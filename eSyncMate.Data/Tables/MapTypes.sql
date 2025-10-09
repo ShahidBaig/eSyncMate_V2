@@ -1,0 +1,7 @@
+﻿CREATE TABLE [dbo].[MapTypes]
+(
+	[Id] INT NOT NULL PRIMARY KEY, 
+    [Name] NVARCHAR(250) NOT NULL, 
+    [CreatedDate] DATETIME NOT NULL DEFAULT GETDATE(), 
+    [CreatedBy] INT NOT NULL
+)

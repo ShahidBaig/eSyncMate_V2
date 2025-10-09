@@ -1,0 +1,18 @@
+CREATE TABLE InvFeedFromNDC(
+	ID				INT IDENTITY(1,1) PRIMARY KEY,
+	UPC				VARCHAR(50) NULL,
+	ItemID			VARCHAR(50) NULL,
+	Description		VARCHAR(500) NULL,
+	Qty				INT NULL,
+	ETAQty			INT NULL,			
+	ETADate			DATETIME NULL,
+	CreatedDate		DATETIME NOT NULL,			
+	CreatedBy		INT NOT NULL,			
+	ModifiedDate	DATETIME NULL,			
+	ModifiedBy		INT  NULL			
+)
+
+GO
+
+
+

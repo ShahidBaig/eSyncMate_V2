@@ -1,0 +1,142 @@
+
+<div class="mat-table-container">
+
+  <mat-card>
+    <mat-card-content>
+      <form [formGroup]="InventoryForm">
+        <mat-form-field appearance="fill" color="accent">
+          <mat-label>{{ 'itemID' | translate }}</mat-label>
+          <input matInput formControlName="itemID">
+          <!--<mat-hint class="custom-hint">{{ 'searchInventoryRecords' | translate }}</mat-hint>-->
+        </mat-form-field>
+        &nbsp;
+        <mat-form-field appearance="fill" color="accent">
+          <mat-label>{{ 'erpCustomerID' | translate }}</mat-label>
+          <mat-select formControlName="customerID">
+            <mat-option *ngFor="let customers of customersOptions" [value]="customers.erpCustomerID">
+              {{ customers.erpCustomerID }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+        &nbsp;
+        <mat-form-field appearance="fill" color="accent">
+          <mat-label>{{ 'routeType' | translate }}</mat-label>
+          <mat-select formControlName="routeType">
+            <mat-option *ngFor="let route of routeTypeOptions" [value]="route.routeType">
+              {{ route.routeType }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+        &nbsp;
+        <mat-form-field color="accent">
+          <mat-label>{{ 'start_Date' | translate }}</mat-label>
+          <input formControlName="startDate" matInput [matDatepicker]="startDate">
+          <mat-hint>MM/DD/YYYY</mat-hint>
+          <mat-datepicker-toggle matIconSuffix [for]="startDate"></mat-datepicker-toggle>
+          <mat-datepicker #startDate></mat-datepicker>
+        </mat-form-field>
+        &nbsp;
+        <mat-form-field color="accent">
+          <mat-label>{{ 'finish_Date' | translate }}</mat-label>
+          <input formControlName="finishDate" matInput [matDatepicker]="finishDate">
+          <mat-hint>MM/DD/YYYY</mat-hint>
+          <mat-datepicker-toggle matIconSuffix [for]="finishDate"></mat-datepicker-toggle>
+          <mat-datepicker #finishDate></mat-datepicker>
+        </mat-form-field>
+        &nbsp;
+        <mat-form-field appearance="fill" color="accent">
+          <mat-label>{{ 'status' | translate }}</mat-label>
+          <mat-select formControlName="status">
+            <mat-option *ngFor="let status of statusOptions" [value]="status">
+              {{ status }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+        &nbsp;
+        <button mat-flat-button color="accent" (click)="getInventory()">
+          <span *ngIf="!showSpinnerforSearch">{{ 'searchInventory' | translate }}</span>
+          <mat-spinner *ngIf="showSpinnerforSearch" diameter="20"></mat-spinner>
+        </button>
+
+      </form>
+    </mat-card-content>
+  </mat-card>
+
+
+  &nbsp;
+  <mat-card>
+    <mat-card-content>
+      <table mat-table [dataSource]="inventoryToDisplay">
+
+        <!-- BatchID Column -->
+        <!-- ItemCount Column -->
+        <ng-container matColumnDef="ItemCount">
+          <th mat-header-cell *matHeaderCellDef>{{ 'itemCount' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.itemCount}} </td>
+        </ng-container>
+
+        <!-- Status -->
+        <ng-container matColumnDef="Status">
+          <th mat-header-cell *matHeaderCellDef>{{ 'status' | translate }}</th>
+          <td mat-cell *matCellDef="let element" [ngClass]="getStatusClass(element.status)" [matTooltip]="getTooltipWithTranslation(element)">
+            {{ element.status }}
+          </td>
+        </ng-container>
+
+        <!-- StartDate -->
+        <ng-container matColumnDef="StartDate">
+          <th mat-header-cell *matHeaderCellDef>{{ 'start_Date' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.startDate | date:'MMM-dd-yyyy HH:mm:ss' }} </td>
+        </ng-container>
+
+        <!-- FinishDate Column -->
+        <ng-container matColumnDef="FinishDate">
+          <th mat-header-cell *matHeaderCellDef>{{ 'finish_Date' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.finishDate | date:'MMM-dd-yyyy HH:mm:ss'}} </td>
+        </ng-container>
+
+        <!-- Total_ATS Column -->
+        <ng-container matColumnDef="PageCount">
+          <th mat-header-cell *matHeaderCellDef>{{ 'pageCount' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.pageCount}} </td>
+        </ng-container>
+
+        <ng-container matColumnDef="Type">
+          <th mat-header-cell *matHeaderCellDef>{{ 'routeType' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.routeType}} </td>
+        </ng-container>
+
+        <ng-container matColumnDef="CustomerID">
+          <th mat-header-cell *matHeaderCellDef>{{ 'erpCustomerID' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.customerID}} </td>
+        </ng-container>
+
+        <!--GetInventoryFiles-->
+        <ng-container matColumnDef="File">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let element">
+            <button mat-icon-button aria-label="normal button" color="accent" matTooltip="Get Batch Wise Inventory" matTooltipPosition="above"
+                    (click)="getBatchiWiseInventory(element)">
+              <mat-icon>read_more</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="columns"></tr>
+        <tr mat-row *matRowDef="let row; columns: columns"></tr>
+
+      </table>
+      <mat-paginator [length]="listOfInventory.length"
+                     [pageSize]="10"
+                     [pageSizeOptions]="[5, 10, 25, 100]"
+                     (page)="onPageChange($event)">
+      </mat-paginator>
+
+    </mat-card-content>
+  </mat-card>
+
+</div>
+
+<div *ngIf="showSpinner" class="spinner-overlay">
+  <mat-spinner></mat-spinner>
+</div>

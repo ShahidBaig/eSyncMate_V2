@@ -1,0 +1,12 @@
+
+
+
+CREATE TABLE WalmartShipNodes 
+(
+	ID			INT IDENTITY(1,1) PRIMARY KEY,
+	WHSID		VARCHAR(10),
+	ShipNode	NVARCHAR(500),
+	APIName		VARCHAR(100)
+)
+
+GO

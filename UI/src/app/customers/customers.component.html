@@ -1,0 +1,138 @@
+<!--<button mat-button (click)="openAddCustomerDialog()">Add Customer</button>-->
+
+<div class="mat-table-container">
+
+  <mat-card>
+    <mat-card-content>
+      <mat-form-field appearance="fill" color="accent">
+        <mat-label>{{ 'searchBy' | translate }}:</mat-label>
+        <mat-select id="myComboBox" [(ngModel)]="selectedOption" (click)="onSelectionChange()">
+          <mat-option *ngFor="let option of options" [value]="option">
+            {{ option }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      &nbsp;
+
+      <ng-container *ngIf="selectedOption !== 'Created Date' else dateRangeField">
+        <mat-form-field appearance="fill" color="accent">
+          <mat-label>{{ label }}</mat-label>
+          <input matInput [(ngModel)]="searchValue"/>
+        </mat-form-field>
+      </ng-container>
+
+      <ng-template #dateRangeField>
+        <mat-form-field appearance="fill" color="accent">
+          <mat-label>{{ label }}</mat-label>
+          <mat-date-range-input [rangePicker]="picker">
+            <input matStartDate [(ngModel)]="startDate" placeholder="Start date">
+            <input matEndDate [(ngModel)]="endDate" placeholder="End date">
+          </mat-date-range-input>
+          <mat-hint>MM/DD/YYYY – MM/DD/YYYY</mat-hint>
+          <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+          <mat-date-range-picker #picker></mat-date-range-picker>
+        </mat-form-field>
+      </ng-template>
+
+      &nbsp;
+
+      <button mat-flat-button color="accent" (click)="getCustomers()">
+        <span>{{ 'searchCustomers' | translate }}</span>
+        <mat-spinner *ngIf="showSpinnerforSearch" diameter="20"></mat-spinner>
+      </button>
+
+      &nbsp;
+
+      <button *ngIf="isAdminUser" mat-flat-button color="accent" (click)="openAddCustomerDialog()">
+        <span>{{ 'addCustomer' | translate }}</span>
+        <mat-spinner *ngIf="showSpinnerforSearch" diameter="20"></mat-spinner>
+      </button>
+    </mat-card-content>
+  </mat-card>
+
+  &nbsp;
+  <mat-card>
+    <mat-card-content>
+      <table mat-table [dataSource]="customersToDisplay">
+
+        <!-- ID Column -->
+        <ng-container matColumnDef="id">
+          <th mat-header-cell *matHeaderCellDef>{{ 'id' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.id}} </td>
+        </ng-container>
+
+        <!-- Customer Name -->
+        <ng-container matColumnDef="Name">
+          <th mat-header-cell *matHeaderCellDef>{{ 'name' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.name}} </td>
+        </ng-container>
+
+        <!-- ERP Customer ID -->
+        <ng-container matColumnDef="ERPCustomerID">
+          <th mat-header-cell *matHeaderCellDef>{{ 'erpCustomerID' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.erpCustomerID}} </td>
+        </ng-container>
+
+        <!-- ISACustomerID -->
+        <ng-container matColumnDef="ISACustomerID">
+          <th mat-header-cell *matHeaderCellDef>ISA {{ 'customerID' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.isaCustomerID}} </td>
+        </ng-container>
+
+        <!-- ISA810ReceiverId -->
+        <ng-container matColumnDef="ISA810ReceiverId">
+          <th mat-header-cell *matHeaderCellDef>ISA 810 {{ 'receiverID' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.isA810ReceiverId}} </td>
+        </ng-container>
+
+        <!-- ISA810ReceiverId -->
+        <ng-container matColumnDef="ISA856ReceiverId">
+          <th mat-header-cell *matHeaderCellDef>ISA 856 {{ 'receiverID' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.isA856ReceiverId}} </td>
+        </ng-container>
+
+
+        <!-- Marketplace -->
+        <ng-container matColumnDef="Marketplace">
+          <th mat-header-cell *matHeaderCellDef>{{ 'marketPlace' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.marketplace}} </td>
+        </ng-container>
+
+        <!-- Created Date -->
+        <ng-container matColumnDef="CreatedDate">
+          <th mat-header-cell *matHeaderCellDef>{{ 'createdDate' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.createdDate | date:'MMM-dd-yyyy HH:mm:ss'}} </td>
+        </ng-container>
+
+        <!--Edit-->
+        <ng-container *ngIf="isAdminUser">
+          <ng-container matColumnDef="Edit" >
+            <th mat-header-cell *matHeaderCellDef> {{ 'actions' | translate }}</th>
+            <td mat-cell *matCellDef="let element">
+              <button mat-icon-button (click)="openEditDialog(element)" aria-label="normal button" color="accent" matTooltip="Edit Customer" matTooltipPosition="above">
+                <mat-icon>edit</mat-icon>
+              </button>
+            </td>
+          </ng-container>
+        </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="columns"></tr>
+          <tr mat-row *matRowDef="let row; columns: columns"></tr>
+
+      </table>
+
+      <mat-paginator [length]="listOfCustomers.length"
+                     [pageSize]="10"
+                     [pageSizeOptions]="[5, 10, 25, 100]"
+                     (page)="onPageChange($event)">
+      </mat-paginator>
+
+    </mat-card-content>
+  </mat-card>
+
+</div>
+
+<div *ngIf="showSpinner" class="spinner-overlay">
+  <mat-spinner></mat-spinner>
+</div>

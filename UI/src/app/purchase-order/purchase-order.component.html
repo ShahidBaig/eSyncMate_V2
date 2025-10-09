@@ -1,0 +1,409 @@
+<div class="mat-table-container">
+  <mat-card>
+    <mat-card-content>
+      <mat-form-field appearance="fill" color="accent">
+        <mat-label>{{ "searchBy" | translate }}:</mat-label>
+        <mat-select id="myComboBox"
+                    [(ngModel)]="selectedOption"
+                    (click)="onSelectionChange()">
+          <mat-option *ngFor="let option of options" [value]="option">
+            {{ option }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+      &nbsp;
+      <ng-container *ngIf="selectedOption !== 'Purchase Order Date'; else dateRangeField">
+        <mat-form-field appearance="fill" color="accent">
+          <mat-label>{{ label }}</mat-label>
+          <input matInput [(ngModel)]="searchValue" />
+        </mat-form-field>
+      </ng-container>
+
+      <ng-template #dateRangeField>
+        <mat-form-field appearance="fill" color="accent">
+          <mat-label>{{ label }}</mat-label>
+          <mat-date-range-input [rangePicker]="picker">
+            <input matStartDate [(ngModel)]="startDate" placeholder="Start date">
+            <input matEndDate [(ngModel)]="endDate" placeholder="End date">
+          </mat-date-range-input>
+          <mat-hint>MM/DD/YYYY – MM/DD/YYYY</mat-hint>
+          <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+          <mat-date-range-picker #picker></mat-date-range-picker>
+        </mat-form-field>
+      </ng-template>
+      &nbsp;
+      <button mat-flat-button color="accent" (click)="getPurchaseOrder()">
+        <span>{{ "searchPurchaseOrder" | translate }}</span>
+        <mat-spinner *ngIf="showSpinnerforSearch" diameter="20"></mat-spinner>
+      </button>
+      &nbsp;
+      <button mat-flat-button
+              color="accent"
+              (click)="openAddPurchaseOrderCompenent()">
+        <span>{{ "addPurchase" | translate }}</span>
+        <mat-icon>add</mat-icon>
+        <mat-spinner *ngIf="showSpinnerforSearch" diameter="20"></mat-spinner>
+      </button>
+    </mat-card-content>
+  </mat-card>
+  &nbsp;
+  <mat-card>
+    <mat-card-content>
+      <table mat-table [dataSource]="mapsToDisplay">
+        <ng-container matColumnDef="id">
+          <th mat-header-cell *matHeaderCellDef>{{ "id" | translate }}</th>
+          <td mat-cell *matCellDef="let element">{{ element.id }}</td>
+        </ng-container>
+        <ng-container matColumnDef="PONumber">
+          <th mat-header-cell *matHeaderCellDef>
+            {{ "PONumber" | translate }}
+          </th>
+          <td mat-cell *matCellDef="let element">{{ element.poNumber }}</td>
+        </ng-container>
+        <ng-container matColumnDef="Status">
+          <th mat-header-cell *matHeaderCellDef>{{ "status" | translate }}</th>
+          <td mat-cell
+              *matCellDef="let element"
+              [ngClass]="getStatusClass(element.status)"
+              [matTooltip]="getTooltipWithTranslation(element)">
+            {{ element.status }}
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="OrderDate">
+          <th mat-header-cell *matHeaderCellDef>
+            {{ "OrderDate" | translate }}
+          </th>
+          <td mat-cell *matCellDef="let element">
+            {{ element.orderDate | date : "MMM-dd-YYYY HH:mm:ss" }}
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="SupplierID">
+          <th mat-header-cell *matHeaderCellDef>
+            {{ "Supplier" | translate }}
+          </th>
+          <td mat-cell *matCellDef="let element">{{ element.supplierID }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="ExpectedDate">
+          <th mat-header-cell *matHeaderCellDef>
+            {{ "Ship Date" | translate }}
+          </th>
+          <td mat-cell *matCellDef="let element">
+            {{ element.vExpectedDate | date : "MMM-dd-YYYY HH:mm:ss" }}
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="ReferenceNo" [style.display]="showDataColumn ? 'none' : 'none'">
+          <th mat-header-cell *matHeaderCellDef [style.display]="showDataColumn ? 'none' : 'none'">
+            {{
+              'referenceNo' | translate
+            }}
+          </th>
+          <td mat-cell *matCellDef="let element" [style.display]="showDataColumn ? 'none' : 'none'">
+            {{element.referenceNo}}
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="ShipServiceCode" [style.display]="showDataColumn ? 'none' : 'none'">
+          <th mat-header-cell *matHeaderCellDef [style.display]="showDataColumn ? 'none' : 'none'">
+            {{
+       'shipServiceCode' | translate
+            }}
+          </th>
+          <td mat-cell *matCellDef="let element" [style.display]="showDataColumn ? 'none' : 'none'">
+            {{element.shipServiceCode}}
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="shipToAddress1" [style.display]="showDataColumn ? 'none' : 'none'">
+          <th mat-header-cell *matHeaderCellDef [style.display]="showDataColumn ? 'none' : 'none'">
+            {{ 'shipToAddress1' | translate }}
+          </th>
+          <td mat-cell *matCellDef="let element" [style.display]="showDataColumn ? 'none' : 'none'">
+            {{ element.shipToAddress1 }}
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="shipToAddress2" [style.display]="showDataColumn ? 'none' : 'none'">
+          <th mat-header-cell *matHeaderCellDef [style.display]="showDataColumn ? 'none' : 'none'">
+            {{ 'shipToAddress2' | translate }}
+          </th>
+          <td mat-cell *matCellDef="let element" [style.display]="showDataColumn ? 'none' : 'none'">
+            {{ element.shipToAddress2 }}
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="shipToCity" [style.display]="showDataColumn ? 'none' : 'none'">
+          <th mat-header-cell *matHeaderCellDef [style.display]="showDataColumn ? 'none' : 'none'">
+            {{ 'shipToCity' | translate }}
+          </th>
+          <td mat-cell *matCellDef="let element" [style.display]="showDataColumn ? 'none' : 'none'">
+            {{ element.shipToCity }}
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="shipToState" [style.display]="showDataColumn ? 'none' : 'none'">
+          <th mat-header-cell *matHeaderCellDef [style.display]="showDataColumn ? 'none' : 'none'">
+            {{ 'shipToState' | translate }}
+          </th>
+          <td mat-cell *matCellDef="let element" [style.display]="showDataColumn ? 'none' : 'none'">
+            {{ element.shipToState }}
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="shipToZip" [style.display]="showDataColumn ? 'none' : 'none'">
+          <th mat-header-cell *matHeaderCellDef [style.display]="showDataColumn ? 'none' : 'none'">
+            {{ 'shipToZip' | translate }}
+          </th>
+          <td mat-cell *matCellDef="let element" [style.display]="showDataColumn ? 'none' : 'none'">
+            {{ element.shipToZip }}
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="shipToCountry" [style.display]="showDataColumn ? 'none' : 'none'">
+          <th mat-header-cell *matHeaderCellDef [style.display]="showDataColumn ? 'none' : 'none'">
+            {{ 'shipToCountry' | translate }}
+          </th>
+          <td mat-cell *matCellDef="let element" [style.display]="showDataColumn ? 'none' : 'none'">
+            {{ element.shipToCountry }}
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="shipToEmail" [style.display]="showDataColumn ? 'none' : 'none'">
+          <th mat-header-cell *matHeaderCellDef [style.display]="showDataColumn ? 'none' : 'none'">
+            {{ 'shipToEmail' | translate }}
+          </th>
+          <td mat-cell *matCellDef="let element" [style.display]="showDataColumn ? 'none' : 'none'">
+            {{ element.shipToEmail }}
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="shipToPhone" [style.display]="showDataColumn ? 'none' : 'none'">
+          <th mat-header-cell *matHeaderCellDef [style.display]="showDataColumn ? 'none' : 'none'">
+            {{ 'shipToPhone' | translate }}
+          </th>
+          <td mat-cell *matCellDef="let element" [style.display]="showDataColumn ? 'none' : 'none'">
+            {{ element.shipToPhone }}
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="billToAddress1" [style.display]="showDataColumn ? 'none' : 'none'">
+          <th mat-header-cell *matHeaderCellDef [style.display]="showDataColumn ? 'none' : 'none'">
+            {{ 'billToAddress1' | translate }}
+          </th>
+          <td mat-cell *matCellDef="let element" [style.display]="showDataColumn ? 'none' : 'none'">
+            {{ element.billToAddress1 }}
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="billToAddress2" [style.display]="showDataColumn ? 'none' : 'none'">
+          <th mat-header-cell *matHeaderCellDef [style.display]="showDataColumn ? 'none' : 'none'">
+            {{ 'billToAddress2' | translate }}
+          </th>
+          <td mat-cell *matCellDef="let element" [style.display]="showDataColumn ? 'none' : 'none'">
+            {{ element.billToAddress2 }}
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="billToCity" [style.display]="showDataColumn ? 'none' : 'none'">
+          <th mat-header-cell *matHeaderCellDef [style.display]="showDataColumn ? 'none' : 'none'">
+            {{ 'billToCity' | translate }}
+          </th>
+          <td mat-cell *matCellDef="let element" [style.display]="showDataColumn ? 'none' : 'none'">
+            {{ element.billToCity }}
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="billToState" [style.display]="showDataColumn ? 'none' : 'none'">
+          <th mat-header-cell *matHeaderCellDef [style.display]="showDataColumn ? 'none' : 'none'">
+            {{ 'billToState' | translate }}
+          </th>
+          <td mat-cell *matCellDef="let element" [style.display]="showDataColumn ? 'none' : 'none'">
+            {{ element.billToState }}
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="billToZip" [style.display]="showDataColumn ? 'none' : 'none'">
+          <th mat-header-cell *matHeaderCellDef [style.display]="showDataColumn ? 'none' : 'none'">
+            {{ 'billToZip' | translate }}
+          </th>
+          <td mat-cell *matCellDef="let element" [style.display]="showDataColumn ? 'none' : 'none'">
+            {{ element.billToZip }}
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="billToCountry" [style.display]="showDataColumn ? 'none' : 'none'">
+          <th mat-header-cell *matHeaderCellDef [style.display]="showDataColumn ? 'none' : 'none'">
+            {{ 'billToCountry' | translate }}
+          </th>
+          <td mat-cell *matCellDef="let element" [style.display]="showDataColumn ? 'none' : 'none'">
+            {{ element.billToCountry }}
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="billToEmail" [style.display]="showDataColumn ? 'none' : 'none'">
+          <th mat-header-cell *matHeaderCellDef [style.display]="showDataColumn ? 'none' : 'none'">
+            {{ 'billToEmail' | translate }}
+          </th>
+          <td mat-cell *matCellDef="let element" [style.display]="showDataColumn ? 'none' : 'none'">
+            {{ element.billToEmail }}
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="billToPhone" [style.display]="showDataColumn ? 'none' : 'none'">
+          <th mat-header-cell *matHeaderCellDef [style.display]="showDataColumn ? 'none' : 'none'">
+            {{ 'billToPhone' | translate }}
+          </th>
+          <td mat-cell *matCellDef="let element" [style.display]="showDataColumn ? 'none' : 'none'">
+            {{ element.billToPhone }}
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="manufacturerName" [style.display]="showDataColumn ? 'none' : 'none'">
+          <th mat-header-cell *matHeaderCellDef [style.display]="showDataColumn ? 'none' : 'none'">
+            {{ 'manufacturerName' | translate }}
+          </th>
+          <td mat-cell *matCellDef="let element" [style.display]="showDataColumn ? 'none' : 'none'">
+            {{ element.manufacturerName }}
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="totalQty" [style.display]="showDataColumn ? 'none' : 'none'">
+          <th mat-header-cell *matHeaderCellDef [style.display]="showDataColumn ? 'none' : 'none'">
+            {{ 'totalQty' | translate }}
+          </th>
+          <td mat-cell *matCellDef="let element" [style.display]="showDataColumn ? 'none' : 'none'">
+            {{ element.totalQty }}
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="totalExtendedPrice" [style.display]="showDataColumn ? 'none' : 'none'">
+          <th mat-header-cell *matHeaderCellDef [style.display]="showDataColumn ? 'none' : 'none'">
+            {{ 'totalExtendedPrice' | translate }}
+          </th>
+          <td mat-cell *matCellDef="let element" [style.display]="showDataColumn ? 'none' : 'none'">
+            {{ element.totalExtendedPrice }}
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="ndcItemID" [style.display]="showDataColumn ? 'none' : 'none'">
+          <th mat-header-cell *matHeaderCellDef [style.display]="showDataColumn ? 'none' : 'none'">
+            {{ 'NDCItemID' | translate }}
+          </th>
+          <td mat-cell *matCellDef="let element" [style.display]="showDataColumn ? 'none' : 'none'">
+            {{ element.ndcItemID }}
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="productName" [style.display]="showDataColumn ? 'none' : 'none'">
+          <th mat-header-cell *matHeaderCellDef [style.display]="showDataColumn ? 'none' : 'none'">
+            {{ 'ProductName' | translate }}
+          </th>
+          <td mat-cell *matCellDef="let element" [style.display]="showDataColumn ? 'none' : 'none'">
+            {{ element.productName }}
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="primaryCategoryName" [style.display]="showDataColumn ? 'none' : 'none'">
+          <th mat-header-cell *matHeaderCellDef [style.display]="showDataColumn ? 'none' : 'none'">
+            {{ 'primaryCategoryName' | translate }}
+          </th>
+          <td mat-cell *matCellDef="let element" [style.display]="showDataColumn ? 'none' : 'none'">
+            {{ element.primaryCategoryName }}
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="secondaryCategoryName" [style.display]="showDataColumn ? 'none' : 'none'">
+          <th mat-header-cell *matHeaderCellDef [style.display]="showDataColumn ? 'none' : 'none'">
+            {{ 'secondaryCategoryName' | translate }}
+          </th>
+          <td mat-cell *matCellDef="let element" [style.display]="showDataColumn ? 'none' : 'none'">
+            {{ element.secondaryCategoryName }}
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="warehouseName">
+          <th mat-header-cell *matHeaderCellDef>
+            {{ 'Warehouse Name' | translate }}
+          </th>
+          <td mat-cell *matCellDef="let element">
+            {{ element.warehouseName }}
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="warehouseID">
+          <th mat-header-cell *matHeaderCellDef>
+            {{ 'Warehouse ID' | translate }}
+          </th>
+          <td mat-cell *matCellDef="let element">
+            {{ element.warehouseID }}
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="Map"
+                      [style.display]="showDataColumn ? 'none' : 'none'">
+          <th mat-header-cell
+              *matHeaderCellDef
+              [style.display]="showDataColumn ? 'none' : 'none'">
+            {{ "map" | translate }}
+          </th>
+          <td mat-cell
+              *matCellDef="let element"
+              [style.display]="showDataColumn ? 'none' : 'none'">
+            {{ element.map }}
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="View">
+          <th mat-header-cell *matHeaderCellDef>{{ "actions" | translate }}</th>
+          <td mat-cell *matCellDef="let element">
+            <button mat-icon-button
+                    aria-label="normal button"
+                    (click)="openViewPurchaseOrderCompenent(element)"
+                    color="accent"
+                    matTooltip="View"
+                    matTooltipPosition="above">
+              <mat-icon>visibility</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+
+        <!--Edit-->
+        <ng-container matColumnDef="Edit" *ngIf="isAdminUser">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let element">
+            <button mat-icon-button aria-label="normal button"
+                    (click)="openEditPurchaseOrderCompenent(element)"
+                    color="accent" matTooltip="Edit" matTooltipPosition="above" *ngIf="element.status === 'INPROGRESS'">
+              <mat-icon>edit</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="MarkOrderforRelease">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let element">
+            <button mat-icon-button aria-label="normal button" color="accent" matTooltip="Release"
+                    matTooltipPosition="above" (click)="markForRelease(element)" *ngIf="element.status === 'INPROGRESS'">
+              <mat-icon>send</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="columns"></tr>
+        <tr mat-row *matRowDef="let row; columns: columns"></tr>
+      </table>
+
+      <mat-paginator [length]="listOfPurchaseOrders.length"
+                     [pageSize]="10"
+                     [pageSizeOptions]="[5, 10, 25, 100]"
+                     (page)="onPageChange($event)">
+      </mat-paginator>
+    </mat-card-content>
+  </mat-card>
+</div>
+
+<div *ngIf="showSpinner" class="spinner-overlay">
+  <mat-spinner></mat-spinner>
+</div>

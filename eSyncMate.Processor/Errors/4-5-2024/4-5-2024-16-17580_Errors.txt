@@ -1,0 +1,21 @@
+Date/Time: 4/5/2024 4:40:05 PM
+Message: Input string was not in a correct format.
+StackTrace:    at System.Number.ThrowOverflowOrFormatException(ParsingStatus status, TypeCode type)
+   at System.String.System.IConvertible.ToInt32(IFormatProvider provider)
+   at System.Convert.ToInt32(Object value)
+   at eSyncMate.DB.DataConverter.ConvertToInteger(Object Val) in D:\Esoftage\eSyncMate\eSyncMate.DB\DataConverter.cs:line 34
+===========================================================================================
+Date/Time: 4/5/2024 4:40:33 PM
+Message: Input string was not in a correct format.
+StackTrace:    at System.Number.ThrowOverflowOrFormatException(ParsingStatus status, TypeCode type)
+   at System.String.System.IConvertible.ToInt32(IFormatProvider provider)
+   at System.Convert.ToInt32(Object value)
+   at eSyncMate.DB.DataConverter.ConvertToInteger(Object Val) in D:\Esoftage\eSyncMate\eSyncMate.DB\DataConverter.cs:line 34
+===========================================================================================
+Date/Time: 4/5/2024 4:40:59 PM
+Message: Input string was not in a correct format.
+StackTrace:    at System.Number.ThrowOverflowOrFormatException(ParsingStatus status, TypeCode type)
+   at System.String.System.IConvertible.ToInt32(IFormatProvider provider)
+   at System.Convert.ToInt32(Object value)
+   at eSyncMate.DB.DataConverter.ConvertToInteger(Object Val)
+===========================================================================================

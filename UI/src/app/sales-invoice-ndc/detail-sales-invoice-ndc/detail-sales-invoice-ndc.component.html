@@ -1,0 +1,122 @@
+<div mat-dialog-content class="dialog-content scrollable-content">
+  <h1>Invoice</h1>
+
+  <!-- General Information Section -->
+  <mat-card class="report-card">
+    <mat-card-content>
+      <h2 class="dialog-title">General Information</h2>
+      <div class="report-section">
+        <div class="report-row">
+          <span>Invoice No:</span> <span class="report-row-value">{{ invoiceData.invoiceNo }}</span>
+        </div>
+        <div class="report-row">
+          <span>Invoice Date:</span> <span class="report-row-value">{{ getFormattedDate(invoiceData.invoiceDate) }}</span>
+        </div>
+        <div class="report-row">
+          <span>PO Number:</span> <span class="report-row-value">{{ invoiceData.poNumber }}</span>
+        </div>
+        <div class="report-row">
+          <span>Status:</span> <span class="report-row-value">{{ invoiceData.status }}</span>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Bill-to and Ship-to Section -->
+  <mat-card class="report-card">
+    <mat-card-content>
+      <h2 class="dialog-title">Bill-to and Ship-to Information</h2>
+      <div class="report-section">
+        <div class="report-row">
+          <!-- <span>Bill To:</span> -->
+          <!-- <div class="report-row-value">
+            {{ invoiceData.billToName }}<br>
+            {{ invoiceData.billToAddress }}<br>
+            {{ invoiceData.billToCity }}, {{ invoiceData.billToState }} {{ invoiceData.billToZip }}
+          </div> -->
+        </div>
+        <div class="report-row">
+          <span>Ship To:</span>
+          <div class="report-row-value">
+            {{ invoiceData.shippingName }}<br>
+            {{ invoiceData.shippingAddress1 }}<br>
+            {{ invoiceData.shippingCity }}, {{ invoiceData.shippingState }} {{ invoiceData.shippingZip }}
+          </div>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Line Item Information -->
+  <!-- <mat-card class="report-card">
+    <mat-card-content>
+      <h2 class="dialog-title">Line Item Information</h2>
+      <div class="report-section">
+        <div class="report-row">
+          <span>Description:</span> <span class="report-row-value">{{ invoiceData.itemDescription }}</span>
+        </div>
+        <div class="report-row">
+          <span>Quantity:</span> <span class="report-row-value">{{ invoiceData.itemQuantity }}</span>
+        </div>
+        <div class="report-row">
+          <span>Unit Price:</span> <span class="report-row-value">{{ invoiceData.itemUnitPrice }}</span>
+        </div>
+        <div class="report-row">
+          <span>Total Price:</span> <span class="report-row-value">{{ invoiceData.itemTotalPrice }}</span>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card> -->
+
+  <!-- Charges and Allowances Section -->
+  <mat-card class="report-card">
+    <mat-card-content>
+      <h2 class="dialog-title">Charges and Allowances</h2>
+      <div class="report-section">
+        <!-- <div class="report-row">
+          <span>Freight:</span> <span class="report-row-value">{{ invoiceData.freight }}</span>
+        </div> -->
+        <div class="report-row">
+          <span>Handling Amount:</span> <span class="report-row-value">{{ invoiceData.handlingAmount }}</span>
+        </div>
+        <div class="report-row">
+          <span>Sales Tax:</span> <span class="report-row-value">{{ invoiceData.salesTax }}</span>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Total Monetary Value Summary -->
+  <mat-card class="report-card">
+    <mat-card-content>
+      <h2 class="dialog-title">Total Monetary Value Summary</h2>
+      <div class="report-section">
+        <div class="report-row">
+          <span>Total Invoice Amount:</span> <span class="report-row-value">{{ invoiceData.invoiceAmount }}</span>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Footer with Control Information -->
+  <mat-card class="report-card">
+    <mat-card-content>
+      <h2 class="dialog-title">Control Information</h2>
+      <div class="report-section">
+        <div class="report-row">
+          <span>SCAC Code:</span> <span class="report-row-value">{{ invoiceData.scacCode }}</span>
+        </div>
+        <div class="report-row">
+          <span>Seller ID:</span> <span class="report-row-value">{{ invoiceData.sellerID }}</span>
+        </div>
+        <div class="report-row">
+          <span>Control Number:</span> <span class="report-row-value">{{ invoiceData.id }}</span>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+  <div mat-dialog-actions class="dialog-actions">
+    <button mat-button class="cancel-button" (click)="onCancel()">Cancel</button>
+    <button mat-button class="download-button" (click)="downloadPDF()">Download</button>
+  </div>
+</div>

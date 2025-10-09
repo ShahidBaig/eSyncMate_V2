@@ -1,0 +1,245 @@
+<div mat-dialog-content class="dialog-content" [ngStyle]="{ 'overflow-y': showRestTab ? 'auto' : 'hidden' }">
+  <h1 class="dialog-title">{{ 'addConnector' | translate }}</h1>
+  <form [formGroup]="newConnectorForm" class="connector-form">
+
+    <mat-tab-group>
+      <mat-tab label="General">
+        <br />
+        <div class="form-row">
+          <mat-form-field class="form-field">
+            <mat-label>{{ 'connectorName' | translate }}</mat-label>
+            <input matInput formControlName="name">
+          </mat-form-field>
+
+          <!-- Row 1: Name -->
+          <div class="form-row">
+            <mat-form-field class="form-field">
+              <mat-label>{{ 'connectorType' | translate }}</mat-label>
+              <mat-select formControlName="typeId">
+                <mat-option *ngFor="let connectorType of connectorTypesOptions" [value]="connectorType.id">
+                  {{ connectorType.name }}
+                </mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field class="form-field">
+              <mat-label>{{ 'connectivityType' | translate }}</mat-label>
+              <mat-select formControlName="connectivityType">
+                <mat-option *ngFor="let connectivityType of connectivityTypeOptions" [value]="connectivityType">
+                  {{ connectivityType }}
+                </mat-option>
+              </mat-select>
+            </mat-form-field>
+          </div>
+        </div>
+
+      </mat-tab>
+
+      <mat-tab label="Sql Server" *ngIf="showSqlServerTab">
+        <br />
+        <div class="form-row">
+          <mat-form-field class="form-field">
+            <mat-label>{{ 'commandType' | translate }}</mat-label>
+            <input matInput formControlName="commandType">
+          </mat-form-field>
+
+          <mat-form-field class="form-field">
+            <mat-label>{{ 'command' | translate }}</mat-label>
+            <input matInput formControlName="command">
+          </mat-form-field>
+
+          <mat-form-field class="form-field">
+            <mat-label>{{ 'keyFieldName' | translate }}</mat-label>
+            <input matInput formControlName="keyFieldName">
+          </mat-form-field>
+        </div>
+
+        <div class="form-row">
+          <mat-form-field class="form-field">
+            <mat-label>{{ 'dataFieldName' | translate }}</mat-label>
+            <input matInput formControlName="dataFieldName">
+          </mat-form-field>
+
+          <mat-form-field class="form-field">
+            <mat-label>{{ 'customerID' | translate }}</mat-label>
+            <input matInput formControlName="customerID">
+          </mat-form-field>
+
+          <mat-form-field class="form-field">
+            <mat-label>{{ 'jsonDataCollectionName' | translate }}</mat-label>
+            <input matInput formControlName="jsonDataCollectionName">
+          </mat-form-field>
+        </div>
+
+        <div class="form-row">
+          <mat-form-field class="form-field">
+            <mat-label>{{ 'connectionString' | translate }}</mat-label>
+            <input [type]="hide ? 'password' : 'text'" type="password" matInput formControlName="connectionString">
+            <button mat-icon-button matSuffix (click)="hide = !hide">
+              <mat-icon>{{hide ? 'visibility_off' : 'visibility'}}</mat-icon>
+            </button>
+          </mat-form-field>
+        </div>
+      </mat-tab>
+
+      <mat-tab label="Rest" *ngIf="showRestTab" class="">
+        <br />
+        <div class="custom-css">
+          <div class="form-row">
+            <mat-form-field class="form-field">
+              <mat-label>{{ 'authType' | translate }}</mat-label>
+              <input matInput formControlName="authType">
+            </mat-form-field>
+
+            <mat-form-field class="form-field">
+              <mat-label>{{ 'host' | translate }}</mat-label>
+              <input matInput formControlName="host">
+            </mat-form-field>
+
+            <mat-form-field class="form-field">
+              <mat-label>{{ 'baseURL' | translate }}</mat-label>
+              <input matInput formControlName="baseUrl">
+            </mat-form-field>
+
+            <!-- Row 1: Name -->
+
+          </div>
+
+          <div class="form-row">
+            <mat-form-field class="form-field">
+              <mat-label>{{ 'uRL' | translate }}</mat-label>
+              <input matInput formControlName="url">
+            </mat-form-field>
+
+            <mat-form-field class="form-field">
+              <mat-label>{{ 'method' | translate }}</mat-label>
+              <input matInput formControlName="method">
+            </mat-form-field>
+
+            <mat-form-field class="form-field">
+              <mat-label>{{ 'bodyFormat' | translate }}</mat-label>
+              <input matInput formControlName="bodyFormat">
+            </mat-form-field>
+
+          </div>
+
+          <div class="form-row">
+            <mat-form-field class="form-field">
+              <mat-label>{{ 'consumerKey' | translate }}</mat-label>
+              <input [type]="hide ? 'password' : 'text'" matInput formControlName="consumerKey">
+              <button mat-icon-button matSuffix (click)="hide = !hide">
+                <mat-icon>{{hide ? 'visibility_off' : 'visibility'}}</mat-icon>
+              </button>
+            </mat-form-field>
+
+            <mat-form-field class="form-field">
+              <mat-label>{{ 'consumerSecret' | translate }}</mat-label>
+              <input [type]="consumerSecrethide ? 'password' : 'text'" matInput formControlName="consumerSecret">
+              <button mat-icon-button matSuffix (click)="consumerSecrethide = !consumerSecrethide">
+                <mat-icon>{{consumerSecrethide ? 'visibility_off' : 'visibility'}}</mat-icon>
+              </button>
+            </mat-form-field>
+
+            <mat-form-field class="form-field">
+              <mat-label>{{ 'token' | translate }}</mat-label>
+              <input [type]="tokenHide ? 'password' : 'text'" matInput formControlName="token">
+              <button mat-icon-button matSuffix (click)="tokenHide = !tokenHide">
+                <mat-icon>{{tokenHide ? 'visibility_off' : 'visibility'}}</mat-icon>
+              </button>
+            </mat-form-field>
+          </div>
+
+          <div class="form-row">
+
+            <mat-form-field class="form-field">
+              <mat-label>{{ 'tokenSecret' | translate }}</mat-label>
+              <input [type]="tokenSecretHide ? 'password' : 'text'" matInput formControlName="tokenSecret">
+              <button mat-icon-button matSuffix (click)="tokenSecretHide = !tokenSecretHide">
+                <mat-icon>{{tokenSecretHide ? 'visibility_off' : 'visibility'}}</mat-icon>
+              </button>
+            </mat-form-field>
+            <mat-form-field class="form-field">
+              <mat-label>{{ 'realm' | translate }}</mat-label>
+              <input matInput formControlName="realm">
+            </mat-form-field>
+
+            <mat-form-field class="form-field">
+              <mat-label>{{ 'customerID' | translate }}</mat-label>
+              <input matInput formControlName="customerID">
+            </mat-form-field>
+          </div>
+        </div>
+
+        <mat-tab label="Rest Extension" *ngIf="showRestTab">
+          <mat-tab-group>
+            <mat-tab label="Headers">
+
+              <div class="form-row">
+
+                <mat-form-field class="form-field">
+                  <mat-label>{{ 'name' | translate }}</mat-label>
+                  <input matInput formControlName="headerName">
+                </mat-form-field>
+
+                <mat-form-field class="form-field">
+                  <mat-label>{{ 'value' | translate }}</mat-label>
+                  <input matInput formControlName="headerValue">
+                </mat-form-field>
+
+              </div>
+              <div class="form-row">
+                <button mat-raised-button color="primary" (click)="addChips()">{{ 'add' | translate }}</button>
+              </div>
+              <br />
+              <div class="form-row">
+                <div *ngIf="headerChipsValues.length > 0">
+                  <mat-chip *ngFor="let chip of headerChipsValues; let i = index" removable (removed)="removeChip(i)">
+                    {{ chip.name }}: {{ chip.value }}
+                    <mat-icon matChipRemove>cancel</mat-icon>
+                  </mat-chip>
+                </div>
+              </div>
+
+            </mat-tab>
+            <mat-tab label="Parameters">
+              <div class="form-row">
+
+                <mat-form-field class="form-field">
+                  <mat-label>{{ 'name' | translate }}</mat-label>
+                  <input matInput formControlName="paramName">
+                </mat-form-field>
+
+                <mat-form-field class="form-field">
+                  <mat-label>{{ 'value' | translate }}</mat-label>
+                  <input matInput formControlName="paramValue">
+                </mat-form-field>
+
+              </div>
+              <div class="form-row">
+                <button mat-raised-button color="primary" (click)="addParameter()">{{ 'add' | translate }}</button>
+              </div>
+              <br />
+              <div class="form-row">
+                <div *ngIf="paramValues.length > 0">
+                  <mat-chip *ngFor="let chip of paramValues; let i = index" removable (removed)="removeParam(i)">
+                    {{ chip.name }}: {{ chip.value }}
+                    <mat-icon matChipRemove>cancel</mat-icon>
+                  </mat-chip>
+                </div>
+              </div>
+            </mat-tab>
+
+          </mat-tab-group>
+
+          <br />
+        </mat-tab>
+      </mat-tab>
+
+    </mat-tab-group>
+  </form>
+</div>
+
+<div mat-dialog-actions class="dialog-actions">
+  <button mat-button class="cancel-button" (click)="onCancel()">{{ 'cancel' | translate }}</button>
+  <button mat-raised-button color="primary" [disabled]="!newConnectorForm.valid" (click)="onSave()">{{ 'save' | translate }}</button>
+</div>

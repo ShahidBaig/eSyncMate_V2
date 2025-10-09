@@ -1,0 +1,371 @@
+.dialog-content {
+  padding: 24px;
+}
+
+.spinner-overlay {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: rgba(255, 255, 255, 0.8);
+  z-index: 1000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100vw;
+  height: 100vh;
+}
+
+.dialog-title {
+  margin-bottom: 20px;
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.route-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.form-row {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+mat-header-row {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+.form-field {
+  flex: 1;
+  max-width: 500px;
+}
+
+.full-width {
+  flex: 0 0 98%;
+}
+
+.form-field-shippingAddress {
+  flex: 1;
+  max-width: 370px;
+}
+
+.form-field-details {
+  flex: 5;
+}
+
+.form-field-detail-Description {
+  flex: 10;
+}
+
+::ng-deep .mandatory .mdc-text-field--filled:not(.mdc-text-field--disabled) {
+  background-color:rgb(243 218 220) !important;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: space-between;
+  padding: 16px 24px 24px;
+  border-top: 1px solid #eee;
+}
+
+.cancel-button {
+  color: #666;
+}
+
+mat-form-field {
+  width: 100%;
+}
+
+input[matInput] {
+  padding: 8px 12px;
+}
+
+.checkbox-container {
+  display: flex;
+}
+
+.checkbox-label {
+  margin-right: 20px;
+}
+
+.scrollable-grid {
+  max-height: 600px; /* Set the max height of the grid container */
+  overflow-y: auto; /* Enable vertical scrolling */
+  padding: 10px; /* Optional: Add padding around the grid */
+  border: 1px solid #ccc; /* Optional: Add a border around the grid */
+}
+
+
+.new-status {
+  background: linear-gradient(to bottom, palegreen 0%, palegreen 100%);
+  border: 1px solid palegreen;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 10px 20px;
+  text-align: center;
+  text-decoration: none;
+  display: -webkit-inline-box;
+  border-radius: 20px;
+  transition: background 0.3s ease;
+  box-shadow: 0px 4px 5px rgba(0, 0, 0, 0.1);
+  justify-content: center;
+  height: 100%;
+}
+
+.syncerror-status {
+  background: linear-gradient(to bottom, rgb(84, 115, 228) 0%, rgb(90, 142, 238) 100%);
+  // border: 1px solid red;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 10px 20px;
+  text-align: center;
+  text-decoration: none;
+  display: -webkit-inline-box;
+  border-radius: 20px;
+  transition: background 0.3s ease;
+  box-shadow: 0px 4px 5px rgba(0, 0, 0, 0.1);
+  justify-content: center;
+  height: 100%;
+}
+
+.sysced-status {
+  background: linear-gradient(to bottom, lightskyblue 0%, lightskyblue 100%);
+  border: 1px solid lightskyblue;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 10px 20px;
+  text-align: center;
+  text-decoration: none;
+  display: -webkit-inline-box;
+  border-radius: 20px;
+  transition: background 0.3s ease;
+  box-shadow: 0px 4px 5px rgba(0, 0, 0, 0.1);
+  justify-content: center;
+  height: 100%;
+}
+
+.invoiced-status {
+  background: linear-gradient(to bottom, rgb(75, 230, 108) 0%, rgb(75, 230, 108) 100%);
+  border: 1px solid lightskyblue;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 10px 20px;
+  text-align: center;
+  text-decoration: none;
+  display: -webkit-inline-box;
+  border-radius: 20px;
+  transition: background 0.3s ease;
+  box-shadow: 0px 4px 5px rgba(0, 0, 0, 0.1);
+  justify-content: center;
+  height: 100%;
+}
+
+.processed-status {
+  background: linear-gradient(to bottom, green 0%, green 100%);
+  border: 1px solid green;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 10px 20px;
+  text-align: center;
+  text-decoration: none;
+  display: -webkit-inline-box;
+  border-radius: 20px;
+  transition: background 0.3s ease;
+  box-shadow: 0px 4px 5px rgba(0, 0, 0, 0.1);
+  justify-content: center;
+  height: 100%;
+}
+
+.asngen-status {
+  background: linear-gradient(to bottom, firebrick 0%, firebrick 100%);
+  border: 1px solid firebrick;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 10px 20px;
+  text-align: center;
+  text-decoration: none;
+  display: -webkit-inline-box;
+  border-radius: 20px;
+  transition: background 0.3s ease;
+  box-shadow: 0px 4px 5px rgba(0, 0, 0, 0.1);
+  justify-content: center;
+  height: 100%;
+}
+
+.asnmark-status {
+  background: linear-gradient(to bottom, lightslategray 0%, lightslategray 100%);
+  border: 1px solid lightslategray;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 10px 20px;
+  text-align: center;
+  text-decoration: none;
+  display: -webkit-inline-box;
+  border-radius: 20px;
+  transition: background 0.3s ease;
+  box-shadow: 0px 4px 5px rgba(0, 0, 0, 0.1);
+  justify-content: center;
+  height: 100%;
+}
+
+.invoiced-status {
+  background: linear-gradient(to bottom, mediumpurple 0%, mediumpurple 100%);
+  border: 1px solid mediumpurple;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 10px 20px;
+  text-align: center;
+  text-decoration: none;
+  display: -webkit-inline-box;
+  border-radius: 20px;
+  transition: background 0.3s ease;
+  box-shadow: 0px 4px 5px rgba(0, 0, 0, 0.1);
+  justify-content: center;
+  height: 100%;
+}
+
+.complete-status {
+  background: linear-gradient(to bottom, gray 0%, gray 100%);
+  border: 1px solid gray;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 10px 20px;
+  text-align: center;
+  text-decoration: none;
+  display: -webkit-inline-box;
+  border-radius: 20px;
+  transition: background 0.3s ease;
+  box-shadow: 0px 4px 5px rgba(0, 0, 0, 0.1);
+  justify-content: center;
+  height: 100%;
+}
+
+.finished-status {
+  background: linear-gradient(to bottom, olivedrab 0%, olivedrab 100%);
+  border: 1px solid olivedrab;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 10px 20px;
+  text-align: center;
+  text-decoration: none;
+  display: -webkit-inline-box;
+  border-radius: 20px;
+  transition: background 0.3s ease;
+  box-shadow: 0px 4px 5px rgba(0, 0, 0, 0.1);
+  justify-content: center;
+  height: 100%;
+}
+
+.splited-status {
+  background: linear-gradient(to bottom, brown 0%, brown 100%);
+  border: 1px solid brown;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 10px 20px;
+  text-align: center;
+  text-decoration: none;
+  display: -webkit-inline-box;
+  border-radius: 20px;
+  transition: background 0.3s ease;
+  box-shadow: 0px 4px 5px rgba(0, 0, 0, 0.1);
+  justify-content: center;
+  height: 100%;
+}
+
+.invedi-status {
+  background: linear-gradient(to bottom, blue 0%, blue 100%);
+  border: 1px solid blue;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 10px 20px;
+  text-align: center;
+  text-decoration: none;
+  display: -webkit-inline-box;
+  border-radius: 20px;
+  transition: background 0.3s ease;
+  box-shadow: 0px 4px 5px rgba(0, 0, 0, 0.1);
+  justify-content: center;
+  height: 100%;
+}
+
+.acknowledged-status {
+  background: linear-gradient(to bottom, #0094ff 0%, #0094ff 100%);
+  border: 1px solid #0094ff;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 10px 20px;
+  text-align: center;
+  text-decoration: none;
+  display: -webkit-inline-box;
+  border-radius: 20px;
+  transition: background 0.3s ease;
+  box-shadow: 0px 4px 5px rgba(0, 0, 0, 0.1);
+  justify-content: center;
+  height: 100%;
+}
+.header-container {
+  display: flex;
+  justify-content: space-between; /* Aligns the two headings */
+  align-items: center; /* Vertically centers the headings if they have different font sizes */
+}
+
+.inprogress-status {
+  background: linear-gradient(to bottom, olivedrab 0%, olivedrab 100%);
+  border: 1px solid olivedrab;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 10px 20px;
+  text-align: center;
+  text-decoration: none;
+  display: -webkit-inline-box;
+  border-radius: 20px;
+  transition: background 0.3s ease;
+  box-shadow: 0px 4px 5px rgba(0, 0, 0, 0.1);
+  justify-content: center;
+  height: 100%;
+}
+
+.add-button {
+  margin-top: 35px;
+}
+
+.spinner-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.inline-spinner {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.drop-down-viewport {
+  height: 200px; 
+  width: 100%;
+}

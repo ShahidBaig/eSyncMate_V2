@@ -1,0 +1,270 @@
+/*:host {
+  display: block;
+  margin: 3rem auto 0;
+  width: 70%;
+}
+*/
+
+table {
+  width: 100%;
+  margin-top: 1rem;
+}
+
+
+.spinner-overlay {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: rgba(255, 255, 255, 0.8); /* Add background color if desired */
+  z-index: 1000; /* Adjust as needed to make sure it's above other elements */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100vw;
+  height: 100vh;
+}
+
+.button-container {
+  display: flex;
+  justify-content: space-between;
+  margin: 10px; /* Adds space around the container */
+}
+
+.mat-table-container {
+  margin: 10px; /* Adds space around the table */
+}
+
+.new-status {
+  background: linear-gradient(to bottom, palegreen 0%, palegreen 100%);
+  border: 1px solid palegreen;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 10px 20px;
+  text-align: center;
+  text-decoration: none;
+  display: -webkit-inline-box;
+  border-radius: 20px;
+  transition: background 0.3s ease;
+  box-shadow: 0px 4px 5px rgba(0, 0, 0, 0.1);
+  justify-content: center;
+  height: 100%;
+  margin: 4px auto;
+}
+
+.syncerror-status {
+  background: linear-gradient(to bottom, red 0%, red 100%);
+  border: 1px solid red;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 10px 20px;
+  text-align: center;
+  text-decoration: none;
+  display: -webkit-inline-box;
+  border-radius: 20px;
+  transition: background 0.3s ease;
+  box-shadow: 0px 4px 5px rgba(0, 0, 0, 0.1);
+  justify-content: center;
+  height: 100%;
+  margin: 4px auto;
+}
+
+.sysced-status {
+  background: linear-gradient(to bottom, lightskyblue 0%, lightskyblue 100%);
+  border: 1px solid lightskyblue;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 10px 20px;
+  text-align: center;
+  text-decoration: none;
+  display: -webkit-inline-box;
+  border-radius: 20px;
+  transition: background 0.3s ease;
+  box-shadow: 0px 4px 5px rgba(0, 0, 0, 0.1);
+  justify-content: center;
+  height: 100%;
+  margin: 4px auto;
+}
+
+.processed-status {
+  background: linear-gradient(to bottom, green 0%, green 100%);
+  border: 1px solid green;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 10px 20px;
+  text-align: center;
+  text-decoration: none;
+  display: -webkit-inline-box;
+  border-radius: 20px;
+  transition: background 0.3s ease;
+  box-shadow: 0px 4px 5px rgba(0, 0, 0, 0.1);
+  justify-content: center;
+  height: 100%;
+  margin: 4px auto;
+}
+
+.asngen-status {
+  background: linear-gradient(to bottom, firebrick 0%, firebrick 100%);
+  border: 1px solid firebrick;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 10px 20px;
+  text-align: center;
+  text-decoration: none;
+  display: -webkit-inline-box;
+  border-radius: 20px;
+  transition: background 0.3s ease;
+  box-shadow: 0px 4px 5px rgba(0, 0, 0, 0.1);
+  justify-content: center;
+  height: 100%;
+  margin: 4px auto;
+}
+
+.asnmark-status {
+  background: linear-gradient(to bottom, lightslategray 0%, lightslategray 100%);
+  border: 1px solid lightslategray;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 10px 20px;
+  text-align: center;
+  text-decoration: none;
+  display: -webkit-inline-box;
+  border-radius: 20px;
+  transition: background 0.3s ease;
+  box-shadow: 0px 4px 5px rgba(0, 0, 0, 0.1);
+  justify-content: center;
+  height: 100%;
+  margin: 4px auto;
+}
+
+.invoiced-status {
+  background: linear-gradient(to bottom, mediumpurple 0%, mediumpurple 100%);
+  border: 1px solid mediumpurple;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 10px 20px;
+  text-align: center;
+  text-decoration: none;
+  display: -webkit-inline-box;
+  border-radius: 20px;
+  transition: background 0.3s ease;
+  box-shadow: 0px 4px 5px rgba(0, 0, 0, 0.1);
+  justify-content: center;
+  height: 100%;
+  margin: 4px auto;
+}
+
+.complete-status {
+  background: linear-gradient(to bottom, gray 0%, gray 100%);
+  border: 1px solid gray;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 10px 20px;
+  text-align: center;
+  text-decoration: none;
+  display: -webkit-inline-box;
+  border-radius: 20px;
+  transition: background 0.3s ease;
+  box-shadow: 0px 4px 5px rgba(0, 0, 0, 0.1);
+  justify-content: center;
+  height: 100%;
+  margin: 4px auto;
+}
+
+.readyToComplete-status {
+  background: linear-gradient(to bottom, rgb(181, 154, 55) 0%, rgb(181, 154, 55) 100%);
+  border: 1px solid gray;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 10px 20px;
+  text-align: center;
+  text-decoration: none;
+  display: -webkit-inline-box;
+  border-radius: 20px;
+  transition: background 0.3s ease;
+  box-shadow: 0px 4px 5px rgba(0, 0, 0, 0.1);
+  justify-content: center;
+  height: 100%;
+  margin: 4px auto;
+}
+
+.finished-status {
+  background: linear-gradient(to bottom, olivedrab 0%, olivedrab 100%);
+  border: 1px solid olivedrab;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 10px 20px;
+  text-align: center;
+  text-decoration: none;
+  display: -webkit-inline-box;
+  border-radius: 20px;
+  transition: background 0.3s ease;
+  box-shadow: 0px 4px 5px rgba(0, 0, 0, 0.1);
+  justify-content: center;
+  height: 100%;
+  margin: 4px auto;
+}
+
+.splited-status {
+  background: linear-gradient(to bottom, brown 0%, brown 100%);
+  border: 1px solid brown;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 10px 20px;
+  text-align: center;
+  text-decoration: none;
+  display: -webkit-inline-box;
+  border-radius: 20px;
+  transition: background 0.3s ease;
+  box-shadow: 0px 4px 5px rgba(0, 0, 0, 0.1);
+  justify-content: center;
+  height: 100%;
+  margin: 4px auto;
+}
+
+.invedi-status {
+  background: linear-gradient(to bottom, blue 0%, blue 100%);
+  border: 1px solid blue;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 10px 20px;
+  text-align: center;
+  text-decoration: none;
+  display: -webkit-inline-box;
+  border-radius: 20px;
+  transition: background 0.3s ease;
+  box-shadow: 0px 4px 5px rgba(0, 0, 0, 0.1);
+  justify-content: center;
+  height: 100%;
+  margin: 4px auto;
+}
+
+.acknowledged-status {
+  background: linear-gradient(to bottom, #0094ff 0%, #0094ff 100%);
+  border: 1px solid #0094ff;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 10px 20px;
+  text-align: center;
+  text-decoration: none;
+  display: -webkit-inline-box;
+  border-radius: 20px;
+  transition: background 0.3s ease;
+  box-shadow: 0px 4px 5px rgba(0, 0, 0, 0.1);
+  justify-content: center;
+  height: 100%;
+  margin: 4px auto;
+}

@@ -1,0 +1,115 @@
+
+<div class="mat-table-container">
+
+  <mat-card>
+    <mat-card-content>
+      <mat-form-field appearance="fill" color="accent">
+        <mat-label>{{ 'searchBy' | translate }}:</mat-label>
+        <mat-select id="myComboBox" [(ngModel)]="selectedOption" (click)="onSelectionChange()">
+          <mat-option *ngFor="let option of options" [value]="option">
+            {{ option }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      &nbsp;
+
+      <ng-container *ngIf="selectedOption !== 'Created Date' else dateRangeField">
+        <mat-form-field appearance="fill" color="accent">
+          <mat-label>{{ label }}</mat-label>
+          <input matInput [(ngModel)]="searchValue" />
+        </mat-form-field>
+      </ng-container>
+
+      <ng-template #dateRangeField>
+        <mat-form-field appearance="fill" color="accent">
+          <mat-label>{{ label }}</mat-label>
+          <mat-date-range-input [rangePicker]="picker">
+            <input matStartDate [(ngModel)]="startDate" placeholder="Start date">
+            <input matEndDate [(ngModel)]="endDate" placeholder="End date">
+          </mat-date-range-input>
+          <mat-hint>MM/DD/YYYY – MM/DD/YYYY</mat-hint>
+          <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+          <mat-date-range-picker #picker></mat-date-range-picker>
+        </mat-form-field>
+      </ng-template>
+
+      &nbsp;
+      <button mat-flat-button color="accent" (click)="getPartnerGroups()">
+        <span>{{ 'search' | translate }} </span>
+        <mat-spinner *ngIf="showSpinnerforSearch" diameter="20"></mat-spinner>
+      </button>
+
+      &nbsp;
+
+      <button mat-flat-button color="accent" (click)="openAddPartnerGroupDialog()" *ngIf="isAdminUser">
+        <span>{{ 'addPartnerGroup' | translate }}</span>
+        <mat-spinner *ngIf="showSpinnerforSearch" diameter="20"></mat-spinner>
+      </button>
+    </mat-card-content>
+  </mat-card>
+
+
+  &nbsp;
+  <mat-card>
+    <mat-card-content>
+      <table mat-table [dataSource]="partnergroupsToDisplay">
+
+        {{ 'idColumn' | translate }}
+        <ng-container matColumnDef="id">
+          <th mat-header-cell *matHeaderCellDef>{{ 'partnerGroupID' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.id}} </td>
+        </ng-container>
+
+        {{ 'partnerGroupDescription' | translate }}
+        <ng-container matColumnDef="Description">
+          <th mat-header-cell *matHeaderCellDef>{{ 'description' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.description}} </td>
+        </ng-container>
+
+        {{ 'sourceParty' | translate }}
+        <ng-container matColumnDef="SourceParty">
+          <th mat-header-cell *matHeaderCellDef>{{ 'sourceParty' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.sourceParty}} </td>
+        </ng-container>
+
+        {{ 'destinationParty' | translate }}
+        <ng-container matColumnDef="DestinationParty">
+          <th mat-header-cell *matHeaderCellDef>{{ 'destinationParty' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.destinationParty}} </td>
+        </ng-container>
+
+        {{ 'createdDate' | translate }}
+        <ng-container matColumnDef="CreatedDate">
+          <th mat-header-cell *matHeaderCellDef>{{ 'createdDate' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.createdDate | date:'MMM-dd-yyyy HH:mm:ss'}} </td>
+        </ng-container>
+
+        <!--Edit-->
+        <ng-container matColumnDef="Edit" *ngIf="isAdminUser">
+          <th mat-header-cell *matHeaderCellDef> {{ 'actions' | translate }}</th>
+          <td mat-cell *matCellDef="let element">
+            <button mat-icon-button aria-label="normal button" (click)="openEditDialog(element)" color="accent" matTooltip="Edit Partner Group" matTooltipPosition="above">
+              <mat-icon>edit</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="columns"></tr>
+        <tr mat-row *matRowDef="let row; columns: columns"></tr>
+
+      </table>
+
+      <mat-paginator [length]="listOfPartnerGroups.length"
+                     [pageSize]="10"
+                     [pageSizeOptions]="[5, 10, 25, 100]"
+                     (page)="onPageChange($event)">
+      </mat-paginator>
+
+    </mat-card-content>
+  </mat-card>
+</div>
+
+<div *ngIf="showSpinner" class="spinner-overlay">
+  <mat-spinner></mat-spinner>
+</div>

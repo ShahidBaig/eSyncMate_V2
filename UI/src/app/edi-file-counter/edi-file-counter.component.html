@@ -1,0 +1,118 @@
+
+<div class="mat-table-container">
+  <mat-card>
+    <mat-card-content>
+      <form [formGroup]="EDIFilesCountForm">
+        <mat-form-field appearance="fill" color="accent">
+          <mat-label>{{ 'customers' | translate }}</mat-label>
+          <mat-select formControlName="customer" >
+            <mat-option *ngFor="let customer of customersList" [value]="customer.id">
+              {{ customer.name }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+        &nbsp;
+
+        <mat-form-field appearance="fill" color="accent">
+          <mat-label>{{ 'shipmentID' | translate }}</mat-label>
+          <input matInput formControlName="shipmentID">
+        </mat-form-field>
+        &nbsp;
+        <mat-form-field appearance="fill" color="accent">
+          <mat-label>{{ 'shipperNo' | translate }}</mat-label>
+          <input matInput formControlName="shipperNo">
+        </mat-form-field>
+        
+        &nbsp;
+        <mat-form-field color="accent">
+          <mat-label>{{ 'fromDate' | translate }}</mat-label>
+          <input formControlName="fromDate" matInput [matDatepicker]="fromDate">
+          <mat-hint>MM/DD/YYYY</mat-hint>
+          <mat-datepicker-toggle matIconSuffix [for]="fromDate"></mat-datepicker-toggle>
+          <mat-datepicker #fromDate></mat-datepicker>
+        </mat-form-field>
+        &nbsp;
+        <mat-form-field color="accent">
+          <mat-label>{{ 'toDate' | translate }}</mat-label>
+          <input formControlName="toDate" matInput [matDatepicker]="toDate">
+          <mat-hint>MM/DD/YYYY</mat-hint>
+          <mat-datepicker-toggle matIconSuffix [for]="toDate"></mat-datepicker-toggle>
+          <mat-datepicker #toDate></mat-datepicker>
+        </mat-form-field>
+        &nbsp;
+        &nbsp;
+        <button mat-flat-button color="accent" (click)="getEdiFilesCount()">
+          <span *ngIf="!showSpinnerforSearch">{{ 'search' | translate }}</span>
+          <mat-spinner *ngIf="showSpinnerforSearch" diameter="20"></mat-spinner>
+        </button>
+        &nbsp;
+        <button mat-flat-button color="accent" (click)="exportData()" *ngIf="ediCountFilesList && ediCountFilesList.length > 0">
+          <span *ngIf="!showSpinnerforSearch">{{ 'exportData' | translate }}</span>
+          <mat-spinner *ngIf="showSpinnerforSearch" diameter="20"></mat-spinner>
+        </button>
+        &nbsp;
+        &nbsp;
+        <br />
+        <span><strong>{{ 'total204count' | translate }}: {{ total204Count }},</strong></span>
+        &nbsp;
+        <span><strong>{{ 'total214count' | translate }}: {{ total214Count }}</strong> </span>
+      </form>
+    </mat-card-content>
+  </mat-card>
+
+
+  &nbsp;
+  <!-- src/app/edi-export/edi-export.component.html -->
+<mat-card>
+  <mat-card-content>
+    <table mat-table [dataSource]="ediDataToDisplay">
+      <ng-container matColumnDef="CustomerName">
+        <th mat-header-cell *matHeaderCellDef>{{ 'customerName' | translate }}</th>
+        <td mat-cell *matCellDef="let element"> {{element.customerName}} </td>
+      </ng-container>
+      <ng-container matColumnDef="DocumentDate">
+        <th mat-header-cell *matHeaderCellDef>{{ 'documentDate' | translate }}</th>
+        <td mat-cell *matCellDef="let element"> {{element.docDate | date:'MMM-dd-YYYY'}} </td>
+      </ng-container>
+      <ng-container matColumnDef="EDI204">
+        <th mat-header-cell *matHeaderCellDef>
+          {{ 'edi204count' | translate }}
+        </th>
+        <td mat-cell *matCellDef="let element"> {{element.counT_204}} </td>
+      </ng-container>
+      <ng-container matColumnDef="EDI214">
+        <th mat-header-cell *matHeaderCellDef>
+          {{ 'edi214count' | translate }}
+        </th>
+        <td mat-cell *matCellDef="let element"> {{element.counT_214}} </td>
+
+
+      </ng-container>
+
+      <ng-container matColumnDef="ShipmentId">
+        <th mat-header-cell *matHeaderCellDef>{{ 'shipmentID' | translate }}</th>
+        <td mat-cell *matCellDef="let element"> {{element.shipmentId}} </td>
+      </ng-container>
+
+      <!-- ShipmentShipperNo -->
+      <ng-container matColumnDef="ShipperNo">
+        <th mat-header-cell *matHeaderCellDef>{{ 'shipperNo' | translate }}</th>
+        <td mat-cell *matCellDef="let element"> {{element.shipperNo}} </td>
+      </ng-container>
+      <tr mat-header-row *matHeaderRowDef="columns"></tr>
+      <tr mat-row *matRowDef="let row; columns: columns"></tr>
+    </table>
+
+    <mat-paginator [length]="ediCountFilesList.length"
+                   [pageSize]="10"
+                   [pageSizeOptions]="[5, 10, 15, 20, 100]"
+                   (page)="onPageChange($event)">
+    </mat-paginator>
+  </mat-card-content>
+</mat-card>
+
+</div>
+
+<div *ngIf="showSpinner" class="spinner-overlay">
+  <mat-spinner></mat-spinner>
+</div>

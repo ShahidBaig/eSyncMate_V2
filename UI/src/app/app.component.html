@@ -1,0 +1,12 @@
+<page-header *ngIf="api.getTokenUserInfo()?.firstName" (menuClicked)="toggleSideNav()">
+</page-header>
+<ng-toast></ng-toast>
+<mat-sidenav-container>
+  <mat-sidenav mode="side" #sideNav opened class="mat-elevation-z6" *ngIf="api.getTokenUserInfo()?.firstName">
+    <side-nav></side-nav>
+  </mat-sidenav>
+  <mat-sidenav-content>
+    <router-outlet></router-outlet>
+  </mat-sidenav-content>
+</mat-sidenav-container>
+

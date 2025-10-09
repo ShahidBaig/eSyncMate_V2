@@ -1,0 +1,3 @@
+ALTER TABLE SCS_PrepareItemData
+ADD FileName VARCHAR(500) NULL
+GO

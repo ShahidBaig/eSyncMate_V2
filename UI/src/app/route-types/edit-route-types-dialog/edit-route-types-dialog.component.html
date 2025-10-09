@@ -1,0 +1,34 @@
+
+<div mat-dialog-content class="dialog-content">
+  <h1 class="dialog-title">{{ 'modifyRouteTypes' | translate }}</h1>
+  <form [formGroup]="updateRouteTypesForm" class="customer-form">
+
+    <mat-form-field class="form-field" [ngStyle]="{'display': 'none'}">
+      <mat-label>{{ 'id' | translate }}</mat-label>
+      <input matInput formControlName="id">
+    </mat-form-field>
+
+    <!-- Row 1: Route Types Name -->
+    <div class="form-row">
+      <mat-form-field class="form-field">
+        <mat-label>{{ 'routeTypesName' | translate }}</mat-label>
+        <input matInput formControlName="name">
+      </mat-form-field>
+    </div>
+
+    <!-- Row 2: Description -->
+    <div class="form-row">
+      <mat-form-field class="full-width" style="width: 100%;">
+        <mat-label>{{ 'description' | translate }}</mat-label>
+        <textarea matInput formControlName="description" style="height: 300px;"></textarea>
+      </mat-form-field>
+    </div>
+
+  </form>
+</div>
+
+<div mat-dialog-actions class="dialog-actions">
+  <button mat-button class="cancel-button" (click)="onCancel()">{{ 'cancel' | translate }}</button>
+  <button mat-raised-button color="primary" [disabled]="!updateRouteTypesForm.valid" (click)="updateRouteTypes()">{{ 'update' | translate }}</button>
+</div>
+

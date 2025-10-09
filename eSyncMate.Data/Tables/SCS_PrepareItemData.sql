@@ -1,0 +1,10 @@
+CREATE TABLE SCS_PrepareItemData 
+(
+	ID				INT IDENTITY(1,1) PRIMARY KEY,
+	ItemTypeID		NVARCHAR(500) NOT NULL,
+	CustomerID		VARCHAR(500),
+	CreatedDate		DATETIME NULL,
+	CSVData			IMAGE
+)
+GO
+

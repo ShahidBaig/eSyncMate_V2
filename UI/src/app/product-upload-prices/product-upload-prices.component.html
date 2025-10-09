@@ -1,0 +1,191 @@
+<div class="mat-table-container">
+  <mat-card *ngIf="isAdminUser">
+    <mat-card-content>
+      <mat-form-field class="form-field">
+        <mat-label>{{ 'erpCustomerID' | translate }}</mat-label>
+        <mat-select  (selectionChange)="onCustomerSelectionChange($event)">
+          <mat-option *ngFor="let customers of customersOptions" [value]="customers.erpCustomerID">
+            {{ customers.erpCustomerID }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+      &nbsp;
+      <button mat-flat-button color="accent"  (click)="downloadSampleFile()">
+        <span>
+          Sample download
+        </span>
+      </button>
+      &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;
+
+      <input class="file-input" type="file" (change)="onFileSelected($event)" accept=".csv,.xls,.xlsx">
+      &nbsp;
+      <button mat-icon-button color="accent" matTooltip="Clear File" matTooltipPosition="above" (click)="clearFile()">
+        <mat-icon style="margin-bottom:-9px;">clear</mat-icon>
+      </button>
+      &nbsp;
+
+      <button mat-flat-button color="accent" [disabled]="isButtonDisabled" (click)="uploadCustomerProductCatalogFile()">
+        <span>
+          {{ 'productUploadPrices' | translate }}
+        </span>
+
+      </button>
+    </mat-card-content>
+  </mat-card>
+  <mat-card>
+    <mat-card-content>
+      <mat-form-field appearance="fill" color="accent">
+        <mat-label>{{ 'searchBy' | translate }}:</mat-label>
+        <mat-select id="myComboBox" [(ngModel)]="selectedOption" (click)="onSelectionChange()">
+          <mat-option *ngFor="let option of options" [value]="option">
+            {{ option }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      &nbsp;
+      <ng-container *ngIf="selectedOption === 'ERP CustomerID' else defaultField">
+        <mat-form-field appearance="fill" color="accent">
+          <mat-label>Select ERP Customer ID</mat-label>
+          <mat-select [(ngModel)]="searchValue">
+            <mat-option *ngFor="let customer of customersOptions" [value]="customer.erpCustomerID">
+              {{ customer.erpCustomerID }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+      </ng-container>
+
+      <ng-template #defaultField>
+        <ng-container *ngIf="selectedOption !== 'Created Date' && selectedOption !== 'Promo StartDate' && selectedOption !== 'Promo EndDate' ; else dateRangeField">
+          <mat-form-field appearance="fill" color="accent">
+            <mat-label>{{ label }}</mat-label>
+            <input matInput [(ngModel)]="searchValue" />
+          </mat-form-field>
+        </ng-container>
+      </ng-template>
+
+      <ng-template #dateRangeField>
+        <mat-form-field appearance="fill" color="accent">
+          <mat-label>{{ label }}</mat-label>
+          <mat-date-range-input [rangePicker]="picker">
+            <input matStartDate [(ngModel)]="startDate" placeholder="From date">
+            <input matEndDate [(ngModel)]="endDate" placeholder="To date">
+          </mat-date-range-input>
+          <mat-hint>MM/DD/YYYY – MM/DD/YYYY</mat-hint>
+          <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+          <mat-date-range-picker #picker></mat-date-range-picker>
+        </mat-form-field>
+      </ng-template>
+
+
+      &nbsp;
+      <button mat-flat-button color="accent" (click)="getCustomerProductCatalog()">
+        <span>{{ 'search' | translate }} </span>
+        <mat-spinner *ngIf="showSpinnerforSearch" diameter="20"></mat-spinner>
+      </button>
+
+      &nbsp;
+
+      <button mat-flat-button color="accent" (click)="priceDescripencies(erpCustomerID)">
+        <mat-icon>download</mat-icon>
+        <span>Data Descripencies Download </span>
+        <!--<mat-spinner *ngIf="showSpinnerforSearch" diameter="20"></mat-spinner>-->
+      </button>
+
+    </mat-card-content>
+  </mat-card>
+  &nbsp;
+  <mat-card>
+    <mat-card-content>
+      <table mat-table [dataSource]="productUploadPricesToDisplay">
+
+        <ng-container matColumnDef="id">
+          <th mat-header-cell *matHeaderCellDef>{{ 'id' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.id}} </td>
+        </ng-container>
+        <!----ID Column-->
+        <ng-container matColumnDef="CustomerID">
+          <th mat-header-cell *matHeaderCellDef>{{ 'erpCustomerID' | translate }} </th>
+          <td mat-cell *matCellDef="let element"> {{element.customerID}} </td>
+        </ng-container>
+
+        <!--SourceParty-->
+        <ng-container matColumnDef="ItemID">
+          <th mat-header-cell *matHeaderCellDef>{{ 'erpItemID' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.itemID}} </td>
+        </ng-container>
+
+
+
+        <ng-container matColumnDef="ListPrice">
+          <th mat-header-cell *matHeaderCellDef>{{ 'promolistPrice' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.listPrice}} </td>
+        </ng-container>
+
+        <ng-container matColumnDef="OffPrice">
+          <th mat-header-cell *matHeaderCellDef>{{ 'promooffPrice' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.offPrice}} </td>
+        </ng-container>
+
+        <ng-container matColumnDef="MAPPrice">
+          <th mat-header-cell *matHeaderCellDef>{{ 'promomapPrice' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.mapPrice}} </td>
+        </ng-container>
+
+        <ng-container matColumnDef="PromoStartDate">
+          <th mat-header-cell *matHeaderCellDef>{{ 'promoStartDate' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.promoStartDate | date:'dd-MMM-yyyy hh:mm a'}} </td>
+        </ng-container>
+
+        <ng-container matColumnDef="PromoEndDate">
+          <th mat-header-cell *matHeaderCellDef>{{ 'promoEndDate' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.promoEndDate | date:'dd-MMM-yyyy hh:mm a'}} </td>
+        </ng-container>
+
+        <ng-container matColumnDef="CreatedDate">
+          <th mat-header-cell *matHeaderCellDef>{{ 'createdDate' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.createdDate | date:'dd-MMM-yyyy hh:mm a'}} </td>
+        </ng-container>
+
+        <ng-container matColumnDef="OldListPrice">
+          <th mat-header-cell *matHeaderCellDef>{{ 'originalListPrice' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.oldListPrice}} </td>
+        </ng-container>
+
+        <ng-container matColumnDef="OldPromoPrice">
+          <th mat-header-cell *matHeaderCellDef>{{ 'originalOffPrice' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.oldOffPrice}} </td>
+        </ng-container>
+
+        <ng-container matColumnDef="OldMAPPrice">
+          <th mat-header-cell *matHeaderCellDef>{{ 'originalMapPrice' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.oldMAPPrice}} </td>
+        </ng-container>
+
+        <!--Created Date-->
+        <!--Edit-->
+        <!--<ng-container matColumnDef="Edit">
+    <th mat-header-cell *matHeaderCellDef> Actions</th>
+    <td mat-cell *matCellDef="let element">
+      <button mat-icon-button aria-label="normal button" (click)="openEditDialog(element)" color="accent" matTooltip="Edit Customer Product Catalog" matTooltipPosition="above">
+        <mat-icon>edit</mat-icon>
+      </button>
+    </td>
+  </ng-container>-->
+
+        <tr mat-header-row *matHeaderRowDef="columns"></tr>
+        <tr mat-row *matRowDef="let row; columns: columns"></tr>
+
+      </table>
+
+      <mat-paginator [length]="listOfProductUploadPrices.length" [pageSize]="10" [pageSizeOptions]="[5, 10, 15, 20, 100]"
+                     (page)="onPageChange($event)">
+      </mat-paginator>
+
+    </mat-card-content>
+  </mat-card>
+</div>
+
+<div *ngIf="showSpinner" class="spinner-overlay">
+  <mat-spinner></mat-spinner>
+</div>

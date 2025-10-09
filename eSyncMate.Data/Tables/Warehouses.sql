@@ -1,0 +1,16 @@
+﻿CREATE TABLE [dbo].[Warehouses](
+	[Id] [int] IDENTITY(1,1) NOT NULL,
+	[WHSId] NVARCHAR(250)  NULL, 
+	[Name] [varchar](250) NOT NULL,
+	[Address1] [varchar](250) NOT NULL,
+	[Address2] [varchar](250)  NULL,
+	[City] [varchar](250) NOT NULL,
+	[State] [varchar](250) NOT NULL,
+	[Zip] [varchar](250) NOT NULL,
+	[Country] [varchar](250) NULL,
+	[Contact] [varchar](250) NULL,
+	[CreatedBy] [int] NOT NULL,
+	[CreatedDate] [datetime] NOT NULL,
+	[ModifiedBy] [int] NULL,
+	[ModifiedDate] [datetime] NULL,
+)

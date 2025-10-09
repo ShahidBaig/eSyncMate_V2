@@ -1,0 +1,3 @@
+ALTER TABLE SCSInventoryFeedData
+ADD BatchID				 NVARCHAR(500)
+	

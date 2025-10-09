@@ -1,0 +1,43 @@
+<div mat-dialog-content class="dialog-content">
+  <h1 class="dialog-title">{{ 'modifyPartnerGroup' | translate }}</h1>
+  <form [formGroup]="updatePartnerGroupForm" class="partnerGroup-form">
+
+    <!-- Row 1: Name -->
+    <div class="form-row">
+      <!-- Row 1: Name -->
+      <div class="form-row">
+        <mat-form-field class="form-field">
+          <mat-label>{{ 'sourceParty' | translate }}</mat-label>
+          <mat-select formControlName="sourceParty">
+            <mat-option *ngFor="let customers of customerOptions" [value]="customers.id">
+              {{ customers.name }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field class="form-field">
+          <mat-label>{{ 'destinationParty' | translate }}</mat-label>
+          <mat-select formControlName="destinationParty">
+            <mat-option *ngFor="let customers of customerOptions" [value]="customers.id">
+              {{ customers.name }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+    </div>
+
+    <!-- Row 2: Data -->
+    <div class="form-row">
+      <mat-form-field class="full-width" style="width: 100%;">
+        <mat-label>{{ 'description' | translate }}</mat-label>
+        <textarea matInput formControlName="description" style="height: 300px;"></textarea>
+      </mat-form-field>
+    </div>
+
+  </form>
+</div>
+
+<div mat-dialog-actions class="dialog-actions">
+  <button mat-button class="cancel-button" (click)="onCancel()">{{ 'cancel' | translate }}</button>
+  <button mat-raised-button color="primary" [disabled]="!updatePartnerGroupForm.valid" (click)="updatePartnerGroup()">{{ 'update' | translate }}</button>
+</div>

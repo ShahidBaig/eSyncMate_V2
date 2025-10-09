@@ -1,0 +1,204 @@
+<div mat-dialog-content class="dialog-content">
+  <h1 class="dialog-title">{{ 'addNewRoute' | translate }}</h1>
+  <form [formGroup]="newRouteForm" class="route-form">
+
+    <mat-tab-group>
+      <mat-tab label="General">
+        <br />
+        <!-- Row 1: Name -->
+        <div class="form-row">
+
+          <div class="form-field">
+            <mat-form-field class="form-field">
+              <mat-label>{{ 'name' | translate }}</mat-label>
+              <input type="text" formControlName="name" matInput placeholder="Name">
+            </mat-form-field>
+          </div>
+
+          <mat-form-field class="form-field">
+            <mat-label>{{ 'status' | translate }}</mat-label>
+            <mat-select formControlName="status">
+              <mat-option [value]="'Active'">Active</mat-option>
+              <mat-option [value]="'In-Active'">In-Active</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field class="form-field">
+            <mat-label>{{ 'sourceParty' | translate }}</mat-label>
+            <mat-select formControlName="sourceParty">
+              <mat-option *ngFor="let customers of customerOptions" [value]="customers.id">
+                {{ customers.name }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field class="form-field">
+            <mat-label>{{ 'destinationParty' | translate }}</mat-label>
+            <mat-select formControlName="destinationParty">
+              <mat-option *ngFor="let customers of customerOptions" [value]="customers.id">
+                {{ customers.name }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+
+        </div>
+
+        <div class="form-row">
+          <!-- Row 2: Name -->
+
+          <mat-form-field class="form-field">
+            <mat-label>{{ 'sourceConnector' | translate }}</mat-label>
+            <mat-select formControlName="sourceConnector">
+              <mat-option *ngFor="let connectors of connectorsOptions" [value]="connectors.id">
+                {{ connectors.name }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field class="form-field">
+            <mat-label>{{ 'destinationConnector' | translate }}</mat-label>
+            <mat-select formControlName="destinationConnector">
+              <mat-option *ngFor="let connectors of connectorsOptions" [value]="connectors.id">
+                {{ connectors.name }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field class="form-field">
+            <mat-label>{{ 'map' | translate }}</mat-label>
+            <mat-select formControlName="map">
+              <mat-option *ngFor="let mapss of mapsOptions" [value]="mapss.id">
+                {{ mapss.name }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+        </div>
+        <!-- Row 2: Name -->
+        <div class="form-row">
+          <mat-form-field class="form-field">
+            <mat-label>{{ 'partnerGroup' | translate }}</mat-label>
+            <mat-select formControlName="partnerGroup">
+              <mat-option *ngFor="let partnerGroup of partnerGroupOptions" [value]="partnerGroup.id">
+                {{ partnerGroup.description }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field class="form-field">
+            <mat-label>{{ 'routeType' | translate }}</mat-label>
+            <mat-select formControlName="routeType">
+              <mat-option *ngFor="let routeType of routeTypesOptions" [value]="routeType.id">
+                {{ routeType.name }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <div class="form-field">
+            <mat-form-field class="form-field">
+              <mat-label>{{ 'routeGroup' | translate }}</mat-label>
+              <input type="text" formControlName="routeGroup" matInput placeholder="Route Group">
+            </mat-form-field>
+          </div>
+        </div>
+      </mat-tab>
+
+      <mat-tab label="Scheduler">
+        <br />
+        <div class="form-row">
+          <mat-form-field class="form-field">
+            <input formControlName="startDate" matInput [matDatepicker]="startDatePicker" placeholder="Start Date">
+            <mat-datepicker-toggle matSuffix [for]="startDatePicker"></mat-datepicker-toggle>
+            <mat-datepicker #startDatePicker></mat-datepicker>
+          </mat-form-field>
+
+          <mat-form-field class="form-field">
+            <input formControlName="endDate" matInput [matDatepicker]="endDatePicker" placeholder="End Date">
+            <mat-datepicker-toggle matSuffix [for]="endDatePicker"></mat-datepicker-toggle>
+            <mat-datepicker #endDatePicker></mat-datepicker>
+          </mat-form-field>
+
+          <div class="form-field" *ngIf="showRepeatCount">
+            <mat-form-field class="form-field">
+              <mat-label>{{ 'repeatCount' | translate }}</mat-label>
+              <input type="number" formControlName="repeatCount" matInput placeholder="Rqepeat Count">
+            </mat-form-field>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-field" *ngIf="showExecutionTime">
+            <mat-form-field class="form-field">
+              <mat-label> {{ 'executionTime' | translate }}</mat-label>
+              <mat-chip-grid #chipGrid aria-label="Enter executionTime">
+                <mat-chip-row *ngFor="let executionTime of executionTimelist; let i = index" (removed)="executionTimeRemove(executionTime)"
+                              [editable]="true"
+                              (edited)="executionTimeEdit(executionTime, $event)"
+                              [aria-description]="'press enter to edit ' + executionTime.name">
+                  {{executionTime.name}}
+                  <button matChipRemove [attr.aria-label]="'executionTimeRemove ' + executionTime.name">
+                    <mat-icon>cancel</mat-icon>
+                  </button>
+                </mat-chip-row>
+                <input type="time" formControlName="executionTime"
+                       placeholder="Execution Time.."
+                       [matChipInputFor]="chipGrid"
+                       [matChipInputSeparatorKeyCodes]="separatorKeysCodes"
+                       [matChipInputAddOnBlur]="addOnBlur"
+                       (matChipInputTokenEnd)="executionTimeAdd($event)" />
+              </mat-chip-grid>
+            </mat-form-field>
+          </div>
+
+
+          <mat-form-field class="form-field">
+            <mat-label>{{ 'frequencyType' | translate }}</mat-label>
+            <mat-select formControlName="frequencyType">
+              <mat-option *ngFor="let frequencyType of frequencyTypeOptions" [value]="frequencyType">
+                {{ frequencyType }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+        </div>
+
+        <div class="form-row" style="overflow:hidden;">
+          <div *ngIf="showdaysOfWeek" class="form-field checkbox-container">
+            <div *ngFor="let day of daysOfWeek; let i = index" class="checkbox-label">
+              <mat-checkbox [formControl]="getSelectedWeekdayControl(i)!" [value]="day">
+                {{ day }}
+              </mat-checkbox>
+            </div>
+          </div>
+
+          <div class="form-field" *ngIf="showOnDayInput">
+            <mat-form-field class="example-chip-list">
+              <mat-label> {{ 'onDay' | translate }}</mat-label>
+              <mat-chip-grid #chipGrid aria-label="Enter ondays">
+                <mat-chip-row *ngFor="let onday of onDayList; let i = index" (removed)="remove(onday)"
+                              [editable]="true"
+                              (edited)="edit(onday, $event)"
+                              [aria-description]="'press enter to edit ' + onday.name">
+                  {{onday.name}}
+                  <button matChipRemove [attr.aria-label]="'remove ' + onday.name">
+                    <mat-icon>cancel</mat-icon>
+                  </button>
+                </mat-chip-row>
+                <input formControlName="onDay"
+                       placeholder="On Day.."
+                       [matChipInputFor]="chipGrid"
+                       [matChipInputSeparatorKeyCodes]="separatorKeysCodes"
+                       [matChipInputAddOnBlur]="addOnBlur"
+                       (matChipInputTokenEnd)="add($event)" />
+              </mat-chip-grid>
+            </mat-form-field>
+          </div>
+        </div>
+      </mat-tab>
+
+    </mat-tab-group>
+  </form>
+</div>
+
+<div mat-dialog-actions class="dialog-actions">
+  <button mat-button class="cancel-button" (click)="onCancel()">{{ 'cancel' | translate }}</button>
+  <button mat-raised-button color="primary" (click)="onSave()">{{ 'save' | translate }}</button>
+</div>

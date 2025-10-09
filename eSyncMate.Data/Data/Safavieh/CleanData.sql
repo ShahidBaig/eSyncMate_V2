@@ -1,0 +1,14 @@
+﻿TRUNCATE TABLE SCS_ItemsTypeReport
+TRUNCATE TABLE SCS_ItemsType
+TRUNCATE TABLE SCS_ItemTypeAttribute
+TRUNCATE TABLE SCS_CustomerProductCatalog
+TRUNCATE TABLE SCSInventoryFeed
+
+TRUNCATE TABLE Temp_ProductUploadPrices
+TRUNCATE TABLE Temp_SCS_CustomerProductCatalog
+TRUNCATE TABLE Temp_SCS_ItemsType
+TRUNCATE TABLE Temp_SCS_ItemTypeAttribute
+TRUNCATE TABLE Temp_SCSInventoryFeed
+
+TRUNCATE TABLE RouteLog
+TRUNCATE TABLE RouteData

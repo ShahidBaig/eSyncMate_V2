@@ -1,0 +1,164 @@
+<div class="mat-table-container">
+
+  <mat-card>
+    <mat-card-content>
+      <mat-form-field appearance="fill" color="accent">
+        <mat-label>{{ 'searchBy' | translate }}:</mat-label>
+        <mat-select id="myComboBox" [(ngModel)]="selectedOption" (click)="onSelectionChange()">
+          <mat-option *ngFor="let option of options" [value]="option">
+            {{ option }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      &nbsp;
+
+      <ng-container *ngIf="selectedOption !== 'Created Date' else dateRangeField">
+        <mat-form-field appearance="fill" color="accent">
+          <mat-label>{{ label }}</mat-label>
+          <input matInput [(ngModel)]="searchValue" />
+        </mat-form-field>
+      </ng-container>
+
+      <ng-template #dateRangeField>
+        <mat-form-field appearance="fill" color="accent">
+          <mat-label>{{ label }}</mat-label>
+          <mat-date-range-input [rangePicker]="picker">
+            <input matStartDate [(ngModel)]="startDate" placeholder="Start date">
+            <input matEndDate [(ngModel)]="endDate" placeholder="End date">
+          </mat-date-range-input>
+          <mat-hint>MM/DD/YYYY – MM/DD/YYYY</mat-hint>
+          <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+          <mat-date-range-picker #picker></mat-date-range-picker>
+        </mat-form-field>
+      </ng-template>
+      &nbsp;
+      <button mat-flat-button color="accent" (click)="getInvFeedFromNDC()">
+        <span>{{ 'searchinvFeedFromNDC' | translate }}</span>
+        <mat-spinner *ngIf="showSpinnerforSearch" diameter="20"></mat-spinner>
+      </button>
+
+      &nbsp;
+      <input class="file-input" type="file" (change)="onFileSelected($event)" accept=".xlsx, .xls">
+
+      <button mat-icon-button color="accent" matTooltip="Clear File" matTooltipPosition="above" (click)="clearFile()">
+        <mat-icon style="margin-bottom:-9px;">clear</mat-icon>
+      </button>
+      <button mat-flat-button color="accent" [disabled]="isButtonDisabled" (click)="uploadFile()">
+        Import
+      </button>
+
+    </mat-card-content>
+  </mat-card>
+
+
+  &nbsp;
+  <mat-card>
+    <mat-card-content>
+      <table mat-table [dataSource]="mapsToDisplay">
+
+        <!-- ID Column -->
+        <ng-container matColumnDef="id" [style.display]="showDataColumn ? 'none' : 'none'">
+          <th mat-header-cell *matHeaderCellDef [style.display]="showDataColumn ? 'none' : 'none'">{{ 'id' | translate }}</th>
+          <td mat-cell *matCellDef="let element" [style.display]="showDataColumn ? 'none' : 'none'"> {{element.id}} </td>
+        </ng-container>
+
+        <!-- ItemID -->
+        <ng-container matColumnDef="ItemID">
+          <th mat-header-cell *matHeaderCellDef>{{ 'itemID' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.itemID}} </td>
+        </ng-container>
+
+        <!-- SKU -->
+        <ng-container matColumnDef="SKU">
+          <th mat-header-cell *matHeaderCellDef>{{ 'sku' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.sku}} </td>
+        </ng-container>
+
+        <!-- UnitPrice -->
+        <ng-container matColumnDef="UnitPrice">
+          <th mat-header-cell *matHeaderCellDef>{{ 'unitPrice' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.unitPrice}} </td>
+        </ng-container>
+
+        <!-- ManufacturerName -->
+        <ng-container matColumnDef="ManufacturerName">
+          <th mat-header-cell *matHeaderCellDef>Manufacturer Name</th>
+          <td mat-cell *matCellDef="let element"> {{element.manufacturerName}} </td>
+        </ng-container>
+
+        <!-- NDCItemID -->
+        <ng-container matColumnDef="NDCItemID">
+          <th mat-header-cell *matHeaderCellDef>NDC SKU</th>
+          <td mat-cell *matCellDef="let element"> {{element.ndcItemID}} </td>
+        </ng-container>
+
+        <!-- NDCItemID -->
+        <ng-container matColumnDef="ProductName">
+          <th mat-header-cell *matHeaderCellDef>Product Name</th>
+          <td mat-cell *matCellDef="let element"> {{element.productName}} </td>
+        </ng-container>
+
+        <!-- PrimaryCategoryName -->
+        <ng-container matColumnDef="PrimaryCategoryName" [style.display]="showDataColumn ? 'none' : 'none'">
+          <th mat-header-cell *matHeaderCellDef [style.display]="showDataColumn ? 'none' : 'none'">Primary Category Name</th>
+          <td mat-cell *matCellDef="let element" [style.display]="showDataColumn ? 'none' : 'none'"> {{element.primaryCategoryName}} </td>
+        </ng-container>
+
+        <!-- SecondaryCategoryName -->
+        <ng-container matColumnDef="SecondaryCategoryName" [style.display]="showDataColumn ? 'none' : 'none'">
+          <th mat-header-cell *matHeaderCellDef [style.display]="showDataColumn ? 'none' : 'none'">Search Shipment From NDC</th>
+          <td mat-cell *matCellDef="let element" [style.display]="showDataColumn ? 'none' : 'none'"> {{element.secondaryCategoryName}} </td>
+        </ng-container>
+
+        <!-- ETADate -->
+        <ng-container matColumnDef="ETADate" [style.display]="showDataColumn ? 'none' : 'none'">
+          <th mat-header-cell *matHeaderCellDef [style.display]="showDataColumn ? 'none' : 'none'">{{ 'etaDate' | translate }}</th>
+          <td mat-cell *matCellDef="let element" [style.display]="showDataColumn ? 'none' : 'none'"> {{element.etaDate | date:'MMM-dd-YYYY HH:mm:ss'}} </td>
+        </ng-container>
+
+        <!-- ETAQty -->
+        <ng-container matColumnDef="ETAQty" [style.display]="showDataColumn ? 'none' : 'none'">
+          <th mat-header-cell *matHeaderCellDef [style.display]="showDataColumn ? 'none' : 'none'">{{ 'etaQty' | translate }}</th>
+          <td mat-cell *matCellDef="let element" [style.display]="showDataColumn ? 'none' : 'none'"> {{element.etaQty}} </td>
+        </ng-container>
+
+        <!-- Created Date -->
+        <ng-container matColumnDef="CreatedDate">
+          <th mat-header-cell *matHeaderCellDef>{{ 'createdDate' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.createdDate | date:'MMM-dd-YYYY HH:mm:ss'}} </td>
+        </ng-container>
+
+        <!-- Actions Column -->
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef>{{ 'actions' | translate }}</th>
+          <td mat-cell *matCellDef="let element">
+            <!-- <button mat-icon-button aria-label="normal button" (click)="openEditDialog(element)" color="accent"
+              matTooltip="Edit Route" matTooltipPosition="above">
+        <mat-icon>edit</mat-icon>
+      </button> -->
+            <button mat-icon-button aria-label="normal button" (click)="showRouteLog(element)" color="accent"
+                    matTooltip="Route Log" matTooltipPosition="above">
+              <mat-icon>history</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="columns"></tr>
+        <tr mat-row *matRowDef="let row; columns: columns"></tr>
+
+      </table>
+
+      <mat-paginator [length]="listOfMaps.length"
+                     [pageSize]="10"
+                     [pageSizeOptions]="[5, 10, 25, 100]"
+                     (page)="onPageChange($event)">
+      </mat-paginator>
+
+    </mat-card-content>
+  </mat-card>
+</div>
+
+<div *ngIf="showSpinner" class="spinner-overlay">
+  <mat-spinner></mat-spinner>
+</div>

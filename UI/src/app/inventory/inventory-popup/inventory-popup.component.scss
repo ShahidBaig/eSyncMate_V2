@@ -1,0 +1,74 @@
+.close-button {
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+
+:host {
+  display: unset;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+}
+
+.button-container {
+  display: flex;
+  justify-content: space-between;
+  margin: 16px; /* Adds space around the container */
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #f0f0f0;
+  border-bottom: 1px solid #ccc;
+}
+
+.body {
+  padding: 20px;
+}
+
+.mat-table-container {
+  max-height: 450px;
+  overflow-y: auto;
+  cursor: pointer;
+  margin: 16px;
+}
+
+.mat-table-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.mat-table-container::-webkit-scrollbar-thumb {
+  background-color: #ccc;
+  border-radius: 4px;
+}
+
+.mat-table-container::-webkit-scrollbar-track {
+  background-color: #f0f0f0;
+}
+.dialog-actions {
+  display: flex;
+  justify-content: space-between;
+  padding: 16px 24px 24px;
+  border-top: 1px solid #eee;
+}
+mat-form-field {
+  width: 100%;
+}
+
+
+.form-row {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap; /* Allows fields to wrap on smaller screens */
+}
+
+.form-field {
+  flex: 1; /* Each field takes equal space */
+  max-width: 500px; /* Increase max-width as needed */
+}
+.cdk-column-CustomerId,.cdk-column-ItemId,.cdk-column-type,.cdk-column-createdDate{
+ min-width: 150px !important
+}

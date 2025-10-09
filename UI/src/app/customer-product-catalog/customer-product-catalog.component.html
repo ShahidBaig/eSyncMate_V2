@@ -1,0 +1,232 @@
+<div class="mat-table-container">
+
+
+  <mat-card *ngIf="isAdminUser">
+    <mat-card-content>
+      <mat-form-field class="form-field">
+        <mat-label>ERP CustomerID</mat-label>
+        <mat-select [(ngModel)]="erpCustomerID" (selectionChange)="onCustomerSelectionChange($event)">
+          <mat-option *ngFor="let customers of customersOptions" [value]="customers.erpCustomerID">
+            {{ customers.erpCustomerID }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+      &nbsp;
+      <mat-form-field class="form-field custom-width">
+        <mat-label>Item Types</mat-label>
+        <input type="text"
+               placeholder="Filter Item Types"
+               aria-label="Filter Item Types"
+               matInput
+               [(ngModel)]="itemTypeFilter"
+               [matAutocomplete]="auto" />
+        <mat-autocomplete #auto="matAutocomplete"
+                          (optionSelected)="onItemTypesChange($event)"
+                          [displayWith]="displayItemType">
+          <mat-option *ngFor="let itemType of getFilteredItemTypes()" [value]="itemType">
+            {{ itemType.item_Type }} - {{ itemType.brand }} - {{ itemType.item_Type_Id }}
+          </mat-option>
+        </mat-autocomplete>
+      </mat-form-field>
+
+      &nbsp;
+
+      <button mat-flat-button color="accent" [disabled]="isButtonDisabled" (click)="downloadSampleFile(erpCustomerID,itemTypes)">
+        <span>
+          Sample download
+        </span>
+      </button>
+      &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;
+      <input class="file-input" type="file" (change)="onFileSelected($event)" accept=".csv,.xls,.xlsx">
+      &nbsp;
+      <button mat-icon-button color="accent" matTooltip="Clear File" matTooltipPosition="above" (click)="clearFile()">
+        <mat-icon style="margin-bottom:-9px;">clear</mat-icon>
+      </button>
+      &nbsp;
+      <button mat-flat-button color="accent" [disabled]="isButtonDisabled" (click)="uploadCustomerProductCatalogFile()">
+        <span>
+          Upload File
+        </span>
+
+      </button>
+      &nbsp; &nbsp; &nbsp;
+      <button mat-flat-button color="accent" (click)="downloadRejectProductCSV(erpCustomerID)">
+        <mat-icon>download</mat-icon>
+        <span>Rejected CSV Download </span>
+        <!--<mat-spinner *ngIf="showSpinnerforSearch" diameter="20"></mat-spinner>-->
+      </button>
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card>
+    <mat-card-content>
+
+      <div class="grid-container">
+        <mat-form-field appearance="fill" color="accent">
+          <mat-label>Search by:</mat-label>
+          <mat-select id="myComboBox" [(ngModel)]="selectedOption" (selectionChange)="onSelectionChange()">
+            <mat-option *ngFor="let option of options" [value]="option">
+              {{ option }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <ng-container *ngIf="selectedOption === 'ERP CustomerID' else defaultField">
+          <mat-form-field appearance="fill" color="accent">
+            <mat-label>Select ERP Customer ID</mat-label>
+            <mat-select [(ngModel)]="searchValue">
+              <mat-option *ngFor="let customer of customersOptions" [value]="customer.erpCustomerID">
+                {{ customer.erpCustomerID }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+        </ng-container>
+
+        <ng-template #defaultField>
+          <ng-container *ngIf="selectedOption !== 'Created Date' else dateRangeField">
+            <mat-form-field appearance="fill" color="accent">
+              <mat-label>{{ label }}</mat-label>
+              <input matInput [(ngModel)]="searchValue" />
+            </mat-form-field>
+          </ng-container>
+        </ng-template>
+
+        <!-- Date Range Picker -->
+        <ng-template #dateRangeField>
+          <mat-form-field appearance="fill" color="accent">
+            <mat-label>{{ label }}</mat-label>
+            <mat-date-range-input [rangePicker]="picker">
+              <input matStartDate [(ngModel)]="startDate" placeholder="Start date">
+              <input matEndDate [(ngModel)]="endDate" placeholder="End date">
+            </mat-date-range-input>
+            <mat-hint>MM/DD/YYYY – MM/DD/YYYY</mat-hint>
+            <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+            <mat-date-range-picker #picker></mat-date-range-picker>
+          </mat-form-field>
+        </ng-template>
+
+
+        <button mat-flat-button color="accent" (click)="getCustomerProductCatalog()">
+          <span>Search </span>
+          <mat-spinner *ngIf="showSpinnerforSearchData" diameter="20"></mat-spinner>
+        </button>
+        <div class="action-row" *ngIf="isAdminUser">
+          <mat-form-field appearance="fill" color="accent">
+            <mat-label>{{ 'erpCustomerID' | translate }}</mat-label>
+            <input matInput [(ngModel)]="erpCustomerID" readonly>
+          </mat-form-field>
+          <mat-form-field>
+            <mat-label>{{ 'itemTypes' | translate }}</mat-label>
+            <input matInput [(ngModel)]="itemTypeName" readonly>
+          </mat-form-field>
+          &nbsp;&nbsp;&nbsp;&nbsp;
+          <button mat-flat-button color="accent" matTooltip="Download Items Data"
+                  (click)="downloadItemsDataCSV(erpCustomerID,itemTypes)">
+            <mat-icon>download</mat-icon>
+            <span>Download</span>
+            <mat-spinner *ngIf="showSpinnerforSearch" diameter="20"></mat-spinner>
+          </button>
+          &nbsp;&nbsp;&nbsp;&nbsp;
+          <button mat-flat-button color="primary" (click)="processErrorResolve()">
+            <span>Clear Errors </span>
+            <mat-spinner *ngIf="showSpinnerforSearchData" diameter="20"></mat-spinner>
+          </button>
+        </div>
+      </div>
+    </mat-card-content>
+
+  </mat-card>
+  &nbsp;
+  <mat-card>
+    <mat-card-content>
+      <table mat-table [dataSource]="customerProductCatalogToDisplay">
+
+        <ng-container matColumnDef="ProductId">
+          <th mat-header-cell *matHeaderCellDef>{{ 'id' | translate }} </th>
+          <td mat-cell *matCellDef="let element"> {{element.productId}} </td>
+        </ng-container>
+        <!----ID Column-->
+        <ng-container matColumnDef="CustomerID">
+          <th mat-header-cell *matHeaderCellDef>{{ 'erpCustomerID' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.customerID}} </td>
+        </ng-container>
+
+        <!--ItemID-->
+        <ng-container matColumnDef="ItemID">
+          <th mat-header-cell *matHeaderCellDef>{{ 'erpItemID' | translate }}</th>
+          <td mat-cell *matCellDef="let element">
+            {{element.itemID}}
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="UPC">
+          <th mat-header-cell *matHeaderCellDef>UPC</th>
+          <td mat-cell *matCellDef="let element"> {{element.upc}} </td>
+        </ng-container>
+
+        <ng-container matColumnDef="Status">
+          <th mat-header-cell *matHeaderCellDef>{{ 'status' | translate }}</th>
+          <td mat-cell *matCellDef="let element"  [ngClass]="getStatusClass(element.syncStatus)"
+            [matTooltip]="getTooltipWithTranslation(element)" matTooltipPosition="right">
+          {{element.syncStatus}} </td>
+        </ng-container>
+
+        <ng-container matColumnDef="itemTypeName">
+          <th mat-header-cell *matHeaderCellDef>{{ 'itemTypeName' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.itemTypeName}} </td>
+        </ng-container>
+
+        <ng-container matColumnDef="ParentID">
+          <th mat-header-cell *matHeaderCellDef>{{ 'parentID' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.parentID}} </td>
+        </ng-container>
+
+        <ng-container matColumnDef="ListPrice">
+          <th mat-header-cell *matHeaderCellDef>{{ 'listPrice' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.listPrice}} </td>
+        </ng-container>
+
+        <ng-container matColumnDef="MapPrice">
+          <th mat-header-cell *matHeaderCellDef>{{ 'mapPrice' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.mapPrice}} </td>
+        </ng-container>
+
+        <!--Created Date-->
+        <ng-container matColumnDef="CreatedDate">
+          <th mat-header-cell *matHeaderCellDef>{{ 'modifiedDate' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.createdDate | date:'MMM-dd-yyyy HH:mm:ss'}} </td>
+        </ng-container>
+
+        <!--Edit-->
+        <ng-container matColumnDef="Edit" *ngIf="isAdminUser">
+          <th mat-header-cell *matHeaderCellDef> {{ 'actions' | translate }}</th>
+          <td mat-cell *matCellDef="let element" style="display: flex">
+            <button mat-icon-button aria-label="normal button" (click)="openEditDialog(element)" color="accent" matTooltip="Edit Customer Product Catalog" matTooltipPosition="above">
+              <mat-icon>edit</mat-icon>
+            </button>
+
+            <button mat-icon-button aria-label="normal button" (click)="showProductsData(element)" color="accent"
+                    matTooltip="Product Data" matTooltipPosition="above" style="display:flex; justify-content:end">
+              <mat-icon>read_more</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="columns"></tr>
+        <tr mat-row *matRowDef="let row; columns: columns"></tr>
+
+      </table>
+
+      <mat-paginator [length]="listOfCustomerProductCatalog.length"
+                     [pageSize]="10"
+                     [pageSizeOptions]="[5, 10, 25, 100]"
+                     (page)="onPageChange($event)">
+      </mat-paginator>
+
+    </mat-card-content>
+  </mat-card>
+</div>
+
+<div *ngIf="showSpinner" class="spinner-overlay">
+  <mat-spinner></mat-spinner>
+</div>

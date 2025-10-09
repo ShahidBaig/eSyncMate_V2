@@ -1,0 +1,147 @@
+<div class="header" style="padding: 20px;">
+  <h1 class="dialog-title" style="margin-bottom: 0px;">Order [{{data.orderNumber}}] Logs</h1>
+  <button mat-icon-button color="accent" aria-label="normal button" class="close-button" (click)="closeDialog()">
+    <mat-icon>close</mat-icon>
+  </button>
+</div>
+
+<div class="body">
+  <div class="mat-table-container">
+    <table mat-table [dataSource]="data.listOfOrderFiles" *ngIf="!optionalProperty">
+      <!-- Define the columns -->
+      <ng-container matColumnDef="id">
+        <th mat-header-cell *matHeaderCellDef>{{ 'logID' | translate }}</th>
+
+        <td mat-cell *matCellDef="let element" > {{element.id}} </td>
+      </ng-container>
+
+      <!-- type -->
+      <ng-container matColumnDef="type">
+        <th mat-header-cell *matHeaderCellDef>{{ 'type' | translate }}</th>
+        <!-- <td mat-cell *matCellDef="let element"> {{element.type}} </td> -->
+        <td class="modalType" mat-cell *matCellDef="let element">
+          <div style="display: flex; align-items: center;">
+            <div style="padding: 3px 0px 0px 5px;">
+              <!-- <mat-icon>{{ typeMap[element.type].icon }}</mat-icon> -->
+            </div>
+            <div>
+              {{ typeMap[element?.type].name }}
+            </div>
+          </div>
+        </td>
+      </ng-container>
+
+      <!-- Created Date -->
+      <ng-container matColumnDef="createdDate">
+        <th mat-header-cell *matHeaderCellDef>{{ 'createdDate' | translate }}</th>
+        <td mat-cell *matCellDef="let element"> {{element.createdDate | date:'MMM-dd-YYYY HH:mm:ss'}} </td>
+
+      </ng-container>
+
+      <!-- data -->
+
+      <ng-container matColumnDef="data" [style.display]="showDataColumn ? 'none' : 'none'">
+        <th mat-header-cell *matHeaderCellDef [style.display]="showDataColumn ? 'none' : 'none'">{{ 'data' | translate
+          }}</th>
+        <td mat-cell *matCellDef="let element" [style.display]="showDataColumn ? 'none' : 'none'">
+          {{element.data}}
+        </td>
+      </ng-container>
+
+
+      <!-- FileName -->
+      <ng-container matColumnDef="fileName">
+        <th mat-header-cell *matHeaderCellDef>{{ 'fileName' | translate }}</th>
+        <td mat-cell *matCellDef="let element"> {{element.fileName}} </td>
+      </ng-container>
+
+      <!--Download/ViewFile-->
+      <ng-container matColumnDef="DownloadFile">
+        <th mat-header-cell *matHeaderCellDef>{{ 'actions' | translate }}</th>
+        <td mat-cell *matCellDef="let element" class="Custom">
+          <!-- Download Button -->
+          <button mat-icon-button color="accent" aria-label="Download button" [disabled]="showSpinner"
+            matTooltip="Download File" matTooltipPosition="left"
+            (click)="downloadFile(element.data, element.fileName)">
+            <mat-icon>save_alt</mat-icon>
+            <mat-spinner *ngIf="showSpinner" diameter="20"></mat-spinner>
+          </button>
+
+          <!-- View Button -->
+          <button mat-icon-button color="accent" aria-label="View button" matTooltip="View File"
+            matTooltipPosition="right" (click)="viewFile(element.data, element.fileName)">
+            <mat-icon>visibility</mat-icon>
+          </button>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="columns"></tr>
+      <tr mat-row *matRowDef="let row; columns: columns"></tr>
+    </table>
+    <div *ngIf="optionalProperty">
+      <!-- Ack Type Field -->
+      <div class="form-row">
+        <mat-form-field class="form-field">
+          <mat-label>{{ 'ackType' | translate }}</mat-label>
+          <mat-select [(ngModel)]="data.listOfCarrier.trackStatus">
+            <mat-option *ngFor="let ackData of data.listAckData" [value]="ackData.id">
+              {{ ackData.id + " - " + ackData.description }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+
+      </div>
+
+      <!-- Three distinct properties in one row -->
+      <div class="form-row">
+        <mat-form-field class="form-field">
+          <mat-label>{{ 'consigneeAddress' | translate }}</mat-label>
+          <input matInput [(ngModel)]="data.listOfCarrier.consigneeAddress">
+        </mat-form-field>
+
+        <mat-form-field class="form-field">
+          <mat-label>{{ 'consigneeCity' | translate }}</mat-label>
+          <input matInput [(ngModel)]="data.listOfCarrier.consigneeCity">
+        </mat-form-field>
+      </div>
+
+      <!-- Additional rows can be added similarly -->
+      <div class="form-row">
+        <mat-form-field class="form-field">
+          <mat-label>{{ 'consigneeState' | translate }}</mat-label>
+          <mat-select [(ngModel)]="data.listOfCarrier.consigneeState" (selectionChange)="onStateChange($event)">
+            <mat-option *ngFor="let states of data.listStatesData" [value]="states.scS_Code">
+              {{ states.scS_Code }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field class="form-field">
+          <mat-label>{{ 'consigneeZIP' | translate }}</mat-label>
+          <input matInput [(ngModel)]="data.listOfCarrier.consigneeZip">
+        </mat-form-field>
+
+        <mat-form-field class="form-field">
+          <mat-label>{{ 'consigneeCountry' | translate }}</mat-label>
+          <input matInput [(ngModel)]="data.listOfCarrier.consigneeCountry">
+        </mat-form-field>
+
+        <mat-form-field class="form-field">
+          <mat-label>{{ 'vehicleplate' | translate }}</mat-label>
+          <input matInput [(ngModel)]="data.listOfCarrier.equipmentNo" readonly>
+        </mat-form-field>
+
+        <mat-form-field class="form-field">
+          <mat-label>{{ 'manualvehicleplate' | translate }}</mat-label>
+          <input matInput [(ngModel)]="data.listOfCarrier.manualEquipmentNo">
+        </mat-form-field>
+      </div>
+
+      <div mat-dialog-actions class="dialog-actions">
+        <button mat-raised-button color="primary" [disabled]="!data.listOfCarrier.trackStatus"
+          (click)="updateTrackStatus()">{{ 'save' | translate }}</button>
+      </div>
+    </div>
+
+  </div>
+</div>

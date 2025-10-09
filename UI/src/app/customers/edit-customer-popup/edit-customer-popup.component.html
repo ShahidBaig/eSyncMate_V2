@@ -1,0 +1,55 @@
+<div mat-dialog-content class="dialog-content">
+  <h1 class="dialog-title">{{ 'modifyCustomer' | translate }}</h1>
+  <form [formGroup]="updateCustomerForm" class="customer-form">
+
+    <mat-form-field class="form-field" [ngStyle]="{'display': 'none'}">
+      <mat-label>{{ 'customerID' | translate }}</mat-label>
+      <input matInput formControlName="id">
+    </mat-form-field>
+
+    <!-- Row 1: Customer Name and ERP Customer ID -->
+    <div class="form-row">
+      <mat-form-field class="form-field">
+        <mat-label>{{ 'customerName' | translate }}</mat-label>
+        <input matInput formControlName="name">
+      </mat-form-field>
+
+      <mat-form-field class="form-field">
+        <mat-label>{{ 'erpCustomerID' | translate }}</mat-label>
+        <input matInput formControlName="erpCustomerId">
+      </mat-form-field>
+    </div>
+
+    <!-- Row 2: ISA Customer ID and ISA 810 Receiver ID -->
+    <div class="form-row">
+      <mat-form-field class="form-field">
+        <mat-label>ISA {{ 'customerID' | translate }}</mat-label>
+        <input matInput formControlName="isaCustomerId">
+      </mat-form-field>
+
+      <mat-form-field class="form-field">
+        <mat-label>ISA 810 {{ 'receiverID' | translate }}</mat-label>
+        <input matInput formControlName="isa810ReceiverId">
+      </mat-form-field>
+    </div>
+
+    <!-- Row 3: ISA 856 Receiver ID and Marketplace -->
+    <div class="form-row">
+      <mat-form-field class="form-field">
+        <mat-label>ISA 856 {{ 'receiverID' | translate }}</mat-label>
+        <input matInput formControlName="isa856ReceiverId">
+      </mat-form-field>
+
+      <mat-form-field class="form-field full-width">
+        <mat-label>{{ 'marketPlace' | translate }}</mat-label>
+        <input matInput formControlName="marketplace">
+      </mat-form-field>
+    </div>
+
+  </form>
+</div>
+
+<div mat-dialog-actions class="dialog-actions">
+  <button mat-button class="cancel-button" (click)="onCancel()">{{ 'cancel' | translate }}</button>
+  <button mat-raised-button color="primary" [disabled]="!updateCustomerForm.valid" (click)="updateCustomer()">{{ 'update' | translate }}</button>
+</div>

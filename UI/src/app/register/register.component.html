@@ -1,0 +1,120 @@
+<div class="login-container">
+  <div class="login-box">
+    <h1>{{ 'signUp' | translate }}</h1>
+
+    <h2>{{responseMsg}}</h2>
+
+    <mat-grid-list cols="2" rowHeight="100px" gutterSize="10px" [formGroup]="registerForm">
+      <mat-grid-tile>
+        <mat-form-field appearance="fill" color="accent">
+          <mat-label>{{ 'userID' | translate }}</mat-label>
+          <input matInput formControlName="userID">
+          <mat-error *ngIf="this.UserID.invalid">{{getUserIDErrors()}}</mat-error>
+        </mat-form-field>
+      </mat-grid-tile>
+
+      <mat-grid-tile>
+        <mat-form-field appearance="fill" color="accent">
+          <mat-label>{{ 'firstName' | translate }}</mat-label>
+          <input matInput formControlName="firstName">
+          <mat-error *ngIf="this.FirstName.invalid">{{getFirstNameErrors()}}</mat-error>
+        </mat-form-field>
+      </mat-grid-tile>
+
+      <mat-grid-tile>
+        <mat-form-field appearance="fill" color="accent">
+          <mat-label>{{ 'lastName' | translate }}</mat-label>
+          <input matInput formControlName="lastName">
+          <mat-error *ngIf="this.LastName.invalid">{{getLastNameErrors()}}</mat-error>
+        </mat-form-field>
+      </mat-grid-tile>
+
+      <mat-grid-tile>
+        <mat-form-field appearance="fill" color="accent">
+          <mat-label>{{ 'email' | translate }}</mat-label>
+          <input matInput formControlName="email">
+          <mat-error *ngIf="this.Email.invalid">{{getEmailErrors()}}</mat-error>
+        </mat-form-field>
+      </mat-grid-tile>
+
+      <mat-grid-tile>
+        <mat-form-field appearance="fill" color="accent">
+          <mat-label>{{ 'phoneNo' | translate }}</mat-label>
+          <input matInput formControlName="mobile">
+          <!--<mat-error *ngIf="this.LastName.invalid">{{getLastNameErrors()}}</mat-error>-->
+        </mat-form-field>
+      </mat-grid-tile>
+
+      <mat-grid-tile>
+        <mat-form-field appearance="fill" color="accent">
+          <mat-label>{{ 'password' | translate }}</mat-label>
+          <input matInput [type]="hide ? 'password' : 'text'" formControlName="password">
+          <button mat-icon-button matSuffix (click)="hide = !hide">
+            <mat-icon>{{hide ? 'visibility_off' : 'visibility'}}</mat-icon>
+          </button>
+          <mat-error *ngIf="this.Password.invalid">{{getPasswordErrors()}}</mat-error>
+        </mat-form-field>
+      </mat-grid-tile>
+
+      <mat-grid-tile>
+        <mat-form-field appearance="fill" color="accent">
+          <mat-label>{{ 'confirmPassword' | translate }}</mat-label>
+          <input matInput [type]="hide ? 'password' : 'text'" formControlName="rpassword">
+          <button mat-icon-button matSuffix (click)="hide = !hide">
+            <mat-icon>{{hide ? 'visibility_off' : 'visibility'}}</mat-icon>
+          </button>
+          <mat-error *ngIf="this.RPassword.hasError('rpassword')">
+            {{ 'passwordMessage' | translate }}
+          </mat-error>
+        </mat-form-field>
+
+
+      </mat-grid-tile>
+      <mat-grid-tile>
+        <mat-form-field class="form-field">
+          <mat-label>{{ 'userType' | translate }}</mat-label>
+          <mat-select formControlName="userType">
+            <mat-option [value]="'ADMIN'">ADMIN</mat-option>
+            <mat-option [value]="'READER'">READER</mat-option>
+            <mat-option [value]="'WRITER'">WRITER</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </mat-grid-tile>
+      <mat-grid-tile>
+        <mat-form-field class="form-field">
+          <mat-label>{{ 'status' | translate }}</mat-label>
+          <mat-select formControlName="status">
+            <mat-option [value]="'ACTIVE'">ACTIVE</mat-option>
+            <mat-option [value]="'BLOCKED'">BLOCKED</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </mat-grid-tile>
+
+      <mat-grid-tile>
+        <mat-form-field appearance="fill" color="accent">
+          <mat-label>{{ 'customer' | translate }}</mat-label>
+          <mat-select formControlName="customerName" multiple>
+            <mat-option *ngFor="let customer of customerOptions" [value]="customer.erpCustomerID">
+              {{ customer.erpCustomerID }}
+            </mat-option>
+          </mat-select>
+          <mat-error *ngIf="this.CustomerName.invalid || (this.CustomerName.touched || this.CustomerName.untouched)">
+            {{ getCustomerError() }}
+          </mat-error>
+        </mat-form-field>
+      </mat-grid-tile>
+
+      <mat-grid-tile *ngIf="registerForm.get('userType')?.value === 'WRITER' && registerForm.get('userType')?.value !== ''">
+        <mat-checkbox formControlName="isSetupMenu">{{ 'showSetupMenu' | translate }}</mat-checkbox>
+      </mat-grid-tile>
+
+      <mat-grid-tile colspan="2">
+        <button mat-flat-button color="accent" class="create-account-btn" (click)="register()"
+                [disabled]="registerForm.invalid">
+                {{ 'createAccount' | translate }}
+        </button>
+      </mat-grid-tile>
+
+    </mat-grid-list>
+  </div>
+</div>

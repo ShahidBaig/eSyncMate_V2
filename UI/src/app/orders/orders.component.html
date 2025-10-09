@@ -1,0 +1,260 @@
+<div class="mat-table-container">
+
+  <mat-card>
+    <mat-card-content>
+      <form [formGroup]="OrderForm">
+        <mat-form-field appearance="fill" color="accent">
+          <mat-label>{{ 'eSyncMateID' | translate }}</mat-label>
+          <input matInput formControlName="orderId">
+        </mat-form-field>
+        &nbsp;
+        <mat-form-field appearance="fill" color="accent">
+          <mat-label>{{ 'customerPO' | translate }}</mat-label>
+          <input matInput formControlName="orderNo">
+        </mat-form-field>
+
+        &nbsp;
+        <mat-form-field appearance="fill" color="accent">
+          <mat-label>{{ 'ERPSoNum' | translate }}</mat-label>
+          <input matInput formControlName="soNo">
+        </mat-form-field>
+
+        &nbsp;
+        <mat-form-field color="accent">
+          <mat-label>{{ 'fromDate' | translate }}</mat-label>
+          <input formControlName="fromDate" matInput [matDatepicker]="fromDate">
+          <mat-hint>MM/DD/YYYY</mat-hint>
+          <mat-datepicker-toggle matIconSuffix [for]="fromDate"></mat-datepicker-toggle>
+          <mat-datepicker #fromDate></mat-datepicker>
+        </mat-form-field>
+        &nbsp;
+        <mat-form-field color="accent">
+          <mat-label>{{ 'toDate' | translate }}</mat-label>
+          <input formControlName="toDate" matInput [matDatepicker]="toDate">
+          <mat-hint>MM/DD/YYYY</mat-hint>
+          <mat-datepicker-toggle matIconSuffix [for]="toDate"></mat-datepicker-toggle>
+          <mat-datepicker #toDate></mat-datepicker>
+        </mat-form-field>
+        &nbsp;
+        <mat-form-field appearance="fill" color="accent">
+          <mat-label>{{ 'status' | translate }}</mat-label>
+          <mat-select formControlName="status">
+            <mat-option *ngFor="let status of statusOptions" [value]="status">
+              {{ status }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+        &nbsp;
+        <mat-form-field appearance="fill" color="accent">
+          <mat-label>{{ 'customerName' | translate }}</mat-label>
+          <mat-select formControlName="customerName">
+            <mat-option [value]="'EMPTY'" selected>
+              Select Customer
+            </mat-option>
+            <mat-option *ngFor="let customerName of customerOptions" [value]="customerName.erpCustomerID">
+              {{ customerName.name }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        &nbsp;
+        <button mat-flat-button color="accent" (click)="getOrders()">
+          <span *ngIf="!showSpinnerforSearch">{{ 'searchOrders' | translate }}</span>
+          <mat-spinner *ngIf="showSpinnerforSearch" diameter="20"></mat-spinner>
+        </button>
+
+      </form>
+    </mat-card-content>
+  </mat-card>
+
+
+  &nbsp;
+  <mat-card>
+    <mat-card-content>
+      <table mat-table [dataSource]="ordersToDisplay">
+
+        <!-- ID Column -->
+        <ng-container matColumnDef="id">
+          <th mat-header-cell *matHeaderCellDef>{{ 'eSyncMateID' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.id}} </td>
+        </ng-container>
+
+        <!-- Status -->
+        <ng-container matColumnDef="Status">
+          <th mat-header-cell *matHeaderCellDef>{{ 'status' | translate }}</th>
+          <td mat-cell *matCellDef="let element" [ngClass]="getStatusClass(element.status)"
+              [matTooltip]="getTooltipWithTranslation(element)">
+            {{element.status}}
+          </td>
+        </ng-container>
+
+        <!-- Customer Name -->
+        <ng-container matColumnDef="CustomerName">
+          <th mat-header-cell *matHeaderCellDef>{{ 'customerName' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.customerName}} </td>
+        </ng-container>
+
+        <ng-container matColumnDef="ERPCustomerID" [style.display]="showDataColumn ? 'none' : 'none'">
+          <th mat-header-cell *matHeaderCellDef [style.display]="showDataColumn ? 'none' : 'none'">{{ 'ERPCustomerID' | translate }}</th>
+          <td mat-cell *matCellDef="let element" [style.display]="showDataColumn ? 'none' : 'none'"> {{element.erpCustomerID}} </td>
+        </ng-container>
+
+        <ng-container matColumnDef="ERPSoNum">
+          <th mat-header-cell *matHeaderCellDef>{{ 'ERPSoNum' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.externalId}} </td>
+        </ng-container>
+
+        <!-- Order Date -->
+        <ng-container matColumnDef="OrderDate">
+          <th mat-header-cell *matHeaderCellDef>{{ 'orderDate' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.orderDate | date:'MMM-dd-yyyy'}} </td>
+        </ng-container>
+
+        <!-- Created Date -->
+        <ng-container matColumnDef="CreatedDate">
+          <th mat-header-cell *matHeaderCellDef>{{ 'createdDate' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.createdDate | date:'MMM-dd-yyyy HH:mm:ss'}} </td>
+        </ng-container>
+
+        <!-- OrderNumber -->
+        <ng-container matColumnDef="OrderNumber">
+          <th mat-header-cell *matHeaderCellDef>{{ 'customerPO' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.orderNumber}} </td>
+        </ng-container>
+
+        <ng-container matColumnDef="ModifyOrder">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let element">
+            <button mat-icon-button aria-label="normal button" color="accent" matTooltip="View Order"
+                    matTooltipPosition="right" (click)="editOrder(element)">
+              <mat-icon>visibility</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="OrderStatusError">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let element">
+            <button mat-icon-button aria-label="normal button" color="accent" matTooltip="Re-Proccess Order"
+                    matTooltipPosition="right" *ngIf="element.status == 'ERROR' || element.status == 'ASNERROR' || element.status == 'ACKERROR'" (click)="ReProccess(element,0)">
+              <mat-icon>refresh</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+
+        <!--<ng-container matColumnDef="OrderStatusASNError">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let element">
+            <button mat-icon-button aria-label="normal button" color="accent" matTooltip="Re-Proccess ASN"
+                    matTooltipPosition="right" *ngIf="element.status == 'ASNERROR'" (click)="ReProccess(element,1)">
+              <mat-icon>autorenew</mat-icon>
+            </button>
+          </td>
+        </ng-container>-->
+
+        <ng-container matColumnDef="File">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let element">
+            <button mat-icon-button aria-label="normal button" color="accent" matTooltip="Get Order Files"
+                    matTooltipPosition="right" (click)="getOrderFiles(element)">
+              <mat-icon>read_more</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+
+        <!--GenerateASN - process856-->
+        <ng-container *ngIf="isCompany !== 'esyncmate' && isCompany !== 'RepaintStudios' " matColumnDef="GenerateASN">
+          <th mat-header-cell *matHeaderCellDef>{{ 'actions' | translate }}</th>
+          <td mat-cell *matCellDef="let element">
+            <button mat-icon-button aria-label="normal button" matTooltip="Generate ASN" matTooltipPosition="right"
+                    color="accent" (click)="generateASN(element)"
+                    *ngIf="element.status == 'SYNCED' || element.status === 'PROCESSED' || element.status === 'ACKNOWLEDGED' ">
+              <mat-icon>local_shipping</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+
+        <!--Generate855EDI-->
+        <ng-container *ngIf="isCompany !== 'esyncmate' && isCompany !== 'RepaintStudios' " matColumnDef="SendOrderStatus">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let element">
+            <button mat-icon-button aria-label="normal button" color="accent" matTooltip="Send Order ACK"
+                    matTooltipPosition="right" (click)="generate855EDI(element)"
+                    *ngIf="element.status === 'SYNCED' || element.status === 'PROCESSED' ">
+              <mat-icon>send</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+
+        <!--MarkOrderforASN-->
+        <ng-container *ngIf="isCompany !== 'esyncmate' && isCompany !== 'RepaintStudios' " matColumnDef="MarkOrderforASN">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let element">
+            <button mat-icon-button aria-label="normal button" color="accent" matTooltip="Mark Order for ASN"
+                    matTooltipPosition="right" (click)="markForASN(element)" *ngIf="element.status === 'ASNGEN'">
+              <mat-icon>file_copy</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+
+        <!--CreateInvoice-->
+        <ng-container *ngIf="isCompany !== 'esyncmate' && isCompany !== 'RepaintStudios'" matColumnDef="CreateInvoice">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let element">
+            <button mat-icon-button aria-label="normal button" color="accent" matTooltip="Create Invoice"
+                    matTooltipPosition="right" (click)="createInvoice(element)" *ngIf="element.status === 'ASNMARK'">
+              <mat-icon>ballot</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+
+        <!--Create810-->
+        <ng-container *ngIf="isCompany !== 'esyncmate' && isCompany !== 'RepaintStudios'" matColumnDef="Create810">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let element">
+            <button mat-icon-button aria-label="normal button" color="accent" matTooltip="Create 810"
+                    matTooltipPosition="right" (click)="process810(element)" *ngIf="element.status === 'INVOICED'">
+              <mat-icon>developer_mode</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+
+        <!--SyncOrder-->
+        <ng-container *ngIf="isCompany !== 'esyncmate' && isCompany !== 'RepaintStudios' " matColumnDef="SyncOrder">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let element">
+            <button mat-icon-button aria-label="normal button" color="accent" matTooltip="Sync Order"
+                    matTooltipPosition="right" (click)="syncOrder(element)"
+                    *ngIf="element.status === 'NEW' || element.status === 'SYNCERROR'">
+              <mat-icon>sync</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+
+        <!--getStoresOrder-->
+        <ng-container *ngIf="isCompany !== 'esyncmate'" matColumnDef="GetStoresOrder">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let element">
+            <button mat-icon-button aria-label="normal button" color="accent" matTooltip="Get Store Orders"
+                    matTooltipPosition="right" (click)="getStoresOrder(element)" *ngIf="element.status === 'SPLITED'">
+              <mat-icon>business_center</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="columns"></tr>
+        <tr mat-row *matRowDef="let row; columns: columns"></tr>
+
+      </table>
+      <mat-paginator [length]="listOfOrders.length" [pageSize]="10" [pageSizeOptions]="[5, 10, 25, 100]"
+                     (page)="onPageChange($event)">
+      </mat-paginator>
+
+    </mat-card-content>
+  </mat-card>
+
+</div>
+
+<div *ngIf="showSpinner" class="spinner-overlay">
+  <mat-spinner></mat-spinner>
+</div>

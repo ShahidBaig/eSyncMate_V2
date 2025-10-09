@@ -1,0 +1,156 @@
+<div mat-dialog-content class="dialog-content">
+  <div class="header-container">
+    <h1 class="dialog-title left-title">{{ 'Order' | translate }} #{{ orderData.id }}</h1>
+  </div>
+
+  <form [formGroup]="orderDetailForm" class="route-form">
+    <!-- Fixed General Information Section -->
+    <div class="form-row">
+        <mat-form-field >
+          <mat-label>{{ 'erpCustomerID' | translate }}</mat-label>
+          <input readonly type="text" matInput formControlName="customerID">
+        </mat-form-field>
+
+        <mat-form-field >
+          <mat-label>{{ 'orderDate' | translate }}</mat-label>
+          <input readonly type="text" formControlName="orderDate" matInput placeholder="Order Date" [value]="orderDetailForm.get('orderDate')?.value | date: 'MMM-dd-YYYY'">
+        </mat-form-field>
+
+        <mat-form-field >
+          <mat-label>{{ 'ERPSoNum' | translate }}</mat-label>
+          <input readonly type="text" formControlName="externalId" matInput placeholder="ERP So Num">
+        </mat-form-field>
+
+      <mat-form-field appearance="fill" color="accent">
+        <mat-label>{{ 'status' | translate }}</mat-label>
+        <mat-select formControlName="status">
+          <mat-option *ngFor="let status of statusOptions" [value]="status" [disabled]="inView">
+            {{ status }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+    </div>
+
+    <div class="form-row">
+        <mat-form-field style="width: 280px;">
+          <mat-label>{{ 'orderNumber' | translate }}</mat-label>
+          <input readonly type="text" formControlName="orderNumber" matInput placeholder="Customer PO">
+        </mat-form-field>
+    </div>
+
+    <mat-divider></mat-divider>
+    <!-- Tabs for Addresses and Details -->
+    <mat-tab-group>
+      <!-- Addresses Tab -->
+      <mat-tab [label]="('shippingAddress' | translate)">
+        <mat-card-content>
+          <div class="form-row">
+            <mat-form-field appearance="fill" style="width:100%">
+              <mat-label>{{ 'shipToName' | translate }}</mat-label>
+              <input [readonly]="isReadonly()" type="text" formControlName="shipToName" matInput placeholder="Enter shipToName">
+            </mat-form-field>
+          </div>
+
+          <div class="form-row">
+            <mat-form-field appearance="fill" style="width:100%">
+              <mat-label>{{ 'addressLine1' | translate }}</mat-label>
+              <input [readonly]="isReadonly()" type="text" formControlName="shipToAddress1" matInput placeholder="Enter Address Line 1">
+            </mat-form-field>
+          </div>
+
+          <div class="form-row">
+            <mat-form-field appearance="fill" style="width:100%">
+              <mat-label>{{ 'addressLine2' | translate }}</mat-label>
+              <input [readonly]="isReadonly()" type="text" formControlName="shipToAddress2" matInput placeholder="Enter Address Line 2">
+            </mat-form-field>
+          </div>
+
+          <div class="form-row">
+            <mat-form-field appearance="fill">
+              <mat-label>{{ 'city' | translate }}</mat-label>
+              <input [readonly]="isReadonly()" type="text" formControlName="shipToCity" matInput placeholder="Enter City">
+            </mat-form-field>
+
+            <mat-form-field appearance="fill">
+              <mat-label>{{ 'state' | translate }}</mat-label>
+              <input [readonly]="isReadonly()" type="text" formControlName="shipToState" matInput placeholder="Enter State">
+            </mat-form-field>
+
+            <mat-form-field appearance="fill">
+              <mat-label>{{ 'zipCode' | translate }}</mat-label>
+              <input [readonly]="isReadonly()" type="text" formControlName="shipToZip" matInput placeholder="Enter Zip Code">
+            </mat-form-field>
+
+            <mat-form-field appearance="fill">
+              <mat-label>{{ 'country' | translate }}</mat-label>
+              <input [readonly]="isReadonly()" type="text" formControlName="shipToCountry" matInput placeholder="Enter Country">
+            </mat-form-field>
+          </div>
+        </mat-card-content>
+      </mat-tab>
+
+      <!-- Details Tab -->
+      <mat-tab [label]="('Details' | translate)">
+          <div class="scrollable-grid" style="height: 225px; width: 100%;">
+            <table mat-table [dataSource]="dataSource">
+              <!-- Line Number Column (Sticky) -->
+              <ng-container matColumnDef="LineNo">
+                <th mat-header-cell *matHeaderCellDef sticky> {{ 'lineNo' | translate }}</th>
+                <td mat-cell *matCellDef="let element" sticky> {{ element.lineNo }} </td>
+              </ng-container>
+            <!-- Order Quantity Column -->
+              <ng-container matColumnDef="OrderQty">
+                <th mat-header-cell *matHeaderCellDef> {{ 'orderQty' | translate }} </th>
+                <td mat-cell *matCellDef="let element"> {{ element.lineQty }} </td>
+              </ng-container>
+
+              <!-- ASN Quantity Column -->
+              <ng-container matColumnDef="AsnQty">
+                <th mat-header-cell *matHeaderCellDef> {{ 'shippedQty' | translate }} </th>
+                <td mat-cell *matCellDef="let element"> {{ element.asnQty }} </td>
+              </ng-container>
+
+              <!-- Cancel Quantity Column -->
+              <ng-container matColumnDef="CancelQty">
+                <th mat-header-cell *matHeaderCellDef> {{ 'cancelQty' | translate }} </th>
+                <td mat-cell *matCellDef="let element"> {{ element.cancelQty }} </td>
+              </ng-container>
+
+              <!-- Unit Price Column -->
+              <ng-container matColumnDef="UnitPrice">
+                <th mat-header-cell *matHeaderCellDef> {{ 'unitPrice' | translate }}</th>
+                <td mat-cell *matCellDef="let element"> {{ element.unitPrice | currency }} </td>
+              </ng-container>
+
+              <ng-container matColumnDef="TotalAmount">
+                <th mat-header-cell *matHeaderCellDef> {{ 'totalAmount' | translate }}</th>
+                <td mat-cell *matCellDef="let element"> {{ element.totalAmount | currency }} </td>
+              </ng-container>
+
+              <ng-container matColumnDef="ItemID">
+                <th mat-header-cell *matHeaderCellDef> {{ 'erpItemID' | translate }}</th>
+                <td mat-cell *matCellDef="let element"> {{ element.itemID}} </td>
+              </ng-container>
+
+              <ng-container matColumnDef="Status">
+                <th mat-header-cell *matHeaderCellDef>{{ 'status' | translate }}</th>
+                <td mat-cell *matCellDef="let element" [ngClass]="getStatusClass(element.status)"
+                  [matTooltip]="getTooltipWithTranslation(element.status)">
+                  {{element.statusDescription}}
+                </td>
+              </ng-container>
+
+              <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+              <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+            </table>
+          </div>
+      </mat-tab>
+    </mat-tab-group>
+  </form>
+</div>
+
+<div mat-dialog-actions class="dialog-actions">
+  <button mat-button class="cancel-button" (click)="onCancel()">{{ 'cancel' | translate }}</button>
+  <button *ngIf="inView" mat-raised-button color="primary" (click)="editDocument()">{{ 'edit' | translate }}</button>
+<button   *ngIf="!inView"mat-raised-button color="primary" (click)="onSave()">{{ 'update' | translate }}</button>
+</div>

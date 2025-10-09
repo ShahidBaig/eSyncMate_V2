@@ -1,0 +1,30 @@
+.file-label {
+  cursor: pointer;
+}
+.file-input:hover {
+  cursor: pointer;
+}
+
+.spinner-overlay {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: rgba(255, 255, 255, 0.8); /* Add background color if desired */
+  z-index: 1000; /* Adjust as needed to make sure it's above other elements */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100vw;
+  height: 100vh;
+}
+
+.button-container {
+  display: flex;
+  justify-content: space-between;
+  margin: 10px; /* Adds space around the container */
+}
+
+.mat-table-container {
+  margin: 10px; /* Adds space around the table */
+}

@@ -1,0 +1,112 @@
+<div class="mat-table-container">
+  <mat-card>
+    <mat-card-content>
+      <form [formGroup]="RouteLogForm">
+
+        <mat-form-field appearance="fill" color="accent">
+          <mat-label>{{ 'routeName' | translate }}</mat-label>
+          <mat-select formControlName="name">
+            <mat-option *ngFor="let name of routeOptions" [value]="name">
+              {{ name.name }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        &nbsp;
+        <mat-form-field appearance="fill" color="accent">
+          <mat-label>{{ 'exception' | translate }}</mat-label>
+          <input matInput formControlName="message">
+        </mat-form-field>
+        &nbsp;
+        <mat-form-field color="accent">
+          <mat-label>{{ 'fromDate' | translate }}</mat-label>
+          <input formControlName="fromDate" matInput [matDatepicker]="fromDate">
+          <mat-hint>MM/DD/YYYY</mat-hint>
+          <mat-datepicker-toggle matIconSuffix [for]="fromDate"></mat-datepicker-toggle>
+          <mat-datepicker #fromDate></mat-datepicker>
+        </mat-form-field>
+        &nbsp;
+        <mat-form-field color="accent">
+          <mat-label>{{ 'toDate' | translate }}</mat-label>
+          <input formControlName="toDate" matInput [matDatepicker]="toDate">
+          <mat-hint>MM/DD/YYYY</mat-hint>
+          <mat-datepicker-toggle matIconSuffix [for]="toDate"></mat-datepicker-toggle>
+          <mat-datepicker #toDate></mat-datepicker>
+        </mat-form-field>
+        &nbsp;
+        <mat-form-field appearance="fill" color="accent">
+          <mat-label>{{ 'status' | translate }}</mat-label>
+          <mat-select formControlName="status">
+            <mat-option *ngFor="let status of statusOptions" [value]="status">
+              {{ status }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+        &nbsp;
+        <button mat-flat-button color="accent" (click)="getRouteExceptions()">
+          <span *ngIf="!showSpinnerforSearch">{{ 'search' | translate }}</span>
+          <mat-spinner *ngIf="showSpinnerforSearch" diameter="20"></mat-spinner>
+        </button>
+      </form>
+    </mat-card-content>
+  </mat-card>
+  &nbsp;
+  <mat-card>
+    <mat-card-content>
+      <table mat-table [dataSource]="routeExceptionsToDisplay">
+
+        <!-- Route Name -->
+        <ng-container matColumnDef="name">
+          <th mat-header-cell *matHeaderCellDef>{{ 'routeName' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.name}} </td>
+        </ng-container>
+
+        <!-- Status -->
+        <ng-container matColumnDef="Status">
+          <th mat-header-cell *matHeaderCellDef>{{ 'status' | translate }}</th>
+          <td mat-cell *matCellDef="let element" [ngClass]="getStatusClass(element.status)">
+            {{element.status}}
+          </td>
+        </ng-container>
+
+        <!-- Exception -->
+        <ng-container matColumnDef="Message">
+          <th mat-header-cell *matHeaderCellDef>{{ 'exception' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.message}} </td>
+        </ng-container>
+
+        <!-- Exception Date -->
+        <ng-container matColumnDef="CreatedDate">
+          <th mat-header-cell *matHeaderCellDef>{{ 'exceptionDate' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.createdDate | date:'MMM-dd-yyyy HH:mm:ss'}} </td>
+        </ng-container>
+
+        <ng-container matColumnDef="DownloadFile" *ngIf="isAdminUser">
+          <th mat-header-cell *matHeaderCellDef>{{ 'actions' | translate }}</th>
+          <td mat-cell *matCellDef="let element">
+            <!-- View Button -->
+            <button mat-icon-button color="accent" aria-label="View button" matTooltip="View File" matTooltipPosition="above" (click)="viewFile(element.id)">
+              <mat-icon>visibility</mat-icon>
+              <mat-spinner *ngIf="isLoading(element.id)" diameter="20"></mat-spinner>
+            </button>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="columns"></tr>
+        <tr mat-row *matRowDef="let row; columns: columns"></tr>
+      </table>
+
+      <mat-paginator *ngIf="listOfRouteExceptions"
+                     [length]="listOfRouteExceptions.length"
+                     [pageSize]="10"
+                     [pageSizeOptions]="[5, 10, 25, 100]"
+                     (page)="onPageChange($event)">
+      </mat-paginator>
+
+    </mat-card-content>
+  </mat-card>
+</div>
+
+<div *ngIf="showSpinner" class="spinner-overlay">
+  <mat-spinner></mat-spinner>
+</div>

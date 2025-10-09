@@ -1,0 +1,45 @@
+<div mat-dialog-content class="dialog-content">
+  <h1 class="dialog-title">{{ 'modifyMap' | translate }}</h1>
+  <form [formGroup]="updateMapForm" class="customer-form">
+
+    <mat-form-field class="form-field" [ngStyle]="{'display': 'none'}">
+      <mat-label>Id</mat-label>
+      <input matInput formControlName="id">
+    </mat-form-field>
+
+    <!-- Row 1: Map Name -->
+    <div class="form-row">
+      <mat-form-field class="form-field">
+        <mat-label>{{ 'mapName' | translate }}</mat-label>
+        <input matInput formControlName="name">
+      </mat-form-field>
+
+      <!-- Map Type -->
+      <div class="form-row">
+        <mat-form-field class="form-field">
+          <mat-label>{{ 'mapType' | translate }}</mat-label>
+          <mat-select formControlName="typeId">
+            <mat-option *ngFor="let mapType of mapTypesOptions" [value]="mapType.id">
+              {{ mapType.name }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+
+    </div>
+
+    <!-- Row 2: Data -->
+    <div class="form-row">
+      <mat-form-field class="full-width" style="width: 100%;">
+        <mat-label>{{ 'map' | translate }}</mat-label>
+        <textarea matInput formControlName="map" style="height: 300px;"></textarea>
+      </mat-form-field>
+    </div>
+
+  </form>
+</div>
+
+<div mat-dialog-actions class="dialog-actions">
+  <button mat-button class="cancel-button" (click)="onCancel()">{{ 'cancel' | translate }}</button>
+  <button mat-raised-button color="primary" [disabled]="!updateMapForm.valid" (click)="updateMap()">{{ 'update' | translate }}</button>
+</div>

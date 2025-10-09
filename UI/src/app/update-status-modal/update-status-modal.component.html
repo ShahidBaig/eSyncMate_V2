@@ -1,0 +1,45 @@
+<!--<h1 mat-dialog-title>Update Status</h1>
+<div mat-dialog-content class="container">
+  <mat-form-field appearance="fill">
+    <mat-label> Status</mat-label>
+    <mat-select>
+      <mat-option *ngFor="let option of statusOptions" [value]="option">
+        {{ option }}
+      </mat-option>
+    </mat-select>
+  </mat-form-field>
+</div>
+<div mat-dialog-actions>
+  <button mat-button (click)="onExit()">Cancel</button>
+  <button mat-button (click)="onSubmit()">Submit</button>
+</div>-->
+
+
+
+
+<div mat-dialog-content class="dialog-content">
+  <h1 class="dialog-title">Update Status</h1>
+  <form [formGroup]="updateOrderStatusForm" class="route-form">
+    <div class="form-row">
+      <mat-form-field appearance="fill">
+        <mat-label> Status</mat-label>
+        <mat-select formControlName="status" (selectionChange)="onStatusChange($event)">
+          <mat-option *ngFor="let option of statusOptions" [value]="option">
+            {{ option }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field class="form-field" *ngIf="isCompletionDateVisible">
+        <input formControlName="completionDate" matInput [matDatepicker]="completionDatePicker" placeholder="Completion Date">
+        <mat-datepicker-toggle matSuffix [for]="completionDatePicker"></mat-datepicker-toggle>
+        <mat-datepicker #completionDatePicker></mat-datepicker>
+      </mat-form-field>
+      </div>
+  </form>
+</div>
+
+<div mat-dialog-actions class="dialog-actions">
+  <button mat-button class="cancel-button" (click)="onCancel()">{{ 'cancel' | translate }}</button>
+  <button mat-raised-button color="primary" (click)="onSave()">{{ 'save' | translate }}</button>
+</div>

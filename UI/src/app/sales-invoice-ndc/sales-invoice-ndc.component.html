@@ -1,0 +1,112 @@
+<div class="mat-table-container">
+
+  <mat-card>
+    <mat-card-content>
+      <form [formGroup]="SalesInvoiceNDC">
+        <mat-form-field appearance="fill" color="accent">
+          <mat-label>{{ 'invoiceNo' | translate }}</mat-label>
+          <input matInput formControlName="invoiceNo">
+          <!--<mat-hint class="custom-hint">{{ 'searchInventoryRecords' | translate }}</mat-hint>-->
+        </mat-form-field>
+
+        &nbsp;
+        <mat-form-field appearance="fill" color="accent">
+          <mat-label>{{ 'PONumber' | translate }}</mat-label>
+          <input matInput formControlName="poNumber">
+          <!--<mat-hint class="custom-hint">{{ 'searchInventoryRecords' | translate }}</mat-hint>-->
+        </mat-form-field>
+        &nbsp;
+        <mat-form-field color="accent">
+          <mat-label>{{ 'transactionDate' | translate }}</mat-label>
+          <input formControlName="transactionDate" matInput [matDatepicker]="transactionDate">
+          <mat-hint>MM/DD/YYYY</mat-hint>
+          <mat-datepicker-toggle matIconSuffix [for]="transactionDate"></mat-datepicker-toggle>
+          <mat-datepicker #transactionDate></mat-datepicker>
+        </mat-form-field>
+
+        &nbsp;
+        <mat-form-field appearance="fill" color="accent">
+          <mat-label>{{ 'status' | translate }}</mat-label>
+          <mat-select formControlName="status">
+            <mat-option *ngFor="let status of statusOptions" [value]="status">
+              {{ status }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+        &nbsp;
+        <button mat-flat-button color="accent" (click)="getShipmentFromNDC()">
+          <span *ngIf="!showSpinnerforSearch">{{ 'searchSalesInvoiceNDC' | translate }}</span>
+          <mat-spinner *ngIf="showSpinnerforSearch" diameter="20"></mat-spinner>
+        </button>
+
+      </form>
+    </mat-card-content>
+  </mat-card>
+
+
+  &nbsp;
+  <mat-card>
+    <mat-card-content>
+      <table mat-table [dataSource]="salesInvoiceNDC">
+
+        <!-- BatchID Column -->
+        <!-- ItemCount Column -->
+        <ng-container matColumnDef="InvoiceNo">
+          <th mat-header-cell *matHeaderCellDef>{{ 'invoiceNo' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.invoiceNo}} </td>
+        </ng-container>
+
+        <!-- Status -->
+        <ng-container matColumnDef="Status">
+          <th mat-header-cell *matHeaderCellDef>{{ 'status' | translate }}</th>
+          <td mat-cell *matCellDef="let element" [ngClass]="getStatusClass(element.status)"
+            [matTooltip]="getTooltipWithTranslation(element)">
+            {{ element.status }}
+          </td>
+        </ng-container>
+
+        <!-- StartDate -->
+        <ng-container matColumnDef="TransactionDate">
+          <th mat-header-cell *matHeaderCellDef>{{ 'status' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.status }} </td>
+        </ng-container>
+
+        <!-- FinishDate Column -->
+
+        <ng-container matColumnDef="PoNumber">
+          <th mat-header-cell *matHeaderCellDef>{{ 'PONumber' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.poNumber}} </td>
+        </ng-container>
+
+        <ng-container matColumnDef="InvoiceDate">
+          <th mat-header-cell *matHeaderCellDef>{{ 'invoiceDate' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.invoiceDate | date:'MMM-dd-YYYY HH:mm:ss' }} </td>
+        </ng-container>
+
+        <!--GetInventoryFiles-->
+        <ng-container matColumnDef="Detail">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let element">
+            <button mat-icon-button aria-label="normal button" color="accent" matTooltip="Get Shipment Detail"
+              matTooltipPosition="above" (click)="getBatchiWiseInventory(element)">
+              <mat-icon>playlist_add</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="columns"></tr>
+        <tr mat-row *matRowDef="let row; columns: columns"></tr>
+
+      </table>
+      <mat-paginator [length]="salesInvoiceNDC.length" [pageSize]="10" [pageSizeOptions]="[5, 10, 25, 100]"
+        (page)="onPageChange($event)">
+      </mat-paginator>
+
+    </mat-card-content>
+  </mat-card>
+
+</div>
+
+<div *ngIf="showSpinner" class="spinner-overlay">
+  <mat-spinner></mat-spinner>
+</div>

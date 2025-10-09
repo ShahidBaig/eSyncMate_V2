@@ -1,0 +1,5 @@
+﻿CREATE TABLE SCS_States (
+    SCS_Code CHAR(2) PRIMARY KEY,
+    Description VARCHAR(100) NOT NULL
+)
+GO

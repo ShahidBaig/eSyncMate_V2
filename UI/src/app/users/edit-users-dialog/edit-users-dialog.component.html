@@ -1,0 +1,106 @@
+
+<div mat-dialog-content class="dialog-content">
+  <h1 class="dialog-title">{{ 'modifyUsers' | translate }}</h1>
+  <form [formGroup]="updateUserForm" class="customer-form">
+
+    <mat-form-field class="form-field" [ngStyle]="{'display': 'none'}">
+      <mat-label>{{ 'id' | translate }}</mat-label>
+      <input matInput formControlName="id">
+    </mat-form-field>
+
+    <!-- Row 1: Route Types Name -->
+    <div class="form-row">
+      <mat-form-field class="form-field">
+        <mat-label>{{ 'userID' | translate }}</mat-label>
+        <input matInput formControlName="userID" readonly>
+      </mat-form-field>
+
+      <mat-form-field class="form-field">
+        <mat-label>{{ 'firstName' | translate }}</mat-label>
+        <input matInput formControlName="firstName">
+        <mat-error *ngIf="this.FirstName.invalid">{{getFirstNameErrors()}}</mat-error>
+      </mat-form-field>
+
+      <mat-form-field class="form-field">
+        <mat-label>{{ 'lastName' | translate }}</mat-label>
+        <input matInput formControlName="lastName">
+      </mat-form-field>
+
+      <mat-form-field class="form-field">
+        <mat-label>{{ 'email' | translate }}</mat-label>
+        <input matInput formControlName="email">
+      </mat-form-field>
+    </div>
+
+    <!-- Row 2: Description -->
+    <div class="form-row">
+      <mat-form-field class="form-field">
+        <mat-label>{{ 'phoneNo' | translate }}</mat-label>
+        <input matInput formControlName="mobile">
+        <!--<mat-error *ngIf="this.LastName.invalid">{{getLastNameErrors()}}</mat-error>-->
+      </mat-form-field>
+
+      <mat-form-field class="form-field">
+        <mat-label>{{ 'password' | translate }}</mat-label>
+        <input matInput [type]="hide ? 'password' : 'text'" formControlName="password">
+        <button mat-icon-button matSuffix (click)="hide = !hide">
+          <mat-icon>{{hide ? 'visibility_off' : 'visibility'}}</mat-icon>
+        </button>
+        <mat-error *ngIf="this.Password.invalid">{{getPasswordErrors()}}</mat-error>
+      </mat-form-field>
+
+      <mat-form-field class="form-field">
+        <mat-label>{{ 'confirmPassword' | translate }}</mat-label>
+        <input matInput [type]="hideConfirm ? 'password' : 'text'" formControlName="rpassword">
+        <button mat-icon-button matSuffix (click)="hideConfirm = !hideConfirm">
+          <mat-icon>{{hideConfirm ? 'visibility_off' : 'visibility'}}</mat-icon>
+        </button>
+        <mat-error *ngIf="this.RPassword.hasError('rpassword')">
+          {{ 'passwordMessage' | translate }}
+        </mat-error>
+      </mat-form-field>
+    </div>
+
+    <div class="form-row">
+      <mat-form-field class="form-field">
+        <mat-label>{{ 'userType' | translate }}</mat-label>
+        <mat-select formControlName="userType">
+          <mat-option [value]="'ADMIN'">ADMIN</mat-option>
+          <mat-option [value]="'READER'">READER</mat-option>
+          <mat-option [value]="'WRITER'">WRITER</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field class="form-field">
+        <mat-label>{{ 'status' | translate }}</mat-label>
+        <mat-select formControlName="status">
+          <mat-option [value]="'ACTIVE'">ACTIVE</mat-option>
+          <mat-option [value]="'BLOCKED'">BLOCKED</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field class="form-field">
+        <mat-label>{{ 'customer' | translate }}</mat-label>
+        <mat-select formControlName="customerName" multiple>
+          <mat-option *ngFor="let customer of customerOptions" [value]="customer.erpCustomerID">
+            {{ customer.erpCustomerID }}
+          </mat-option>
+        </mat-select>
+        <mat-error *ngIf="this.CustomerName.invalid || (this.CustomerName.touched || this.CustomerName.untouched)">
+          {{ getCustomerError() }}
+        </mat-error>
+      </mat-form-field>
+    </div>
+    <div class="form-row" *ngIf="updateUserForm.get('userType')?.value === 'WRITER' && updateUserForm.get('userType')?.value !== ''">
+    <div class="form-field">
+      <mat-checkbox formControlName="isSetupMenu">{{ 'showSetupMenu' | translate }}</mat-checkbox>
+    </div>
+  </div>
+  </form>
+</div>
+
+<div mat-dialog-actions class="dialog-actions">
+  <button mat-button class="cancel-button" (click)="onCancel()">{{ 'cancel' | translate }}</button>
+  <button mat-raised-button color="primary" [disabled]="!updateUserForm.valid" (click)="updateUsers()">{{ 'update' | translate }}</button>
+</div>
+

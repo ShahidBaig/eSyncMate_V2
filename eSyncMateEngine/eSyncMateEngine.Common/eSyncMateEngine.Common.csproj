@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <RootNamespace>eSyncMateEngine.Common</RootNamespace>
+    <AssemblyName>eSyncMateEngine.Common</AssemblyName>
+    <AssemblyVersion>1.6.0.0</AssemblyVersion>
+    <FileVersion>1.6.0.0</FileVersion>
+    <Version>1.6.0.0</Version>
+    <Description>eSyncMate Engine comon library</Description>
+    <RepositoryUrl>https://github.com/olmelabs/EdiEngine</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/olmelabs/EdiEngine</PackageProjectUrl>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="newtonsoft.json" Version="12.0.3" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="All" />
+  </ItemGroup> 
+</Project>

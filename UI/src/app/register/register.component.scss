@@ -1,0 +1,93 @@
+@import "../../theme.scss";
+
+:host {
+  display: block;
+  /*padding: 2rem;*/
+  width: 700px;
+  border-radius: 1rem;
+  margin: 3rem auto 0;
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.login-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.login-box {
+  background-color: #fff;
+  padding: 30px;
+  border-radius: 10px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  max-width: 715px;
+  width: 100%;
+}
+
+.login-box h1 {
+  font-size: 2em;
+  margin-bottom: 10px;
+}
+
+.login-box h2 {
+  font-size: 1.2em;
+  color: #666;
+  margin-bottom: 20px;
+}
+
+mat-form-field {
+  width: 100%;
+}
+
+.mat-form-field-appearance-fill .mat-form-field-flex {
+  background-color: #f9f9f9;
+}
+
+.mat-form-field-wrapper {
+  padding: 0 12px;
+}
+
+mat-icon {
+  color: #ccc;
+}
+
+mat-error {
+  font-size: 14px;
+  color: #f00;
+}
+
+button.mat-flat-button {
+  margin-top: 10px;
+  width: 45%;
+  font-size: 1rem;
+  height: 50px;
+}
+
+.create-account-btn {
+  background-color: #f00 !important;
+  color: #fff !important;
+}
+
+.cancel-btn {
+  background-color: #fff;
+  color: #f00;
+  border: 2px solid #f00;
+}
+
+.login-link {
+  margin-top: 20px;
+}
+
+.login-link span {
+  margin-right: 10px;
+}
+
+.checkbox-container {
+  display: flex;
+}
+
+.checkbox-label {
+  margin-right: 20px;
+}
+

@@ -1,0 +1,11 @@
+﻿INSERT INTO CustomerItems (Id, CustomerId, UPC, VendorStyle, CreatedBy) VALUES (1,1,'817338021757','990285574',1)
+INSERT INTO CustomerItems (Id, CustomerId, UPC, VendorStyle, CreatedBy) VALUES (2,1,'817338023393','990285723',1)
+INSERT INTO CustomerItems (Id, CustomerId, UPC, VendorStyle, CreatedBy) VALUES (3,1,'817338023485','990283982',1)
+INSERT INTO CustomerItems (Id, CustomerId, UPC, VendorStyle, CreatedBy) VALUES (4,1,'817338021948','990285722',1)
+INSERT INTO CustomerItems (Id, CustomerId, UPC, VendorStyle, CreatedBy) VALUES (5,1,'817338027438','990285730',1)
+INSERT INTO CustomerItems (Id, CustomerId, UPC, VendorStyle, CreatedBy) VALUES (6,1,'817338027421','990285731',1)
+INSERT INTO CustomerItems (Id, CustomerId, UPC, VendorStyle, CreatedBy) VALUES (7,1,'817338023652','990285732',1)
+INSERT INTO CustomerItems (Id, CustomerId, UPC, VendorStyle, CreatedBy) VALUES (8,1,'817338023515','990285733',1)
+INSERT INTO CustomerItems (Id, CustomerId, UPC, VendorStyle, CreatedBy) VALUES (9,1,'817338023539','990178313',1)
+INSERT INTO CustomerItems (Id, CustomerId, UPC, VendorStyle, CreatedBy) VALUES (10,1,'817338028039','990303557',1)
+GO

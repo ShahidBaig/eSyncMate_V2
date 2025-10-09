@@ -1,0 +1,27 @@
+<div mat-dialog-content class="dialog-content">
+  <h1 class="dialog-title">{{ 'addNewRouteTypes' | translate }}</h1>
+  <form [formGroup]="newRouteTypesForm" class="routetypes-form">
+
+    <!-- Row 1: Name -->
+    <div class="form-row">
+      <mat-form-field class="form-field">
+        <mat-label>{{ 'routeTypesName' | translate }}</mat-label>
+        <input matInput formControlName="name">
+      </mat-form-field>
+    </div>
+
+    <!-- Row 2: Description -->
+    <div class="form-row">
+      <mat-form-field class="full-width" style="width: 100%;">
+        <mat-label>{{ 'description' | translate }}</mat-label>
+        <textarea matInput formControlName="description" style="height: 300px;"></textarea>
+      </mat-form-field>
+    </div>
+
+  </form>
+</div>
+
+<div mat-dialog-actions class="dialog-actions">
+  <button mat-button class="cancel-button" (click)="onCancel()">{{ 'cancel' | translate }}</button>
+  <button mat-raised-button color="primary" [disabled]="!newRouteTypesForm.valid" (click)="onSave()">{{ 'save' | translate }}</button>
+</div>

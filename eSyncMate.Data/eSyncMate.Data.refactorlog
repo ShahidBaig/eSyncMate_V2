@@ -1,0 +1,59 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Operations Version="1.0" xmlns="http://schemas.microsoft.com/sqlserver/dac/Serialization/2012/02">
+  <Operation Name="Rename Refactor" Key="0b700bae-386c-4d20-a97c-43dd69ede51b" ChangeDateTime="09/08/2023 07:14:43">
+    <Property Name="ElementName" Value="[dbo].[Maps].[Type]" />
+    <Property Name="ElementType" Value="SqlSimpleColumn" />
+    <Property Name="ParentElementName" Value="[dbo].[Maps]" />
+    <Property Name="ParentElementType" Value="SqlTable" />
+    <Property Name="NewName" Value="TypeId" />
+  </Operation>
+  <Operation Name="Rename Refactor" Key="cd2858e0-57a3-4a8c-9ef1-e3cd7e7b2bfe" ChangeDateTime="09/08/2023 09:42:43">
+    <Property Name="ElementName" Value="[dbo].[Orders].[ShipToEMail]" />
+    <Property Name="ElementType" Value="SqlSimpleColumn" />
+    <Property Name="ParentElementName" Value="[dbo].[Orders]" />
+    <Property Name="ParentElementType" Value="SqlTable" />
+    <Property Name="NewName" Value="ShipToEmail" />
+  </Operation>
+  <Operation Name="Rename Refactor" Key="f5c9d0be-c198-403d-b1e8-04fc8a55e47a" ChangeDateTime="09/08/2023 11:36:52">
+    <Property Name="ElementName" Value="[dbo].[Connectors].[Url]" />
+    <Property Name="ElementType" Value="SqlSimpleColumn" />
+    <Property Name="ParentElementName" Value="[dbo].[Connectors]" />
+    <Property Name="ParentElementType" Value="SqlTable" />
+    <Property Name="NewName" Value="Data" />
+  </Operation>
+  <Operation Name="Rename Refactor" Key="bfc22e77-97a0-489d-b606-e7cfeec81b12" ChangeDateTime="10/04/2023 13:42:41">
+    <Property Name="ElementName" Value="[dbo].[Users].[Passwrod]" />
+    <Property Name="ElementType" Value="SqlSimpleColumn" />
+    <Property Name="ParentElementName" Value="[dbo].[Users]" />
+    <Property Name="ParentElementType" Value="SqlTable" />
+    <Property Name="NewName" Value="Password" />
+  </Operation>
+  <Operation Name="Rename Refactor" Key="1fd49485-4f96-4a84-bba7-849a67f843a2" ChangeDateTime="04/21/2024 15:28:16">
+    <Property Name="ElementName" Value="[dbo].[CarrierLoadTender].[Purpose]" />
+    <Property Name="ElementType" Value="SqlSimpleColumn" />
+    <Property Name="ParentElementName" Value="[dbo].[CarrierLoadTender]" />
+    <Property Name="ParentElementType" Value="SqlTable" />
+    <Property Name="NewName" Value="ShipmentId" />
+  </Operation>
+  <Operation Name="Rename Refactor" Key="ce7a5454-3e2c-454f-ab94-5bfcef2a6357" ChangeDateTime="04/21/2024 15:28:23">
+    <Property Name="ElementName" Value="[dbo].[CarrierLoadTender].[On_N1]" />
+    <Property Name="ElementType" Value="SqlSimpleColumn" />
+    <Property Name="ParentElementName" Value="[dbo].[CarrierLoadTender]" />
+    <Property Name="ParentElementType" Value="SqlTable" />
+    <Property Name="NewName" Value="Purpose" />
+  </Operation>
+  <Operation Name="Rename Refactor" Key="88391d6e-dbd9-4a38-8e8d-a17e38df8bc5" ChangeDateTime="04/21/2024 15:28:28">
+    <Property Name="ElementName" Value="[dbo].[CarrierLoadTender].[FreightBillParty]" />
+    <Property Name="ElementType" Value="SqlSimpleColumn" />
+    <Property Name="ParentElementName" Value="[dbo].[CarrierLoadTender]" />
+    <Property Name="ParentElementType" Value="SqlTable" />
+    <Property Name="NewName" Value="ReferenceNo" />
+  </Operation>
+  <Operation Name="Rename Refactor" Key="8c0432ae-cd1f-401c-a601-2814626ceb14" ChangeDateTime="04/21/2024 15:28:34">
+    <Property Name="ElementName" Value="[dbo].[CarrierLoadTender].[EquipmentDetails]" />
+    <Property Name="ElementType" Value="SqlSimpleColumn" />
+    <Property Name="ParentElementName" Value="[dbo].[CarrierLoadTender]" />
+    <Property Name="ParentElementType" Value="SqlTable" />
+    <Property Name="NewName" Value="BillToParty" />
+  </Operation>
+</Operations>

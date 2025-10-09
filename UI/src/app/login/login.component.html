@@ -1,0 +1,51 @@
+<div class="login-container">
+  <div class="login-box">
+    <h1>{{ 'login' | translate }}</h1>
+
+    <h2 [ngStyle]="redTextStyle">{{responseMsg}}</h2>
+
+    <form [formGroup]="loginForm" (keydown)="handleKeyDown($event)">
+      <mat-grid-list cols="2" rowHeight="100px" gutterSize="10px">
+        <mat-grid-tile colspan="2">
+          <mat-form-field appearance="fill" color="accent">
+            <mat-label>{{ 'userID' | translate }}</mat-label>
+            <input matInput formControlName="userID">
+            <!--<mat-error >{{getEmailErrors()}}</mat-error>-->
+          </mat-form-field>
+        </mat-grid-tile>
+
+        <mat-grid-tile colspan="2">
+          <mat-form-field appearance="fill" color="accent">
+            <mat-label>{{ 'password' | translate }}</mat-label>
+            <input matInput [type]="hide ? 'password' : 'text'" formControlName="password">
+            <button mat-icon-button matSuffix (click)="hide = !hide">
+              <mat-icon>{{hide ? 'visibility_off' : 'visibility'}}</mat-icon>
+            </button>
+            <mat-error *ngIf="this.Password.invalid" style="font-size: 10px;">{{getPasswordErrors()}}</mat-error>
+          </mat-form-field>
+        </mat-grid-tile>
+
+        <mat-grid-tile colspan="2">
+          <mat-form-field class="form-field">
+            <mat-label>{{ 'language' | translate }}</mat-label>
+            <mat-select (selectionChange)="languageService.setLanguage($event.value)" [value]="languageService.currentLanguage">
+              <mat-option [value]="'en'">English</mat-option>
+              <mat-option [value]="'es'">Español</mat-option>
+            </mat-select>
+          </mat-form-field>
+        </mat-grid-tile>
+
+        <mat-grid-tile colspan="2" class="login">
+          <button mat-flat-button color="warn" class="cancel-btn" (click)="cancel()">{{ 'Cancel' | translate }}</button>
+          <button mat-flat-button color="accent" class="login-btn" [disabled]="loginForm.invalid" (click)="login()">{{ 'login' | translate }}</button>
+        </mat-grid-tile>
+      </mat-grid-list>
+    </form>
+
+    <!--<div class="login-link">
+    <span>Don't have an account?</span>
+    <button mat-stroked-button color="accent" routerLink="/register">Create Account</button>
+  </div>-->
+
+  </div>
+</div>

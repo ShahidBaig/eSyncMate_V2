@@ -1,0 +1,8 @@
+﻿DELETE FROM CarrierLoadTender
+DELETE FROM CarrierLoadTenderData
+DELETE FROM RouteLog
+DELETE FROM RouteData
+DELETE FROM InboundEDI
+DELETE FROM InboundEDIInfo
+DELETE FROM OutboundEDI
+GO

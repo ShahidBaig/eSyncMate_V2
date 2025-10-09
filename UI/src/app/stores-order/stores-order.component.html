@@ -1,0 +1,86 @@
+<div class="header">
+  <button mat-icon-button color="accent" class="close-button" (click)="closeDialog()">
+    <mat-icon>close</mat-icon>
+  </button>
+</div>
+
+<div hidden="hidden">
+  <label>{{ parentOrderId }}</label>
+</div>
+
+<div class="body">
+  <button mat-flat-button color="accent" matTooltip="Sync All Store Orders" matTooltipPosition="above" (click)="syncAllStoreOrders(data)">
+    {{ 'syncOrders' | translate }}
+    <mat-icon>sync</mat-icon>
+  </button>
+  &nbsp;
+  &nbsp;
+  <button class="file-input" (click)="fileInput.click()" mat-flat-button color="accent" matTooltip="Generate ASN For Store Orders" matTooltipPosition="above">
+    <mat-icon>local_shipping</mat-icon>
+  </button>
+  <input #fileInput type="file" (change)="uploadGenerateASNForStoreOrders($event)" accept=".csv" style="display:none" multiple />
+  &nbsp;
+  <button mat-flat-button color="accent" matTooltip="Mark Store Orders For ASN" matTooltipPosition="above" (click)="markForASNForStoreOrdersSelectAll(data)">
+    <mat-icon>file_copy</mat-icon>
+  </button>
+  &nbsp;
+  <button mat-flat-button color="accent" matTooltip="Create Invoice For Store Orders" matTooltipPosition="above" (click)="createInvoiceForStoreOrdersSelectAll(data)">
+    <mat-icon>ballot</mat-icon>
+  </button>
+  &nbsp;
+  <button class="file-input1" (click)="fileInput1.click()" mat-flat-button color="accent" matTooltip="Create 810 For Store Orders" matTooltipPosition="above">
+    <mat-icon>developer_mode</mat-icon>
+  </button>
+  <input #fileInput1 type="file" (change)="uploadGenerate810ForStoreOrders($event)" accept=".csv" style="display:none" multiple />
+
+
+  <div class="mat-table-container">
+    <table mat-table [dataSource]="data">
+      <!-- Define the columns -->
+      <ng-container matColumnDef="id">
+        <th mat-header-cell *matHeaderCellDef>{{ 'storeOrderID' | translate }}</th>
+        <td mat-cell *matCellDef="let element"> {{element.id}} </td>
+      </ng-container>
+
+      <ng-container matColumnDef="orderId" [style.display]="showDataColumn ? 'none' : 'none'">
+        <th mat-header-cell *matHeaderCellDef [style.display]="showDataColumn ? 'none' : 'none'">data</th>
+        <td mat-cell *matCellDef="let element" [style.display]="showDataColumn ? 'none' : 'none'">
+          {{element.orderId}}
+        </td>
+      </ng-container>
+
+      <!-- Status -->
+      <ng-container matColumnDef="Status">
+        <th mat-header-cell *matHeaderCellDef>{{ 'status' | translate }}</th>
+        <td mat-cell *matCellDef="let element" [ngClass]="getStatusClass(element.status)">
+          {{element.status}}
+        </td>
+      </ng-container>
+
+      <!-- Customer PO -->
+      <ng-container matColumnDef="CustomerPO">
+        <th mat-header-cell *matHeaderCellDef>{{ 'customerPO' | translate }}</th>
+        <td mat-cell *matCellDef="let element"> {{element.customerPO}} </td>
+      </ng-container>
+
+      <!--SyncOrderStore-->
+      <ng-container matColumnDef="SyncOrderStore">
+        <th mat-header-cell *matHeaderCellDef> {{ 'actions' | translate }}</th>
+        <td mat-cell *matCellDef="let element">
+          <button mat-icon-button aria-label="normal button" color="accent" matTooltip="Sync Store Order" matTooltipPosition="above"
+                  (click)="syncStoreOrder(element.id, element.orderId, false)"
+                  *ngIf="element.status !== 'SYNCED'">
+            <mat-icon>sync</mat-icon>
+          </button>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="columns"></tr>
+      <tr mat-row *matRowDef="let row; columns: columns"></tr>
+    </table>
+  </div>
+</div>
+
+<div *ngIf="showSpinner" class="spinner-overlay">
+  <mat-spinner></mat-spinner>
+</div>

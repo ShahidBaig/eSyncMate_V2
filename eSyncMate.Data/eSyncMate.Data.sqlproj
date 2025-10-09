@@ -1,0 +1,233 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <Name>eSyncMate.Data</Name>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectVersion>4.1</ProjectVersion>
+    <ProjectGuid>{14b34b08-1106-45f1-ba9c-53e1d84200ea}</ProjectGuid>
+    <DSP>Microsoft.Data.Tools.Schema.Sql.Sql160DatabaseSchemaProvider</DSP>
+    <OutputType>Database</OutputType>
+    <RootPath />
+    <RootNamespace>eSyncMate.Data</RootNamespace>
+    <AssemblyName>eSyncMate.Data</AssemblyName>
+    <ModelCollation>1033, CI</ModelCollation>
+    <DefaultFileStructure>BySchemaAndSchemaType</DefaultFileStructure>
+    <DeployToDatabase>True</DeployToDatabase>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
+    <TargetLanguage>CS</TargetLanguage>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <SqlServerVerification>False</SqlServerVerification>
+    <IncludeCompositeObjects>True</IncludeCompositeObjects>
+    <TargetDatabaseSet>True</TargetDatabaseSet>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <OutputPath>bin\Release\</OutputPath>
+    <BuildScriptName>$(MSBuildProjectName).sql</BuildScriptName>
+    <TreatWarningsAsErrors>False</TreatWarningsAsErrors>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <DefineDebug>false</DefineDebug>
+    <DefineTrace>true</DefineTrace>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <OutputPath>bin\Debug\</OutputPath>
+    <BuildScriptName>$(MSBuildProjectName).sql</BuildScriptName>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <DefineDebug>true</DefineDebug>
+    <DefineTrace>true</DefineTrace>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup>
+    <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">11.0</VisualStudioVersion>
+    <SSDTExists Condition="Exists('$(MSBuildExtensionsPath)\Microsoft\VisualStudio\v$(VisualStudioVersion)\SSDT\Microsoft.Data.Tools.Schema.SqlTasks.targets')">True</SSDTExists>
+    <VisualStudioVersion Condition="'$(SSDTExists)' == ''">11.0</VisualStudioVersion>
+  </PropertyGroup>
+  <Import Condition="'$(SQLDBExtensionsRefPath)' != ''" Project="$(SQLDBExtensionsRefPath)\Microsoft.Data.Tools.Schema.SqlTasks.targets" />
+  <Import Condition="'$(SQLDBExtensionsRefPath)' == ''" Project="$(MSBuildExtensionsPath)\Microsoft\VisualStudio\v$(VisualStudioVersion)\SSDT\Microsoft.Data.Tools.Schema.SqlTasks.targets" />
+  <ItemGroup>
+    <Folder Include="Properties" />
+    <Folder Include="Tables" />
+    <Folder Include="Views" />
+    <Folder Include="Data" />
+    <Folder Include="Data\InitialSetup" />
+    <Folder Include="Data\GeckoTech" />
+    <Folder Include="Procedures" />
+    <Folder Include="Data\Safavieh" />
+    <Folder Include="Triggers" />
+    <Folder Include="Data\Safavieh\ToDeploy" />
+    <Folder Include="Data\Safavieh\Deployed" />
+    <Folder Include="Data\GeckoTech\ToDeploy" />
+    <Folder Include="Data\GeckoTech\Deployed" />
+    <Folder Include="Data\Surgimac" />
+    <Folder Include="Data\Surgimac\Views" />
+  </ItemGroup>
+  <ItemGroup>
+    <Build Include="Tables\Customers.sql" />
+    <Build Include="Tables\Maps.sql" />
+    <Build Include="Views\VW_CustomerMaps.sql" />
+    <None Include="Data\InitialSetup\MapTypesData.sql" />
+    <None Include="Data\InitialSetup\MapsData.sql" />
+    <None Include="Data\InitialSetup\CustomersData.sql" />
+    <None Include="Data\InitialSetup\CustomerMapsData.sql" />
+    <Build Include="Tables\Orders.sql" />
+    <Build Include="Tables\OrderData.sql" />
+    <Build Include="Tables\ConnectorTypes.sql" />
+    <Build Include="Tables\Connectors.sql" />
+    <Build Include="Tables\CustomerConnectors.sql" />
+    <Build Include="Views\VW_CustomerConnectors.sql" />
+    <Build Include="Tables\OrderStores.sql" />
+    <Build Include="Tables\InboundEDI.sql" />
+    <Build Include="Tables\InboundEDIInfo.sql" />
+    <Build Include="Tables\OutboundEDI.sql" />
+    <Build Include="Views\VW_OrderData.sql" />
+    <Build Include="Views\VW_Orders.sql" />
+    <Build Include="Tables\Users.sql" />
+    <Build Include="Views\VW_Users.sql" />
+    <Build Include="Tables\CustomerItems.sql" />
+    <Build Include="Views\VW_Maps.sql" />
+    <Build Include="Views\VW_Connectors.sql" />
+    <Build Include="Views\VW_Customers.sql" />
+    <Build Include="Data\InitialSetup\CustomersFeed.sql" />
+    <Build Include="Tables\ParterGroups.sql" />
+    <Build Include="Tables\Routes.sql" />
+    <Build Include="Tables\RouteTypes.sql" />
+    <Build Include="Tables\CustomersFeed.sql" />
+    <Build Include="Views\VW_PartnerGroups.sql" />
+    <Build Include="Views\VW_Routes.sql" />
+    <Build Include="Views\VW_RouteTypes.sql" />
+    <Build Include="Views\VW_RouteData.sql" />
+    <Build Include="Views\VW_RouteLog.sql" />
+    <Build Include="Tables\RouteData.sql" />
+    <Build Include="Tables\RouteLog.sql" />
+    <Build Include="Tables\CarrierLoadTender.sql" />
+    <Build Include="Tables\CarrierLoadTenderData.sql" />
+    <Build Include="Views\VW_CarrierLoadTenderData.sql" />
+    <Build Include="Views\VW_CarrierLoadTender.sql" />
+    <None Include="Data\GeckoTech\MapsData.sql" />
+    <None Include="Data\GeckoTech\CustomersData.sql" />
+    <None Include="Data\GeckoTech\MapTypesData.sql" />
+    <None Include="Data\GeckoTech\ConnectorTypesData.sql" />
+    <None Include="Data\GeckoTech\ConnectorsData.sql" />
+    <None Include="Data\GeckoTech\CustomerMapsData.sql" />
+    <Build Include="Tables\CARRIERTENDERLOAD_ACK.sql" />
+    <Build Include="Procedures\SP_OrdersData.sql" />
+    <Build Include="Procedures\InsertCustomerProductCatalog.sql" />
+    <Build Include="Procedures\SP_GETSCSASN.sql" />
+    <Build Include="Procedures\SP_GETSCSOrderStatus.sql" />
+    <Build Include="Procedures\SP_InsertSCSInventoryFeed.sql" />
+    <Build Include="Procedures\SP_InsertSCSOrderStatus.sql" />
+    <Build Include="Procedures\Sp_ProductCatalogFileHeaderColumn.sql" />
+    <Build Include="Procedures\Sp_SaveCustomerProductCatalog.sql" />
+    <Build Include="Procedures\Sp_SaveItemsType.sql" />
+    <Build Include="Procedures\Sp_SaveItemsTypeReport.sql" />
+    <Build Include="Procedures\Sp_SaveItemTypeAttributes.sql" />
+    <Build Include="Procedures\Sp_SaveProductUploadPrices.sql" />
+    <Build Include="Procedures\Sp_SCS_GetProductCatalog.sql" />
+    <Build Include="Procedures\SP_SCSInvoice.sql" />
+    <Build Include="Procedures\SP_UpdateOrderStatus.sql" />
+    <None Include="Data\Safavieh\MapsData.sql" />
+    <None Include="Data\Safavieh\MapTypesData.sql" />
+    <Build Include="Tables\ConnectorsLogs.sql" />
+    <Build Include="Tables\ConnectorTypesLogs.sql" />
+    <Build Include="Tables\CustomersLogs.sql" />
+    <Build Include="Tables\MapsLogs.sql" />
+    <Build Include="Tables\MapTypesLogs.sql" />
+    <Build Include="Triggers\trg_ConnectorsChangeLogs.sql" />
+    <Build Include="Triggers\trg_ConnectorTypesChangeLogs.sql" />
+    <Build Include="Triggers\trg_CustomersChangeLogs.sql" />
+    <Build Include="Triggers\trg_MapsChangeLogs.sql" />
+    <Build Include="Triggers\trg_MapTypesChangeLogs.sql" />
+    <Build Include="Triggers\trg_OrdersChangeLogs.sql" />
+    <Build Include="Triggers\trg_OrderStoresChangeLogs.sql" />
+    <Build Include="Triggers\trg_PartnerGroupsChangeLogs.sql" />
+    <Build Include="Triggers\trg_ProductUploadPricesChangeLogs.sql" />
+    <Build Include="Triggers\trg_RoutesChangeLogs.sql" />
+    <Build Include="Triggers\trg_RouteTypesChangeLogs.sql" />
+    <Build Include="Triggers\trg_UsersChangeLogs.sql" />
+    <None Include="Data\Safavieh\CleanData.sql" />
+    <Build Include="Procedures\SP_CustomerProductCatalog.sql" />
+    <Build Include="Tables\ProductUploadPrices.sql" />
+    <Build Include="Data\InitialSetup\RouteTypesData.sql" />
+    <Build Include="Data\InitialSetup\PartnerGroupsData.sql" />
+    <Build Include="Data\InitialSetup\RoutesData.sql" />
+    <Build Include="Data\Safavieh\RouteTypes_Insert.sql" />
+    <Build Include="Tables\SCS_CustomerProductCatalog.sql" />
+    <Build Include="Tables\SCS_ItemsType.sql" />
+    <Build Include="Tables\SCS_ItemsTypeReport.sql" />
+    <Build Include="Tables\SCS_ItemTypeAttribute.sql" />
+    <Build Include="Tables\SCS_PlaceOrder_Update.sql" />
+    <Build Include="Tables\SCSInventoryFeed.sql" />
+    <Build Include="Tables\Temp_ProductUploadPrices.sql" />
+    <Build Include="Tables\Temp_SCS_CustomerProductCatalog.sql" />
+    <Build Include="Tables\Temp_SCS_ItemsType.sql" />
+    <Build Include="Tables\Temp_SCS_ItemTypeAttribute.sql" />
+    <Build Include="Tables\Temp_SCSInventoryFeed.sql" />
+    <Build Include="Views\VW_GetProductID.sql" />
+    <Build Include="Views\VW_ProductUploadPrices.sql" />
+    <Build Include="Views\VW_SCS_CustomerProductCatalog.sql" />
+    <Build Include="Views\VW_SCS_ItemsType.sql" />
+    <Build Include="Views\VW_SCS_ItemsTypeReport.sql" />
+    <Build Include="Views\VW_TempSCSInventoryFeed.sql" />
+    <Build Include="Tables\OrdersLogs.sql" />
+    <Build Include="Tables\OrderStoresLogs.sql" />
+    <Build Include="Tables\RoutesLogs.sql" />
+    <Build Include="Tables\RouteTypesLogs.sql" />
+    <Build Include="Tables\ProductUploadPricesLogs.sql" />
+    <Build Include="Tables\SCS_CustomerProductCatalogData.sql" />
+    <Build Include="Tables\PartnerGroupsLogs.sql" />
+    <Build Include="Procedures\Sp_ProductCatalogRejected.sql" />
+    <Build Include="Tables\OrderDetail.sql" />
+    <Build Include="Views\VW_SCS_CustomerProductCatalogData.sql" />
+    <Build Include="Tables\CustomerProductCatalogPrices.sql" />
+    <Build Include="Tables\SCSInventoryFeedData.sql" />
+    <Build Include="Views\VW_SCSInventoryFeedData.sql" />
+    <Build Include="Procedures\SP_SyncCancelQty.sql" />
+    <Build Include="Views\VW_Inventory.sql" />
+    <Build Include="Tables\SCS_States.sql" />
+    <Build Include="Procedures\Sp_preSave.sql" />
+    <Build Include="Procedures\sp_GetSCSOrder.sql" />
+    <Build Include="Tables\InventoryBatchWise.sql" />
+    <Build Include="Views\VW_BatchWiseInventory.sql" />
+    <Build Include="Views\VW_GetEDIFilesCount.sql" />
+    <Build Include="Tables\SCSInventoryFeedData_AlterTable.sql" />
+    <Build Include="Procedures\Sp_GetItemTypeAttributeName.sql" />
+    <Build Include="Views\VW_Inventory_ItemWise.sql" />
+    <Build Include="Procedures\Sp_ProductPromotionFileHeaderColumn.sql" />
+    <Build Include="Views\VW_OrderDetail.sql" />
+    <Build Include="Tables\OrderDataLogs.sql" />
+    <Build Include="Tables\Warehouses.sql" />
+    <None Include="Data\Surgimac\WarehousesData.sql" />
+    <Build Include="Data\Surgimac\Views\VW_Temp_PurchaseOrders.sql" />
+    <Build Include="Data\Safavieh\ApplicationSettings.sql" />
+  </ItemGroup>
+  <ItemGroup>
+    <RefactorLog Include="eSyncMate.Data.refactorlog" />
+  </ItemGroup>
+  <ItemGroup>
+    <Build Include="Tables\MapTypes.sql" />
+    <Build Include="Tables\CustomerMaps.sql" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Data\InitialSetup\ConnectorTypesData.sql" />
+    <None Include="Data\InitialSetup\ConnectorsData.sql" />
+    <None Include="Data\InitialSetup\CustomerConnectorsData.sql" />
+    <None Include="Data\InitialSetup\UsersData.sql" />
+    <None Include="Data\InitialSetup\CustomerItemsData.sql" />
+    <None Include="Data\GeckoTech\RoutesData.sql" />
+    <None Include="Data\GeckoTech\RouteTypesData.sql" />
+    <None Include="Data\GeckoTech\UsersData.sql" />
+    <None Include="Data\GeckoTech\PartnerGroupsData.sql" />
+    <None Include="Data\GeckoTech\CARRIERTENDERLOAD_ACK_DATA.sql" />
+    <None Include="Data\GeckoTech\CleanData.sql" />
+    <None Include="Data\GeckoTech\SCS_StatesData.sql" />
+    <None Include="Triggers\trg_OrderDataLogs.sql" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,74 @@
+.custom-css {
+  height: 400px;
+  overflow: scroll;
+  overflow-x: hidden;
+}
+
+.dialog-content {
+  padding: 24px;
+}
+
+.dialog-title {
+  margin-bottom: 20px;
+  font-size: 24px;
+  font-weight: bold;
+}
+
+
+/*.form-row {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;*/ /* Allows fields to wrap on smaller screens */
+/*}*/
+
+.form-field {
+  flex: 1; /* Each field takes equal space */
+  max-width: 500px; /* Increase max-width as needed */
+}
+
+.full-width {
+  flex: 0 0 98%; /* Full width for single field rows */
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: space-between;
+  padding: 16px 24px 24px;
+  border-top: 1px solid #eee;
+}
+
+.cancel-button {
+  color: #666;
+}
+
+/* Additional global styles */
+/*mat-form-field {
+  width: 100%;
+}*/
+
+input[matInput] {
+  padding: 8px 12px;
+}
+
+.checkbox-container {
+  display: flex;
+}
+
+.checkbox-label {
+  margin-right: 20px;
+}
+
+
+.form-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center; /* This ensures that all form elements are vertically aligned */
+  gap: 16px; /* Provides space between items */
+}
+
+.mat-form-field {
+  flex-grow: 1; /* Allows each field to expand to fill available space */
+  min-width: 120px;
+  /*height: 55px;
+    width: 168px;*/ /* Prevents the fields from becoming too small on narrow screens */
+}

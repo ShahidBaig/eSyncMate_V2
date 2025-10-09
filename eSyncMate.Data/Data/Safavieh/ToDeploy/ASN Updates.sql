@@ -1,0 +1,18 @@
+
+
+
+INSERT INTO WalmartShipNodes(WHSID,ShipNode,APIName)
+VALUES
+    ('L10', '497761682444439553','WalmartAPI'),
+    ('L21', '497762031336734721','WalmartAPI'),
+    ('L28', '497762311259340801','WalmartAPI'),
+    ('L35', '497763272632614913','WalmartAPI'),
+    ('L36', '497763469216034817','WalmartAPI'),
+    ('L37', '497763920192221185','WalmartAPI'),
+    ('L40', '497762868331835393','WalmartAPI'),
+    ('L41', '497763055940186113','WalmartAPI'),
+    ('L55', '497764084382445569','WalmartAPI'),
+    ('L60', '497763730913599489','WalmartAPI'),
+    ('L70', '685239455581687809','WalmartAPI')
+
+GO

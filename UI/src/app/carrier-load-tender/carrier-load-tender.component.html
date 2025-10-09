@@ -1,0 +1,174 @@
+
+<div class="mat-table-container">
+
+  <mat-card>
+    <mat-card-content>
+      <form [formGroup]="CarrierLoadTenderForm">
+        <mat-form-field appearance="fill" color="accent">
+          <mat-label>{{ 'cltID' | translate }}</mat-label>
+          <input matInput formControlName="carrierLoadTenderId">
+        </mat-form-field>
+        &nbsp;
+        <mat-form-field appearance="fill" color="accent">
+          <mat-label>{{ 'shipmentID' | translate }}</mat-label>
+          <input matInput formControlName="shipmentId">
+        </mat-form-field>
+        &nbsp;
+        <mat-form-field appearance="fill" color="accent">
+          <mat-label>{{ 'shipperNo' | translate }}</mat-label>
+          <input matInput formControlName="shipmentShipperNo">
+        </mat-form-field>
+       
+        &nbsp;
+        <mat-form-field color="accent">
+          <mat-label>{{ 'fromDate' | translate }}</mat-label>
+          <input formControlName="fromDate" matInput [matDatepicker]="fromDate">
+          <mat-hint>MM/DD/YYYY</mat-hint>
+          <mat-datepicker-toggle matIconSuffix [for]="fromDate"></mat-datepicker-toggle>
+          <mat-datepicker #fromDate></mat-datepicker>
+        </mat-form-field>
+        &nbsp;
+        <mat-form-field color="accent">
+          <mat-label>{{ 'toDate' | translate }}</mat-label>
+          <input formControlName="toDate" matInput [matDatepicker]="toDate">
+          <mat-hint>MM/DD/YYYY</mat-hint>
+          <mat-datepicker-toggle matIconSuffix [for]="toDate"></mat-datepicker-toggle>
+          <mat-datepicker #toDate></mat-datepicker>
+        </mat-form-field>
+        &nbsp;
+        <mat-form-field appearance="fill" color="accent">
+          <mat-label>{{ 'status' | translate }}</mat-label>
+          <mat-select formControlName="status">
+            <mat-option *ngFor="let status of statusOptions" [value]="status">
+              {{ status }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+        &nbsp;
+        <button mat-flat-button color="accent" (click)="getCarrierLoadTender()">
+          <span *ngIf="!showSpinnerforSearch">{{ 'searchCarrier' | translate }}</span>
+          <mat-spinner *ngIf="showSpinnerforSearch" diameter="20"></mat-spinner>
+        </button>
+
+      </form>
+    </mat-card-content>
+  </mat-card>
+
+
+  &nbsp;
+  <mat-card>
+    <mat-card-content>
+      <table mat-table [dataSource]="carrierToDisplay">
+
+        <!-- ID Column -->
+        <ng-container matColumnDef="id">
+          <th mat-header-cell *matHeaderCellDef>{{ 'cltID' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.id}} </td>
+        </ng-container>
+
+        <!-- Status -->
+        <ng-container matColumnDef="Status">
+          <th mat-header-cell *matHeaderCellDef>{{ 'status' | translate }}</th>
+          <td mat-cell *matCellDef="let element" [ngClass]="getStatusClass(element.status)">
+            {{element.status}}
+          </td>
+        </ng-container>
+
+        <!-- Customer Name -->
+        <ng-container matColumnDef="CustomerName">
+          <th mat-header-cell *matHeaderCellDef>{{ 'customerName' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.customerName}} </td>
+        </ng-container>
+
+        <!-- Document Date -->
+        <ng-container matColumnDef="DocumentDate">
+          <th mat-header-cell *matHeaderCellDef>{{ 'documentDate' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.documentDate | date:'MMM-dd-YYYY'}} </td>
+        </ng-container>
+
+        <!-- Created Date -->
+        <ng-container matColumnDef="CreatedDate">
+          <th mat-header-cell *matHeaderCellDef>{{ 'receivedDate' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.createdDate | date:'MMM-dd-YYYY HH:mm:ss'}} </td>
+        </ng-container>
+
+        <!-- ShipmentId -->
+        <ng-container matColumnDef="ShipmentId">
+          <th mat-header-cell *matHeaderCellDef>{{ 'shipmentID' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.shipmentId}} </td>
+        </ng-container>
+
+        <!-- ShipmentShipperNo -->
+        <ng-container matColumnDef="ShipperNo">
+          <th mat-header-cell *matHeaderCellDef>{{ 'shipperNo' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.shipperNo}} </td>
+        </ng-container>
+        &nbsp;
+        <ng-container matColumnDef="CompletionDate">
+          <th mat-header-cell *matHeaderCellDef>{{ 'completionDate' | translate }}</th>
+          <td mat-cell *matCellDef="let element">
+            <ng-container *ngIf="element.completionDate !== '0001-01-01T00:00:00'; else emptyDate">
+              {{ element.completionDate | date:'MMM-dd-YYYY' }}
+            </ng-container>
+            <ng-template #emptyDate></ng-template>
+          </td>
+        </ng-container>
+        &nbsp;
+        <!--GetCarrierFiles-->
+        <ng-container matColumnDef="File" *ngIf="isAdminUser">
+          <th mat-header-cell *matHeaderCellDef>{{ 'actions' | translate }}</th>
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let element">
+            <button mat-icon-button aria-label="normal button" color="accent" matTooltip="Get Carrier Files" matTooltipPosition="above"
+                    (click)="getCarrierLoadTenderFiles(element)">
+              <mat-icon>playlist_add</mat-icon>
+            </button>
+            <!--<button *ngIf="element.status === 'NEW' && !element.ackStatus" mat-icon-button aria-label="normal button" style="color: #4CAF50;" matTooltip="Accept" matTooltipPosition="above"
+                    (click)="updateAckStatus('ACCEPT',element)">
+              <mat-icon>done</mat-icon>
+            </button>
+            <button *ngIf="element.status?.toLocaleUpperCase() === 'NEW' && (element.ackStatus?.toLocaleUpperCase() || '') === ''" mat-icon-button aria-label="normal button" style="color:#F44336;" matTooltip="Reject" matTooltipPosition="above"
+                    (click)="updateAckStatus('REJECT',element)">
+              <mat-icon>close</mat-icon>
+            </button>-->
+            <button *ngIf="element.status === 'ACK' && element.ackStatus === 'ACCEPT'" mat-icon-button aria-label="normal button" style="color:#1851a69c;" matTooltip="Track" matTooltipPosition="above"
+                    (click)="openTrackAckPopUp(element)">
+              <mat-icon>edit</mat-icon>
+            </button>
+
+            <button mat-icon-button aria-label="normal button" color="accent" matTooltip="Update Status"
+                    matTooltipPosition="right" (click)="openEditDialog(element)">
+              <mat-icon>edit</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+
+        <!--<ng-container matColumnDef="OrderStatus">
+    <th mat-header-cell *matHeaderCellDef></th>
+    <td mat-cell *matCellDef="let element">
+      <button mat-icon-button aria-label="normal button" color="accent" matTooltip="Update Status"
+              matTooltipPosition="right" (click)="openEditDialog(element)">
+        <mat-icon>edit</mat-icon>
+      </button>
+    </td>
+  </ng-container>-->
+
+        <tr mat-header-row *matHeaderRowDef="columns"></tr>
+        <tr mat-row *matRowDef="let row; columns: columns"></tr>
+
+      </table>
+
+      <mat-paginator [length]="listOfCarrier.length"
+                     [pageSize]="10"
+                     [pageSizeOptions]="[5, 10, 15, 20, 100]"
+                     (page)="onPageChange($event)">
+      </mat-paginator>
+
+    </mat-card-content>
+  </mat-card>
+
+</div>
+
+<div *ngIf="showSpinner" class="spinner-overlay">
+  <mat-spinner></mat-spinner>
+</div>

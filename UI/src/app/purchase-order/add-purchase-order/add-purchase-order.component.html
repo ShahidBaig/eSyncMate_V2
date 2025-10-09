@@ -1,0 +1,469 @@
+<div mat-dialog-content class="dialog-content">
+  <h1 class="dialog-title">{{ "addNewPurchaseOrder" | translate }}</h1>
+    <form [formGroup]="newPurchaseOrderForm" class="route-form">
+      <mat-tab-group>
+        <mat-tab label="General">
+          <br />
+          <div class="form-row">
+            <mat-form-field class="form-field">
+              <mat-label>{{ "orderDate" | translate }}</mat-label>
+              <input matInput
+                     [matDatepicker]="orderDatePicker"
+                     formControlName="orderDate"
+                     placeholder="Purchase Order Date"
+                     [min]="minOrderDate"
+                     readonly />
+              <mat-datepicker-toggle matSuffix [for]="orderDatePicker"></mat-datepicker-toggle>
+              <mat-datepicker #orderDatePicker [disabled]="true"></mat-datepicker>
+            </mat-form-field>
+            <mat-form-field class="form-field" [class.field-error]="isFieldInvalid('vExpectedDate')">
+              <mat-label>{{ "Ship Date" | translate }}</mat-label>
+              <input formControlName="vExpectedDate"
+                     matInput
+                     [matDatepicker]="vExpectedDatePicker"
+                     placeholder="Ship Date"
+                     required />
+              <mat-datepicker-toggle matSuffix [for]="vExpectedDatePicker"></mat-datepicker-toggle>
+              <mat-datepicker #vExpectedDatePicker></mat-datepicker>
+              <mat-error *ngIf="isFieldInvalid('vExpectedDate')">
+                Ship Date is required.
+              </mat-error>
+            </mat-form-field>
+            <div class="form-field" [class.field-error]="isFieldInvalid('poNumber')">
+              <mat-form-field class="form-field">
+                <mat-label>{{ "PONumber" | translate }}</mat-label>
+                <input type="text"
+                       formControlName="poNumber"
+                       matInput
+                       placeholder="Purchase Order No"
+                       required />
+                <mat-error *ngIf="isFieldInvalid('poNumber')">
+                  Purchase Order Number is required.
+                </mat-error>
+              </mat-form-field>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-field" [class.field-error]="isFieldInvalid('supplierID')">
+              <mat-form-field class="form-field">
+                <mat-label>Supplier</mat-label>
+                <input type="text"
+                       matInput
+                       [formControl]="myControl"
+                       [matAutocomplete]="autoSupplier"
+                       placeholder="Select Supplier"
+                       required />
+                <mat-autocomplete #autoSupplier="matAutocomplete" [displayWith]="displayFn">
+                  <mat-option *ngFor="let option of filteredOptions | async"
+                              [value]="option"
+                              (onSelectionChange)="onSupplierSelected($event)">
+                    {{ option.supplierID }} - {{ option.name }}
+                  </mat-option>
+                </mat-autocomplete>
+                <mat-error *ngIf="isFieldInvalid('supplierID')">
+                  Supplier is required.
+                </mat-error>
+              </mat-form-field>
+            </div>
+            <div class="form-field">
+              <mat-form-field class="form-field">
+                <mat-label>{{ "Reference No" | translate }}</mat-label>
+                <input type="text" formControlName="referenceNo" matInput placeholder="Reference No" />
+              </mat-form-field>
+            </div>
+            <div class="form-field">
+              <mat-form-field class="form-field">
+                <mat-label>{{ "shipServiceCode" | translate }}</mat-label>
+                <input type="text" formControlName="shipServiceCode" matInput placeholder="Ship Service Code" />
+              </mat-form-field>
+            </div>
+          </div>
+          <mat-divider></mat-divider>
+          <br />
+          <mat-card-content>
+            <div class="form-row">
+              <mat-form-field class="form-field">
+                <mat-label>{{ 'Warehouses' | translate }}</mat-label>
+                <mat-select formControlName="WarehouseID" required>
+                  <mat-option *ngIf="!wareHouseOptions?.length" disabled>
+                    Loading warehouses...
+                  </mat-option>
+                  <mat-option *ngFor="let wareHouse of wareHouseOptions" [value]="wareHouse.id">
+                    {{ wareHouse.name }}
+                  </mat-option>
+                </mat-select>
+                <mat-error *ngIf="isFieldInvalid('WarehouseID')">
+                  Warehouse is required.
+                </mat-error>
+              </mat-form-field>
+
+              <div class="form-field">
+                <mat-form-field appearance="fill" class="full-width">
+                  <mat-label>{{ "Shipping Address Line 1" | translate }}</mat-label>
+                  <input type="text" formControlName="shipToAddress1" matInput placeholder="Enter Ship Address Line 1" readonly />
+                </mat-form-field>
+              </div>
+              <div class="form-field">
+                <mat-form-field appearance="fill" class="full-width">
+                  <mat-label>{{ "Shipping Address Line 2" | translate }}</mat-label>
+                  <input type="text" formControlName="shipToAddress2" matInput placeholder="Enter Ship Address Line 2" readonly />
+                </mat-form-field>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-field-shippingAddress">
+                <mat-form-field appearance="fill" class="full-width">
+                  <mat-label>{{ "Shipping City" | translate }}</mat-label>
+                  <input type="text" formControlName="shipToCity" matInput placeholder="Enter Ship City" readonly />
+                </mat-form-field>
+              </div>
+              <div class="form-field-shippingAddress">
+                <mat-form-field appearance="fill" class="full-width">
+                  <mat-label>{{ "Shipping State" | translate }}</mat-label>
+                  <input type="text" formControlName="shipToState" matInput placeholder="Enter Ship State" readonly />
+                </mat-form-field>
+              </div>
+              <div class="form-field-shippingAddress">
+                <mat-form-field appearance="fill" class="full-width">
+                  <mat-label>{{ "Shipping Zip Code" | translate }}</mat-label>
+                  <input type="text" formControlName="shipToZip" matInput placeholder="Enter Ship Zip Code" readonly />
+                </mat-form-field>
+              </div>
+              <div class="form-field-shippingAddress">
+                <mat-form-field appearance="fill" class="full-width">
+                  <mat-label>{{ "Shipping Country" | translate }}</mat-label>
+                  <input type="text" formControlName="shipToCountry" matInput placeholder="Enter Ship Country" readonly />
+                </mat-form-field>
+              </div>
+            </div>
+          </mat-card-content>
+          <mat-divider></mat-divider>
+          <br />
+          <mat-card-content>
+            <div class="form-row">
+              <div class="form-field">
+                <mat-form-field appearance="fill" class="full-width">
+                  <mat-label>{{ "Billing Address Line 1" | translate }}</mat-label>
+                  <input type="text"
+                         formControlName="billToAddress1"
+                         matInput
+                         placeholder="Enter Bill Address Line 1"
+                         readonly />
+                </mat-form-field>
+              </div>
+              <div class="form-field">
+                <mat-form-field appearance="fill" class="full-width">
+                  <mat-label>{{ "Billing Address Line 2" | translate }}</mat-label>
+                  <input type="text"
+                         formControlName="billToAddress2"
+                         matInput
+                         placeholder="Enter Bill Address Line 2"
+                         readonly />
+                </mat-form-field>
+              </div>
+              <div class="form-field">
+                <mat-form-field appearance="fill" class="full-width">
+                  <mat-label>{{ "Billing City" | translate }}</mat-label>
+                  <input type="text"
+                         formControlName="billToCity"
+                         matInput
+                         placeholder="Enter Bill City"
+                         readonly />
+                </mat-form-field>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-field">
+                <mat-form-field appearance="fill" class="full-width">
+                  <mat-label>{{ "Billing State" | translate }}</mat-label>
+                  <input type="text"
+                         formControlName="billToState"
+                         matInput
+                         placeholder="Enter Bill State"
+                         readonly />
+                </mat-form-field>
+              </div>
+              <div class="form-field">
+                <mat-form-field appearance="fill" class="full-width">
+                  <mat-label>{{ "Billing Zip Code" | translate }}</mat-label>
+                  <input type="text"
+                         formControlName="billToZip"
+                         matInput
+                         placeholder="Enter Bill Zip Code"
+                         readonly />
+                </mat-form-field>
+              </div>
+              <div class="form-field">
+                <mat-form-field appearance="fill" class="full-width">
+                  <mat-label>{{ "Billing Country" | translate }}</mat-label>
+                  <input type="text"
+                         formControlName="billToCountry"
+                         matInput
+                         placeholder="Enter Bill Country"
+                         readonly />
+                </mat-form-field>
+              </div>
+            </div>
+          </mat-card-content>
+        </mat-tab>
+        <mat-tab label="Detail">
+          <br />
+          <br />
+          <mat-divider></mat-divider>
+          <mat-card appearance="outlined">
+            <mat-card-content>
+              <div class="form-row">
+                <div class="table-container" style="height: 250px; width: 100%; overflow: auto">
+                  <mat-table [dataSource]="dataSource" class="mat-elevation-z8">
+                    <ng-container matColumnDef="LineNo">
+                      <mat-header-cell *matHeaderCellDef sticky>
+                        Line No
+                      </mat-header-cell>
+                      <mat-cell *matCellDef="let element" sticky>
+                        {{ element.lineNo }}
+                      </mat-cell>
+                    </ng-container>
+                    <ng-container matColumnDef="ItemID">
+                      <mat-header-cell *matHeaderCellDef>
+                        SKU
+                      </mat-header-cell>
+                      <mat-cell *matCellDef="let element">
+                        {{ element.itemID }}
+                      </mat-cell>
+                    </ng-container>
+                    <ng-container matColumnDef="UPC" [style.display]="showDataColumn ? 'none' : 'none'">
+                      <mat-header-cell *matHeaderCellDef [style.display]="showDataColumn ? 'none' : 'none'"> UPC </mat-header-cell>
+                      <mat-cell *matCellDef="let element" [style.display]="showDataColumn ? 'none' : 'none'">
+                        {{ element.upc }}
+                      </mat-cell>
+                    </ng-container>
+                    <ng-container matColumnDef="Qty" [style.display]="showDataColumn ? 'none' : 'none'">
+                      <mat-header-cell *matHeaderCellDef [style.display]="showDataColumn ? 'none' : 'none'"> ATS Qty </mat-header-cell>
+                      <mat-cell *matCellDef="let element" [style.display]="showDataColumn ? 'none' : 'none'">
+                        {{ element.qty }}
+                      </mat-cell>
+                    </ng-container>
+                    <ng-container matColumnDef="Description">
+                      <mat-header-cell *matHeaderCellDef>
+                        Description
+                      </mat-header-cell>
+                      <mat-cell *matCellDef="let element">
+                        {{
+                      element.description | slice : 0 : 10
+                        }}{{ element.description.length > 10 ? "..." : "" }}
+                      </mat-cell>
+                    </ng-container>
+                    <ng-container matColumnDef="OrderQty">
+                      <mat-header-cell *matHeaderCellDef>
+                        Order Qty
+                      </mat-header-cell>
+                      <mat-cell *matCellDef="let element">
+                        {{ element.orderQty }}
+                      </mat-cell>
+                    </ng-container>
+                    <ng-container matColumnDef="UnitPrice">
+                      <mat-header-cell *matHeaderCellDef>
+                        Unit Price
+                      </mat-header-cell>
+                      <mat-cell *matCellDef="let element">
+                        {{ element.unitPrice | currency }}
+                      </mat-cell>
+                    </ng-container>
+                    <ng-container matColumnDef="extendedPrice">
+                      <mat-header-cell *matHeaderCellDef>
+                        Extended Price
+                      </mat-header-cell>
+                      <mat-cell *matCellDef="let element" style="color: red;">
+                        {{ element.extendedPrice | currency }}
+                      </mat-cell>
+                    </ng-container>
+                    <ng-container matColumnDef="PrimaryCategoryName" [style.display]="showDataColumn ? 'none' : 'none'">
+                      <mat-header-cell *matHeaderCellDef [style.display]="showDataColumn ? 'none' : 'none'">
+                        Primary Category Name
+                      </mat-header-cell>
+                      <mat-cell *matCellDef="let element" [style.display]="showDataColumn ? 'none' : 'none'">
+                        {{ element.primaryCategoryName}}
+                      </mat-cell>
+                    </ng-container>
+                    <ng-container matColumnDef="SecondaryCategoryName" [style.display]="showDataColumn ? 'none' : 'none'">
+                      <mat-header-cell *matHeaderCellDef [style.display]="showDataColumn ? 'none' : 'none'">
+                        Secondary Category Name
+                      </mat-header-cell>
+                      <mat-cell *matCellDef="let element" [style.display]="showDataColumn ? 'none' : 'none'">
+                        {{ element.secondaryCategoryName}}
+                      </mat-cell>
+                    </ng-container>
+                    <ng-container matColumnDef="NDCItemID">
+                      <mat-header-cell *matHeaderCellDef>
+                        NDC SKU
+                      </mat-header-cell>
+                      <mat-cell *matCellDef="let element">
+                        {{ element.ndcItemID}}
+                      </mat-cell>
+                    </ng-container>
+                    <ng-container matColumnDef="ProductName">
+                      <mat-header-cell *matHeaderCellDef>
+                        Product Name
+                      </mat-header-cell>
+                      <mat-cell *matCellDef="let element">
+                        {{ element.productName}}
+                      </mat-cell>
+                    </ng-container>
+                    <ng-container matColumnDef="ManufacturerName">
+                      <mat-header-cell *matHeaderCellDef>
+                        Manufacturer Name
+                      </mat-header-cell>
+                      <mat-cell *matCellDef="let element">
+                        {{ element.manufacturerName}}
+                      </mat-cell>
+                    </ng-container>
+                    <ng-container matColumnDef="Actions">
+                      <mat-header-cell *matHeaderCellDef>
+                        Actions
+                      </mat-header-cell>
+                      <mat-cell *matCellDef="let element">
+                        <button mat-icon-button color="warn" (click)="removeDetail(element.lineNo)">
+                          <mat-icon>delete</mat-icon>
+                        </button>
+                      </mat-cell>
+                    </ng-container>
+                    <mat-header-row *matHeaderRowDef="displayedColumns" stcky></mat-header-row>
+                    <mat-row *matRowDef="let row; columns: displayedColumns"></mat-row>
+                  </mat-table>
+                </div>
+              </div>
+            </mat-card-content>
+          </mat-card>
+          <br />
+          <mat-card appearance="outlined">
+            <mat-card-content>
+              <div [formGroup]="newPurchaseOrderForm" class="form-row">
+
+                <mat-form-field class="form-field-details" [style.display]="showDataColumn ? 'none' : 'none'">
+                  <mat-label [style.display]="showDataColumn ? 'none' : 'none'">{{ 'Supplier' | translate }}</mat-label>
+
+                  <!-- Spinner Container -->
+                  <div class="spinner-container" [style.display]="showDataColumn ? 'none' : 'none'">
+                    <input type="text"
+                           matInput
+                           [formControl]="supplierDetailControl"
+                           [matAutocomplete]="autoSupplierDetail"
+                           placeholder="Select Supplier" />
+                    <div *ngIf="showSpinnerDetails" class="inline-spinner">
+                      <mat-spinner diameter="24"></mat-spinner>
+                    </div>
+                  </div>
+
+                  <mat-autocomplete #autoSupplierDetail="matAutocomplete"
+                                    [displayWith]="displayFnSupplier">
+                    <mat-option *ngFor="let supplier of filteredSupplierOptions | async"
+                                [value]="supplier"
+                                (onSelectionChange)="onSupplierSelectedForDetail($event)">
+                      {{ supplier.name }}
+                    </mat-option>
+                  </mat-autocomplete>
+                </mat-form-field>
+                <mat-form-field class="form-field-details">
+                  <mat-label>SKU </mat-label>
+                  <input type="text" matInput [formControl]="itemControl" [matAutocomplete]="autoItem" />
+                  <mat-autocomplete #autoItem="matAutocomplete" [displayWith]="displayitemFn">
+                    <cdk-virtual-scroll-viewport itemSize="48" class="drop-down-viewport">
+                      <mat-option *cdkVirtualFor="let option of filteredItemOptions | async" [value]="option"
+                                  (onSelectionChange)="onItemSelected($event)">
+                        {{ option.itemID }}
+                      </mat-option>
+                    </cdk-virtual-scroll-viewport>
+                  </mat-autocomplete>
+                </mat-form-field>
+                <mat-form-field class="form-field-details" [style.display]="showDataColumn ? 'none' : 'none'">
+                  <mat-label [style.display]="showDataColumn ? 'none' : 'none'">UPC</mat-label>
+                  <input [style.display]="showDataColumn ? 'none' : 'none'" matInput formControlName="UPC" readonly />
+                </mat-form-field>
+                <mat-form-field class="form-field-details" [style.display]="showDataColumn ? 'none' : 'none'">
+                  <mat-label [style.display]="showDataColumn ? 'none' : 'none'">extendedPrice</mat-label>
+                  <input [style.display]="showDataColumn ? 'none' : 'none'" matInput formControlName="extendedPrice" readonly />
+                </mat-form-field>
+                <mat-form-field class="form-field-details" [style.display]="showDataColumn ? 'none' : 'none'">
+                  <mat-label [style.display]="showDataColumn ? 'none' : 'none'">ATSQty</mat-label>
+                  <input [style.display]="showDataColumn ? 'none' : 'none'" matInput formControlName="QTY" readonly />
+                </mat-form-field>
+                <mat-form-field class="form-field-details">
+                  <mat-label>Order Qty</mat-label>
+                  <input matInput type="number" formControlName="OrderQty" placeholder="Enter Order Quantity" (ngModelChange)="calculateExtendedPricForQty($event)" />
+                </mat-form-field>
+                <mat-form-field class="form-field-details mandatory">
+                  <mat-label>Total Qty</mat-label>
+                  <input matInput type="number" readonly formControlName="TotalQty" />
+                </mat-form-field>
+                <mat-form-field class="form-field-details" style="position: relative;">
+                  <mat-label>Unit Price</mat-label>
+                  <input matInput type="number" formControlName="UnitPrice" (ngModelChange)="calculateExtendedPriceForUnitPrice($event)" />
+                  <span matTextPrefix style="position: absolute; bottom: 22%; ">$&nbsp;</span>
+                </mat-form-field>
+                  <mat-form-field class="form-field-details mandatory" style="position: relative;">
+                    <mat-label>Total Extended Price </mat-label>
+                    <input matInput type="number" readonly formControlName="TotalExtendedPrice"/>
+                    <span matTextPrefix style="position: absolute; bottom: 22%; ">$&nbsp;</span>
+                  </mat-form-field>
+                <mat-form-field class="form-field-details">
+                  <mat-label>NDC SKU</mat-label>
+                  <input matInput type="text" formControlName="NDCItemID" placeholder="NDCItemID" />
+                </mat-form-field>
+                <mat-form-field class="form-field-details">
+                  <mat-label>Product Name</mat-label>
+                  <input matInput type="text" formControlName="ProductName" placeholder="ProductName" />
+                </mat-form-field>
+              </div>
+              <div class="form-row">
+                <mat-form-field class="form-field-detail-Description">
+                  <mat-label>Description </mat-label>
+                  <input type="text" matInput [formControl]="itemDescriptionControl" [matAutocomplete]="autoItemDescription" />
+                  <mat-autocomplete #autoItemDescription="matAutocomplete" [displayWith]="displayitemDescriptionFn">
+                    <!-- <mat-option *ngFor="let itemDescription of filteredItemDescriptionOptions | async" [value]="itemDescription"
+                                (onSelectionChange)="onItemDescriptionSelected($event)">
+                      {{ itemDescription.description }}
+                    </mat-option> -->
+                    <cdk-virtual-scroll-viewport itemSize="48" class="drop-down-viewport">
+                      <mat-option *cdkVirtualFor="let itemDescription of filteredItemDescriptionOptions | async" [value]="itemDescription"
+                                  (onSelectionChange)="onItemDescriptionSelected($event)">
+                        {{ itemDescription.description }}
+                      </mat-option>
+                    </cdk-virtual-scroll-viewport>
+                  </mat-autocomplete>
+                </mat-form-field>
+                <mat-form-field class="form-field-details">
+                  <mat-label>Manufacturer Name</mat-label>
+                  <input matInput type="text" formControlName="ManufacturerName" placeholder="ManufacturerName" />
+                </mat-form-field>
+             
+                <mat-form-field class="form-field-details" [style.display]="showDataColumn ? 'none' : 'none'">
+                  <mat-label [style.display]="showDataColumn ? 'none' : 'none'">Primary Category Name</mat-label>
+                  <input matInput type="text" formControlName="PrimaryCategoryName" [style.display]="showDataColumn ? 'none' : 'none'" placeholder="PrimaryCategoryName" />
+                </mat-form-field>
+                <mat-form-field class="form-field-details" [style.display]="showDataColumn ? 'none' : 'none'">
+                  <mat-label [style.display]="showDataColumn ? 'none' : 'none'">Secondary Category Name</mat-label>
+                  <input matInput type="text" formControlName="SecondaryCategoryName" [style.display]="showDataColumn ? 'none' : 'none'" placeholder="SecondaryCategoryName" />
+                </mat-form-field>
+                <div class="form-field add-button">
+                  <button mat-raised-button color="primary" (click)="addDetail()">
+                    Add
+                  </button>
+                </div>
+              </div>
+            </mat-card-content>
+          </mat-card>
+        </mat-tab>
+      </mat-tab-group>
+    </form>
+</div>
+  <div mat-dialog-actions class="dialog-actions">
+    <button mat-button class="cancel-button" (click)="onCancel()">
+      {{ "Cancel" | translate }}
+    </button>
+    <button mat-raised-button color="primary" (click)="onSave()">
+      {{ "Save" | translate }}
+    </button>
+  </div>
+  <div *ngIf="showSpinner" class="spinner-overlay">
+    <mat-spinner></mat-spinner>
+  </div>
