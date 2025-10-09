@@ -361,10 +361,9 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
-/EDI.Processor/appsettings.json
+
 /EDI.Processor/Queries/
 /eSyncMate.Processor/Queries
-eSyncMate.Processor/appsettings.json
+
 UI/yarn.lock
 UI/package-lock.json
-/eSyncMate.Processor/Managers/ASNShipmentNotificationRoute.cs
