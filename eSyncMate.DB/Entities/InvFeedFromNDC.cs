@@ -31,6 +31,7 @@ namespace eSyncMate.DB.Entities
         public string SecondaryCategoryName { get; set; }
         public string ProductName { get; set; }
         public decimal UnitPrice { get; set; }
+        public string UOM { get; set; }
         public DateTime ModifiedDate { get; set; }
         public int ModifiedBy { get; set; }
         private static string TableName { get; set; }

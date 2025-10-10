@@ -221,6 +221,14 @@
                       {{ element.manufacturerName}}
                     </mat-cell>
                   </ng-container>
+                  <ng-container matColumnDef="UOM">
+                    <mat-header-cell *matHeaderCellDef>
+                      UOM
+                    </mat-header-cell>
+                    <mat-cell *matCellDef="let element">
+                      {{ element.uom}}
+                    </mat-cell>
+                  </ng-container>
                   <ng-container matColumnDef="NDCItemID">
                     <mat-header-cell *matHeaderCellDef>
                       NDC SKU
@@ -269,14 +277,14 @@
                     <mat-header-cell *matHeaderCellDef> Order Qty </mat-header-cell>
                     <mat-cell *matCellDef="let element"> {{element.orderQty}} </mat-cell>
                   </ng-container>
-				     <ng-container matColumnDef="extendedPrice">
-                      <mat-header-cell *matHeaderCellDef>
-                        Extended Price
-                      </mat-header-cell>
-                      <mat-cell *matCellDef="let element" style="color: red;">
-                        {{ element.extendedPrice | currency }}
-                      </mat-cell>
-                    </ng-container>
+                  <ng-container matColumnDef="extendedPrice">
+                    <mat-header-cell *matHeaderCellDef>
+                      Extended Price
+                    </mat-header-cell>
+                    <mat-cell *matCellDef="let element" style="color: red;">
+                      {{ element.extendedPrice | currency }}
+                    </mat-cell>
+                  </ng-container>
                   <ng-container matColumnDef="Actions">
                     <mat-header-cell *matHeaderCellDef stickyEnd> Actions </mat-header-cell>
                     <mat-cell *matCellDef="let element" stickyEnd>
@@ -390,7 +398,10 @@
                 <mat-label>Manufacturer Name</mat-label>
                 <input matInput type="text" formControlName="ManufacturerName" placeholder="ManufacturerName" />
               </mat-form-field>
-
+              <mat-form-field class="form-field-details">
+                <mat-label>UOM</mat-label>
+                <input readonly="readonly" matInput type="text" formControlName="UOM" placeholder="UOM" />
+              </mat-form-field>
               <mat-form-field class="form-field-details" [style.display]="showDataColumn ? 'none' : 'none'">
                 <mat-label [style.display]="showDataColumn ? 'none' : 'none'">Primary Category Name</mat-label>
                 <input matInput type="text" formControlName="PrimaryCategoryName" [style.display]="showDataColumn ? 'none' : 'none'" placeholder="PrimaryCategoryName" />

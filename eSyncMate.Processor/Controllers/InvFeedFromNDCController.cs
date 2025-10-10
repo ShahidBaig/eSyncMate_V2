@@ -157,6 +157,11 @@ namespace eSyncMate.Processor.Controllers
                             row["CreatedDate"] = DateTime.Now;
                             row["CreatedBy"] = 1; // Example hardcoded user ID
                             row["SupplierName"] = "NDC MedPlus";
+                            // Convert only UOM column to uppercase
+                            if (row.Table.Columns.Contains("UOM") && row["UOM"] != DBNull.Value)
+                            {
+                                row["UOM"] = row["UOM"].ToString().ToUpperInvariant();
+                            }
                         }
 
                         using (var connection = new SqlConnection(CommonUtils.ConnectionString))
@@ -185,6 +190,7 @@ namespace eSyncMate.Processor.Controllers
                                         bulkCopy.ColumnMappings.Add("ItemDescription", "Description");
                                         bulkCopy.ColumnMappings.Add("UnitPrice", "UnitPrice");
                                         bulkCopy.ColumnMappings.Add("ManufacturerName", "ManufacturerName");
+                                        bulkCopy.ColumnMappings.Add("UOM", "UOM");
                                         bulkCopy.ColumnMappings.Add("Qty", "Qty");
                                         bulkCopy.ColumnMappings.Add("ETAQty", "ETAQty");
                                         bulkCopy.ColumnMappings.Add("ETADate", "ETADate");

@@ -33,11 +33,11 @@ namespace eSyncMate.Processor.Managers
                     return;
                 }
 
-                //if (route.Status.ToUpper() == "IN-ACTIVE")
-                //{
-                //    this.RemoveRouteJob(route);
-                //    return;
-                //}
+                if (route.Status.ToUpper() == "IN-ACTIVE")
+                {
+                    this.RemoveRouteJob(route);
+                    return;
+                }
 
                 if (currentRoutes.ContainsKey(routeId))
                 {

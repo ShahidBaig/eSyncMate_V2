@@ -1,121 +1,161 @@
-<div mat-dialog-content class="dialog-content scrollable-content">
-  <h1>Invoice</h1>
+<div class="dialog-wrapper">
+  <!-- Static Header -->
+  <div class="dialog-header soft-shadow">
+    <div class="title-wrap">
+      <h1>Invoice</h1>
 
-  <!-- General Information Section -->
-  <mat-card class="report-card">
-    <mat-card-content>
-      <h2 class="dialog-title">General Information</h2>
-      <div class="report-section">
-        <div class="report-row">
-          <span>Invoice No:</span> <span class="report-row-value">{{ invoiceData.invoiceNo }}</span>
-        </div>
-        <div class="report-row">
-          <span>Invoice Date:</span> <span class="report-row-value">{{ getFormattedDate(invoiceData.invoiceDate) }}</span>
-        </div>
-        <div class="report-row">
-          <span>PO Number:</span> <span class="report-row-value">{{ invoiceData.poNumber }}</span>
-        </div>
-        <div class="report-row">
-          <span>Status:</span> <span class="report-row-value">{{ invoiceData.status }}</span>
-        </div>
+      <div class="chip-row" *ngIf="header?.status || header?.invoiceNo">
+        <span class="chip pill" *ngIf="header?.invoiceNo">#{{ header.invoiceNo }}</span>
+        <span class="chip status"
+              [class.ok]="header?.status==='PAID'"
+              [class.warn]="header?.status==='DUE' || header?.status==='NEW'"
+              [class.bad]="header?.status==='OVERDUE'"
+              *ngIf="header?.status">
+          {{ header.status }}
+        </span>
+        <span class="chip subtle" *ngIf="header?.invoiceDate">Date: {{ getFormattedDate(header.invoiceDate) }}</span>
       </div>
-    </mat-card-content>
-  </mat-card>
+    </div>
 
-  <!-- Bill-to and Ship-to Section -->
-  <mat-card class="report-card">
-    <mat-card-content>
-      <h2 class="dialog-title">Bill-to and Ship-to Information</h2>
-      <div class="report-section">
-        <div class="report-row">
-          <!-- <span>Bill To:</span> -->
-          <!-- <div class="report-row-value">
-            {{ invoiceData.billToName }}<br>
-            {{ invoiceData.billToAddress }}<br>
-            {{ invoiceData.billToCity }}, {{ invoiceData.billToState }} {{ invoiceData.billToZip }}
-          </div> -->
+    <!-- quick totals strip -->
+    <div class="totals-strip">
+      <div class="mini">
+        <div class="mini-label">Total Qty</div>
+        <div class="mini-value mono strong">{{ totalQty | number:'1.0-3' }}</div>
+      </div>
+      <div class="mini">
+        <div class="mini-label">Sub Total</div>
+        <div class="mini-value mono strong">{{ subtotal | number:'1.2-2' }}</div>
+      </div>
+      <div class="mini">
+        <div class="mini-label">Grand Total</div>
+        <div class="mini-value mono strong">{{ header?.invoiceAmount | number:'1.2-2' }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scrollable Content -->
+  <div id="invoice-report" mat-dialog-content class="dialog-content scrollable-content">
+
+    <!-- General Information -->
+    <mat-card class="report-card">
+      <mat-card-content>
+        <h2 class="dialog-title">General Information</h2>
+        <div class="report-grid">
+          <div class="report-cell"><span class="label">Control # (ID):</span><span class="value">{{ header.id }}</span></div>
+          <div class="report-cell"><span class="label">Invoice No:</span><span class="value">{{ header.invoiceNo }}</span></div>
+          <div class="report-cell"><span class="label">Invoice Date:</span><span class="value">{{ getFormattedDate(header.invoiceDate) }}</span></div>
+          <div class="report-cell"><span class="label">Status:</span><span class="value">{{ header.status }}</span></div>
+          <div class="report-cell"><span class="label">Invoice PO Number:</span><span class="value">{{ header.poNumber }}</span></div>
+          <div class="report-cell"><span class="label">Invoice Tracking #:</span><span class="value">{{ header.trackingNo }}</span></div>
+          <div class="report-cell"><span class="label">Invoice Terms:</span><span class="value">{{ header.invoiceTerms }}</span></div>
+          <div class="report-cell"><span class="label">Routing:</span><span class="value">{{ header.routing }}</span></div>
+          <div class="report-cell"><span class="label">SCAC Code:</span><span class="value">{{ header.scacCode }}</span></div>
+          <div class="report-cell"><span class="label">Seller ID:</span><span class="value">{{ header.sellerID }}</span></div>
         </div>
-        <div class="report-row">
-          <span>Ship To:</span>
-          <div class="report-row-value">
-            {{ invoiceData.shippingName }}<br>
-            {{ invoiceData.shippingAddress1 }}<br>
-            {{ invoiceData.shippingCity }}, {{ invoiceData.shippingState }} {{ invoiceData.shippingZip }}
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Ship To -->
+    <mat-card class="report-card">
+      <mat-card-content>
+        <h2 class="dialog-title">Ship To</h2>
+        <div class="report-grid">
+          <div class="report-cell full"><span class="label">Name:</span><span class="value">{{ header.shippingName }}</span></div>
+          <div class="report-cell full"><span class="label">Address 1:</span><span class="value">{{ header.shippingAddress1 }}</span></div>
+          <div class="report-cell full" *ngIf="header.shippingAddress2"><span class="label">Address 2:</span><span class="value">{{ header.shippingAddress2 }}</span></div>
+          <div class="report-cell"><span class="label">City:</span><span class="value">{{ header.shippingCity }}</span></div>
+          <div class="report-cell"><span class="label">State:</span><span class="value">{{ header.shippingState }}</span></div>
+          <div class="report-cell"><span class="label">ZIP:</span><span class="value">{{ header.shippingZip }}</span></div>
+          <div class="report-cell"><span class="label">Country:</span><span class="value">{{ header.shippingCountry }}</span></div>
+          <div class="report-cell"><span class="label">Ship To #:</span><span class="value">{{ header.shippingToNo }}</span></div>
+          <div class="report-cell"><span class="label">Shipping Date:</span><span class="value">{{ getFormattedDate(header.shippingDate) }}</span></div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Charges & Summary -->
+    <mat-card class="report-card">
+      <mat-card-content>
+        <h2 class="dialog-title">Charges & Summary</h2>
+        <div class="report-grid">
+          <div class="report-cell">
+            <span class="label">Freight:</span>
+            <span class="value mono">{{ freight | number:'1.2-2' }}</span>
+          </div>
+          <div class="report-cell">
+            <span class="label">Handling Amount:</span>
+            <span class="value mono">{{ header.handlingAmount | number:'1.2-2' }}</span>
+          </div>
+          <div class="report-cell">
+            <span class="label">Sales Tax:</span>
+            <span class="value mono">{{ header.salesTax | number:'1.2-2' }}</span>
+          </div>
+          <div class="report-cell">
+            <span class="label">Total Invoice Amount:</span>
+            <span class="value mono strong">{{ header.invoiceAmount | number:'1.2-2' }}</span>
           </div>
         </div>
-      </div>
-    </mat-card-content>
-  </mat-card>
+      </mat-card-content>
+    </mat-card>
 
-  <!-- Line Item Information -->
-  <!-- <mat-card class="report-card">
-    <mat-card-content>
-      <h2 class="dialog-title">Line Item Information</h2>
-      <div class="report-section">
-        <div class="report-row">
-          <span>Description:</span> <span class="report-row-value">{{ invoiceData.itemDescription }}</span>
-        </div>
-        <div class="report-row">
-          <span>Quantity:</span> <span class="report-row-value">{{ invoiceData.itemQuantity }}</span>
-        </div>
-        <div class="report-row">
-          <span>Unit Price:</span> <span class="report-row-value">{{ invoiceData.itemUnitPrice }}</span>
-        </div>
-        <div class="report-row">
-          <span>Total Price:</span> <span class="report-row-value">{{ invoiceData.itemTotalPrice }}</span>
-        </div>
-      </div>
-    </mat-card-content>
-  </mat-card> -->
+    <!-- Line Items -->
+    <mat-card class="report-card">
+      <mat-card-content>
+        <h2 class="dialog-title">Line Items</h2>
 
-  <!-- Charges and Allowances Section -->
-  <mat-card class="report-card">
-    <mat-card-content>
-      <h2 class="dialog-title">Charges and Allowances</h2>
-      <div class="report-section">
-        <!-- <div class="report-row">
-          <span>Freight:</span> <span class="report-row-value">{{ invoiceData.freight }}</span>
-        </div> -->
-        <div class="report-row">
-          <span>Handling Amount:</span> <span class="report-row-value">{{ invoiceData.handlingAmount }}</span>
-        </div>
-        <div class="report-row">
-          <span>Sales Tax:</span> <span class="report-row-value">{{ invoiceData.salesTax }}</span>
-        </div>
-      </div>
-    </mat-card-content>
-  </mat-card>
+        <div class="table-wrapper soft-shadow">
+          <table class="line-table">
+            <thead>
+              <tr>
+                <th class="narrow center sticky-col">#</th>
+                <th>PO No</th>
+                <th>Tracking #</th>
+                <th>EDI Line ID</th>
+                <th>SKU</th>
+                <th class="narrow">UOM</th>
+                <th class="narrow right">Qty</th>
+                <th class="narrow right">Unit Price</th>
+                <th class="narrow right">Line Total</th>
+              </tr>
+            </thead>
 
-  <!-- Total Monetary Value Summary -->
-  <mat-card class="report-card">
-    <mat-card-content>
-      <h2 class="dialog-title">Total Monetary Value Summary</h2>
-      <div class="report-section">
-        <div class="report-row">
-          <span>Total Invoice Amount:</span> <span class="report-row-value">{{ invoiceData.invoiceAmount }}</span>
-        </div>
-      </div>
-    </mat-card-content>
-  </mat-card>
+            <tbody>
+              <tr *ngFor="let line of rows; let i = index" [class.alt]="i % 2 === 1" class="row-hover">
+                <td class="center sticky-col">{{ i + 1 }}</td>
+                <td>{{ line.detailPoNumber || line.poNumberDetail || line.sdPoNumber || header.poNumber }}</td>
+                <td>{{ line.detailTrackingNo || line.sdTrackingNo || header.trackingNo }}</td>
+                <td>{{ line.ediLineID }}</td>
+                <td>{{ line.sku }}</td>
+                <td class="nowrap">{{ line.uom }}</td>
+                <td class="right mono">{{ toNum(line?.qty) | number:'1.0-3' }}</td>
+                <td class="right mono">{{ toNum(line?.unitPrice) | number:'1.2-2' }}</td>
+                <td class="right mono strong">{{ safeLineTotal(line) | number:'1.2-2' }}</td>
+              </tr>
+            </tbody>
 
-  <!-- Footer with Control Information -->
-  <mat-card class="report-card">
-    <mat-card-content>
-      <h2 class="dialog-title">Control Information</h2>
-      <div class="report-section">
-        <div class="report-row">
-          <span>SCAC Code:</span> <span class="report-row-value">{{ invoiceData.scacCode }}</span>
+            <!-- *** Totals row aligned for 9 columns *** -->
+            <tfoot *ngIf="rows?.length">
+              <tr class="totals">
+                <!-- 1..6 (through UOM) -->
+                <td colspan="6" class="right strong">Totals:</td>
+                <!-- 7 = Qty total -->
+                <td class="right mono strong">{{ totalQty | number:'1.0-3' }}</td>
+                <!-- 8 = Unit Price (blank) -->
+                <td></td>
+                <!-- 9 = Amount total -->
+                <td class="right mono strong">{{ totalAmount | number:'1.2-2' }}</td>
+              </tr>
+            </tfoot>
+          </table>
         </div>
-        <div class="report-row">
-          <span>Seller ID:</span> <span class="report-row-value">{{ invoiceData.sellerID }}</span>
-        </div>
-        <div class="report-row">
-          <span>Control Number:</span> <span class="report-row-value">{{ invoiceData.id }}</span>
-        </div>
-      </div>
-    </mat-card-content>
-  </mat-card>
-  <div mat-dialog-actions class="dialog-actions">
+      </mat-card-content>
+    </mat-card>
+
+  </div>
+
+  <!-- Static Footer -->
+  <div class="dialog-footer">
     <button mat-button class="cancel-button" (click)="onCancel()">Cancel</button>
     <button mat-button class="download-button" (click)="downloadPDF()">Download</button>
   </div>

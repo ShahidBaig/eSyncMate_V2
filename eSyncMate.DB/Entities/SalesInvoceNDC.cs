@@ -160,26 +160,26 @@ namespace eSyncMate.DB.Entities
             string viewName = SalesInvoiceNDC.ViewName;
 
             // Modify criteria based on default values
-            if (p_Criteria.Contains("InvoiceNo = 0"))
-            {
-                p_Criteria = p_Criteria.Replace("InvoiceNo = 0", "").Trim();
-            }
-            if (p_Criteria.Contains("InvoiceDate = '1999-01-01'"))
-            {
-                p_Criteria = p_Criteria.Replace("InvoiceDate = '1999-01-01'", "").Trim();
-            }
-            if (p_Criteria.Contains("PoNumber = 'EMPTY'"))
-            {
-                p_Criteria = p_Criteria.Replace("PoNumber = 'EMPTY'", "").Trim();
-            }
-            if (p_Criteria.Contains("Status = 'EMPTY'"))
-            {
-                p_Criteria = p_Criteria.Replace("Status = 'EMPTY'", "").Trim();
-            }
+            //if (p_Criteria.Contains("InvoiceNo = 0"))
+            //{
+            //    p_Criteria = p_Criteria.Replace("InvoiceNo = 0", "").Trim();
+            //}
+            //if (p_Criteria.Contains("InvoiceDate = '1999-01-01'"))
+            //{
+            //    p_Criteria = p_Criteria.Replace("InvoiceDate = '1999-01-01'", "").Trim();
+            //}
+            //if (p_Criteria.Contains("PoNumber = 'EMPTY'"))
+            //{
+            //    p_Criteria = p_Criteria.Replace("PoNumber = 'EMPTY'", "").Trim();
+            //}
+            //if (p_Criteria.Contains("Status = 'EMPTY'"))
+            //{
+            //    p_Criteria = p_Criteria.Replace("Status = 'EMPTY'", "").Trim();
+            //}
 
-            // Clean up any extra 'AND' or 'OR' in the criteria
-            p_Criteria = p_Criteria.Replace("AND AND", "AND").Replace("WHERE AND", "WHERE").Replace("WHERE OR", "WHERE");
-            p_Criteria = p_Criteria.Trim().TrimEnd(new char[] { 'A', 'N', 'D', 'O', 'R' });
+            //// Clean up any extra 'AND' or 'OR' in the criteria
+            //p_Criteria = p_Criteria.Replace("AND AND", "AND").Replace("WHERE AND", "WHERE").Replace("WHERE OR", "WHERE");
+            //p_Criteria = p_Criteria.Trim().TrimEnd(new char[] { 'A', 'N', 'D', 'O', 'R' });
 
             // Build the query
             if (string.IsNullOrEmpty(p_Fields))

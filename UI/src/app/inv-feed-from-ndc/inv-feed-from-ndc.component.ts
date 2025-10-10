@@ -78,6 +78,7 @@ export class InvFeedFromNDCComponent implements OnInit {
     'ProductName',
     'UnitPrice',
     'ManufacturerName',
+    'UOM',
     'PrimaryCategoryName',
     'SecondaryCategoryName',
     'ETADate',

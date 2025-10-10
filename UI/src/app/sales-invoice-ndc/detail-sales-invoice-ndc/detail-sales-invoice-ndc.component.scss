@@ -1,109 +1,340 @@
-/* Scrollable container */
-.custom-css {
-  height: 400px;
-  overflow-y: auto; /* Enables vertical scrolling */
-  overflow-x: auto; /* Enables horizontal scrolling */
+/* Layout */
+.dialog-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
 }
 
-/* Dialog content padding */
-.dialog-content {
+.scrollable-content {
+  flex: 1 1 auto;
+  overflow-y: auto;
   padding: 24px;
 }
 
-/* Dialog title styling */
-.dialog-title {
-  margin-bottom: 20px;
-  background-color: #d3d3d3;
-  font-size: 16px;
-  font-weight: bold;
-  padding-left: 0.5rem;
-  padding-right: 0.5rem;
-}
-
-/* Table styling */
-.fixed-table {
-  table-layout: fixed;
-  width: 200%;
-}
-
-.mat-column-CustomerItemCode {
-  width: 8% !important;
-}
-
-/* Form styling */
-.form-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center; /* Vertically aligns form elements */
-  gap: 16px; /* Spacing between items */
-}
-
-.form-field {
-  flex: 1; /* Each field takes equal space */
-  max-width: 500px; /* Maximum width for fields */
-}
-
-.full-width {
-  flex: 0 0 98%; /* Full width for single field rows */
-}
-
-.mat-form-field {
-  flex-grow: 1; /* Expands to fill available space */
-  min-width: 120px; /* Minimum width for fields */
-}
-
-/* Input padding */
-input[matInput] {
-  padding: 8px 12px;
-}
-
-/* Checkbox styling */
-.checkbox-container {
-  display: flex;
-}
-
-.checkbox-label {
-  margin-right: 20px;
-}
-
-/* Dialog actions styling */
-.dialog-actions {
+.dialog-footer {
+  flex: 0 0 auto;
   display: flex;
   justify-content: space-between;
-  padding: 16px 24px 24px;
+  padding: 16px 24px;
   border-top: 1px solid #eee;
+  background: #f9f9f9;
+  z-index: 10;
 }
 
 .cancel-button {
   color: #666;
 }
 
-/* Report card and sections styling */
+/* Header */
+.dialog-header {
+  flex: 0 0 auto;
+  padding: 16px 24px;
+  border-bottom: 1px solid #eee;
+  background: linear-gradient(180deg,#fafbff, #f5f7fb);
+  z-index: 10;
+}
+
+.title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.dialog-header h1 {
+  margin: 0;
+  font-size: 20px;
+  letter-spacing: .2px;
+}
+
+/* Chips */
+.chip-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.chip {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid #e6e9f5;
+  background: #fff;
+  color: #475569;
+}
+
+.chip.pill {
+  background: #eef2ff;
+  border-color: #dbe2ff;
+  color: #334155;
+}
+
+.chip.subtle {
+  background: #f8fafc;
+}
+
+.chip.status {
+  font-weight: 600;
+}
+
+.chip.status.ok {
+  background: #ecfdf5;
+  color: #047857;
+  border-color: #bbf7d0;
+}
+
+.chip.status.warn {
+  background: #fffbeb;
+  color: #a16207;
+  border-color: #fde68a;
+}
+
+.chip.status.bad {
+  background: #fef2f2;
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+
+/* Summary strip */
+.totals-strip {
+  display: flex;
+  gap: 16px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.mini {
+  background: #fff;
+  border: 1px solid #eef0f6;
+  border-radius: 12px;
+  padding: 10px 12px;
+  min-width: 140px;
+}
+
+.mini-label {
+  font-size: 11px;
+  color: #6b7280;
+  letter-spacing: .03em;
+}
+
+.mini-value {
+  font-size: 14px;
+  margin-top: 2px;
+}
+
+.mini .strong {
+  font-weight: 700;
+}
+
+/* Cards and titles */
 .report-card {
-  margin-bottom: 1rem;
+  margin-bottom: 16px;
+  border-radius: 16px;
+  overflow: hidden;
 }
 
-.report-section {
+.dialog-title {
+  margin: 0 0 16px 0;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  background: #f3f6fb;
+  border-left: 3px solid #3f51b5;
+  padding: 6px 10px;
+  border-radius: 8px;
+  color: #364152;
+}
+
+/* Field grid */
+.report-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  gap: 10px 18px;
+}
+
+.report-cell {
   display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+  gap: 8px;
+  align-items: baseline;
 }
 
-.report-row {
-  display: flex;
-  margin-right: 8px;
+.report-cell.full {
+  grid-column: 1/-1;
 }
 
-.report-row strong {
-  width: 200px;
-}
-.scrollable-content{
-  height: 100vh;
+.label {
+  width: 180px;
+  min-width: 160px;
+  color: #64748b;
+  font-weight: 600;
 }
 
-.report-section, .report-row {
-  visibility: visible !important;
+.value {
+  flex: 1;
+  color: #111827;
+  word-break: break-word;
 }
-.report-row-value{
-  margin-right: 8px !important;
+
+.value.strong {
+  font-weight: 800;
+}
+
+@media (max-width:900px) {
+  .report-grid {
+    grid-template-columns: 1fr
+  }
+
+  .label {
+    width: 140px;
+    min-width: 120px;
+  }
+}
+
+/* Table */
+.table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.line-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 12.5px;
+  table-layout: fixed; /* ensures predictable column widths */
+}
+
+.line-table th, .line-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #eef0f4;
+  vertical-align: top;
+}
+
+/* --- FIX FOR OVERLAPPING COLUMNS --- */
+.line-table th:nth-child(2),
+.line-table td:nth-child(2) { /* PO No */
+  width: 140px;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.line-table th:nth-child(3),
+.line-table td:nth-child(3) { /* Tracking # */
+  width: 160px;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.line-table th:nth-child(4),
+.line-table td:nth-child(4) { /* EDI Line ID */
+  width: 100px;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+/* ----------------------------------- */
+
+.line-table thead th {
+  position: sticky;
+  top: 0;
+  background: #f9fbff;
+  z-index: 1;
+  border-bottom: 2px solid #e0e6f3;
+  text-align: left;
+  font-weight: 700;
+  color: #334155;
+}
+
+.line-table tbody tr.alt {
+  background: #fcfdff;
+}
+
+.row-hover:hover {
+  background: #f6faff;
+}
+
+.line-table .right {
+  text-align: right;
+}
+
+.line-table .center {
+  text-align: center;
+}
+
+.line-table .narrow {
+  width: 88px;
+}
+
+.line-table .wide {
+  width: 280px;
+}
+
+.line-table .nowrap {
+  white-space: nowrap;
+}
+
+.line-table .pre-wrap {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.line-table .sticky-col {
+  position: sticky;
+  left: 0;
+  background: #fff; /* ensure visible over zebra rows */
+  border-right: 1px solid #eef0f4;
+}
+
+/* Numbers look great in tabular style */
+.mono {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+}
+
+/* Totals row */
+.line-table tfoot .totals td {
+  border-top: 2px solid #cfd8ea;
+  background: linear-gradient(180deg,#f7f9ff,#f1f5ff);
+}
+
+/* Nice soft shadows (non-print only) */
+.soft-shadow {
+  box-shadow: 0 6px 18px rgba(27,40,80,.08), 0 2px 6px rgba(27,40,80,.06);
+}
+
+/* Print */
+@media print {
+  .dialog-footer {
+    display: none;
+  }
+
+  .dialog-header {
+    border-bottom: 1px solid #000;
+    box-shadow: none !important;
+  }
+
+  .dialog-title {
+    background: #fff;
+    border-left-color: #000;
+  }
+
+  .table-wrapper {
+    overflow: visible;
+  }
+
+  .line-table thead th {
+    position: sticky;
+    top: 0;
+  }
+
+  .line-table tr, .line-table td, .line-table th {
+    page-break-inside: avoid;
+  }
+
+  .report-card {
+    break-inside: avoid;
+  }
 }

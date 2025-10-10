@@ -33,6 +33,7 @@ namespace eSyncMate.DB.Entities
         public string SecondaryCategoryName { get; set; }
         public string ProductName { get; set; }
         public decimal ExtendedPrice { get; set; }
+        public string UOM { get; set; }
         public DateTime CreatedDate { get; set; }
         public int CreatedBy { get; set; }
         private static string TableName { get; set; }

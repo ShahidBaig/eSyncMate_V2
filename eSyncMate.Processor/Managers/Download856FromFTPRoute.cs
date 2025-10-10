@@ -1,35 +1,36 @@
 ﻿using EdiEngine;
 using EdiEngine.Runtime;
+using eSyncMate.DB;
 using eSyncMate.DB.Entities;
+using eSyncMate.Maps;
 using eSyncMate.Processor.Connections;
 using eSyncMate.Processor.Controllers;
 using eSyncMate.Processor.Models;
 using Hangfire;
 using Hangfire.Storage;
 using Intercom.Core;
+using Intercom.Data;
 using JUST;
+using Microsoft.AspNetCore.Components.Forms;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using Nancy;
 using Newtonsoft.Json;
-using RestSharp;
-using System.Reflection;
-using Microsoft.AspNetCore.Mvc;
-using static eSyncMate.DB.Declarations;
-using Intercom.Data;
-using eSyncMate.DB;
-using System.Data;
-using System.Threading;
 using Newtonsoft.Json.Linq;
-using eSyncMate.Maps;
-using static eSyncMate.Processor.Models._856TransformJson;
-using System.Text.Json.Nodes;
-using Microsoft.AspNetCore.Components.Forms;
+using RestSharp;
+using System.Data;
 using System.Data.Common;
-using Microsoft.Extensions.Logging;
-using System.Text.RegularExpressions;
 using System.Data.SqlClient;
-using static eSyncMate.Processor.Models.MacysGetOrderResponseModel;
+using System.Globalization;
 using System.Net.Http.Headers;
+using System.Reflection;
 using System.Text;
+using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
+using System.Threading;
+using static eSyncMate.DB.Declarations;
+using static eSyncMate.Processor.Models._856TransformJson;
+using static eSyncMate.Processor.Models.MacysGetOrderResponseModel;
 
 namespace eSyncMate.Processor.Managers
 {
@@ -211,70 +212,159 @@ namespace eSyncMate.Processor.Managers
                     string PoNumber = result["PoNumber"]?.ToString();
                     var detailList = new List<dynamic>();
 
+                    // ===================== UPDATED TRAVERSAL =====================
                     void TraverseContent(dynamic content, string currentBOLNo, string currentSSCC)
                     {
+                        if (content == null) return;
+
                         foreach (var segment in content)
                         {
-                            if (segment.Type == "L" && segment.Name == "L_HL")
+                            // Process HL lists only (L_HL)
+                            if (segment?.Type == "L" && segment?.Name == "L_HL")
                             {
-                                dynamic hlSegment = segment.Content[0];
-                                if (hlSegment.Name == "HL")
+                                dynamic hlSegment = segment.Content?[0];
+                                if (hlSegment?.Name != "HL")
                                 {
-                                    string hlCode = hlSegment.Content[2]?.E?.ToString();
+                                    if (segment?.Content != null) TraverseContent(segment.Content, currentBOLNo, currentSSCC);
+                                    continue;
+                                }
 
-                                    if (hlCode == "P")
+                                // HL03 tells the level: S / O / P / I
+                                string hlCode = hlSegment.Content?[2]?.E?.ToString();
+
+                                // ---------- HL = P (Pack) ----------
+                                if (hlCode == "P")
+                                {
+                                    string bolNo = currentBOLNo;
+                                    string sscc = currentSSCC;
+
+                                    foreach (var sub in segment.Content)
                                     {
-                                        string bolNo = currentBOLNo;
-                                        string sscc = currentSSCC;
-
-                                        foreach (var subSegment in segment.Content)
+                                        // BOL at P-level: REF*BM*<bol>
+                                        if (sub?.Name == "REF" && sub.Content != null && sub.Content[0]?.E?.ToString() == "BM")
                                         {
-                                            if (subSegment.Name == "REF" && subSegment.Content != null && subSegment.Content[0]?.E?.ToString() == "BM")
-                                            {
-                                                bolNo = subSegment.Content[1]?.E?.ToString() ?? bolNo;
-                                            }
-                                            else if (subSegment.Name == "MAN" && subSegment.Content != null && subSegment.Content[0]?.E?.ToString() == "GM")
-                                            {
-                                                sscc = subSegment.Content[1]?.E?.ToString() ?? sscc;
-                                            }
+                                            var val = sub.Content[1]?.E?.ToString();
+                                            if (!string.IsNullOrWhiteSpace(val)) bolNo = val.Trim();
                                         }
-
-                                        if (segment.Content != null)
+                                        // SSCC at P-level: MAN*GM*<sscc>
+                                        else if (sub?.Name == "MAN" && sub.Content != null && sub.Content[0]?.E?.ToString() == "GM")
                                         {
-                                            TraverseContent(segment.Content, bolNo, sscc);
+                                            var val = sub.Content[1]?.E?.ToString();
+                                            if (!string.IsNullOrWhiteSpace(val)) sscc = val.Trim();
                                         }
                                     }
-                                    else if (hlCode == "I")
-                                    {
-                                        string itemId = null;
-                                        string sku = null;
-                                        string qty = null;
-                                        string uom = null;
-                                        string lotNumber = null;
-                                        string ExpirationDate = null;
 
-                                        foreach (var subSegment in segment.Content)
+                                    // descend with updated BOL/SSCC
+                                    if (segment.Content != null) TraverseContent(segment.Content, bolNo, sscc);
+                                }
+                                // ---------- HL = I (Item) ----------
+                                else if (hlCode == "I")
+                                {
+                                    string itemId = null;
+                                    string sku = null;
+                                    string qty = null;
+                                    string uom = null;
+                                    string lotNumber = null;
+                                    string expirationDate = null;
+
+                                    // Collect ALL barcodes from REF*11 at I-level
+                                    var references = new List<string>();
+
+                                    foreach (var sub in segment.Content)
+                                    {
+                                        if (sub?.Name == "LIN" && sub.Content != null)
                                         {
-                                            if (subSegment.Name == "LIN" && subSegment.Content != null)
+                                            // LIN**VN*<item>
+                                            itemId = sub.Content[2]?.E?.ToString();
+                                            if (!string.IsNullOrWhiteSpace(itemId)) itemId = itemId.Trim();
+                                            sku = itemId;
+                                        }
+                                        else if (sub?.Name == "SN1" && sub.Content != null)
+                                        {
+                                            qty = sub.Content[1]?.E?.ToString();
+                                            if (!string.IsNullOrWhiteSpace(qty)) qty = qty.Trim();
+                                            uom = sub.Content[2]?.E?.ToString();
+                                            if (!string.IsNullOrWhiteSpace(uom)) uom = uom.Trim();
+                                        }
+                                        else if (sub?.Name == "REF" && sub.Content != null)
+                                        {
+                                            var qual = sub.Content[0]?.E?.ToString();
+                                            if (qual == "LT") // lot
                                             {
-                                                itemId = subSegment.Content[2]?.E?.ToString();
-                                                sku = itemId;
+                                                lotNumber = sub.Content[1]?.E?.ToString();
+                                                if (!string.IsNullOrWhiteSpace(lotNumber)) lotNumber = lotNumber.Trim();
                                             }
-                                            else if (subSegment.Name == "SN1" && subSegment.Content != null)
+                                            else if (qual == "11") // barcodes
                                             {
-                                                qty = subSegment.Content[1]?.E?.ToString();
-                                                uom = subSegment.Content[2]?.E?.ToString();
-                                            }
-                                            else if (subSegment.Name == "REF" && subSegment.Content != null && subSegment.Content[0]?.E?.ToString() == "LT")
-                                            {
-                                                lotNumber = subSegment.Content[1]?.E?.ToString();
-                                            }
-                                            else if (subSegment.Name == "DTM" && subSegment.Content != null && subSegment.Content[0]?.E?.ToString() == "036")
-                                            {
-                                                ExpirationDate = subSegment.Content[1]?.E?.ToString();
+                                                var refVal = sub.Content[1]?.E?.ToString();
+                                                if (!string.IsNullOrWhiteSpace(refVal))
+                                                    references.Add(refVal.Trim());
                                             }
                                         }
+                                        else if (sub?.Name == "DTM" && sub.Content != null
+                                                 && sub.Content[0]?.E?.ToString() == "036")
+                                        {
+                                            expirationDate = sub.Content[1]?.E?.ToString();
+                                            if (!string.IsNullOrWhiteSpace(expirationDate)) expirationDate = expirationDate.Trim();
+                                        }
 
+                                        // OPTIONAL: if some partners send BM/GM at I-level, you could pick them here too
+                                        // else if (sub?.Name == "REF" && sub.Content != null && sub.Content[0]?.E?.ToString() == "BM") { currentBOLNo = sub.Content[1]?.E?.ToString() ?? currentBOLNo; }
+                                        // else if (sub?.Name == "MAN" && sub.Content != null && sub.Content[0]?.E?.ToString() == "GM") { currentSSCC = sub.Content[1]?.E?.ToString() ?? currentSSCC; }
+                                    }
+
+                                    // ---- Quantity distribution across references ----
+                                    decimal totalQty = 0;
+                                    decimal.TryParse(qty ?? "0", NumberStyles.Any, CultureInfo.InvariantCulture, out totalQty);
+
+                                    int refCount = references.Count;
+                                    var perRefQty = new List<string>();
+
+                                    if (refCount > 0 && totalQty > 0)
+                                    {
+                                        var baseQty = Math.Floor(totalQty / refCount);               // e.g., 5/2 => 2
+                                        var remainder = (int)(totalQty - (baseQty * refCount));     // remainder => 1
+
+                                        for (int i = 0; i < refCount; i++)
+                                        {
+                                            var q = baseQty + (i < remainder ? 1 : 0);               // 3,2 or 1,1 etc.
+                                            perRefQty.Add(q.ToString(CultureInfo.InvariantCulture));
+                                        }
+                                    }
+                                    else if (refCount > 0)
+                                    {
+                                        // If total qty missing/zero, default 1 each (customize to "0" if desired)
+                                        perRefQty = Enumerable.Repeat("1", refCount).ToList();
+                                    }
+
+                                    // ---- Create detail rows ----
+                                    if (references.Count > 0)
+                                    {
+                                        for (int i = 0; i < references.Count; i++)
+                                        {
+                                            var reference = references[i];
+                                            var lineQty = (i < perRefQty.Count ? perRefQty[i] : qty); // fallback to original qty
+
+                                            // OPTIONAL: skip 0-qty rows
+                                            // if (decimal.TryParse(lineQty, NumberStyles.Any, CultureInfo.InvariantCulture, out var qd) && qd == 0) continue;
+
+                                            detailList.Add(new
+                                            {
+                                                BOLNo = currentBOLNo,
+                                                SSCC = currentSSCC,
+                                                ItemID = itemId,
+                                                SKU = sku,
+                                                QTY = lineQty,                 // per-barcode qty
+                                                UOM = uom,
+                                                LotNumber = lotNumber,
+                                                ExpirationDate = expirationDate,
+                                                Reference = reference          // per-row barcode
+                                            });
+                                        }
+                                    }
+                                    else
+                                    {
+                                        // No REF*11 => single row with original qty
                                         detailList.Add(new
                                         {
                                             BOLNo = currentBOLNo,
@@ -284,25 +374,29 @@ namespace eSyncMate.Processor.Managers
                                             QTY = qty,
                                             UOM = uom,
                                             LotNumber = lotNumber,
-                                            ExpirationDate = ExpirationDate
+                                            ExpirationDate = expirationDate,
+                                            Reference = (string)null
                                         });
+                                    }
 
-                                        if (segment.Content != null)
-                                        {
-                                            TraverseContent(segment.Content, currentBOLNo, currentSSCC);
-                                        }
-                                    }
-                                    else
-                                    {
-                                        if (segment.Content != null)
-                                        {
-                                            TraverseContent(segment.Content, currentBOLNo, currentSSCC);
-                                        }
-                                    }
+                                    // descend if any nested content
+                                    if (segment.Content != null) TraverseContent(segment.Content, currentBOLNo, currentSSCC);
                                 }
+                                else
+                                {
+                                    // HL = S/O or anything else → descend
+                                    if (segment.Content != null) TraverseContent(segment.Content, currentBOLNo, currentSSCC);
+                                }
+                            }
+                            else
+                            {
+                                // non-HL container: keep walking
+                                if (segment?.Content != null) TraverseContent(segment.Content, currentBOLNo, currentSSCC);
                             }
                         }
                     }
+                    // =================== END UPDATED TRAVERSAL ===================
+
 
                     TraverseContent(transactionData["Content"], null, null);
                     int headerId = SaveHeaderData(result, connectionString, userNo);
@@ -413,9 +507,9 @@ namespace eSyncMate.Processor.Managers
                 {
                     var command = new SqlCommand(
                         @"INSERT INTO ShipmentDetailFromNDC 
-                        (ShipmentFromNDC_ID, ShipmentID, PoNumber, Status, BOLNO, SSCC, ItemID, SKU, QTY, UOM, WarehouseName, CreatedDate, CreatedBy, ExpirationDate, LotNumber, ShipStationStatus) 
+                        (ShipmentFromNDC_ID, ShipmentID, PoNumber, Status, BOLNO, SSCC, ItemID, SKU, QTY, UOM, WarehouseName, CreatedDate, CreatedBy, ExpirationDate, LotNumber, ShipStationStatus, Reference) 
                         OUTPUT INSERTED.WarehouseName, INSERTED.ItemID, INSERTED.QTY
-                        VALUES (@HeaderID, @ShipmentID, @PoNumber, @Status, @BOLNO, @SSCC, @ItemID, @SKU, @QTY, @UOM, @WarehouseName, @CreatedDate, @CreatedBy, @ExpirationDate, @LotNumber, @ShipStationStatus)",
+                        VALUES (@HeaderID, @ShipmentID, @PoNumber, @Status, @BOLNO, @SSCC, @ItemID, @SKU, @QTY, @UOM, @WarehouseName, @CreatedDate, @CreatedBy, @ExpirationDate, @LotNumber, @ShipStationStatus, @Reference)",
                                 connection);
 
                     command.Parameters.AddWithValue("@HeaderID", headerId);
@@ -430,6 +524,7 @@ namespace eSyncMate.Processor.Managers
                     command.Parameters.AddWithValue("@QTY", detail.QTY ?? (object)DBNull.Value);
                     command.Parameters.AddWithValue("@UOM", detail.UOM ?? (object)DBNull.Value);
                     command.Parameters.AddWithValue("@LotNumber", detail.LotNumber ?? (object)DBNull.Value);
+                    command.Parameters.AddWithValue("@Reference", detail.Reference ?? (object)DBNull.Value);
                     DateTime expirationDate;
                     command.Parameters.AddWithValue("@ExpirationDate",
                         DateTime.TryParseExact(detail.ExpirationDate?.ToString(), "yyyyMMdd", null, System.Globalization.DateTimeStyles.None, out expirationDate)

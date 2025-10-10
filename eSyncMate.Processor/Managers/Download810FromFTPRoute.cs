@@ -143,7 +143,7 @@ namespace eSyncMate.Processor.Managers
                 }
             }
         }
-       
+
         private static InboundEDIInfo CreateInboundEDIInfo(EdiInterchange interchange, int ediId, int userNo, string connectionString)
         {
             var ediInfo = new InboundEDIInfo();
@@ -240,6 +240,72 @@ namespace eSyncMate.Processor.Managers
             }
         }
 
+        private static decimal? NormalizeMoney(object? raw)
+        {
+            if (raw == null) return null;
+
+            switch (raw)
+            {
+                case decimal d:
+                    return Math.Round(d, 2, MidpointRounding.AwayFromZero);
+
+                case double db:
+                    return Math.Round((decimal)db, 2, MidpointRounding.AwayFromZero);
+
+                case float f:
+                    return Math.Round((decimal)f, 2, MidpointRounding.AwayFromZero);
+
+                case long l:
+                    // cents -> dollars
+                    return l / 100m;
+
+                case int i:
+                    return i / 100m;
+
+                case string s:
+                    s = s.Trim();
+                    if (string.IsNullOrWhiteSpace(s)) return null;
+
+                    // If it parses as decimal:
+                    if (decimal.TryParse(
+                            s,
+                            System.Globalization.NumberStyles.Any,
+                            System.Globalization.CultureInfo.InvariantCulture,
+                            out var parsed))
+                    {
+                        // If original had no decimal separator, treat as cents
+                        if (!s.Contains(".") && !s.Contains(",")) return parsed / 100m;
+                        return Math.Round(parsed, 2, MidpointRounding.AwayFromZero);
+                    }
+
+                    // Fallback: strip non-digits except dot/comma
+                    var cleaned = System.Text.RegularExpressions.Regex.Replace(s, @"[^\d\.,-]", "");
+                    if (decimal.TryParse(
+                            cleaned.Replace(",", "."),
+                            System.Globalization.NumberStyles.Any,
+                            System.Globalization.CultureInfo.InvariantCulture,
+                            out var parsed2))
+                    {
+                        if (!cleaned.Contains(".") && !cleaned.Contains(",")) return parsed2 / 100m;
+                        return Math.Round(parsed2, 2, MidpointRounding.AwayFromZero);
+                    }
+
+                    return null;
+
+                default:
+                    try
+                    {
+                        // last resort: convert then assume cents
+                        var any = System.Convert.ToDecimal(raw, System.Globalization.CultureInfo.InvariantCulture);
+                        return any / 100m;
+                    }
+                    catch
+                    {
+                        return null;
+                    }
+            }
+        }
+
         private static int SaveHeaderDataFromDB(string connectionString, string transformedJson, int userNo)
         {
             var receivedData = JsonConvert.DeserializeObject<_810TransformJson>(transformedJson);
@@ -247,6 +313,11 @@ namespace eSyncMate.Processor.Managers
             {
                 throw new Exception("Transformed data is null.");
             }
+
+            var frieghtNorm = NormalizeMoney(receivedData.Frieght);
+            var handlingAmountNorm = NormalizeMoney(receivedData.HandlingAmount);
+            var salesTaxNorm = NormalizeMoney(receivedData.SalesTax);
+            var invoiceAmountNorm = NormalizeMoney(receivedData.InvoiceAmount);
 
             using (var connection = new SqlConnection(connectionString))
             {
@@ -278,10 +349,10 @@ namespace eSyncMate.Processor.Managers
                 command.Parameters.AddWithValue("@ShippingZip", receivedData.ShippingZip ?? (object)DBNull.Value);
                 command.Parameters.AddWithValue("@ShippingCountry", receivedData.ShippingCountry ?? (object)DBNull.Value);
                 command.Parameters.AddWithValue("@InvoiceTerms", receivedData.InvoiceTerms ?? (object)DBNull.Value);
-                command.Parameters.AddWithValue("@Frieght", receivedData.Frieght ?? (object)DBNull.Value);
-                command.Parameters.AddWithValue("@HandlingAmount", receivedData.HandlingAmount ?? (object)DBNull.Value);
-                command.Parameters.AddWithValue("@SalesTax", receivedData.SalesTax ?? (object)DBNull.Value);
-                command.Parameters.AddWithValue("@InvoiceAmount", receivedData.InvoiceAmount ?? (object)DBNull.Value);
+                command.Parameters.AddWithValue("@Frieght", (object?)frieghtNorm ?? DBNull.Value);
+                command.Parameters.AddWithValue("@HandlingAmount", (object?)handlingAmountNorm ?? DBNull.Value);
+                command.Parameters.AddWithValue("@SalesTax", (object?)salesTaxNorm ?? DBNull.Value);
+                command.Parameters.AddWithValue("@InvoiceAmount", (object?)invoiceAmountNorm ?? DBNull.Value);
                 command.Parameters.AddWithValue("@TrackingNo", receivedData.TrackingNo ?? (object)DBNull.Value);
                 command.Parameters.AddWithValue("@CreatedDate", DateTime.Now);
                 command.Parameters.AddWithValue("@CreatedBy", userNo);
@@ -355,7 +426,7 @@ namespace eSyncMate.Processor.Managers
 
         private static void SaveOrSendACK(string edi997, string documentType, ConnectorDataModel connector, int userNo)
         {
-            
+
             //SaveACKToDatabase(edi997, documentType, userNo);
             //// Or send via FTP
             //FtpConnector.SendFile(connector.Host, connector.ConsumerKey, connector.ConsumerSecret, connector.Method, $"{documentType}_997.edi", edi997);

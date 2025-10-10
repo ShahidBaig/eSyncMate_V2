@@ -39,6 +39,7 @@ export interface DetailItem {
   qty: number;
   description: string;
   manufacturerName: string;
+  uom: string;
   ndcItemID: string;
   productName: string;
   primaryCategoryName: string;
@@ -106,12 +107,13 @@ export class EditPurchaseOrderComponent implements OnInit {
   filteredOptions: Observable<Supplier[]> | undefined;
   filteredSupplierOptions: Observable<Supplier[]> | undefined;
   supplierOptions: Supplier[] = [];
-  displayedColumns: string[] = ['LineNo', 'ItemID', 'Description', 'OrderQty', 'UnitPrice','extendedPrice', 'UPC', 'Qty', 'PrimaryCategoryName', 'SecondaryCategoryName', 'ManufacturerName', 'NDCItemID', 'ProductName', 'Status' ,'Actions'];
+  displayedColumns: string[] = ['LineNo', 'ItemID', 'Description', 'OrderQty', 'UnitPrice','extendedPrice', 'UPC', 'Qty', 'PrimaryCategoryName', 'SecondaryCategoryName', 'ManufacturerName', 'UOM' ,'NDCItemID', 'ProductName', 'Status' ,'Actions'];
   dataSource = new MatTableDataSource<DetailItem>();
   supplierID = '';
   itemID = '';
   itemDescription = '';
   manufacturerName = '';
+  uom = '';
   ExtendedPrice:number = 0
   ndcItemID = '';
   productName = '';
@@ -172,6 +174,7 @@ export class EditPurchaseOrderComponent implements OnInit {
       ItemID: [''],
       UPC: [''],
       ManufacturerName: [''],
+      UOM: [''],
       NDCItemID: [''],
       ProductName: [''],
       PrimaryCategoryName: [''],
@@ -289,6 +292,7 @@ export class EditPurchaseOrderComponent implements OnInit {
       ItemID: [''],
       Description: [''],
       ManufacturerName: [''],
+      UOM: [''],
       NDCItemID: [''],
       ProductName: [''],
       PrimaryCategoryName: [''],
@@ -381,6 +385,7 @@ export class EditPurchaseOrderComponent implements OnInit {
           upc: item.upc,
           description: item.description,
           manufacturerName: item.manufacturerName,
+          uom: item.uom,
           ndcItemID: item.ndcItemID,
           productName: item.productName,
           primaryCategoryName: item.primaryCategoryName,
@@ -549,6 +554,7 @@ export class EditPurchaseOrderComponent implements OnInit {
       qty: this.editPurchaseOrderForm.get('QTY')?.value,
       description: this.itemDescription,
       manufacturerName: this.editPurchaseOrderForm.get('ManufacturerName')?.value || '-',
+      uom: this.editPurchaseOrderForm.get('UOM')?.value || '-',
       ndcItemID: this.editPurchaseOrderForm.get('NDCItemID')?.value || '-',
       productName: this.editPurchaseOrderForm.get('ProductName')?.value || '-',
       primaryCategoryName: this.editPurchaseOrderForm.get('PrimaryCategoryName')?.value || '-',
@@ -640,6 +646,7 @@ export class EditPurchaseOrderComponent implements OnInit {
       extendedPrice:0,
       OrderQty: 0,
       ManufacturerName: '',
+      UOM: '',
       NDCItemID: '',
       ProductName: '',
       PrimaryCategoryName: '',
@@ -799,6 +806,7 @@ export class EditPurchaseOrderComponent implements OnInit {
                 QTY: this.selectedItems?.qty,
                 UnitPrice: this.selectedItems?.unitPrice,
                 ManufacturerName: this.selectedItems?.manufacturerName,
+                UOM: this.selectedItems?.uom,
                 NDCItemID: this.selectedItems?.ndcItemID,
                 ProductName: this.selectedItems?.productName,
                 PrimaryCategoryName: this.selectedItems?.primaryCategoryName,
@@ -848,6 +856,7 @@ export class EditPurchaseOrderComponent implements OnInit {
                 QTY: this.selectedItems?.qty,
                 UnitPrice: this.selectedItems?.unitPrice,
                 ManufacturerName: this.selectedItems?.manufacturerName,
+                UOM: this.selectedItems?.uom,
                 NDCItemID: this.selectedItems?.ndcItemID,
                 ProductName: this.selectedItems?.productName,
                 PrimaryCategoryName: this.selectedItems?.primaryCategoryName,

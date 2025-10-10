@@ -291,6 +291,7 @@ export interface InvFeedFromNDC {
   itemID: string,
   description: string,
   manufacturerName: string,
+  uom: string,
   ndcItemID: string,
   productName: string,
   primaryCategoryName: string,
