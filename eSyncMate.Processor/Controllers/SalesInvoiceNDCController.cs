@@ -66,6 +66,7 @@ namespace eSyncMate.Processor.Controllers
                 {
                     InvoiceNo = 0;
                 }
+
                 if (Status == "EMPTY")
                 {
                     Status = string.Empty;

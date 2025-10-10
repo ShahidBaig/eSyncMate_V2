@@ -29,7 +29,7 @@ import { DetailSalesInvoiceNdcComponent } from './detail-sales-invoice-ndc/detai
 
 
 @Component({
-  selector: 'sipment-from-ndc',
+  selector: 'sales-invoice-ndc',
   templateUrl: './sales-invoice-ndc.component.html',
   styleUrls: ['./sales-invoice-ndc.component.scss'],
   standalone: true,
@@ -143,7 +143,7 @@ export class SalesInvoiceNdcComponent {
         }
 
         const dialogRef = this.dialog.open(DetailSalesInvoiceNdcComponent, {
-          width: '100%',
+          width: '40%',
           data: {
             listofDetail: this.listOfSalesInvoiceDetailNDC
           },

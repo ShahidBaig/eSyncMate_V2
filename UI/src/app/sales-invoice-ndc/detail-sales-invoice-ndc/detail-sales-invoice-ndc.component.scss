@@ -1,4 +1,6 @@
-/* Layout */
+/* ===============================
+   Layout
+================================*/
 .dialog-wrapper {
   display: flex;
   flex-direction: column;
@@ -25,12 +27,14 @@
   color: #666;
 }
 
-/* Header */
+/* ===============================
+   Header
+================================*/
 .dialog-header {
   flex: 0 0 auto;
   padding: 16px 24px;
   border-bottom: 1px solid #eee;
-  background: linear-gradient(180deg,#fafbff, #f5f7fb);
+  background: linear-gradient(180deg,#fafbff,#f5f7fb);
   z-index: 10;
 }
 
@@ -47,7 +51,9 @@
   letter-spacing: .2px;
 }
 
-/* Chips */
+/* ===============================
+   Chips
+================================*/
 .chip-row {
   display: flex;
   gap: 8px;
@@ -95,7 +101,9 @@
   border-color: #fecaca;
 }
 
-/* Summary strip */
+/* ===============================
+   Summary strip
+================================*/
 .totals-strip {
   display: flex;
   gap: 16px;
@@ -126,7 +134,9 @@
   font-weight: 700;
 }
 
-/* Cards and titles */
+/* ===============================
+   Cards & Titles
+================================*/
 .report-card {
   margin-bottom: 16px;
   border-radius: 16px;
@@ -146,7 +156,9 @@
   color: #364152;
 }
 
-/* Field grid */
+/* ===============================
+   Field Grid
+================================*/
 .report-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0,1fr));
@@ -182,7 +194,7 @@
 
 @media (max-width:900px) {
   .report-grid {
-    grid-template-columns: 1fr
+    grid-template-columns: 1fr;
   }
 
   .label {
@@ -191,51 +203,39 @@
   }
 }
 
-/* Table */
+/* ===============================
+   Container width (A4 fit)
+================================*/
+#invoice-report {
+  max-width: 780px;
+  margin: 0 auto;
+}
+
+/* ===============================
+   Table (no horizontal scroll)
+================================*/
 .table-wrapper {
   width: 100%;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  border-radius: 14px;
+  overflow-x: visible !important;
   background: #fff;
+  border-radius: 14px;
 }
 
 .line-table {
   width: 100%;
-  border-collapse: separate;
+  border-collapse: collapse;
   border-spacing: 0;
   font-size: 12.5px;
-  table-layout: fixed; /* ensures predictable column widths */
+  table-layout: auto;
+  word-wrap: break-word;
 }
 
-.line-table th, .line-table td {
-  padding: 10px 12px;
+.line-table th,
+.line-table td {
+  padding: 7px 8px;
   border-bottom: 1px solid #eef0f4;
-  vertical-align: top;
+  vertical-align: middle;
 }
-
-/* --- FIX FOR OVERLAPPING COLUMNS --- */
-.line-table th:nth-child(2),
-.line-table td:nth-child(2) { /* PO No */
-  width: 140px;
-  overflow-wrap: anywhere;
-  word-break: break-word;
-}
-
-.line-table th:nth-child(3),
-.line-table td:nth-child(3) { /* Tracking # */
-  width: 160px;
-  overflow-wrap: anywhere;
-  word-break: break-word;
-}
-
-.line-table th:nth-child(4),
-.line-table td:nth-child(4) { /* EDI Line ID */
-  width: 100px;
-  overflow-wrap: anywhere;
-  word-break: break-word;
-}
-/* ----------------------------------- */
 
 .line-table thead th {
   position: sticky;
@@ -243,7 +243,7 @@
   background: #f9fbff;
   z-index: 1;
   border-bottom: 2px solid #e0e6f3;
-  text-align: left;
+  text-align: center; /* align headers centrally */
   font-weight: 700;
   color: #334155;
 }
@@ -264,14 +264,6 @@
   text-align: center;
 }
 
-.line-table .narrow {
-  width: 88px;
-}
-
-.line-table .wide {
-  width: 280px;
-}
-
 .line-table .nowrap {
   white-space: nowrap;
 }
@@ -284,28 +276,100 @@
 .line-table .sticky-col {
   position: sticky;
   left: 0;
-  background: #fff; /* ensure visible over zebra rows */
+  background: #fff;
   border-right: 1px solid #eef0f4;
 }
 
-/* Numbers look great in tabular style */
-.mono {
-  font-variant-numeric: tabular-nums;
-  font-feature-settings: "tnum" 1, "lnum" 1;
+/* ===============================
+   Column Widths (adjusted for alignment)
+================================*/
+.line-table th:nth-child(1),
+.line-table td:nth-child(1) {
+  width: 30px;
+  text-align: center;
 }
 
-/* Totals row */
+.line-table th:nth-child(2),
+.line-table td:nth-child(2) {
+  width: 120px;
+  text-align: left;
+}
+
+.line-table th:nth-child(3),
+.line-table td:nth-child(3) {
+  width: 110px;
+  text-align: left;
+}
+
+.line-table th:nth-child(4),
+.line-table td:nth-child(4) {
+  width: 70px;
+  text-align: center;
+}
+
+.line-table th:nth-child(5),
+.line-table td:nth-child(5) {
+  width: 160px;
+  text-align: left;
+}
+
+.line-table th:nth-child(6),
+.line-table td:nth-child(6) {
+  width: 55px;
+  text-align: center;
+}
+
+/* ✅ FIXED QTY COLUMN ALIGNMENT */
+.line-table th:nth-child(7),
+.line-table td:nth-child(7) {
+  width: 70px;
+  text-align: center; /* both centered now */
+  vertical-align: middle;
+  padding-right: 0;
+}
+
+/* Unit Price */
+.line-table th:nth-child(8),
+.line-table td:nth-child(8) {
+  width: 80px;
+  text-align: right;
+  vertical-align: middle;
+}
+
+/* Line Total */
+.line-table th:nth-child(9),
+.line-table td:nth-child(9) {
+  width: 95px;
+  text-align: right;
+  vertical-align: middle;
+}
+
+/* ===============================
+   Totals Row
+================================*/
 .line-table tfoot .totals td {
   border-top: 2px solid #cfd8ea;
   background: linear-gradient(180deg,#f7f9ff,#f1f5ff);
 }
 
-/* Nice soft shadows (non-print only) */
+/* ===============================
+   Typography
+================================*/
+.mono {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+}
+
+/* ===============================
+   Shadows
+================================*/
 .soft-shadow {
   box-shadow: 0 6px 18px rgba(27,40,80,.08), 0 2px 6px rgba(27,40,80,.06);
 }
 
-/* Print */
+/* ===============================
+   Print rules
+================================*/
 @media print {
   .dialog-footer {
     display: none;
@@ -325,11 +389,6 @@
     overflow: visible;
   }
 
-  .line-table thead th {
-    position: sticky;
-    top: 0;
-  }
-
   .line-table tr, .line-table td, .line-table th {
     page-break-inside: avoid;
   }
@@ -337,4 +396,31 @@
   .report-card {
     break-inside: avoid;
   }
+}
+
+/* ===============================
+   Export-only overrides (html2pdf)
+================================*/
+.pdf-export .table-wrapper {
+  overflow: visible !important;
+}
+
+.pdf-export .line-table thead th {
+  position: static !important;
+  top: auto !important;
+  z-index: auto !important;
+}
+
+.pdf-export .line-table .sticky-col {
+  position: static !important;
+  left: auto !important;
+  border-right: none !important;
+}
+
+.pdf-export .report-card,
+.pdf-export .line-table tr,
+.pdf-export .line-table td,
+.pdf-export .line-table th {
+  break-inside: avoid;
+  page-break-inside: avoid;
 }

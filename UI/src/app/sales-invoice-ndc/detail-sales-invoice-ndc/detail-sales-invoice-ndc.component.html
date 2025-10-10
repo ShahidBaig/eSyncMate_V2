@@ -4,16 +4,16 @@
     <div class="title-wrap">
       <h1>Invoice</h1>
 
-      <div class="chip-row" *ngIf="header?.status || header?.invoiceNo">
-        <span class="chip pill" *ngIf="header?.invoiceNo">#{{ header.invoiceNo }}</span>
+      <div class="chip-row" *ngIf="header.status || header.invoiceNo">
+        <span class="chip pill" *ngIf="header.invoiceNo">#{{ header.invoiceNo }}</span>
         <span class="chip status"
-              [class.ok]="header?.status==='PAID'"
-              [class.warn]="header?.status==='DUE' || header?.status==='NEW'"
-              [class.bad]="header?.status==='OVERDUE'"
-              *ngIf="header?.status">
+              [class.ok]="header.status==='PAID'"
+              [class.warn]="header.status==='DUE' || header.status==='NEW'"
+              [class.bad]="header.status==='OVERDUE'"
+              *ngIf="header.status">
           {{ header.status }}
         </span>
-        <span class="chip subtle" *ngIf="header?.invoiceDate">Date: {{ getFormattedDate(header.invoiceDate) }}</span>
+        <span class="chip subtle" *ngIf="header.invoiceDate">Date: {{ getFormattedDate(header.invoiceDate) }}</span>
       </div>
     </div>
 
@@ -29,7 +29,7 @@
       </div>
       <div class="mini">
         <div class="mini-label">Grand Total</div>
-        <div class="mini-value mono strong">{{ header?.invoiceAmount | number:'1.2-2' }}</div>
+        <div class="mini-value mono strong">{{ header.invoiceAmount | number:'1.2-2' }}</div>
       </div>
     </div>
   </div>

@@ -183,21 +183,40 @@ export class DetailSalesInvoiceNdcComponent implements OnInit {
     return moment(date).format('MM-DD-YYYY');
   }
 
-  downloadPDF(): void {
-    const reportContent = document.querySelector('#invoice-report') as HTMLElement | null;
-    if (!reportContent) {
-      console.error('Report content not found!');
-      return;
-    }
-    setTimeout(() => {
+  async downloadPDF(): Promise<void> {
+    const report = document.querySelector('#invoice-report') as HTMLElement | null;
+    if (!report) return;
+
+    report.classList.add('pdf-export');
+
+    setTimeout(async () => {
+      const { default: html2pdf } = await import('html2pdf.js');
+
       const options = {
         filename: 'invoice.pdf',
+        margin: [8, 8, 8, 8],
+        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 4, logging: false, useCORS: true },
-        jsPDF: { unit: 'pt', format: 'a4', orientation: 'portrait', putOnlyUsedFonts: true, compress: true }
+        html2canvas: {
+          scale: 3,
+          useCORS: true,
+          logging: false,
+          windowWidth: 780
+        },
+        jsPDF: {
+          unit: 'pt',
+          format: 'a4',
+          orientation: 'portrait',
+          putOnlyUsedFonts: true,
+          compress: true
+        }
       };
-      // @ts-ignore
-      (html2pdf as any)().from(reportContent).set(options).save();
-    }, 200);
+
+      await html2pdf().from(report).set(options).save();
+      report.classList.remove('pdf-export');
+    }, 50);
   }
+
+
+
 }

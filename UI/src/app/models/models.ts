@@ -442,6 +442,19 @@ export interface SalesInvoiceFromNDC {
   ShipmentID: string,
   PoNumber: number,
   Status: string,
-  InvoiceDate: number,
+  InvoiceDate: Date,
   TrackingNo: string,
 }
+
+export interface PurchaseOrdersTracking {
+  ID: number,
+  PurchaseOrderNo: number,
+  PoNumber: string,
+  OrderDate: Date,
+  SKU: string,
+  OrderQty: number,
+  ReceivedDate: Date,
+  ReceivedQty: number,
+  BackOrderQty: number,
+}
+

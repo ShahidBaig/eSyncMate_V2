@@ -240,6 +240,7 @@
   "invoiceDate": "Invoice Date",
   "searchShipmentFromNDC": "Search Shipment From NDC",
   "searchSalesInvoiceNDC": "Search Sales Invoice NDC",
+  "searchPurchaseOrdersTracking": "Search",
   "ediLineID": "EDI Line ID",
   "supplierStyle": "Supplier Style",
   "sku": "SKU",
@@ -270,7 +271,8 @@
     "invFeedFromNDC": "Inventory Feed From NDC",
     "purchaseOrder": "Purchase Order",
     "sipmentFromNdc": "Shipment From NDC",
-    "salesInvoiceNdc": "Sales Invoice NDC"
+    "salesInvoiceNdc": "Sales Invoice NDC",
+    "purchaseOrdersTracking": "Purchase Orders Tracking"
 
   },
   "orderReceived": "Order Received",
