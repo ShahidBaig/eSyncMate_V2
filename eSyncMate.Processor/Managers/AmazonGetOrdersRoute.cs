@@ -37,9 +37,12 @@ namespace eSyncMate.Processor.Managers
 
             AmazonGetOrdersResponseModel OrdersList = new AmazonGetOrdersResponseModel();
             RestResponse sourceResponse = new RestResponse();
-
+            DateTime currentDateTime = DateTime.Now;
+            DateTime startDateTime = currentDateTime.AddMinutes(-600);
+            string formattedStartDate = "2025-11-05T00:00:00Z";
             try
             {
+                
                 ConnectorDataModel? l_SourceConnector = JsonConvert.DeserializeObject<ConnectorDataModel>(route.SourceConnectorObject.Data);
                 ConnectorDataModel? l_DestinationConnector = JsonConvert.DeserializeObject<ConnectorDataModel>(route.DestinationConnectorObject.Data);
 
@@ -61,13 +64,52 @@ namespace eSyncMate.Processor.Managers
 
                 if (l_SourceConnector.ConnectivityType == ConnectorTypesEnum.Rest.ToString())
                 {
-                    l_SourceConnector.Url = l_SourceConnector.BaseUrl + "/orders/v0/orders?MarketplaceIds=ATVPDKIKX0DER&CreatedAfter=2025-01-01T12:36:00Z&OrderStatuses=Unshipped";
-                    sourceResponse = RestConnector.Execute(l_SourceConnector, string.Empty).GetAwaiter().GetResult();
 
-                    route.SaveData("JSON-SNT", 0, l_SourceConnector.Url, userNo);
+                    var allOrders = new List<AmazonOrder>();
+                    string nextToken = null;
+                    int page = 0;
 
-                    OrdersList = JsonConvert.DeserializeObject<AmazonGetOrdersResponseModel>(sourceResponse.Content);
-                    route.SaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
+                    do
+                    {
+                        page++;
+
+                        if (string.IsNullOrEmpty(nextToken))
+                        {
+                            // your original first-page query (keep as-is)
+                            l_SourceConnector.Url = l_SourceConnector.BaseUrl
+                                + $"/orders/v0/orders?MarketplaceIds=ATVPDKIKX0DER&CreatedAfter={formattedStartDate}&OrderStatuses=Unshipped";
+                        }
+                        else
+                        {
+                            // IMPORTANT: when paging, only send NextToken
+                            l_SourceConnector.Url = l_SourceConnector.BaseUrl
+                                + $"/orders/v0/orders?NextToken={Uri.EscapeDataString(nextToken)}";
+                        }
+
+                        route.SaveData("JSON-SNT", 0, l_SourceConnector.Url, userNo);
+
+                        sourceResponse = RestConnector.Execute(l_SourceConnector, string.Empty).GetAwaiter().GetResult();
+                        route.SaveData("JSON-RVD", 0,sourceResponse.Content, userNo);
+
+                        var pageResult = JsonConvert.DeserializeObject<AmazonGetOrdersResponseModel>(sourceResponse.Content);
+
+                        if (pageResult?.payload?.Orders != null && pageResult.payload.Orders.Any())
+                        {
+                            allOrders.AddRange(pageResult.payload.Orders);
+                        }
+
+                        nextToken = pageResult?.payload?.NextToken;
+
+                    } while (!string.IsNullOrWhiteSpace(nextToken));
+
+
+                    //l_SourceConnector.Url = l_SourceConnector.BaseUrl + "/orders/v0/orders?MarketplaceIds=ATVPDKIKX0DER&CreatedAfter=2025-01-01T12:36:00Z&OrderStatuses=Unshipped";
+                    //sourceResponse = RestConnector.Execute(l_SourceConnector, string.Empty).GetAwaiter().GetResult();
+
+                    //route.SaveData("JSON-SNT", 0, l_SourceConnector.Url, userNo);
+
+                    //OrdersList = JsonConvert.DeserializeObject<AmazonGetOrdersResponseModel>(sourceResponse.Content);
+                    //route.SaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
 
                     if (l_DestinationConnector.ConnectivityType == ConnectorTypesEnum.SqlServer.ToString())
                     {
@@ -75,7 +117,7 @@ namespace eSyncMate.Processor.Managers
                         l_Customer.GetObject("ERPCustomerID", l_SourceConnector.CustomerID);
                         l_Orders.UseConnection(l_DestinationConnector.ConnectionString);
 
-                        foreach (var order in OrdersList.payload.Orders)
+                        foreach (var order in allOrders)
                         {
                             l_OrderData = new DataTable();
 
@@ -221,6 +263,12 @@ namespace eSyncMate.Processor.Managers
                 throw;
             }
 
+            int l_OrderLineNo = 1;
+            foreach (var orderLine in OrderDetail.payload.OrderItems)
+            {
+                orderLine.LineNo = l_OrderLineNo;
+                l_OrderLineNo++;
+            }
 
             jsonString = JsonConvert.SerializeObject(order);
 
@@ -230,8 +278,8 @@ namespace eSyncMate.Processor.Managers
             l_Orders.OrderNumber = order.AmazonOrderId;
             //l_Orders.VendorNumber = order.vmm_vendor_id;
             l_Orders.ShipToName = $"{order.OrderAddress.payload.ShippingAddress.Name ?? ""}";
-            l_Orders.ShipToAddress1 = "";
-            l_Orders.ShipToAddress2 = "";
+            l_Orders.ShipToAddress1 = order.OrderAddress.payload.ShippingAddress.AddressLine1 ?? "";
+            l_Orders.ShipToAddress2 = order.OrderAddress.payload.ShippingAddress.AddressLine2 ?? "";
             l_Orders.ShipToCity = order.OrderAddress.payload.ShippingAddress.City;
             l_Orders.ShipToState = order.OrderAddress.payload.ShippingAddress.StateOrRegion;
             l_Orders.ShipToZip = order.OrderAddress.payload.ShippingAddress.PostalCode;
@@ -274,16 +322,19 @@ namespace eSyncMate.Processor.Managers
                     l_OrderDetail.OrderId = l_Orders.Id;
                     l_OrderDetail.LineNo = l_LineNo;
                     l_OrderDetail.ItemID = orderLine.SellerSKU.Replace($"{orderLine.ASIN}", "").Trim();
+                    //l_OrderDetail.ItemID = orderLine.ASIN;
                     l_OrderDetail.LineQty = 1;
                     l_OrderDetail.UnitPrice = Math.Round(Convert.ToDecimal(orderLine.ItemPrice.Amount) / Convert.ToDecimal(orderLine.QuantityOrdered),2);
                     l_OrderDetail.order_line_id = orderLine.OrderItemId;
                     l_OrderDetail.Status = "NEW";
                     l_OrderDetail.CreatedBy = userNo;
                     l_OrderDetail.CreatedDate = DateTime.Now;
-                    l_LineNo++;
+                    
 
                     l_OrderDetail.SaveNew();
                 }
+
+                l_LineNo++;
             }
 
             //sourceConnector.Url = sourceConnector.BaseUrl + "order_statuses/" + order.id;

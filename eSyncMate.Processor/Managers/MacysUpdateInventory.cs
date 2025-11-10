@@ -118,6 +118,15 @@ namespace eSyncMate.Processor.Managers
                             route.SaveLog(LogTypeEnum.Debug, $"MacysUpdateInventory updated for item [{l_row["ProductId"]}].", sourceResponse.Content, userNo);
                             feed.SaveData("JSON-RVD", l_row["CustomerId"].ToString(), l_row["ItemId"].ToString(), sourceResponse.Content, userNo, l_InventoryBatchWise.BatchID);
                         }
+
+                        l_InventoryBatchWise.Status = "Completed";
+                        l_InventoryBatchWise.FinishDate = DateTime.Now;
+
+                        l_SCSInventoryFeed.UpdateInventoryBatchWise(l_InventoryBatchWise);
+
+                        route.SaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
+
+                        route.SaveLog(LogTypeEnum.Debug, $"Destination connector processing completed.", string.Empty, userNo);
                     }
                     else
                     {

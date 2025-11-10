@@ -15,8 +15,9 @@ namespace eSyncMate.DB
             {
                 var l_ServerDate = DateAndTime.Now;
                 string l_ProcessID = Process.GetCurrentProcess().Id.ToString();
+                string baseDir = Directory.GetCurrentDirectory();
                 string l_FileName = l_ServerDate.Month + "-" + l_ServerDate.Day + "-" + l_ServerDate.Year + "-" + l_ServerDate.Hour + "-" + l_ProcessID;
-                string l_Path = Path.Combine(Declarations.g_ApplicationLogPath, "Errors");
+                string l_Path = Path.Combine(baseDir, "Errors");
                 string l_FilesContainer = Path.Combine(l_Path, l_ServerDate.Month + "-" + l_ServerDate.Day + "-" + l_ServerDate.Year);
 
                 lock (_LockObj)
@@ -54,8 +55,9 @@ namespace eSyncMate.DB
         {
             var l_ServerDate = DateAndTime.Now;
             string l_ProcessID = Process.GetCurrentProcess().Id.ToString();
+            string baseDir = Directory.GetCurrentDirectory();
             string l_FileName = l_ServerDate.Month + "-" + l_ServerDate.Day + "-" + l_ServerDate.Year + "-" + l_ServerDate.Hour + "-" + l_ProcessID;
-            string l_Path = Path.Combine(Declarations.g_ApplicationLogPath, "Queries");
+            string l_Path = Path.Combine(baseDir, "Queries");
             string l_FilesContainer = Path.Combine(l_Path, l_ServerDate.Month + "-" + l_ServerDate.Day + "-" + l_ServerDate.Year);
 
             lock (_LockObj)

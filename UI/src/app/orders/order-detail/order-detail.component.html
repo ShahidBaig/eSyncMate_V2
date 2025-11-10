@@ -85,6 +85,15 @@
               <mat-label>{{ 'country' | translate }}</mat-label>
               <input [readonly]="isReadonly()" type="text" formControlName="shipToCountry" matInput placeholder="Enter Country">
             </mat-form-field>
+
+          
+          </div>
+
+          <div class="form-row">
+            <mat-form-field appearance="fill">
+              <mat-label>{{ 'shipViaCode' | translate }}</mat-label>
+              <input [readonly]="isReadonly()" type="text" formControlName="shipViaCode" matInput placeholder="Enter ShipVia Code">
+            </mat-form-field>
           </div>
         </mat-card-content>
       </mat-tab>

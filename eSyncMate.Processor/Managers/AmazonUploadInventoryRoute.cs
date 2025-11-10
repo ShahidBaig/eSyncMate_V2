@@ -11,13 +11,9 @@ using RestSharp.Authenticators.OAuth;
 using RestSharp.Authenticators;
 using System.Data;
 using static eSyncMate.DB.Declarations;
-using static eSyncMate.Processor.Models.SCSPlaceOrderResponseModel;
 using Microsoft.SqlServer.Server;
 using Nancy;
-using static eSyncMate.Processor.Models.SCS_ProductTypeAttributeReponseModel;
 using Microsoft.AspNetCore.Mvc;
-using static eSyncMate.Processor.Models.SCS_VAPProductCatalogModel;
-using static eSyncMate.Processor.Models.SCS_ProductCatalogStatusResponseModel;
 using System.Net.Http.Json;
 using System.Text;
 using DocumentFormat.OpenXml.Wordprocessing;
@@ -26,7 +22,8 @@ using Newtonsoft.Json.Linq;
 using Nancy.Responses;
 using System.Net.Http.Headers;
 using OfficeOpenXml.FormulaParsing.LexicalAnalysis;
-using static eSyncMate.Processor.Models.MacysGetOrderResponseModel;
+using static eSyncMate.Processor.Models.AmazonInventoryRequestModel;
+using System.IO.Compression;
 
 namespace eSyncMate.Processor.Managers
 {
@@ -99,37 +96,95 @@ namespace eSyncMate.Processor.Managers
 
                     l_SCSInventoryFeed.InsertInventoryBatchWise(l_InventoryBatchWise);
 
-                    if (l_data.Rows.Count <= 100)
+
+                    int i = 0;
+                    int totalThread = CommonUtils.UploadInventoryTotalThread;
+                    int chunkSize = l_data.Rows.Count / totalThread;
+                    List<Task> tasks = new List<Task>();
+
+                    var tables = l_data.AsEnumerable().ToChunks(chunkSize)
+                        .Select(rows => rows.CopyToDataTable()).ToList();
+
+
+                    foreach (var table in tables)
                     {
-                        AmazonProcessItemsThread itemsThread = new AmazonProcessItemsThread(l_data, route, feed, l_DestinationConnector, l_SourceConnector, userNo, l_InventoryBatchWise.BatchID);
+                        var itemsThread = new AmazonProcessItemsThread(
+                           table, route, feed, l_DestinationConnector, l_SourceConnector, userNo, l_InventoryBatchWise.BatchID
+                       );
 
-                        // Run ProcessItems async
-                        Task.Run(() => itemsThread.ProcessItems());
+                        itemsThread.ProcessItems().GetAwaiter().GetResult();
+
+                        Thread.Sleep(TimeSpan.FromMinutes(1));
                     }
-                    else
-                    {
-                        int i = 0;
-                        int totalThread = CommonUtils.UploadInventoryTotalThread;
-                        int chunkSize = l_data.Rows.Count / totalThread;
-                        List<Task> tasks = new List<Task>();
 
-                        var tables = l_data.AsEnumerable().ToChunks(chunkSize)
-                            .Select(rows => rows.CopyToDataTable()).ToList();
 
-                        while (i < tables.Count)
-                        {
-                            AmazonProcessItemsThread itemsThread = new AmazonProcessItemsThread(tables[i], route, feed, l_DestinationConnector, l_SourceConnector, userNo, l_InventoryBatchWise.BatchID);
 
-                            // Run tasks for each chunk of data asynchronously
-                            //tasks.Add(Task.Run(() => itemsThread.ProcessItems()));
-                            Task t = Task.Run(() => itemsThread.ProcessItems());
-                            Task.WhenAll(t).GetAwaiter().GetResult(); 
-                            i++;
-                        }
+                    //if (l_data.Rows.Count <= 100)
+                    //{
+                    //    AmazonProcessItemsThread itemsThread = new AmazonProcessItemsThread(l_data, route, feed, l_DestinationConnector, l_SourceConnector, userNo, l_InventoryBatchWise.BatchID);
 
-                        // Wait for all tasks to complete
-                        //Task.WhenAll(tasks).GetAwaiter().GetResult();
-                    }
+                    //    // Run ProcessItems async
+                    //    Task.Run(() => itemsThread.ProcessItems());
+                    //}
+                    //else
+                    //{
+                    //    int i = 0;
+                    //    int totalThread = CommonUtils.UploadInventoryTotalThread;
+                    //    int chunkSize = l_data.Rows.Count / totalThread;
+                    //    List<Task> tasks = new List<Task>();
+
+                    //    var tables = l_data.AsEnumerable().ToChunks(chunkSize)
+                    //        .Select(rows => rows.CopyToDataTable()).ToList();
+
+                    //    //while (i < tables.Count)
+                    //    //{
+                    //    //    AmazonProcessItemsThread itemsThread = new AmazonProcessItemsThread(tables[i], route, feed, l_DestinationConnector, l_SourceConnector, userNo, l_InventoryBatchWise.BatchID);
+
+                    //    //    itemsThread.ProcessItems().GetAwaiter().GetResult();
+
+                    //    //    //// Run tasks for each chunk of data asynchronously
+                    //    //    ////tasks.Add(Task.Run(() => itemsThread.ProcessItems()));
+                    //    //    //Task t = Task.Run(() => itemsThread.ProcessItems());
+                    //    //    //Task.WhenAll(t).GetAwaiter().GetResult(); 
+                    //    //    i++;
+                    //    //    Thread.Sleep(5000);
+                    //    //}
+
+
+                    //    foreach (var table in tables)
+                    //    {
+                    //        var itemsThread = new AmazonProcessItemsThread(
+                    //           table, route, feed, l_DestinationConnector, l_SourceConnector, userNo, l_InventoryBatchWise.BatchID
+                    //       );
+
+                    //        itemsThread.ProcessItems().GetAwaiter().GetResult();
+
+                    //        Thread.Sleep(TimeSpan.FromMinutes(1));
+                    //    }
+
+
+
+                    //    //int feedIndex = 0;
+                    //    //foreach (var table in DataTableChunker.Split(l_data, DataTableChunker.ChunkSize))
+                    //    //{
+                    //    //    feedIndex++;
+                    //    //    route.SaveLog(LogTypeEnum.Info, $"Preparing feed {feedIndex} with {table.Rows.Count} items.", string.Empty, userNo);
+
+                    //    //    var itemsThread = new AmazonProcessItemsThread(
+                    //    //        table, route, feed, l_DestinationConnector, l_SourceConnector, userNo, l_InventoryBatchWise.BatchID
+                    //    //    );
+
+                    //    //    // strictly sequential
+                    //    //    itemsThread.ProcessItems().GetAwaiter().GetResult();
+
+                    //    //    // optional small pause
+                    //    //    Thread.Sleep(2000);
+                    //    //}
+
+
+                    //    // Wait for all tasks to complete
+                    //    //Task.WhenAll(tasks).GetAwaiter().GetResult();
+                    //}
 
                     route.SaveLog(LogTypeEnum.Debug, $"Destination connector processing completed.", string.Empty, userNo);
                 }
@@ -189,48 +244,64 @@ namespace eSyncMate.Processor.Managers
 
             try
             {
+
                 string token = GetToken(this.destinationConnector.Realm, this.destinationConnector.ConsumerKey, this.destinationConnector.ConsumerSecret, this.destinationConnector.TokenSecret).GetAwaiter().GetResult();
-                JObject response = CreateDocument(token, this.destinationConnector.BaseUrl).GetAwaiter().GetResult();
-
-                string feedDocumentId = response["feedDocumentId"].ToString();
-                string feedUrl = response["url"].ToString();
-
-                string xmlrequest = GenerateInventoryFeedXml(this.data, this.feed, this.sourceConnector.ConnectionString, this.bacthID);
-
-                string res = UploadDocument(feedDocumentId, feedUrl, xmlrequest).GetAwaiter().GetResult();
 
                 this.route.UseConnection(this.sourceConnector.ConnectionString);
                 this.feed.UseConnection(this.sourceConnector.ConnectionString);
 
-                this.route.SaveData("JSON-SNT", 0, xmlrequest, userNo);
-                //this.feed.SaveData("JSON-SNT", this.destinationConnector.CustomerID, itemId, xmlrequest, this.userNo, this.bacthID);
+                this.route.SaveData("JSON-SNT", 0, $@"{{ ""RequestURL"": ""{this.destinationConnector.BaseUrl}"" }}", userNo);
 
-                Thread.Sleep(20000);
+                JObject createDocumentResponse = CreateDocument(token, this.destinationConnector.BaseUrl).GetAwaiter().GetResult();
 
-                string l_response = await SubmitFeed(feedDocumentId, token, this.destinationConnector.BaseUrl);
+                string documentCreateResponse = createDocumentResponse.ToString(Newtonsoft.Json.Formatting.Indented);
 
-                this.route.SaveData("JSON-RVD", 0, l_response, this.userNo);
+                this.route.SaveData("JSON-RVD", 0, documentCreateResponse, userNo);
 
-                DataTable bulkInsertTable = CreateBulkInsertDataTable();
+                string feedDocumentId = createDocumentResponse["feedDocumentId"].ToString();
+                string feedUrl = createDocumentResponse["url"].ToString();
 
-                foreach (DataRow row in this.data.Rows)
+                string jsonrequest = GenerateInventoryFeedXml(this.data, this.feed, this.sourceConnector.ConnectionString, this.bacthID);
+
+                if (!string.IsNullOrWhiteSpace(jsonrequest))
                 {
-                    DataRow bulkRow = bulkInsertTable.NewRow();
-                    bulkRow["CustomerId"] = row["CustomerId"];
-                    bulkRow["ItemId"] = row["ItemId"];
-                    bulkRow["Type"] = "JSON-RVD"; // Example Type
-                    bulkRow["Data"] = l_response;
-                    bulkRow["CreatedDate"] = DateTime.Now;
-                    bulkRow["CreatedBy"] = 1; // Example CreatedBy
-                    bulkRow["BatchID"] = this.bacthID;
+                    this.route.SaveData("JSON-SNT", 0, $@"{{ ""FeedURL"": ""{feedUrl}"" }}", userNo);
 
-                    bulkInsertTable.Rows.Add(bulkRow);
+                    var createUploadDocument = UploadDocument(feedUrl, jsonrequest).GetAwaiter().GetResult();
+
+                    this.route.SaveData("JSON-RVD", 0, createUploadDocument.ToString(), userNo);
+
+                    this.route.SaveData("JSON-SNT", 0, jsonrequest, userNo);
+
+                    //Thread.Sleep(1000);
+
+                    JObject l_responseSubmitFeed = await SubmitFeed(feedDocumentId, token, this.destinationConnector.BaseUrl);
+                    string submitFeedResponse = l_responseSubmitFeed.ToString(Newtonsoft.Json.Formatting.Indented);
+
+                    string feedId = l_responseSubmitFeed["feedId"].ToString();
+
+                    this.route.SaveData("JSON-RVD", 0, submitFeedResponse, this.userNo);
+
+                    DataTable bulkInsertTable = CreateBulkInsertDataTable();
+
+                    foreach (DataRow row in this.data.Rows)
+                    {
+                        DataRow bulkRow = bulkInsertTable.NewRow();
+                        bulkRow["CustomerId"] = row["CustomerId"];
+                        bulkRow["ItemId"] = row["ItemId"];
+                        bulkRow["Type"] = "JSON-RVD"; 
+                        bulkRow["Data"] = submitFeedResponse;
+                        bulkRow["CreatedDate"] = DateTime.Now;
+                        bulkRow["CreatedBy"] = 1;
+                        bulkRow["BatchID"] = this.bacthID;
+                        bulkInsertTable.Rows.Add(bulkRow);
+
+                        feed.UpdateItemStatus(row["ItemId"].ToString(), row["CustomerId"].ToString());
+                    }
+                    
+                    feed.BulkNewInsertData(this.sourceConnector.ConnectionString, "SCSInventoryFeedData", bulkInsertTable);
+                    this.feed.InsertInventoryBatchWiseFeedDetail(this.bacthID, "NEW", feedId, this.destinationConnector.CustomerID);
                 }
-
-                Console.Write(this.bacthID);
-
-                feed.BulkNewInsertData(this.sourceConnector.ConnectionString, "SCSInventoryFeedData", bulkInsertTable);
-                this.feed.InsertInventoryBatchWiseFeedDetail(this.bacthID, "NEW", l_response, this.destinationConnector.CustomerID);
             }
             catch (Exception ex)
             {
@@ -302,80 +373,70 @@ namespace eSyncMate.Processor.Managers
 
             try
             {
-                DataTable bulkInsertTable = CreateBulkInsertDataTable(); 
+                DataTable bulkInsertTable = CreateBulkInsertDataTable();
+                AmazonInventoryRequestModel l_AmazonInventoryRequestModel = new AmazonInventoryRequestModel();
 
-                xml.Append(@"<?xml version=""1.0"" encoding=""UTF-8""?>
-            <AmazonEnvelope xmlns:xsi=""http://www.w3.org/2001/XMLSchema-instance"" xsi:noNamespaceSchemaLocation=""amzn-envelope.xsd"">
-                <Header>
-                    <DocumentVersion>1.02</DocumentVersion>
-                    <MerchantIdentifier>YOUR_SELLER_ID</MerchantIdentifier>
-                </Header>
-                <MessageType>Inventory</MessageType>");
-
+                l_AmazonInventoryRequestModel.header.sellerId = "A3NX96R6O9JSG4";
+                l_AmazonInventoryRequestModel.header.version = "2.0";
+                l_AmazonInventoryRequestModel.header.issueLocale = "en_US";
                 int messageId = 1;
+
                 foreach (DataRow row in inventoryData.Rows)
                 {
-                    xml.Append("<Message>");
+                    var l_Message = new AmazonMessage
+                    {
+                        messageId = messageId,
+                        sku = row["CustomerItemCode"]?.ToString(),         
+                        operationType = "PARTIAL_UPDATE",
+                        productType = "PRODUCT"
+                    };
 
-                    xml.Append($"<MessageID>{messageId}</MessageID>");
+                    var l_Fulfillment_Availability = new Fulfillment_Availability
+                    {
+                        fulfillment_channel_code = "DEFAULT",
+                        quantity = Convert.ToInt64(row["Total_ATS"]),
+                        lead_time_to_ship_max_days = 1
+                    };
 
-                    xml.Append("<OperationType>Update</OperationType>");
+                    l_Message.attributes.fulfillment_availability
+                             .Add(l_Fulfillment_Availability);
 
-                    xml.Append("<Inventory>");
+                    
+                    l_AmazonInventoryRequestModel.messages.Add(l_Message);
+                    var perItemPayload = new
+                    {
+                        header = l_AmazonInventoryRequestModel.header,
+                        messages = new List<AmazonMessage> { l_Message }
+                    };
 
-                    xml.Append($"<SKU>{row["ItemId"]}</SKU>");
-
-                    xml.Append($"<Quantity>{row["Total_ATS"]}</Quantity>");
-
-                    xml.Append($"<FulfillmentLatency>{messageId}</FulfillmentLatency>");
-
-                    xml.Append("</Inventory>");
-                    xml.Append("</Message>");
-                    messageId++;
-
-
-                    StringBuilder l_ItemWisexml = new StringBuilder();
-
-                    l_ItemWisexml.Append("<Message>");
-
-                    l_ItemWisexml.Append($"<MessageID>{messageId}</MessageID>");
-
-                    l_ItemWisexml.Append("<OperationType>Update</OperationType>");
-
-                    l_ItemWisexml.Append("<Inventory>");
-
-                    l_ItemWisexml.Append($"<SKU>{row["ItemId"]}</SKU>");
-
-                    l_ItemWisexml.Append($"<Quantity>{row["Total_ATS"]}</Quantity>");
-
-                    l_ItemWisexml.Append($"<FulfillmentLatency>{messageId}</FulfillmentLatency>");
-
-                    l_ItemWisexml.Append("</Inventory>");
-                    l_ItemWisexml.Append("</Message>");
-
+                    string perItemJson = JsonConvert.SerializeObject(
+                        perItemPayload,
+                        Formatting.None
+                    );
 
                     DataRow bulkRow = bulkInsertTable.NewRow();
                     bulkRow["CustomerId"] = row["CustomerId"];
                     bulkRow["ItemId"] = row["ItemId"];
-                    bulkRow["Type"] = "JSON-SNT"; // Example Type
-                    bulkRow["Data"] = l_ItemWisexml.ToString();
+                    bulkRow["Type"] = "JSON-SNT"; 
+                    bulkRow["Data"] = perItemJson; 
                     bulkRow["CreatedDate"] = DateTime.Now;
-                    bulkRow["CreatedBy"] = 1; // Example CreatedBy
+                    bulkRow["CreatedBy"] = 1; 
                     bulkRow["BatchID"] = batchID;
 
                     bulkInsertTable.Rows.Add(bulkRow);
 
-
-                    //feed.SaveData("JSON-SNT", row["CustomerID"].ToString(), row["ItemId"].ToString(), l_ItemWisexml.ToString(), 1, batchID);
+                    messageId++;
                 }
+
+
+                string fullFeedJson = JsonConvert.SerializeObject(
+                        l_AmazonInventoryRequestModel,
+                        Formatting.None
+                    );
 
                 feed.BulkNewInsertData(ConnectionString, "SCSInventoryFeedData", bulkInsertTable);
 
-                xml.Append("</AmazonEnvelope>");
-
-                //Console.WriteLine(xml.ToString());
-
-                return xml.ToString();
+                return fullFeedJson;
             }
             catch (Exception  ex)
             {
@@ -431,56 +492,122 @@ namespace eSyncMate.Processor.Managers
             }
         }
 
-        async static Task<JObject> CreateDocument(string token,string l_baseurl)
+        //async static Task<JObject> CreateDocument(string token, string l_baseurl)
+        //{
+        //    var client = new HttpClient();
+        //    var request = new HttpRequestMessage(HttpMethod.Post, $"{l_baseurl}/feeds/2021-06-30/documents");
+
+        //    try
+        //    {
+        //        request.Headers.Add("contentType", "application/json");
+        //        request.Headers.Add("x-amz-access-token", token);
+
+        //        var body = new JObject
+        //        {
+        //            ["contentType"] = "application/json; charset=UTF-8"
+        //        };
+
+        //        request.Content = new StringContent(body.ToString(), Encoding.UTF8, "application/json");
+        //        var response = await client.SendAsync(request);
+        //        response.EnsureSuccessStatusCode();
+
+        //        string responseContent = await response.Content.ReadAsStringAsync();
+        //        JObject jsonResponse = JObject.Parse(responseContent);
+        //        return jsonResponse;
+        //    }
+        //    catch (Exception)
+        //    {
+
+        //        throw;
+        //    }
+        //}
+
+        async static Task<JObject> CreateDocument(string token, string baseUrl)
         {
-            var client = new HttpClient();
-            var request = new HttpRequestMessage(HttpMethod.Post, $"{l_baseurl}/feeds/2021-06-30/documents");
+            using var client = new HttpClient();
+            var req = new HttpRequestMessage(HttpMethod.Post, $"{baseUrl}/feeds/2021-06-30/documents");
+            req.Headers.Add("x-amz-access-token", token);
 
-            try
-            {
-                request.Headers.Add("contentType", "application/json");
-                request.Headers.Add("x-amz-access-token", token);
-                var content = new StringContent("{\r\n    \"contentType\": \"application/xml\"\r\n}\r\n\r\n\r\n", null, "application/json");
-                request.Content = content;
-                var response = await client.SendAsync(request);
-                response.EnsureSuccessStatusCode();
+            var body = new JObject { ["contentType"] = "application/json; charset=UTF-8" };
+            req.Content = new StringContent(body.ToString(), Encoding.UTF8, "application/json");
 
-                string responseContent = await response.Content.ReadAsStringAsync();
-                JObject jsonResponse = JObject.Parse(responseContent);
-                return jsonResponse;
-            }
-            catch (Exception)
-            {
+            var res = await client.SendAsync(req);
+            res.EnsureSuccessStatusCode();
+            return JObject.Parse(await res.Content.ReadAsStringAsync());
+        }
+        //async static Task<JObject> CreateDocument(string token, string l_baseurl, bool useGzip = false)
+        //{
+        //    using var client = new HttpClient();
+        //    var request = new HttpRequestMessage(HttpMethod.Post, $"{l_baseurl}/feeds/2021-06-30/documents");
 
-                throw;
-            }
+        //    // LWA token
+        //    request.Headers.Add("x-amz-access-token", token);
+
+        //    var body = new JObject
+        //    {
+        //        ["contentType"] = "application/json; charset=UTF-8"
+        //    };
+        //    if (useGzip)
+        //        body["compressionAlgorithm"] = "GZIP";
+
+        //    request.Content = new StringContent(body.ToString(), Encoding.UTF8, "application/json");
+
+        //    var response = await client.SendAsync(request);
+        //    response.EnsureSuccessStatusCode();
+
+        //    string responseContent = await response.Content.ReadAsStringAsync();
+        //    return JObject.Parse(responseContent);
+        //}
+
+
+        //async static Task<HttpStatusCode> UploadDocument( string url, string xmlrequest)
+        //{
+        //    using var client = new HttpClient();
+
+        //    byte[] xmlBytes = Encoding.UTF8.GetBytes(xmlrequest);
+
+        //    using var content = new ByteArrayContent(xmlBytes);
+        //    content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/json");
+        //    using var request = new HttpRequestMessage(HttpMethod.Put, url)
+        //    {
+        //        Content = content
+        //    };
+
+        //    using var response = await client.SendAsync(request);
+
+        //    return (HttpStatusCode)response.StatusCode;
+        //}
+        async static Task<HttpStatusCode> UploadDocument(string url, string json)
+        {
+            using var client = new HttpClient();
+            using var content = new StringContent(json, Encoding.UTF8);
+            content.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse("application/json; charset=UTF-8");
+
+            using var req = new HttpRequestMessage(HttpMethod.Put, url) { Content = content };
+            using var res = await client.SendAsync(req, HttpCompletionOption.ResponseHeadersRead);
+            return (HttpStatusCode)res.StatusCode;
         }
 
-        async static Task<string> UploadDocument(string feedDocumentId, string url,string xmlrequest)
-        {
-            var client = new HttpClient();
-            byte[] xmlBytes = Encoding.UTF8.GetBytes(xmlrequest);
-            try
-            {
-                ByteArrayContent content = new ByteArrayContent(xmlBytes);
-                content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/xml");
+        //async static Task<HttpStatusCode> UploadDocumentGzipAsync(string url, string jsonPayload)
+        //{
+        //    using var client = new HttpClient();
 
-                HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Put, url)
-                {
-                    Content = content
-                };
-                var response = await client.SendAsync(request);
+        //    byte[] raw = Encoding.UTF8.GetBytes(jsonPayload);
+        //    using var ms = new MemoryStream();
+        //    using (var gzip = new GZipStream(ms, CompressionLevel.Optimal, leaveOpen: true))
+        //        gzip.Write(raw, 0, raw.Length);
+        //    ms.Position = 0;
 
-                response.EnsureSuccessStatusCode();
+        //    using var content = new StreamContent(ms);
+        //    content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/json");
+        //    content.Headers.ContentEncoding.Add("gzip");
 
-                return await response.Content.ReadAsStringAsync();
-            }
-            catch (Exception)
-            {
-                throw;
-            }
-        }
-        private static async Task<string> SubmitFeed(string feedDocumentId, string token,string l_baseurl)
+        //    using var request = new HttpRequestMessage(HttpMethod.Put, url) { Content = content };
+        //    using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+        //    return (HttpStatusCode)response.StatusCode;
+        //}
+
+        private static async Task<JObject> SubmitFeed(string feedDocumentId, string token,string l_baseurl)
         {
             var client = new HttpClient();
             // Set the destination URL for the Submit Feed API endpoint
@@ -493,7 +620,7 @@ namespace eSyncMate.Processor.Managers
 
                 var requestBody = new
                 {
-                    feedType = "POST_INVENTORY_AVAILABILITY_DATA",  
+                    feedType = "JSON_LISTINGS_FEED",  
                     inputFeedDocumentId = feedDocumentId,  
                     marketplaceIds = new[] { "ATVPDKIKX0DER" },
                     feedOptions = new { } 
@@ -512,7 +639,9 @@ namespace eSyncMate.Processor.Managers
 
                 JObject jsonResponse = JObject.Parse(responseContent);
 
-                return jsonResponse["feedId"].ToString();
+                //return jsonResponse["feedId"].ToString();
+
+                return jsonResponse;
             }
             catch (Exception)
             {
@@ -521,5 +650,22 @@ namespace eSyncMate.Processor.Managers
             }
         }
 
+    }
+
+    internal static class DataTableChunker
+    {
+        public const int ChunkSize = 25_000;
+
+        public static IEnumerable<DataTable> Split(DataTable source, int chunkSize = ChunkSize)
+        {
+            if (source == null || source.Rows.Count == 0) yield break;
+            int total = source.Rows.Count;
+            for (int i = 0; i < total; i += chunkSize)
+            {
+                int take = Math.Min(chunkSize, total - i);
+                var slice = source.AsEnumerable().Skip(i).Take(take);
+                yield return slice.CopyToDataTable();
+            }
+        }
     }
 }

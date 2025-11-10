@@ -1,0 +1,4 @@
+ALTER TABLE Orders
+ADD ShipViaCode  NVARCHAR(100) NULL
+
+GO

@@ -492,6 +492,13 @@ namespace eSyncMate.Maps
             return date.ToString(string.IsNullOrEmpty(format) ? "HH:mm:ss" : format);
         }
 
+        public static string ResolveShipVia(string serviceLevel)
+        {
+            if (string.Equals(serviceLevel, "Std US D2D Dom", StringComparison.OrdinalIgnoreCase))
+                return "P/U";
+            return "FEDX";
+        }
+
         public static string formatTotalAmount(string value)
         {
             try

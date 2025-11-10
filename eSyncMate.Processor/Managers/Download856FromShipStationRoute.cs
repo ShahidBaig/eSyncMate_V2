@@ -130,7 +130,7 @@ namespace eSyncMate.Processor.Managers
                     foreach (DataRow item in l_dataTable.Rows)
                     {
                         //var first = JsonConvert.DeserializeObject<object>(JsonConvert.SerializeObject(item["Data"]));
-                        l_DestinationConnector.Url = l_DestinationConnector.BaseUrl + $"/fulfillments?orderNumber={item["OrderNumber"]}";
+                        l_DestinationConnector.Url = l_DestinationConnector.BaseUrl + $"/shipments?orderNumber={item["OrderNumber"]}";
 
                         OrderData l_OrderData = new OrderData();
 
@@ -139,7 +139,7 @@ namespace eSyncMate.Processor.Managers
                         l_OrderData.DeleteWithType(Convert.ToInt32(item["Id"]), "856-JSON-SNT");
 
                         l_OrderData.Type = "856-JSON-SNT";
-                        l_OrderData.Data = l_DestinationConnector.Url;
+                        l_OrderData.Data = "{" + l_DestinationConnector.Url + "}" ;
                         l_OrderData.CreatedBy = userNo;
                         l_OrderData.CreatedDate = DateTime.Now;
                         l_OrderData.OrderId = Convert.ToInt32(item["Id"]);
@@ -159,84 +159,89 @@ namespace eSyncMate.Processor.Managers
                                                    ? JValue.Parse(sourceResponse.Content).ToString() // unwrap inner
                                                    : sourceResponse.Content);
 
-
-                            CustomerShipStationResponseModel l_CustomerShipStationResponseModel = new CustomerShipStationResponseModel();
-                            Fullfilment856Packages l_Fullfilment856Packages = new Fullfilment856Packages();
-
-
-                            l_CustomerShipStationResponseModel.fulfillmentId = model.fulfillments[0].fulfillmentId;
-                            l_CustomerShipStationResponseModel.orderId = model.fulfillments[0].orderId;
-                            l_CustomerShipStationResponseModel.orderNumber = model.fulfillments[0].orderNumber;
-                            l_CustomerShipStationResponseModel.userId = model.fulfillments[0].userId;
-                            l_CustomerShipStationResponseModel.customerEmail = model.fulfillments[0].customerEmail;
-                            l_CustomerShipStationResponseModel.trackingNumber = model.fulfillments[0].trackingNumber;
-                            l_CustomerShipStationResponseModel.createDate = model.fulfillments[0].createDate;
-                            l_CustomerShipStationResponseModel.shipDate = model.fulfillments[0].shipDate;
-                            l_CustomerShipStationResponseModel.voidDate = model.fulfillments[0].voidDate;
-                            l_CustomerShipStationResponseModel.deliveryDate = model.fulfillments[0].deliveryDate;
-                            l_CustomerShipStationResponseModel.carrierCode = model.fulfillments[0].carrierCode;
-                            l_CustomerShipStationResponseModel.sellerFillProviderId = model.fulfillments[0].sellerFillProviderId;
-                            l_CustomerShipStationResponseModel.sellerFillProviderName = model.fulfillments[0].sellerFillProviderName;
-                            l_CustomerShipStationResponseModel.fulfillmentProviderCode = model.fulfillments[0].fulfillmentProviderCode;
-                            l_CustomerShipStationResponseModel.fulfillmentServiceCode = model.fulfillments[0].fulfillmentServiceCode;
-                            l_CustomerShipStationResponseModel.fulfillmentFee = model.fulfillments[0].fulfillmentFee;
-                            l_CustomerShipStationResponseModel.voidRequested = model.fulfillments[0].voidRequested;
-                            l_CustomerShipStationResponseModel.voided = model.fulfillments[0].voided;
-                            l_CustomerShipStationResponseModel.marketplaceNotified = model.fulfillments[0].marketplaceNotified;
-                            l_CustomerShipStationResponseModel.notifyErrorMessage = model.fulfillments[0].notifyErrorMessage;
-                            l_CustomerShipStationResponseModel.shipTo.name = model.fulfillments[0].shipTo.name;
-                            l_CustomerShipStationResponseModel.shipTo.company = model.fulfillments[0].shipTo.company;
-                            l_CustomerShipStationResponseModel.shipTo.street1 = model.fulfillments[0].shipTo.street1;
-                            l_CustomerShipStationResponseModel.shipTo.street2 = model.fulfillments[0].shipTo.street2;
-                            l_CustomerShipStationResponseModel.shipTo.street3 = model.fulfillments[0].shipTo.street3;
-                            l_CustomerShipStationResponseModel.shipTo.city = model.fulfillments[0].shipTo.city;
-                            l_CustomerShipStationResponseModel.shipTo.state = model.fulfillments[0].shipTo.state;
-                            l_CustomerShipStationResponseModel.shipTo.postalCode = model.fulfillments[0].shipTo.postalCode;
-                            l_CustomerShipStationResponseModel.shipTo.country = model.fulfillments[0].shipTo.country;
-                            l_CustomerShipStationResponseModel.shipTo.phone = model.fulfillments[0].shipTo.phone;
-                            l_CustomerShipStationResponseModel.shipTo.residential = model.fulfillments[0].shipTo.residential;
-                            l_CustomerShipStationResponseModel.shipTo.addressVerified = model.fulfillments[0].shipTo.addressVerified;
-                            l_Fullfilment856Packages.trackingNumber = model.fulfillments[0].trackingNumber;
-
-                            var json = item["Data"]?.ToString();
-                            var order = JsonConvert.DeserializeObject<JObject>(json);
-
-                            var items = order["items"] as JArray;
-
-                            if (items != null)
+                            if (model.shipments.Count > 0)
                             {
-                                foreach (var i in items)
+                                CustomerShipStationResponseModel l_CustomerShipStationResponseModel = new CustomerShipStationResponseModel();
+                                Fullfilment856Packages l_Fullfilment856Packages = new Fullfilment856Packages();
+
+
+                                l_CustomerShipStationResponseModel.shipmentId = model.shipments[0].shipmentId;
+                                l_CustomerShipStationResponseModel.orderId = model.shipments[0].orderId;
+                                l_CustomerShipStationResponseModel.orderNumber = model.shipments[0].orderNumber;
+                                l_CustomerShipStationResponseModel.userId = model.shipments[0].userId;
+                                l_CustomerShipStationResponseModel.customerEmail = model.shipments[0].customerEmail;
+                                l_CustomerShipStationResponseModel.trackingNumber = model.shipments[0].trackingNumber;
+                                l_CustomerShipStationResponseModel.createDate = model.shipments[0].createDate;
+                                l_CustomerShipStationResponseModel.shipDate = model.shipments[0].shipDate;
+                                l_CustomerShipStationResponseModel.voidDate = model.shipments[0].voidDate;
+                                l_CustomerShipStationResponseModel.deliveryDate = model.shipments[0].deliveryDate;
+                                l_CustomerShipStationResponseModel.carrierCode = model.shipments[0].carrierCode;
+                                l_CustomerShipStationResponseModel.serviceCode = model.shipments[0].serviceCode;
+                                l_CustomerShipStationResponseModel.packageCode = model.shipments[0].packageCode;
+                                l_CustomerShipStationResponseModel.confirmation = model.shipments[0].confirmation;
+                                l_CustomerShipStationResponseModel.warehouseId = model.shipments[0].warehouseId;
+                                l_CustomerShipStationResponseModel.voided = model.shipments[0].voided;
+                                l_CustomerShipStationResponseModel.marketplaceNotified = model.shipments[0].marketplaceNotified;
+                                l_CustomerShipStationResponseModel.notifyErrorMessage = model.shipments[0].notifyErrorMessage;
+                                l_CustomerShipStationResponseModel.shipTo.name = model.shipments[0].shipTo.name;
+                                l_CustomerShipStationResponseModel.shipTo.company = model.shipments[0].shipTo.company;
+                                l_CustomerShipStationResponseModel.shipTo.street1 = model.shipments[0].shipTo.street1;
+                                l_CustomerShipStationResponseModel.shipTo.street2 = model.shipments[0].shipTo.street2;
+                                l_CustomerShipStationResponseModel.shipTo.street3 = model.shipments[0].shipTo.street3;
+                                l_CustomerShipStationResponseModel.shipTo.city = model.shipments[0].shipTo.city;
+                                l_CustomerShipStationResponseModel.shipTo.state = model.shipments[0].shipTo.state;
+                                l_CustomerShipStationResponseModel.shipTo.postalCode = model.shipments[0].shipTo.postalCode;
+                                l_CustomerShipStationResponseModel.shipTo.country = model.shipments[0].shipTo.country;
+                                l_CustomerShipStationResponseModel.shipTo.phone = model.shipments[0].shipTo.phone;
+                                l_CustomerShipStationResponseModel.shipTo.residential = model.shipments[0].shipTo.residential;
+                                l_CustomerShipStationResponseModel.shipTo.addressVerified = model.shipments[0].shipTo.addressVerified;
+                                l_Fullfilment856Packages.trackingNumber = model.shipments[0].trackingNumber;
+
+                                var json = item["Data"]?.ToString();
+                                var order = JsonConvert.DeserializeObject<JObject>(json);
+
+                                var items = order["items"] as JArray;
+
+                                if (items != null)
                                 {
+                                    foreach (var i in items)
+                                    {
 
-                                    Fullfilment856Items l_Fullfilment856Items = new Fullfilment856Items();
+                                        Fullfilment856Items l_Fullfilment856Items = new Fullfilment856Items();
 
-                                    l_Fullfilment856Items.sku = i["sku"]?.ToString();
-                                    l_Fullfilment856Items.quantity = i["quantity"]?.ToObject<long?>() ?? 0;
-                                    l_Fullfilment856Items.unitPrice = i["price"]?.ToObject<string?>() ?? "0";
-                                    l_Fullfilment856Items.upc = i["upc"]?.ToString();
-                                    l_Fullfilment856Items.lineNo = i["ediLineId"]?.ToObject<string?>() ?? "0";
+                                        l_Fullfilment856Items.sku = i["vendorStyle"]?.ToString();
+                                        l_Fullfilment856Items.quantity = i["quantity"]?.ToObject<long?>() ?? 0;
+                                        l_Fullfilment856Items.unitPrice = i["price"]?.ToObject<string?>() ?? "0";
+                                        l_Fullfilment856Items.upc = i["upc"]?.ToString();
+                                        l_Fullfilment856Items.lineNo = i["ediLineId"]?.ToObject<string?>() ?? "0";
 
-                                    l_Fullfilment856Packages.items.Add(l_Fullfilment856Items);
+                                        l_Fullfilment856Packages.items.Add(l_Fullfilment856Items);
 
+                                    }
+                                    l_CustomerShipStationResponseModel.packages.Add(l_Fullfilment856Packages);
                                 }
-                                l_CustomerShipStationResponseModel.packages.Add(l_Fullfilment856Packages);
+
+                                l_OrderData = new OrderData();
+
+                                l_OrderData.UseConnection(l_SourceConnector.ConnectionString);
+
+                                l_OrderData.DeleteWithType(Convert.ToInt32(item["Id"]), "ASN-RES");
+
+                                l_OrderData.Type = "ASN-RES";
+                                l_OrderData.Data = JsonConvert.SerializeObject(l_CustomerShipStationResponseModel);
+                                l_OrderData.CreatedBy = userNo;
+                                l_OrderData.CreatedDate = DateTime.Now;
+                                l_OrderData.OrderId = Convert.ToInt32(item["Id"]);
+                                l_OrderData.OrderNumber = PublicFunctions.ConvertNullAsString(item["OrderNumber"], string.Empty);
+
+                                l_OrderData.SaveNew();
+
                             }
+                            else
+                            {
+                                route.SaveLog(LogTypeEnum.Debug, "ShipStation fulfillment data isn’t available yet.", string.Empty, userNo);
 
-                            l_OrderData = new OrderData();
-
-                            l_OrderData.UseConnection(l_SourceConnector.ConnectionString);
-
-                            l_OrderData.DeleteWithType(Convert.ToInt32(item["Id"]), "ASN-RES");
-
-                            l_OrderData.Type = "ASN-RES";
-                            l_OrderData.Data = JsonConvert.SerializeObject(l_CustomerShipStationResponseModel); 
-                            l_OrderData.CreatedBy = userNo;
-                            l_OrderData.CreatedDate = DateTime.Now;
-                            l_OrderData.OrderId = Convert.ToInt32(item["Id"]);
-                            l_OrderData.OrderNumber = PublicFunctions.ConvertNullAsString(item["OrderNumber"], string.Empty);
-
-                            l_OrderData.SaveNew();
-
+                            }
 
                         }
 

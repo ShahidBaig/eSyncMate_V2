@@ -125,13 +125,15 @@ namespace eSyncMate.Processor.Managers
 
                 l_EDI.SaveNew();
 
+
                 EdiBatch b = r.FromString(l_EDIData);
 
                 l_Customer.UseConnection(CommonUtils.ConnectionString);
 
+
                 foreach (EdiInterchange i in b.Interchanges)
                 {
-                    if (!l_Customer.GetObject("ERPCustomerID", connection.CustomerID.ToString().Trim()).IsSuccess)
+                    if (!l_Customer.GetObject("ISACustomerID", connection.Realm.ToString().Trim()).IsSuccess)
                     {
 
                         l_EDI.Status = "ERROR";
@@ -142,6 +144,12 @@ namespace eSyncMate.Processor.Managers
                         route.SaveLog(LogTypeEnum.Exception, l_Response.Message, string.Empty, 1);
                         return;
                     }
+
+                    if (i.ISA.Content[5].Val.ToString().Trim() != connection.Realm.ToString())
+                    {
+                        continue;
+                    }
+
 
                     var l_Map = l_Customer.Maps.Where(p => p.MapTypeName == "850 Transformation");
 
@@ -170,6 +178,11 @@ namespace eSyncMate.Processor.Managers
                     }
 
 
+                    if (i.Groups[0].GS.Content[0].ToString().Trim() != "PO")
+                    {
+                        continue;
+                    }
+
                     l_EDIInfo = new InboundEDIInfo();
 
                     l_EDIInfo.InboundEDIId = l_EDI.Id;
@@ -191,12 +204,15 @@ namespace eSyncMate.Processor.Managers
 
                     foreach (EdiGroup g in i.Groups)
                     {
+
                         l_EDIInfo.GSSenderId = g.GS.Content[1].ToString().Trim();
                         l_EDIInfo.GSReceiverId = g.GS.Content[2].ToString().Trim();
                         l_EDIInfo.GSControlNumber = g.GS.Content[5].ToString().Trim();
                         l_EDIInfo.GSEdiVersion = g.GS.Content[7].ToString().Trim();
 
                         l_EDIInfo.SaveNew();
+
+                        SftpConnector.DeleteFileFromSFTP(file.FileName, connection).GetAwaiter().GetResult();
 
                         foreach (EdiTrans t in g.Transactions)
                         {
@@ -232,14 +248,14 @@ namespace eSyncMate.Processor.Managers
                             {
                                 route.SaveData("ACK", 0, edi_997, 1);
 
-                                //connection.BaseUrl = connection.Url;
-                                //SftpConnector.Execute(connection, false, $"{Path.GetFileNameWithoutExtension(file.Name)}-997", edi_997).GetAwaiter().GetResult();
+                                connection.BaseUrl = connection.Url;
+                                SftpConnector.Execute(connection, false, $"{Path.GetFileNameWithoutExtension(file.Name)}-997", edi_997).GetAwaiter().GetResult();
                             }
                         }
                     }
                 }
 
-                route.SaveLog(LogTypeEnum.Exception, "Destination Connector is not setup properly", string.Empty, 1);
+                //route.SaveLog(LogTypeEnum.Exception, "Destination Connector is not setup properly", string.Empty, 1);
 
                 l_EDI.Status = "PROCESSED";
                 l_EDI.Modify();

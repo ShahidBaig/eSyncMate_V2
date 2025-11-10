@@ -332,6 +332,7 @@
   "state": "State",
   "zipCode": "Zip Code",
   "country": "Country",
+  "shipViaCode": "ShipViaCode",
   "shippingAddress": "Shipping Address",
   "details": "Details"
 

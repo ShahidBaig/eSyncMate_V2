@@ -114,8 +114,13 @@ namespace eSyncMate.Processor.Connections
                 using (SftpClient client = new SftpClient(connection.Host, connection.ConsumerKey, connection.ConsumerSecret))
                 {
                     client.Connect();
+                    string remotePath = connection.BaseUrl.Trim().Replace("\\", "/");
 
-                    if (client.Exists(Path.GetDirectoryName(connection.BaseUrl)))
+                    // Make sure no trailing slash
+                    if (remotePath.EndsWith("/"))
+                        remotePath = remotePath.TrimEnd('/');
+
+                    if (client.Exists(remotePath))
                     {
                         client.DeleteFile($"{connection.BaseUrl}/{fileName}");
                         return true;

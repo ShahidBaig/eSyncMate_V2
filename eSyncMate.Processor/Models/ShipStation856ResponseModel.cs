@@ -4,19 +4,19 @@ namespace eSyncMate.Processor.Models
 {
     public class ShipStation856ResponseModel
     {
-        public List<Fulfillment> fulfillments { get; set; }
+        public List<Fulfillment> shipments { get; set; }
         public int total { get; set; }
         public int page { get; set; }
         public int pages { get; set; }
 
         public ShipStation856ResponseModel() 
         {
-            this.fulfillments = new List<Fulfillment>();
+            this.shipments = new List<Fulfillment>();
         }
 
         public class Fulfillment
         {
-            public int fulfillmentId { get; set; }
+            public int shipmentId { get; set; }
             public int orderId { get; set; }
             public string orderNumber { get; set; }
             public string userId { get; set; }
@@ -27,17 +27,14 @@ namespace eSyncMate.Processor.Models
             public object voidDate { get; set; }
             public object deliveryDate { get; set; }
             public string carrierCode { get; set; }
-            public object sellerFillProviderId { get; set; }
-            public object sellerFillProviderName { get; set; }
-            public object fulfillmentProviderCode { get; set; }
-            public object fulfillmentServiceCode { get; set; }
-            public float fulfillmentFee { get; set; }
-            public bool voidRequested { get; set; }
+            public object serviceCode { get; set; }
+            public object packageCode { get; set; }
+            public object confirmation { get; set; }
+            public object warehouseId { get; set; }
             public bool voided { get; set; }
             public bool marketplaceNotified { get; set; }
             public object notifyErrorMessage { get; set; }
             public FullfillmentShipto shipTo { get; set; }
-            public string externalFulfillmentId { get; set; }
         }
 
         public class FullfillmentShipto
@@ -63,7 +60,7 @@ namespace eSyncMate.Processor.Models
 
     public class CustomerShipStationResponseModel 
     {
-        public int fulfillmentId { get; set; }
+        public int shipmentId { get; set; }
         public int orderId { get; set; }
         public string orderNumber { get; set; }
         public string userId { get; set; }
@@ -74,12 +71,10 @@ namespace eSyncMate.Processor.Models
         public object voidDate { get; set; }
         public object deliveryDate { get; set; }
         public string carrierCode { get; set; }
-        public object sellerFillProviderId { get; set; }
-        public object sellerFillProviderName { get; set; }
-        public object fulfillmentProviderCode { get; set; }
-        public object fulfillmentServiceCode { get; set; }
-        public float fulfillmentFee { get; set; }
-        public bool voidRequested { get; set; }
+        public object serviceCode { get; set; }
+        public object packageCode { get; set; }
+        public object confirmation { get; set; }
+        public object warehouseId { get; set; }
         public bool voided { get; set; }
         public bool marketplaceNotified { get; set; }
         public object notifyErrorMessage { get; set; }

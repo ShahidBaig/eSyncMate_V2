@@ -637,6 +637,17 @@ namespace eSyncMate.DB.Entities
                                 orderJson["customer"]["shipping_address"]["zip_code"] = postalCode;
                                 orderJson["customer"]["shipping_address"]["country"] = country;
                             }
+                            else if (orderJson["OrderAddress"]?["payload"]?["ShippingAddress"] != null)
+                            {
+                                // For JSON with 'postalAddress'
+                                orderJson["OrderAddress"]["payload"]["ShippingAddress"]["Name"] = ShipToName;
+                                orderJson["OrderAddress"]["payload"]["ShippingAddress"]["AddressLine1"] = address1;
+                                orderJson["OrderAddress"]["payload"]["ShippingAddress"]["AddressLine2"] = address2;
+                                orderJson["OrderAddress"]["payload"]["ShippingAddress"]["City"] = city;
+                                orderJson["OrderAddress"]["payload"]["ShippingAddress"]["StateOrRegion"] = state;
+                                orderJson["OrderAddress"]["payload"]["ShippingAddress"]["PostalCode"] = postalCode;
+                                orderJson["OrderAddress"]["payload"]["ShippingAddress"]["CountryCode"] = country; 
+                            }
                             else
                             {
                                 l_Result.IsSuccess = false;
@@ -703,7 +714,7 @@ namespace eSyncMate.DB.Entities
             return l_Result;
         }
 
-        public Result UpdateShippingAddress(int orderId, string address1, string address2, string city, string state, string postalCode, string country,string ShipToName)
+        public Result UpdateShippingAddress(int orderId, string address1, string address2, string city, string state, string postalCode, string country,string ShipToName,string ShipViaCode)
         {
             Result l_Result = Result.GetFailureResult();
             bool l_Trans = false;
@@ -735,6 +746,9 @@ namespace eSyncMate.DB.Entities
 
                 if (!string.IsNullOrWhiteSpace(ShipToName))
                     updates.Add($"ShipToName = '{ShipToName}'");
+
+                if (!string.IsNullOrWhiteSpace(ShipViaCode))
+                    updates.Add($"ShipViaCode = '{ShipViaCode}'");
 
                 if (updates.Count > 0)
                 {

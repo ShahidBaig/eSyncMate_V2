@@ -314,5 +314,6 @@
   "zipCode": "Código postal",
   "country": "País",
   "shippingAddress": "Dirección de envío",
-  "details": "Detalles"
+  "details": "Detalles",
+  "shipViaCode": "Código de envío"
 }

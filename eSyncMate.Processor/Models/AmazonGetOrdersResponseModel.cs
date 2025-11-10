@@ -110,6 +110,11 @@
             public string City { get; set; }
             public string CountryCode { get; set; }
             public string Name { get; set; }
+            public string AddressLine1 { get; set; }
+            public string AddressLine2 { get; set; }
+            public string AddressLine3 { get; set; }
+
+
         }
 
     }
@@ -150,6 +155,8 @@
             public string ConditionId { get; set; }
             public Promotiondiscount PromotionDiscount { get; set; }
             public string OrderItemId { get; set; }
+            public Int64 LineNo { get; set; }
+
         }
 
         public class Taxcollection

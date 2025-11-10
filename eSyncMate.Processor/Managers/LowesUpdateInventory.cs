@@ -54,7 +54,7 @@ namespace eSyncMate.Processor.Managers
                     DBConnector connection = new DBConnector(l_SourceConnector.ConnectionString);
 
                     l_SourceConnector.Command = l_SourceConnector.Command.Replace("@CUSTOMERID@", l_SourceConnector.CustomerID);
-                    l_SourceConnector.Command = l_SourceConnector.Command.Replace("@ROUTETYPEID@", Convert.ToString(RouteTypesEnum.MacysInventoryUpload));
+                    l_SourceConnector.Command = l_SourceConnector.Command.Replace("@ROUTETYPEID@", Convert.ToString(RouteTypesEnum.LowesInventoryUpload));
                     l_SourceConnector.Command = l_SourceConnector.Command.Replace("@USERNO@", Convert.ToString(userNo));
 
                     if (l_SourceConnector.CommandType == "SP")
@@ -107,7 +107,7 @@ namespace eSyncMate.Processor.Managers
                     feed.UseConnection(l_SourceConnector.ConnectionString);
 
 
-                    l_DestinationConnector.Url = l_DestinationConnector.BaseUrl + "/api/offers/";
+                    l_DestinationConnector.Url = l_DestinationConnector.BaseUrl + "/api/offers";
                     sourceResponse = RestConnector.Execute(l_DestinationConnector, Body).GetAwaiter().GetResult();
 
                     if (sourceResponse.StatusCode == System.Net.HttpStatusCode.Created)
@@ -118,6 +118,15 @@ namespace eSyncMate.Processor.Managers
                             route.SaveLog(LogTypeEnum.Debug, $"LowesUpdateInventory updated for item [{l_row["ProductId"]}].", sourceResponse.Content, userNo);
                             feed.SaveData("JSON-RVD", l_row["CustomerId"].ToString(), l_row["ItemId"].ToString(), sourceResponse.Content, userNo, l_InventoryBatchWise.BatchID);
                         }
+
+                        l_InventoryBatchWise.Status = "Completed";
+                        l_InventoryBatchWise.FinishDate = DateTime.Now;
+
+                        l_SCSInventoryFeed.UpdateInventoryBatchWise(l_InventoryBatchWise);
+
+                        route.SaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
+
+                        route.SaveLog(LogTypeEnum.Debug, $"Destination connector processing completed.", string.Empty, userNo);
                     }
                     else
                     {

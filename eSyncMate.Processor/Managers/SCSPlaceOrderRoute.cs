@@ -15,6 +15,10 @@ using static eSyncMate.Processor.Models.SCSPlaceOrderResponseModel;
 using Hangfire.Storage;
 using static eSyncMate.Processor.Models.MacysGetOrderResponseModel;
 using DocumentFormat.OpenXml.Office2010.Excel;
+using Nancy;
+using System.Text.Json.Nodes;
+using System.Text.Json;
+using System.Text.Encodings.Web;
 
 namespace eSyncMate.Processor.Managers
 {
@@ -129,6 +133,14 @@ namespace eSyncMate.Processor.Managers
             else if (customerName == "TAR6266PAH")
             {
                 routeName = "SEI - Create Orders in ERP";
+            }
+            else if (customerName == "AMA1005")
+            {
+                routeName = "Amazon - Create Orders";
+            }
+            else if (customerName == "LOW2221MP")
+            {
+                routeName = "Lowes Create Orders";
             }
             else
             {
@@ -245,6 +257,18 @@ namespace eSyncMate.Processor.Managers
             string jsonTransformation = new JsonTransformer().Transform(transformationMap, Body);
             jsonTransformation = jsonTransformation.Replace("@CUSTOMERID@", destinationConnector.CustomerID);
 
+            if (!string.IsNullOrWhiteSpace(Convert.ToString(l_Row["ShipViaCode"])))
+            {
+                var node = JsonNode.Parse(jsonTransformation)!.AsObject();
+                node["order"]!["header"]!["ShipViaCode"] = Convert.ToString(l_Row["ShipViaCode"]);
+
+                jsonTransformation = node.ToJsonString(new JsonSerializerOptions
+                {
+                    WriteIndented = false,
+                    Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+                });
+            }
+           
             route.SaveData("JSON-SNT", 0, jsonTransformation, userNo);
 
             OrderData l_OrderData = new OrderData();

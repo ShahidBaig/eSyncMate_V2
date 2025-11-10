@@ -205,7 +205,7 @@ namespace eSyncMate.Processor.Managers
                             new SegmentDefinitions.GS(), new SegmentDefinitions.GE(),
                             new SegmentDefinitions.ST(), new SegmentDefinitions.SE(),
                             l_EDIInfo.ISAReceiverQual, l_EDIInfo.ISAReceiverId, l_EDIInfo.ISASenderQual, l_EDIInfo.ISASenderId, l_EDIInfo.GSReceiverId, l_EDIInfo.GSSenderId,
-                            l_EDIInfo.ISAEdiVersion, l_EDIInfo.GSEdiVersion, l_EDIInfo.ISAUsageIndicator, l_Outbound.Id, l_Outbound.Id, l_EDIInfo.SegmentSeparator, l_EDIInfo.ElementSeparator, "^", "");
+                            l_EDIInfo.ISAEdiVersion, l_EDIInfo.GSEdiVersion, l_EDIInfo.ISAUsageIndicator, l_Outbound.Id, l_Outbound.Id, l_EDIInfo.SegmentSeparator, l_EDIInfo.ElementSeparator, "U", "");
 
                             EdiDataWriter w = new EdiDataWriter(settings);
 
@@ -227,8 +227,8 @@ namespace eSyncMate.Processor.Managers
 
                             if ( !string.IsNullOrEmpty(l_OData.Data))
                             {
-                                //l_DestinationConnector.BaseUrl = l_DestinationConnector.BaseUrl;
-                                //SftpConnector.Execute(l_DestinationConnector, false, $"{l_OData.OrderNumber}-855", l_OData.Data).GetAwaiter().GetResult();
+                                l_DestinationConnector.BaseUrl = l_DestinationConnector.BaseUrl;
+                                SftpConnector.Execute(l_DestinationConnector, false, $"{l_OData.OrderNumber}-855", l_OData.Data).GetAwaiter().GetResult();
 
                                 DBConnector connection = new DBConnector(l_SourceConnector.ConnectionString);
                                 string Command = string.Empty;

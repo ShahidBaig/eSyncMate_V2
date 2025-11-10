@@ -67,15 +67,15 @@ namespace eSyncMate.Processor.Models
         MacysASNShipmentNotification = 36,
         MacysCancellationLines = 37,
         TargetPlusInventoryFeedWHSWise = 38,
-        AmazonInventoryUpload = 39,
-        AmazonGetOrders = 40,
-        AmazonInventoryStatus = 41,
-        AmazonASNShipmentNotification = 42,
         LowesInventoryUpload = 43,
         LowesBulkItemPrices = 44,
         LowesGetOrders = 45,
         LowesASNShipmentNotification = 46,
         LowesCancellationLines = 47,
+        AmazonInventoryUpload = 48,
+        AmazonGetOrders = 49,
+        AmazonInventoryStatus = 50,
+        AmazonASNShipmentNotification = 51,
         RepaintGetOrders = 500,
         RepaintCreateOrder = 501,
         RepaintGenerate855 = 502,
@@ -100,7 +100,7 @@ namespace eSyncMate.Processor.Models
         //public static string ConnectionString { get; set; } = "Server=rxo.geckotech.com.mx;Database=EDIProcessor;UID=sa;PWD=Gecko8079;";
        // public static string ConnectionString { get; set; } = "Server=192.168.0.44,7100;Database=ESYNCMATE;UID=esyncmate;PWD=eSyncMate786$$$;";
         //public static string ConnectionString { get; set; } = "Server=209.74.79.232;Database=SURGIMAC;UID=sa;PWD=Surgimac8079;";
-        public static string ConnectionString { get; set; } = "Server=110.93.227.0,1433;Database=RepaintStudios;UID=sa;PWD=eSoft#123456;";
+        public static string ConnectionString { get; set; } = "Server=110.93.227.0,1433;Database=ESYNCMATE_TEST;UID=sa;PWD=eSoft#123456;";
         public static string MySqlConnectionString { get; set; } = "Server=162.241.63.30;Database=geckote1_edi;User=geckote1_esyncmate;Password=Gecko8079;";
 
         public static string Company = "eSyncMate";

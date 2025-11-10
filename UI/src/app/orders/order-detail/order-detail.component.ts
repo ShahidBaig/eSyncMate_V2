@@ -107,7 +107,9 @@ export class OrderDetailComponent {
       shipToEmail: [''],
       shipToPhone: [''],
       status: [''],
-      shipToName:['']
+      shipToName: [''],
+      shipViaCode: [''],
+
     });
   }
 
@@ -137,7 +139,9 @@ export class OrderDetailComponent {
       shipToEmail: this.orderData.shipToEmail,
       shipToPhone: this.orderData.shipToPhone,
       status: this.orderData.status,
-      shipToName: this.orderData.shipToName
+      shipToName: this.orderData.shipToName,
+      shipViaCode: this.orderData.shipViaCode
+
     });
   }
 
@@ -191,6 +195,7 @@ export class OrderDetailComponent {
       shipToZip: this.orderDetailForm.get('shipToZip')?.value,
       shipToCountry: this.orderDetailForm.get('shipToCountry')?.value,
       shipToName: this.orderDetailForm.get('shipToName')?.value,
+      shipViaCode: this.orderDetailForm.get('shipViaCode')?.value,
     };
 
     this.orderService.updateSalesOrder(orderModel).subscribe({
