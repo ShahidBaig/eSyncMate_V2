@@ -7,6 +7,8 @@ namespace eSyncMate.Processor.Models
         //public List<InventoryDataModel> Inventory { get; set; }
         public DataTable SalesInvoiceNDC { get; set; }
         public DataTable SalesInvoiceDetailNDC { get; set; }
+
+        public DataTable DetailData { get; set; }
     }
     //public class GetInventoryFilesResponseModel : ResponseModel
     //{

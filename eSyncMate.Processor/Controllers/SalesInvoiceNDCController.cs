@@ -66,6 +66,7 @@ namespace eSyncMate.Processor.Controllers
                 {
                     InvoiceNo = 0;
                 }
+
                 if (Status == "EMPTY")
                 {
                     Status = string.Empty;
@@ -89,7 +90,7 @@ namespace eSyncMate.Processor.Controllers
 
                 l_Criteria = $"Status <> 'DELETED'";
 
-                if (InvoiceNo == 0)
+                if (InvoiceNo > 0)
                 {
                     l_Criteria += " AND ";
                     l_Criteria += $"InvoiceNo = {InvoiceNo}";
@@ -141,6 +142,56 @@ namespace eSyncMate.Processor.Controllers
             return l_Response;
         }
 
+
+        [HttpGet]
+        [Route("getSalesInvoiceNDCDetail")]
+        public async Task<SalesInvoiceNDCResponseModel> GetSalesInvoiceNDCDetail(int InvoiceNo)
+        {
+            MethodBase l_Me = MethodBase.GetCurrentMethod();
+            SalesInvoiceNDCResponseModel l_Response = new SalesInvoiceNDCResponseModel();
+            DataTable l_Data = new DataTable();
+            DataTable l_DetailData = new DataTable();
+
+            try
+            {
+                string l_Criteria = string.Empty;
+                DB.Entities.SalesInvoiceDetailNDC l_SalesInvoiceDetailNDC = new DB.Entities.SalesInvoiceDetailNDC();
+
+                l_Response.Code = (int)ResponseCodes.Error;
+
+                this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Building search criteria.");
+
+                l_SalesInvoiceDetailNDC.UseConnection(CommonUtils.ConnectionString);
+
+                this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Search criteria ready ({l_Criteria}).");
+                this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Starting SalesInvoiceDetailNDC search.");
+
+                // Update the query to include WarehouseID
+                l_SalesInvoiceDetailNDC.GetViewList($"InvoiceNo = {InvoiceNo}", "", ref l_DetailData, "");
+
+                this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - SalesInvoiceDetailNDC searched {{{l_Data.Rows.Count}}}.");
+                this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Populating SalesInvoiceDetailNDC.");
+
+                // Ensure the new column is included in the response
+                l_Response.DetailData = l_DetailData;
+
+                l_Response.Code = (int)ResponseCodes.Success;
+                l_Response.Message = "SalesInvoiceDetailNDC fetched successfully!";
+
+                this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - SalesInvoiceDetailNDC are ready.");
+            }
+            catch (Exception ex)
+            {
+                l_Response.Code = (int)ResponseCodes.Exception;
+                this._logger.LogCritical($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - {ex}");
+            }
+            finally
+            {
+                l_Data.Dispose();
+            }
+
+            return l_Response;
+        }
 
     }
 }

@@ -28,6 +28,7 @@ import { InvFeedFromNDCComponent } from './inv-feed-from-ndc/inv-feed-from-ndc.c
 import { PurchaseOrderComponent } from './purchase-order/purchase-order.component';
 import { SipmentFromNdcComponent } from './sipment-from-ndc/sipment-from-ndc.component';
 import { SalesInvoiceNdcComponent } from './sales-invoice-ndc/sales-invoice-ndc.component';
+import { PurchaseOrdersTrackingComponent } from './purchase-orders-tracking/purchase-orders-tracking.component';
 
 
 const routes: Routes = [
@@ -158,6 +159,11 @@ const routes: Routes = [
     path: 'edi/salesInvoiceNdc',
     component: SalesInvoiceNdcComponent,
     canActivate: [AuthorizationGuard],
+  },
+  {
+    path: 'edi/purchaseOrdersTracking',
+    component: PurchaseOrdersTrackingComponent,
+    //canActivate: [AuthorizationGuard],
   },
   {
     path: "**",

@@ -14,36 +14,21 @@ using System.Xml.Linq;
 
 namespace eSyncMate.DB.Entities
 {
-    public class SalesInvoiceNDC : DBEntity, IDBEntity, IDisposable, IEqualityComparer
+    public class PurchaseOrdersTracking : DBEntity, IDBEntity, IDisposable, IEqualityComparer
     {
-        public int ID { get; set; }
-        public int? InvoiceNo { get; set; }  // Nullable because it's NULLABLE in the table
-        public DateTime? InvoiceDate { get; set; }  // Nullable because it's NULLABLE in the table
-        public string PoNumber { get; set; }  // Matches varchar(500) in the table
-        public string Status { get; set; }  // Matches varchar(100) in the table
-        public string SCACCode { get; set; }  // Matches varchar(50) in the table
-        public string Routing { get; set; }  // Matches varchar(100) in the table
-        public DateTime? ShippingDate { get; set; }  // Nullable to match nullable datetime
-        public string ShippingName { get; set; }  // Matches varchar(500) in the table
-        public string ShippingToNo { get; set; }  // Matches varchar(500) in the table
-        public string ShippingAddress1 { get; set; }  // Matches varchar(500) in the table
-        public string ShippingAddress2 { get; set; }  // Matches varchar(500) in the table
-        public string ShippingCity { get; set; }  // Matches varchar(100) in the table
-        public string ShippingState { get; set; }  // Matches varchar(100) in the table
-        public string ShippingZip { get; set; }  // Matches varchar(50) in the table
-        public string ShippingCountry { get; set; }  // Matches varchar(100) in the table
-        public string SellerID { get; set; }  // Matches varchar(100) in the table
-        public string InvoiceTerms { get; set; }  // Matches varchar(100) in the table
-        public decimal? Freight { get; set; }  // Nullable decimal to match
-        public decimal? HandlingAmount { get; set; }  // Nullable decimal to match
-        public decimal? SalesTax { get; set; }  // Nullable decimal to match
-        public decimal? InvoiceAmount { get; set; }  // Nullable decimal to match
-        public string TrackingNo { get; set; }  // Matches varchar(100) in the table
-        public DateTime CreatedDate { get; set; }  // Not nullable
-        public int CreatedBy { get; set; }  // Not nullable
-        public DateTime? ModifiedDate { get; set; }  // Nullable to match
-        public int? ModifiedBy { get; set; }  // Nullable to match
-
+        public int ID { get; set; }  
+        public int? PurchaseOrderNo { get; set; }
+        public DateTime OrderDate { get; set; }
+        public string PoNumber { get; set; }
+        public string SKU { get; set; }
+        public int? OrderQty { get; set; }
+        public DateTime ReceivedDate { get; set; }
+        public int? ReceivedQty { get; set; }
+        public int? BackOrderQty { get; set; }
+        public DateTime CreatedDate { get; set; }  
+        public int CreatedBy { get; set; }  
+        public DateTime? ModifiedDate { get; set; }  
+        public int? ModifiedBy { get; set; }  
         private static string TableName { get; set; }
         private static string ViewName { get; set; }
         private static string PrimaryKeyName { get; set; }
@@ -54,7 +39,7 @@ namespace eSyncMate.DB.Entities
         /// <summary>
         /// TODO: Update summary.
         /// </summary>
-        public SalesInvoiceNDC() : base()
+        public PurchaseOrdersTracking() : base()
         {
             SetupDBEntity();
         }
@@ -62,7 +47,7 @@ namespace eSyncMate.DB.Entities
         /// <summary>
         /// TODO: Update summary.
         /// </summary>
-        public SalesInvoiceNDC(DBConnector p_Connection) : base(p_Connection)
+        public PurchaseOrdersTracking(DBConnector p_Connection) : base(p_Connection)
         {
             SetupDBEntity();
         }
@@ -70,7 +55,7 @@ namespace eSyncMate.DB.Entities
         /// <summary>
         /// TODO: Update summary.
         /// </summary>
-        public SalesInvoiceNDC(string p_ConnectionString) : base(p_ConnectionString)
+        public PurchaseOrdersTracking(string p_ConnectionString) : base(p_ConnectionString)
         {
             SetupDBEntity();
         }
@@ -82,34 +67,34 @@ namespace eSyncMate.DB.Entities
         {
             string l_Query = string.Empty;
 
-            if (string.IsNullOrEmpty(SalesInvoiceNDC.TableName))
+            if (string.IsNullOrEmpty(PurchaseOrdersTracking.TableName))
             {
-                SalesInvoiceNDC.TableName = "SalesInvoiceNDC";
+                PurchaseOrdersTracking.TableName = "PurchaseOrdersTracking";
             }
 
-            if (string.IsNullOrEmpty(SalesInvoiceNDC.ViewName))
+            if (string.IsNullOrEmpty(PurchaseOrdersTracking.ViewName))
             {
-                SalesInvoiceNDC.ViewName = "VW_SalesInvoiceNDC";
+                PurchaseOrdersTracking.ViewName = "VW_PurchaseOrdersTracking";
             }
 
-            if (string.IsNullOrEmpty(SalesInvoiceNDC.PrimaryKeyName))
+            if (string.IsNullOrEmpty(PurchaseOrdersTracking.PrimaryKeyName))
             {
-                SalesInvoiceNDC.PrimaryKeyName = "CustomerID";
+                PurchaseOrdersTracking.PrimaryKeyName = "CustomerID";
             }
 
-            if (string.IsNullOrEmpty(SalesInvoiceNDC.EndingPropertyName))
+            if (string.IsNullOrEmpty(PurchaseOrdersTracking.EndingPropertyName))
             {
-                SalesInvoiceNDC.EndingPropertyName = "CreatedBy";
+                PurchaseOrdersTracking.EndingPropertyName = "CreatedBy";
             }
 
-            if (SalesInvoiceNDC.DBProperties == null)
+            if (PurchaseOrdersTracking.DBProperties == null)
             {
-                SalesInvoiceNDC.DBProperties = new List<PropertyInfo>(this.GetType().GetProperties());
+                PurchaseOrdersTracking.DBProperties = new List<PropertyInfo>(this.GetType().GetProperties());
             }
 
-            if (string.IsNullOrEmpty(SalesInvoiceNDC.InsertQueryStart))
+            if (string.IsNullOrEmpty(PurchaseOrdersTracking.InsertQueryStart))
             {
-                SalesInvoiceNDC.InsertQueryStart = PrepareQueries(this, SalesInvoiceNDC.TableName, SalesInvoiceNDC.EndingPropertyName, ref l_Query, SalesInvoiceNDC.DBProperties);
+                PurchaseOrdersTracking.InsertQueryStart = PrepareQueries(this, PurchaseOrdersTracking.TableName, PurchaseOrdersTracking.EndingPropertyName, ref l_Query, PurchaseOrdersTracking.DBProperties);
             }
         }
 
@@ -134,11 +119,11 @@ namespace eSyncMate.DB.Entities
 
             if (string.IsNullOrEmpty(p_Fields))
             {
-                l_Query = "SELECT * FROM [" + SalesInvoiceNDC.TableName + "]";
+                l_Query = "SELECT * FROM [" + PurchaseOrdersTracking.TableName + "]";
             }
             else
             {
-                l_Query = "SELECT " + p_Fields + " FROM [" + SalesInvoiceNDC.TableName + "]";
+                l_Query = "SELECT " + p_Fields + " FROM [" + PurchaseOrdersTracking.TableName + "]";
             }
 
             if (!string.IsNullOrEmpty(p_Criteria))
@@ -157,38 +142,14 @@ namespace eSyncMate.DB.Entities
         public bool GetViewList(string p_Criteria, string p_Fields, ref DataTable p_Data, string p_OrderBy = "")
         {
             string l_Query = string.Empty;
-            string viewName = SalesInvoiceNDC.ViewName;
 
-            // Modify criteria based on default values
-            //if (p_Criteria.Contains("InvoiceNo = 0"))
-            //{
-            //    p_Criteria = p_Criteria.Replace("InvoiceNo = 0", "").Trim();
-            //}
-            //if (p_Criteria.Contains("InvoiceDate = '1999-01-01'"))
-            //{
-            //    p_Criteria = p_Criteria.Replace("InvoiceDate = '1999-01-01'", "").Trim();
-            //}
-            //if (p_Criteria.Contains("PoNumber = 'EMPTY'"))
-            //{
-            //    p_Criteria = p_Criteria.Replace("PoNumber = 'EMPTY'", "").Trim();
-            //}
-            //if (p_Criteria.Contains("Status = 'EMPTY'"))
-            //{
-            //    p_Criteria = p_Criteria.Replace("Status = 'EMPTY'", "").Trim();
-            //}
-
-            //// Clean up any extra 'AND' or 'OR' in the criteria
-            //p_Criteria = p_Criteria.Replace("AND AND", "AND").Replace("WHERE AND", "WHERE").Replace("WHERE OR", "WHERE");
-            //p_Criteria = p_Criteria.Trim().TrimEnd(new char[] { 'A', 'N', 'D', 'O', 'R' });
-
-            // Build the query
             if (string.IsNullOrEmpty(p_Fields))
             {
-                l_Query = "SELECT * FROM [" + viewName + "]";
+                l_Query = "SELECT * FROM [" + PurchaseOrdersTracking.ViewName + "]";
             }
             else
             {
-                l_Query = "SELECT " + p_Fields + " FROM [" + viewName + "]";
+                l_Query = "SELECT " + p_Fields + " FROM [" + PurchaseOrdersTracking.ViewName + "]";
             }
 
             if (!string.IsNullOrEmpty(p_Criteria))
@@ -204,14 +165,22 @@ namespace eSyncMate.DB.Entities
             return Connection.GetData(l_Query, ref p_Data);
         }
 
+        public bool GetPurchaseOrdersTrackingData(ref DataTable p_Data)
+        {
+            string l_Query = string.Empty;
+
+            l_Query = $"SELECT DISTINCT ItemID FROM {PurchaseOrdersTracking.TableName} WITH (NOLOCK)";
+
+            return Connection.GetData(l_Query, ref p_Data);
+        }
 
         /// <summary>
         /// TODO: Update summary.
         /// </summary>
         public Result GetObject(int p_PrimaryKey)
         {
-            SetProperty(SalesInvoiceNDC.PrimaryKeyName, p_PrimaryKey);
-            return GetObjectFromQuery(PrepareGetObjectQuery(this, SalesInvoiceNDC.ViewName, SalesInvoiceNDC.PrimaryKeyName));
+            SetProperty(PurchaseOrdersTracking.PrimaryKeyName, p_PrimaryKey);
+            return GetObjectFromQuery(PrepareGetObjectQuery(this, PurchaseOrdersTracking.ViewName, PurchaseOrdersTracking.PrimaryKeyName));
         }
 
         public int GetMax()
@@ -221,7 +190,7 @@ namespace eSyncMate.DB.Entities
             Common l_Common = new Common();
 
             l_Common.UseConnection(string.Empty, Connection);
-            if (!l_Common.GetList("SELECT MAX(CONVERT(INT, ISNULL(" + SalesInvoiceNDC.PrimaryKeyName + ", '0'))) FROM " + SalesInvoiceNDC.TableName, ref l_Data))
+            if (!l_Common.GetList("SELECT MAX(CONVERT(INT, ISNULL(" + PurchaseOrdersTracking.PrimaryKeyName + ", '0'))) FROM " + PurchaseOrdersTracking.TableName, ref l_Data))
             {
                 return l_MaxNo;
             }
@@ -254,12 +223,12 @@ namespace eSyncMate.DB.Entities
 
         public Result GetObject()
         {
-            return GetObjectFromQuery(PrepareGetObjectQuery(this, SalesInvoiceNDC.ViewName, SalesInvoiceNDC.PrimaryKeyName));
+            return GetObjectFromQuery(PrepareGetObjectQuery(this, PurchaseOrdersTracking.ViewName, PurchaseOrdersTracking.PrimaryKeyName));
         }
 
         public Result GetObjectOnly()
         {
-            return GetObjectFromQuery(PrepareGetObjectQuery(this, SalesInvoiceNDC.ViewName, SalesInvoiceNDC.PrimaryKeyName), true);
+            return GetObjectFromQuery(PrepareGetObjectQuery(this, PurchaseOrdersTracking.ViewName, PurchaseOrdersTracking.PrimaryKeyName), true);
         }
 
         /// <summary>
@@ -267,8 +236,8 @@ namespace eSyncMate.DB.Entities
         /// </summary>
         public Result GetObjectOnly(int p_PrimaryKey)
         {
-            SetProperty(SalesInvoiceNDC.PrimaryKeyName, p_PrimaryKey);
-            return GetObjectFromQuery(PrepareGetObjectQuery(this, SalesInvoiceNDC.ViewName, SalesInvoiceNDC.PrimaryKeyName), true);
+            SetProperty(PurchaseOrdersTracking.PrimaryKeyName, p_PrimaryKey);
+            return GetObjectFromQuery(PrepareGetObjectQuery(this, PurchaseOrdersTracking.ViewName, PurchaseOrdersTracking.PrimaryKeyName), true);
         }
 
         public Result GetObject(string propertyName, object propertyValue)
@@ -277,7 +246,7 @@ namespace eSyncMate.DB.Entities
 
             l_Property.FirstOrDefault<PropertyInfo>()?.SetValue(this, propertyValue);
 
-            return GetObjectFromQuery(PrepareGetObjectQuery(this, SalesInvoiceNDC.ViewName, propertyName));
+            return GetObjectFromQuery(PrepareGetObjectQuery(this, PurchaseOrdersTracking.ViewName, propertyName));
         }
 
         public Result SaveNew()
@@ -293,7 +262,7 @@ namespace eSyncMate.DB.Entities
 
                 this.ID = this.GetMax();
 
-                l_Query = this.PrepareInsertQuery(this, SalesInvoiceNDC.InsertQueryStart, SalesInvoiceNDC.EndingPropertyName, SalesInvoiceNDC.DBProperties);
+                l_Query = this.PrepareInsertQuery(this, PurchaseOrdersTracking.InsertQueryStart, PurchaseOrdersTracking.EndingPropertyName, PurchaseOrdersTracking.DBProperties);
 
                 l_Process = this.Connection.Execute(l_Query);
 
@@ -335,15 +304,15 @@ namespace eSyncMate.DB.Entities
 
             try
             {
-                SalesInvoiceNDC.DBProperties = this.GetType().GetProperties()
+                PurchaseOrdersTracking.DBProperties = this.GetType().GetProperties()
                   .Where(prop => prop.Name != "CreatedBy" && prop.Name != "CreatedDate")
                   .ToList();
 
-                SalesInvoiceNDC.EndingPropertyName = "ModifiedBy";
+                PurchaseOrdersTracking.EndingPropertyName = "ModifiedBy";
 
                 l_Trans = this.Connection.BeginTransaction();
 
-                l_Query = this.PrepareUpdateQuery(this, SalesInvoiceNDC.TableName, SalesInvoiceNDC.PrimaryKeyName, SalesInvoiceNDC.EndingPropertyName, Connectors.DBProperties);
+                l_Query = this.PrepareUpdateQuery(this, PurchaseOrdersTracking.TableName, PurchaseOrdersTracking.PrimaryKeyName, PurchaseOrdersTracking.EndingPropertyName, Connectors.DBProperties);
 
                 l_Process = this.Connection.Execute(l_Query);
 
@@ -387,7 +356,7 @@ namespace eSyncMate.DB.Entities
             {
                 l_Trans = this.Connection.BeginTransaction();
 
-                l_Query = this.PrepareDeleteQuery(this, "Temp_"+SalesInvoiceNDC.TableName, SalesInvoiceNDC.PrimaryKeyName);
+                l_Query = this.PrepareDeleteQuery(this, "Temp_"+PurchaseOrdersTracking.TableName, PurchaseOrdersTracking.PrimaryKeyName);
 
                 l_Process = this.Connection.Execute(l_Query);
 
@@ -467,15 +436,6 @@ namespace eSyncMate.DB.Entities
         }
         #endregion
 
-
-        public bool GetBatchWiseData(string p_Criteria, ref DataTable p_Data)
-        {
-            string l_SQL = string.Empty;
-
-            l_SQL = $"SELECT * FROM VW_ShipmentDetailFromNDC WHERE {p_Criteria}";
-
-            return Connection.GetData(l_SQL, ref p_Data);
-        }
-
+        
     }
 }

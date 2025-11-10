@@ -102,6 +102,7 @@ export class PurchaseOrderComponent implements OnInit {
     'warehouseName',
     'warehouseID',
     'manufacturerName',
+    'uom',
     'ndcItemID',
     'productName',
     'totalQty',
@@ -114,7 +115,7 @@ export class PurchaseOrderComponent implements OnInit {
   ];
 
   constructor(private translate: TranslateService, private api: ApiService, private fb: FormBuilder, private toast: NgToastService, private dialog: MatDialog, public languageService: LanguageService, private PurchaseOrderService: PurchaseOrderService,) {
-    this.isAdminUser = ["ADMIN"].includes(this.api.getTokenUserInfo()?.userType || '');
+    this.isAdminUser = ["ADMIN", "WRITER"].includes(this.api.getTokenUserInfo()?.userType || '');
   }
 
   ngOnInit(): void {

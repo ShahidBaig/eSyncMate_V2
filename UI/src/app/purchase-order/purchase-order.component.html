@@ -269,6 +269,15 @@
           </td>
         </ng-container>
 
+        <ng-container matColumnDef="uom" [style.display]="showDataColumn ? 'none' : 'none'">
+          <th mat-header-cell *matHeaderCellDef [style.display]="showDataColumn ? 'none' : 'none'">
+            {{ 'uom' | translate }}
+          </th>
+          <td mat-cell *matCellDef="let element" [style.display]="showDataColumn ? 'none' : 'none'">
+            {{ element.uom }}
+          </td>
+        </ng-container>
+
         <ng-container matColumnDef="totalQty" [style.display]="showDataColumn ? 'none' : 'none'">
           <th mat-header-cell *matHeaderCellDef [style.display]="showDataColumn ? 'none' : 'none'">
             {{ 'totalQty' | translate }}

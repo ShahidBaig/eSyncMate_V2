@@ -1,0 +1,106 @@
+<div class="mat-table-container">
+
+  <mat-card>
+    <mat-card-content>
+      <form [formGroup]="PurchaseOrdersTracking">
+        <mat-form-field appearance="fill" color="accent">
+          <mat-label>{{ 'Order No' | translate }}</mat-label>
+          <input matInput formControlName="purchaseOrderNo">
+        </mat-form-field>
+
+        &nbsp;
+        <mat-form-field appearance="fill" color="accent">
+          <mat-label>{{ 'PO Number' | translate }}</mat-label>
+          <input matInput formControlName="poNumber">
+        </mat-form-field>
+
+        &nbsp;
+        <mat-form-field appearance="fill" color="accent">
+          <mat-label>{{ 'SKU' | translate }}</mat-label>
+          <input matInput formControlName="sku">
+        </mat-form-field>
+
+        &nbsp;
+        <mat-form-field color="accent">
+          <mat-label>{{ 'Order Date' | translate }}</mat-label>
+          <input formControlName="orderDate" matInput [matDatepicker]="orderDate">
+          <mat-hint>MM/DD/YYYY</mat-hint>
+          <mat-datepicker-toggle matIconSuffix [for]="orderDate"></mat-datepicker-toggle>
+          <mat-datepicker #orderDate></mat-datepicker>
+        </mat-form-field>
+        &nbsp;
+        <button mat-flat-button color="accent" (click)="getPurchaseOrdersTracking()">
+          <span *ngIf="!showSpinnerforSearch">{{ 'searchPurchaseOrdersTracking' | translate }}</span>
+          <mat-spinner *ngIf="showSpinnerforSearch" diameter="20"></mat-spinner>
+        </button>
+
+      </form>
+    </mat-card-content>
+  </mat-card>
+
+  &nbsp;
+  <mat-card>
+    <mat-card-content>
+      <table mat-table [dataSource]="inventoryToDisplay">
+
+        <ng-container matColumnDef="ID">
+          <th mat-header-cell *matHeaderCellDef>{{ 'ID' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.id}} </td>
+        </ng-container>
+
+        <ng-container matColumnDef="PurchaseOrderNo">
+          <th mat-header-cell *matHeaderCellDef>{{ 'Order No' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.purchaseOrderNo}} </td>
+        </ng-container>
+
+        <ng-container matColumnDef="PoNumber">
+          <th mat-header-cell *matHeaderCellDef>{{ 'PO Number' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.poNumber}} </td>
+        </ng-container>
+
+        <ng-container matColumnDef="OrderDate">
+          <th mat-header-cell *matHeaderCellDef>{{ 'Order Date' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.orderDate | date:'MMM-dd-YYYY HH:mm:ss' }} </td>
+        </ng-container>
+
+        <ng-container matColumnDef="SKU">
+          <th mat-header-cell *matHeaderCellDef>{{ 'SKU' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.sku}} </td>
+        </ng-container>
+
+        <ng-container matColumnDef="OrderQty">
+          <th mat-header-cell *matHeaderCellDef>{{ 'Order Qty' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.orderQty}} </td>
+        </ng-container>
+
+        <ng-container matColumnDef="ReceivedDate">
+          <th mat-header-cell *matHeaderCellDef>{{ 'Received Date' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.receivedDate | date:'MMM-dd-YYYY HH:mm:ss' }} </td>
+        </ng-container>
+
+        <ng-container matColumnDef="ReceivedQty">
+          <th mat-header-cell *matHeaderCellDef>{{ 'Received Qty' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.receivedQty}} </td>
+        </ng-container>
+
+        <ng-container matColumnDef="BackOrderQty">
+          <th mat-header-cell *matHeaderCellDef>{{ 'Back Order Qty' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.backOrderQty}} </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="columns"></tr>
+        <tr mat-row *matRowDef="let row; columns: columns"></tr>
+
+      </table>
+      <mat-paginator [length]="listOfPurchaseOrdersTracking.length" [pageSize]="10" [pageSizeOptions]="[5, 10, 25, 100]"
+        (page)="onPageChange($event)">
+      </mat-paginator>
+
+    </mat-card-content>
+  </mat-card>
+
+</div>
+
+<div *ngIf="showSpinner" class="spinner-overlay">
+  <mat-spinner></mat-spinner>
+</div>

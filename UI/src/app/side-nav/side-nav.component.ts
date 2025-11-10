@@ -134,6 +134,11 @@ export class SideNavComponent {
       link: 'edi/salesInvoiceNdc',
       visible: this.api.getTokenUserInfo()?.company.toUpperCase() === 'SURGIMAC' ? true : false
     },
+    {
+      title: 'nav.purchaseOrdersTracking',
+      link: 'edi/purchaseOrdersTracking',
+      visible: this.api.getTokenUserInfo()?.company.toUpperCase() === 'SURGIMAC' ? true : false
+    },
   ];
 
   goToLink(option: SideNavItem) {

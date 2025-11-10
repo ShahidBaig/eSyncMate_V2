@@ -169,6 +169,7 @@ namespace eSyncMate.Processor.Controllers
                         l_PurchaseOrderDetail.SecondaryCategoryName = item.SecondaryCategoryName;
                         l_PurchaseOrderDetail.ProductName = item.ProductName;
                         l_PurchaseOrderDetail.ExtendedPrice = item.ExtendedPrice;
+                        l_PurchaseOrderDetail.UOM = item.UOM;
                         l_PurchaseOrderDetail.Status = "NEW";
                         l_PurchaseOrderDetail.UseConnection(CommonUtils.ConnectionString);
                         l_PurchaseOrderDetail.SaveNew();
@@ -241,6 +242,7 @@ namespace eSyncMate.Processor.Controllers
                         l_PurchaseOrderDetail.SecondaryCategoryName = item.SecondaryCategoryName;
                         l_PurchaseOrderDetail.ProductName = item.ProductName;
                         l_PurchaseOrderDetail.ExtendedPrice = item.ExtendedPrice;
+                        l_PurchaseOrderDetail.UOM = item.UOM;
                         l_PurchaseOrderDetail.UseConnection(CommonUtils.ConnectionString);
 
                         if (item.isNew)

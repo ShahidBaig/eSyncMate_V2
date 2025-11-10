@@ -29,7 +29,7 @@ import { DetailSalesInvoiceNdcComponent } from './detail-sales-invoice-ndc/detai
 
 
 @Component({
-  selector: 'sipment-from-ndc',
+  selector: 'sales-invoice-ndc',
   templateUrl: './sales-invoice-ndc.component.html',
   styleUrls: ['./sales-invoice-ndc.component.scss'],
   standalone: true,
@@ -127,17 +127,12 @@ export class SalesInvoiceNdcComponent {
   getBatchiWiseInventory(element: any) {
     console.log("element", element)
     let invoiceNo = element.invoiceNo;
-    let invoiceDate = element.invoiceDate;
-    let status = element.status;
-    let poNumber = element.poNumber;
 
     this.showSpinner = false;
 
-    this.api.getInvoice(invoiceNo, invoiceDate, status, poNumber).subscribe({
+    this.api.getSalesInvoiceNDCDetail(invoiceNo).subscribe({
       next: (res: any) => {
-        console.log("single data", res.salesInvoiceNDC[0])
-        this.listOfSalesInvoiceDetailNDC = res?.salesInvoiceNDC[0];
-        console.log("dataaaaaaaa", this.listOfSalesInvoiceDetailNDC)
+        this.listOfSalesInvoiceDetailNDC = res?.detailData;
         this.msg = res.message;
         this.code = res.code;
 
@@ -147,9 +142,8 @@ export class SalesInvoiceNdcComponent {
           return;
         }
 
-        console.log("before dialog")
         const dialogRef = this.dialog.open(DetailSalesInvoiceNdcComponent, {
-          width: '100%',
+          width: '40%',
           data: {
             listofDetail: this.listOfSalesInvoiceDetailNDC
           },

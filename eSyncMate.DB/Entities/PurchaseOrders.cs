@@ -801,7 +801,7 @@ namespace eSyncMate.DB.Entities
                 using (SqlConnection conn = new SqlConnection(connectionString))
                 {
                     conn.Open();
-                    string query = "SELECT DISTINCT ItemID, SKU, Description, Qty, ETAQty, ETADate,ManufacturerName, NDCItemID, PrimaryCategoryName, SecondaryCategoryName  FROM InvFeedFromNDC ";
+                    string query = "SELECT DISTINCT ItemID, SKU, Description, Qty, ETAQty, ETADate,ManufacturerName, NDCItemID, PrimaryCategoryName, SecondaryCategoryName, ProductName, UOM  FROM InvFeedFromNDC ";
 
                     using (SqlCommand cmd = new SqlCommand(query, conn))
                     {
@@ -830,7 +830,7 @@ namespace eSyncMate.DB.Entities
                 using (SqlConnection conn = new SqlConnection(connectionString))
                 {
                     conn.Open();
-                    string query = "SELECT DISTINCT ItemID, SKU, Description, Qty, ETAQty, ETADate, ManufacturerName, NDCItemID, PrimaryCategoryName, SecondaryCategoryName,ProductName FROM InvFeedFromNDC WHERE SupplierName = @SupplierName";
+                    string query = "SELECT DISTINCT ItemID, SKU, Description, Qty, ETAQty, ETADate, ManufacturerName, NDCItemID, PrimaryCategoryName, SecondaryCategoryName,ProductName, UOM FROM InvFeedFromNDC WHERE SupplierName = @SupplierName";
 
                     using (SqlCommand cmd = new SqlCommand(query, conn))
                     {

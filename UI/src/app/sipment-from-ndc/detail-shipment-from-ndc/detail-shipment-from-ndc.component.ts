@@ -55,7 +55,7 @@ import { ShipmentFromNDCService } from '../../services/shipmentFromNDC.service';
 })
 export class DetailShipmentFromNdcComponent {
   mydate = environment.date;
-  displayedColumns: string[] = ['ShipmentID', 'PoNumber', 'Status', 'EDILineID', 'ItemID', 'QTY', 'LotNumber', 'ExpirationDate', 'SupplierStyle', 'UPC', 'SKU', 'TrackingNo', 'SSCC', 'BOLNO']; 
+  displayedColumns: string[] = ['ShipmentID', 'PoNumber', 'Status', 'EDILineID', 'ItemID', 'QTY', 'LotNumber', 'ExpirationDate', 'SupplierStyle', 'UPC', 'SKU', 'TrackingNo', 'SSCC', 'BOLNO', 'BarCode', 'CarrierName' ]; 
   dataSource = this.data.listofDetail || [];
   id?: string;
   showSpinner: boolean = false;
@@ -82,7 +82,7 @@ export class DetailShipmentFromNdcComponent {
   ngOnInit(): void {
     this.listShipmentDetailFromNDC = this.dataSource;
     this.dataSource = this.listShipmentDetailFromNDC.slice(0, 10);
-
+    console.log(this.dataSource);
   }
 
   onCancel() {

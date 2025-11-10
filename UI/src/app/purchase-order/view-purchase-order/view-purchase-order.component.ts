@@ -35,6 +35,7 @@ export interface DetailItem {
   upc: string;
   description: string;
   manufacturerName: string;
+  uom: string;
   ndcItemID: string;
   productName: string;
   primaryCategoryName: string;
@@ -86,7 +87,7 @@ export class ViewPurchaseOrderComponent implements OnInit {
   itemControl: FormControl;
   filteredOptions: Observable<Supplier[]> | undefined;
   supplierOptions: Supplier[] = [];
-  displayedColumns: string[] = ['LineNo', 'ItemID', 'Description', 'OrderQty','extendedPrice', 'UnitPrice', 'UPC', 'PrimaryCategoryName', 'SecondaryCategoryName', 'ManufacturerName', 'NDCItemID', 'ProductName'];
+  displayedColumns: string[] = ['LineNo', 'ItemID', 'Description', 'OrderQty','extendedPrice', 'UnitPrice', 'UPC', 'PrimaryCategoryName', 'SecondaryCategoryName', 'ManufacturerName', 'UOM' , 'NDCItemID', 'ProductName'];
   dataSource = new MatTableDataSource<DetailItem>();
   supplierID = '';
   itemID = '';
@@ -136,6 +137,7 @@ export class ViewPurchaseOrderComponent implements OnInit {
       UPC: [''],
       Description: [''],
       ManufacturerName: [''],
+      UOM: [''],
       NDCItemID: [''],
       ProductName: [''],
       PrimaryCategoryName: [''],
@@ -202,6 +204,7 @@ export class ViewPurchaseOrderComponent implements OnInit {
       ItemID: [''],
       Description: [''],
       ManufacturerName: [''],
+      UOM: [''],
       NDCItemID: [''],
       ProductName: [''],
       PrimaryCategoryName: [''],
@@ -261,6 +264,7 @@ export class ViewPurchaseOrderComponent implements OnInit {
           upc: item.upc,
           description: item.description,
           manufacturerName: item.manufacturerName,
+          uom: item.uom,
           ndcItemID: item.ndcItemID,
           productName: item.productName,
           primaryCategoryName: item.primaryCategoryName,

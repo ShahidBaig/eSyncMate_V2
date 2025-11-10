@@ -75,7 +75,8 @@ import { EditPurchaseOrderComponent } from './purchase-order/edit-purchase-order
 import { ViewPurchaseOrderComponent } from './purchase-order/view-purchase-order/view-purchase-order.component';
 import { SipmentFromNdcComponent } from './sipment-from-ndc/sipment-from-ndc.component';
 import { DetailShipmentFromNdcComponent } from './sipment-from-ndc/detail-shipment-from-ndc/detail-shipment-from-ndc.component';
-import { OrderDetailComponent } from './orders/order-detail/order-detail.component';
+import { PurchaseOrdersTrackingComponent } from './purchase-orders-tracking/purchase-orders-tracking.component';
+import { SalesInvoiceNdcComponent } from './sales-invoice-ndc/sales-invoice-ndc.component';
 
 @NgModule({
   declarations: [AppComponent  ],
@@ -153,6 +154,8 @@ import { OrderDetailComponent } from './orders/order-detail/order-detail.compone
     ViewPurchaseOrderComponent,
     SipmentFromNdcComponent,
     DetailShipmentFromNdcComponent,
+    SalesInvoiceNdcComponent,
+    PurchaseOrdersTrackingComponent,
     TranslateModule.forRoot({
       loader: {
         provide: TranslateLoader,

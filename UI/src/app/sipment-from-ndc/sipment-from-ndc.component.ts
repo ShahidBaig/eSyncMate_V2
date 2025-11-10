@@ -185,7 +185,7 @@ export class SipmentFromNdcComponent {
         }
 
         const dialogRef = this.dialog.open(DetailShipmentFromNdcComponent, {
-          width: '100%',
+          width: '50%',
           data: {
             listofDetail: this.listOfShipmentDetailFromNDC
              // Add itemID only if it exists, otherwise set as null

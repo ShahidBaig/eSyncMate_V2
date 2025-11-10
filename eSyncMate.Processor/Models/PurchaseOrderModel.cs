@@ -130,6 +130,7 @@
         public string SecondaryCategoryName { get; set; }
         public string ProductName { get; set; }
         public decimal ExtendedPrice { get; set; }
+        public string UOM { get; set; }
     }
 
     public class PurchaseOrderDetailSaveModel
@@ -147,6 +148,7 @@
         public string SecondaryCategoryName { get; set; }
         public string ProductName { get; set; }
         public decimal ExtendedPrice { get; set; }
+        public string UOM { get; set; }
     }
 
     public class DetailItem

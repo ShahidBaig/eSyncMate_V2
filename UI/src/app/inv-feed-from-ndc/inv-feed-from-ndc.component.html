@@ -87,6 +87,12 @@
           <td mat-cell *matCellDef="let element"> {{element.manufacturerName}} </td>
         </ng-container>
 
+        <!-- ManufacturerName -->
+        <ng-container matColumnDef="UOM">
+          <th mat-header-cell *matHeaderCellDef>UOM</th>
+          <td mat-cell *matCellDef="let element"> {{element.uom}} </td>
+        </ng-container>
+
         <!-- NDCItemID -->
         <ng-container matColumnDef="NDCItemID">
           <th mat-header-cell *matHeaderCellDef>NDC SKU</th>

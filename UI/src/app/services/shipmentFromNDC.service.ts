@@ -17,8 +17,11 @@ export class ShipmentFromNDCService {
   }
 
   getInvoice(invoiceNo: string, invoiceDate: string, status: string, poNumber: string) {
-    console.log("before API", invoiceNo, invoiceDate, status, poNumber);
     return this.http.get<any>(this.apiUrl + 'api/v1/SalesInvoiceNDC/getSalesInvoiceNDC/' + invoiceNo + '/' + invoiceDate + '/' + status + '/' + poNumber );
+  }
+
+  getSalesInvoiceNDCDetail(InvoiceNo: any): Observable<any> {
+    return this.http.get(`${this.apiUrl}api/v1/SalesInvoiceNDC/getSalesInvoiceNDCDetail?InvoiceNo=${InvoiceNo}`);
   }
 
   getInventoryFiles(customerId: string, itemId: string, batchId: string = '') {
