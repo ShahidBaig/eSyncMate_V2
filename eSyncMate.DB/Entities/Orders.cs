@@ -714,7 +714,9 @@ namespace eSyncMate.DB.Entities
             return l_Result;
         }
 
-        public Result UpdateShippingAddress(int orderId, string address1, string address2, string city, string state, string postalCode, string country,string ShipToName,string ShipViaCode)
+        //public Result UpdateShippingAddress(int orderId, string address1, string address2, string city, string state, string postalCode, string country,string ShipToName,string ShipViaCode)
+        public Result UpdateShippingAddress(int orderId, string address1, string address2, string city, string state, string postalCode, string country, string ShipToName)
+
         {
             Result l_Result = Result.GetFailureResult();
             bool l_Trans = false;
@@ -747,8 +749,8 @@ namespace eSyncMate.DB.Entities
                 if (!string.IsNullOrWhiteSpace(ShipToName))
                     updates.Add($"ShipToName = '{ShipToName}'");
 
-                if (!string.IsNullOrWhiteSpace(ShipViaCode))
-                    updates.Add($"ShipViaCode = '{ShipViaCode}'");
+                //if (!string.IsNullOrWhiteSpace(ShipViaCode))
+                //    updates.Add($"ShipViaCode = '{ShipViaCode}'");
 
                 if (updates.Count > 0)
                 {
@@ -891,5 +893,19 @@ namespace eSyncMate.DB.Entities
 
             return Connection.GetData(l_SQL, ref p_Data);
         }
+
+         public bool ProcessAPIMissingOrders(string CustomerID, ref DataTable p_dataTable)
+        {
+            string l_Query = string.Empty;
+            string l_Param = string.Empty;
+
+            l_Query = "SELECT * FROM MissingOrders WHERE Processed = 0";
+            PublicFunctions.FieldToParam(CustomerID, ref l_Param, Declarations.FieldTypes.String);
+            l_Query += " AND CustomerID = " + l_Param;
+
+
+            return this.Connection.GetData(l_Query, ref p_dataTable);
+        }
+
     }
 }

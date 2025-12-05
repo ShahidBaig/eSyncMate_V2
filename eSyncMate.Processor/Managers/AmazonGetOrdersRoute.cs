@@ -40,6 +40,7 @@ namespace eSyncMate.Processor.Managers
             DateTime currentDateTime = DateTime.Now;
             DateTime startDateTime = currentDateTime.AddMinutes(-600);
             string formattedStartDate = "2025-11-05T00:00:00Z";
+            DataTable p_SCSInventoryFeedDt = new DataTable();
             try
             {
                 
@@ -117,6 +118,19 @@ namespace eSyncMate.Processor.Managers
                         l_Customer.GetObject("ERPCustomerID", l_SourceConnector.CustomerID);
                         l_Orders.UseConnection(l_DestinationConnector.ConnectionString);
 
+                        DBConnector DBConnection = new DBConnector(l_DestinationConnector.ConnectionString);
+
+                        try
+                        {
+                            DBConnection.GetData($"SELECT * FROM SCSInventoryFeed WHERE CustomerID = '{l_SourceConnector.CustomerID}' ", ref p_SCSInventoryFeedDt);
+
+                        }
+                        catch (Exception)
+                        {
+
+                        }
+                        
+
                         foreach (var order in allOrders)
                         {
                             l_OrderData = new DataTable();
@@ -125,7 +139,7 @@ namespace eSyncMate.Processor.Managers
 
                             if (l_OrderData.Rows.Count == 0)
                             {
-                                ProcessOrder(order, route, l_Customer, l_SourceConnector, l_DestinationConnector, userNo);
+                                ProcessOrder(order, route, l_Customer, l_SourceConnector, l_DestinationConnector, userNo, p_SCSInventoryFeedDt);
                             }
                         }
                     }
@@ -144,49 +158,49 @@ namespace eSyncMate.Processor.Managers
             }
         }
 
-        public static string ExecuteSingle(IConfiguration config, string orderNumber)
-        {
-            int userNo = 1;
-            Routes route = new Routes();
+        //public static string ExecuteSingle(IConfiguration config, string orderNumber)
+        //{
+        //    int userNo = 1;
+        //    Routes route = new Routes();
 
-            route.UseConnection(CommonUtils.ConnectionString);
+        //    route.UseConnection(CommonUtils.ConnectionString);
 
-            if (!route.GetObject("Name", "Get Orders").IsSuccess)
-            {
-                return "Order processing route is not setup.";
-            }
+        //    if (!route.GetObject("Name", "Get Orders").IsSuccess)
+        //    {
+        //        return "Order processing route is not setup.";
+        //    }
 
-            if (route.Status.ToUpper() == "IN-ACTIVE")
-            {
-                return "Order processing route is not active.";
-            }
+        //    if (route.Status.ToUpper() == "IN-ACTIVE")
+        //    {
+        //        return "Order processing route is not active.";
+        //    }
 
-            AmazonOrder order = GetOrdersData(route, orderNumber);
+        //    AmazonOrder order = GetOrdersData(route, orderNumber);
 
-            return ExecuteSingle(config, route, order, userNo);
-        }
+        //    return ExecuteSingle(config, route, order, userNo);
+        //}
 
-        private static string ExecuteSingle(IConfiguration config, Routes route, AmazonOrder order, int userNo)
-        {
-            try
-            {
-                Customers customer = new Customers();
+        //private static string ExecuteSingle(IConfiguration config, Routes route, AmazonOrder order, int userNo)
+        //{
+        //    try
+        //    {
+        //        Customers customer = new Customers();
 
-                ConnectorDataModel? sourceConnector = JsonConvert.DeserializeObject<ConnectorDataModel>(route.SourceConnectorObject.Data);
-                ConnectorDataModel? destinationConnector = JsonConvert.DeserializeObject<ConnectorDataModel>(route.DestinationConnectorObject.Data);
+        //        ConnectorDataModel? sourceConnector = JsonConvert.DeserializeObject<ConnectorDataModel>(route.SourceConnectorObject.Data);
+        //        ConnectorDataModel? destinationConnector = JsonConvert.DeserializeObject<ConnectorDataModel>(route.DestinationConnectorObject.Data);
 
-                customer.UseConnection(destinationConnector.ConnectionString);
-                customer.GetObject("ERPCustomerID", sourceConnector.CustomerID);
+        //        customer.UseConnection(destinationConnector.ConnectionString);
+        //        customer.GetObject("ERPCustomerID", sourceConnector.CustomerID);
 
-                ProcessOrder(order, route, customer, sourceConnector, destinationConnector, userNo);
-            }
-            catch (Exception ex)
-            {
-                route.SaveLog(LogTypeEnum.Exception, $"Error executing the route [{route.Id}]", ex.ToString(), userNo);
-            }
+        //        ProcessOrder(order, route, customer, sourceConnector, destinationConnector, userNo);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        route.SaveLog(LogTypeEnum.Exception, $"Error executing the route [{route.Id}]", ex.ToString(), userNo);
+        //    }
 
-            return string.Empty;
-        }
+        //    return string.Empty;
+        //}
 
         private static AmazonOrder GetOrdersData(Routes route, string orderNumber)
         {
@@ -206,7 +220,7 @@ namespace eSyncMate.Processor.Managers
             return JsonConvert.DeserializeObject<AmazonOrder>(response.Content);
         }
 
-        private static void ProcessOrder(AmazonOrder order, Routes route, Customers customer, ConnectorDataModel sourceConnector, ConnectorDataModel destinationConnector, int userNo)
+        private static void ProcessOrder(AmazonOrder order, Routes route, Customers customer, ConnectorDataModel sourceConnector, ConnectorDataModel destinationConnector, int userNo, DataTable p_SCSInventoryFeed)
         {
             RestResponse sourceResponse = new RestResponse();
             AmazonOrderAddressResponseModel addresses = new AmazonOrderAddressResponseModel();
@@ -267,6 +281,21 @@ namespace eSyncMate.Processor.Managers
             foreach (var orderLine in OrderDetail.payload.OrderItems)
             {
                 orderLine.LineNo = l_OrderLineNo;
+                var sku = orderLine?.SellerSKU?.Trim();
+
+                DataRow row = p_SCSInventoryFeed.Select($"CustomerItemCode = '{sku}'").FirstOrDefault();
+
+                if (row != null)
+                {
+                    orderLine.ItemID = !string.IsNullOrWhiteSpace(Convert.ToString(row["ItemID"])) ? Convert.ToString(row["ItemID"]) : (sku ?? string.Empty);
+
+                }
+                else
+                {
+                    orderLine.ItemID = sku;
+                }
+
+
                 l_OrderLineNo++;
             }
 
@@ -321,7 +350,8 @@ namespace eSyncMate.Processor.Managers
                 {
                     l_OrderDetail.OrderId = l_Orders.Id;
                     l_OrderDetail.LineNo = l_LineNo;
-                    l_OrderDetail.ItemID = orderLine.SellerSKU.Replace($"{orderLine.ASIN}", "").Trim();
+                    //l_OrderDetail.ItemID = orderLine.SellerSKU.Replace($"{orderLine.ASIN}", "").Trim();
+                    l_OrderDetail.ItemID = orderLine.ItemID;
                     //l_OrderDetail.ItemID = orderLine.ASIN;
                     l_OrderDetail.LineQty = 1;
                     l_OrderDetail.UnitPrice = Math.Round(Convert.ToDecimal(orderLine.ItemPrice.Amount) / Convert.ToDecimal(orderLine.QuantityOrdered),2);
@@ -337,75 +367,7 @@ namespace eSyncMate.Processor.Managers
                 l_LineNo++;
             }
 
-            //sourceConnector.Url = sourceConnector.BaseUrl + "order_statuses/" + order.id;
-            //sourceConnector.Method = "PUT";
-
-            //route.SaveData("JSON-SNT", 0, sourceConnector.Url, userNo);
-
-            //var data = new
-            //{
-            //    status = "ACKNOWLEDGED_BY_SELLER",
-            //};
-
-            //var Requestdata = new
-            //{
-            //    status = "ACKNOWLEDGED_BY_SELLER",
-            //    URL = sourceConnector.Url
-            //};
-
-            //l_Data = new OrderData();
-
-            //l_Data.UseConnection(string.Empty, l_Orders.Connection);
-            //l_Data.DeleteWithType(l_Orders.Id, "API-ACK-SNT");
-
-            //l_Data.Type = "API-ACK-SNT";
-            //l_Data.Data = JsonConvert.SerializeObject(Requestdata);
-            //l_Data.CreatedBy = userNo;
-            //l_Data.CreatedDate = DateTime.Now;
-            //l_Data.OrderId = l_Orders.Id;
-            //l_Data.OrderNumber = l_Orders.OrderNumber;
-
-            //l_Data.SaveNew();
-
-            //sourceResponse = RestConnector.Execute(sourceConnector, JsonConvert.SerializeObject(data)).GetAwaiter().GetResult();
-
-            //l_Data = new OrderData();
-
-            //if (sourceResponse == null || string.IsNullOrEmpty(sourceResponse.Content))
-            //{
-            //    DBConnector connection = new DBConnector(destinationConnector.ConnectionString);
-            //    string Command = string.Empty;
-
-            //    Command = "EXEC SP_UpdateOrderStatus @p_CustomerID = '" + sourceConnector.CustomerID + "', @p_RouteType = '" + RouteTypesEnum.SCSGetOrders + "ACKError', @p_OrderId = '" + l_Orders.Id + "'";
-
-            //    connection.Execute(Command);
-
-            //    l_Data.UseConnection(string.Empty, l_Orders.Connection);
-            //    l_Data.DeleteWithType(l_Orders.Id, "ACK-ERR");
-
-            //    l_Data.Type = "ACK-ERR";
-            //    l_Data.Data = sourceResponse?.Content ?? $"{sourceResponse?.StatusDescription} - {sourceResponse?.ErrorMessage} - {sourceResponse?.ErrorException}";
-            //    l_Data.CreatedBy = userNo;
-            //    l_Data.CreatedDate = DateTime.Now;
-            //    l_Data.OrderId = l_Orders.Id;
-            //    l_Data.OrderNumber = l_Orders.OrderNumber;
-
-            //    l_Data.SaveNew();
-            //}
-            //else
-            //{
-            //    l_Data.UseConnection(string.Empty, l_Orders.Connection);
-            //    l_Data.DeleteWithType(l_Orders.Id, "API-ACK");
-
-            //    l_Data.Type = "API-ACK";
-            //    l_Data.Data = sourceResponse.Content;
-            //    l_Data.CreatedBy = userNo;
-            //    l_Data.CreatedDate = DateTime.Now;
-            //    l_Data.OrderId = l_Orders.Id;
-            //    l_Data.OrderNumber = l_Orders.OrderNumber;
-
-            //    l_Data.SaveNew();
-            //}
+           
 
             route.SaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
             route.SaveLog(LogTypeEnum.Debug, $"Processed Order [{l_Orders.OrderNumber}]", string.Empty, userNo);

@@ -1056,7 +1056,9 @@ namespace eSyncMate.Processor.Controllers
                         {
                             l_Result = null;
 
-                            l_Result = order.UpdateShippingAddress(orderModel.Id, orderModel.ShipToAddress1, orderModel.ShipToAddress2, orderModel.ShipToCity, orderModel.ShipToState, orderModel.ShipToZip, orderModel.ShipToCountry, orderModel.ShipToName, orderModel.ShipViaCode);
+                            //l_Result = order.UpdateShippingAddress(orderModel.Id, orderModel.ShipToAddress1, orderModel.ShipToAddress2, orderModel.ShipToCity, orderModel.ShipToState, orderModel.ShipToZip, orderModel.ShipToCountry, orderModel.ShipToName, orderModel.ShipViaCode);
+                            l_Result = order.UpdateShippingAddress(orderModel.Id, orderModel.ShipToAddress1, orderModel.ShipToAddress2, orderModel.ShipToCity, orderModel.ShipToState, orderModel.ShipToZip, orderModel.ShipToCountry, orderModel.ShipToName);
+
                         }
                     }
 

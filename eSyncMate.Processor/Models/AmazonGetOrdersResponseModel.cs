@@ -156,6 +156,8 @@
             public Promotiondiscount PromotionDiscount { get; set; }
             public string OrderItemId { get; set; }
             public Int64 LineNo { get; set; }
+            public string ItemID { get; set; }
+
 
         }
 

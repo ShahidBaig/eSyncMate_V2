@@ -132,7 +132,7 @@ namespace eSyncMate.Processor.Managers
 
                             l_AmazonASNRequestModel.marketplaceId = "ATVPDKIKX0DER";
 
-                            l_AmazonASNRequestModel.packageDetail.packageReferenceId = packageReferenceId.ToString();
+                            l_AmazonASNRequestModel.packageDetail.packageReferenceId = item["OrderDetailID"].ToString(); 
                             l_AmazonASNRequestModel.packageDetail.carrierCode = item["LevelOfService"].ToString();
                             l_AmazonASNRequestModel.packageDetail.trackingNumber = item["TrackingNo"].ToString();
                             l_AmazonASNRequestModel.packageDetail.shipDate = Convert.ToDateTime(item["ShippedDate"]).ToString("yyyy-MM-ddTHH:mm:ssZ");

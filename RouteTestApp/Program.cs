@@ -24,6 +24,7 @@ using Intercom.Data;
 using static eSyncMate.DB.Declarations;
 using Microsoft.Extensions.Logging;
 using Mysqlx.Prepare;
+using static eSyncMate.Processor.Models.LowesGetOrderResponseModel;
 
 static void Main()
 {
@@ -41,8 +42,11 @@ static void Main()
     IConfiguration config = new MyConfigurationImplementation();
     RouteEngine routeEngine = new RouteEngine(config);
     ////1, 4, 10,7 GECKO
-    int routeId = 87;
+    int routeId = 100;
     routeEngine.Execute(routeId);
+
+    //MissingOrdersProcessed().GetAwaiter().GetResult();
+
 
     //IConfiguration config = new MyConfigurationImplementation(); // Your own config implementbation
 
@@ -508,6 +512,259 @@ static void MacysOrderProcess(IConfiguration config, ILogger logger, Routes rout
 }
 
 
+static async Task MissingOrdersProcessed()
+{
+    Orders l_Orders = new Orders();
+    DataTable l_dt = new DataTable();
+    string  l_OrderNumber = string.Empty;
+    l_Orders.UseConnection("Server=192.168.0.44,7100;Database=ESYNCMATE;UID=esyncmate;PWD=eSyncMate786$$$;");
+    l_Orders.ProcessAPIMissingOrders("LOW2221MP", ref l_dt);
+    Routes route = new Routes();
+
+    route.UseConnection("Server=192.168.0.44,7100;Database=ESYNCMATE;UID=esyncmate;PWD=eSyncMate786$$$;");
+
+    route.Id = 79;
+    if (!route.GetObject().IsSuccess)
+    {
+        return;
+    }
+
+    ConnectorDataModel? l_SourceConnector = JsonConvert.DeserializeObject<ConnectorDataModel>(route.SourceConnectorObject.Data);
+    ConnectorDataModel? l_DestinationConnector = JsonConvert.DeserializeObject<ConnectorDataModel>(route.DestinationConnectorObject.Data);
+
+    if (l_dt.Rows.Count > 0)
+    {
+
+        foreach (DataRow item in l_dt.Rows)
+        {
+            l_OrderNumber = Convert.ToString(item["OrderNumber"]);
+
+            ProcessOrdersByStatus(l_OrderNumber, route, l_SourceConnector, l_DestinationConnector, 1);
+        }
+
+    }
+}
+
+
+
+static void ProcessOrdersByStatus(string OrderNumber, Routes route, ConnectorDataModel sourceConnector, ConnectorDataModel destinationConnector, int userNo)
+{
+    Customers l_Customer = new Customers();
+    Orders l_Orders = new Orders();
+    DataTable l_OrderData = new DataTable();
+    LowesGetOrderResponseModel ordersList = new LowesGetOrderResponseModel();
+    RestResponse sourceResponse = new RestResponse();
+
+    try
+    {
+        string url = $"{sourceConnector.BaseUrl}/api/orders?order_ids={OrderNumber}";
+        sourceConnector.Url = url;
+
+        sourceResponse = RestConnector.Execute(sourceConnector, string.Empty).GetAwaiter().GetResult();
+
+        route.SaveData("JSON-SNT", 0, url, userNo);
+        route.SaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
+
+        ordersList = JsonConvert.DeserializeObject<LowesGetOrderResponseModel>(sourceResponse.Content);
+
+        if (ordersList?.orders == null || ordersList.orders.Count == 0)
+        {
+            route.SaveLog(LogTypeEnum.Info, $"No orders found for OrderNumber: {OrderNumber}", string.Empty, userNo);
+            return;
+        }
+
+        if (destinationConnector.ConnectivityType == ConnectorTypesEnum.SqlServer.ToString())
+        {
+            l_Orders.UseConnection(destinationConnector.ConnectionString);
+            l_Customer.UseConnection(destinationConnector.ConnectionString);
+
+            l_Customer.GetObject("ERPCustomerID", sourceConnector.CustomerID);
+
+            foreach (var order in ordersList.orders)
+            {
+                l_OrderData = new DataTable();
+
+                if (!l_Orders.GetViewList($"OrderNumber ='{order.order_id}'", string.Empty, ref l_OrderData))
+                {
+                    LowesProcessOrder(order, route, l_Customer, sourceConnector, destinationConnector, userNo);
+                }
+            }
+        }
+    }
+    catch (Exception ex)
+    {
+        route.SaveLog(LogTypeEnum.Exception, $"Error processing orders for OrderNumber [{OrderNumber}]", ex.ToString(), userNo);
+    }
+    finally
+    {
+        l_OrderData.Dispose();
+    }
+}
+
+
+static void LowesProcessOrder(LowesOrder order, Routes route, Customers customer, ConnectorDataModel sourceConnector, ConnectorDataModel destinationConnector, int userNo)
+{
+    RestResponse sourceResponse = new RestResponse();
+    Addresses addresses = new Addresses();
+    Orders l_Orders = new Orders();
+    OrderData l_Data = null;
+    string jsonString = string.Empty;
+    LowesOrderAcceptInputModel l_LowesOrderAcceptInputModel = new LowesOrderAcceptInputModel();
+    l_Orders.UseConnection(destinationConnector.ConnectionString);
+    //jsonString = JsonConvert.SerializeObject(order);
+    LowesGetOrderResponseModel OrdersList = new LowesGetOrderResponseModel();
+
+    try
+    {
+        sourceConnector.Url = sourceConnector.BaseUrl + $"/api/orders/{order.order_id}/accept";
+        sourceConnector.Method = "PUT";
+
+        foreach (var orderLine in order.order_lines)
+        {
+            var l_LowesAcceptedOrder_Lines = new LowesOrderAcceptInputModel.LowesAcceptedOrder_Lines
+            {
+                accepted = true,
+                id = orderLine.order_line_id
+            };
+
+            l_LowesOrderAcceptInputModel.order_lines.Add(l_LowesAcceptedOrder_Lines);
+        }
+
+        string Body = JsonConvert.SerializeObject(l_LowesOrderAcceptInputModel);
+
+        route.SaveData("JSON-SNT", 0, sourceConnector.Url, userNo);
+
+        l_Data = new OrderData();
+
+        l_Data.UseConnection(string.Empty, l_Orders.Connection);
+        l_Data.DeleteWithType(l_Orders.Id, "API-ACK-SNT");
+
+        l_Data.Type = "API-ACK-SNT";
+        l_Data.Data = Body;
+        l_Data.CreatedBy = userNo;
+        l_Data.CreatedDate = DateTime.Now;
+        l_Data.OrderId = l_Orders.Id;
+        l_Data.OrderNumber = order.order_id;
+
+        l_Data.SaveNew();
+
+        sourceResponse = RestConnector.Execute(sourceConnector, Body).GetAwaiter().GetResult();
+
+        l_Data = new OrderData();
+
+        l_Data.UseConnection(string.Empty, l_Orders.Connection);
+        l_Data.DeleteWithType(l_Orders.Id, "API-ACK");
+
+        l_Data.Type = "API-ACK";
+        l_Data.Data = sourceResponse.Content;
+        l_Data.CreatedBy = userNo;
+        l_Data.CreatedDate = DateTime.Now;
+        l_Data.OrderId = l_Orders.Id;
+        l_Data.OrderNumber = order.order_id;
+
+        l_Data.SaveNew();
+
+        Thread.Sleep(500);
+
+        sourceConnector.Url = sourceConnector.BaseUrl + $"/api/orders?order_ids={order.order_id}";
+        sourceConnector.Method = "GET";
+
+        sourceResponse = RestConnector.Execute(sourceConnector, "").GetAwaiter().GetResult();
+
+        route.SaveData("JSON-SNT", 0, sourceConnector.Url, userNo);
+
+        if (sourceResponse.Content != null)
+        {
+            OrdersList = JsonConvert.DeserializeObject<LowesGetOrderResponseModel>(sourceResponse.Content);
+            route.SaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
+
+            order = new LowesOrder();
+            order = OrdersList.orders[0];
+
+            jsonString = JsonConvert.SerializeObject(order);
+
+            l_Orders.Status = order.customer.shipping_address == null ? "ERROR" : "New";
+            l_Orders.CustomerId = customer.Id;
+            l_Orders.OrderDate = order.created_date;
+            l_Orders.OrderNumber = order.order_id;
+            l_Orders.ShipToName = $"{order.customer.shipping_address?.firstname ?? ""} {order.customer.shipping_address?.lastname ?? ""}";
+            l_Orders.ShipToAddress1 = order.customer.shipping_address?.street_1 ?? "";
+            l_Orders.ShipToAddress2 = order.customer.shipping_address?.street_2 ?? "";
+            l_Orders.ShipToCity = order.customer.shipping_address?.city ?? "";
+            l_Orders.ShipToState = order.customer.shipping_address?.state ?? "";
+            l_Orders.ShipToZip = order.customer.shipping_address?.zip_code ?? "";
+            l_Orders.ShipToCountry = order.customer.shipping_address?.country ?? "";
+            l_Orders.IsStoreOrder = false;
+            l_Orders.CreatedBy = userNo;
+            l_Orders.CreatedDate = DateTime.Now;
+        }
+        else
+        {
+            l_Orders.Status = "ERROR";
+            l_Orders.CustomerId = customer.Id;
+            l_Orders.OrderDate = order.created_date;
+            l_Orders.OrderNumber = order.order_id;
+            l_Orders.ShipToName = "";
+            l_Orders.ShipToAddress1 = "";
+            l_Orders.ShipToAddress2 = "";
+            l_Orders.ShipToCity = "";
+            l_Orders.ShipToState = "";
+            l_Orders.ShipToZip = "";
+            l_Orders.ShipToCountry = "";
+            l_Orders.IsStoreOrder = false;
+            l_Orders.CreatedBy = userNo;
+            l_Orders.CreatedDate = DateTime.Now;
+        }
+
+        if (l_Orders.SaveNew().IsSuccess)
+        {
+            l_Data = new OrderData();
+
+            l_Data.UseConnection(string.Empty, l_Orders.Connection);
+            l_Data.DeleteWithType(l_Orders.Id, "API-JSON");
+
+            l_Data.Type = "API-JSON";
+            l_Data.Data = jsonString;
+            l_Data.CreatedBy = userNo;
+            l_Data.CreatedDate = DateTime.Now;
+            l_Data.OrderId = l_Orders.Id;
+            l_Data.OrderNumber = l_Orders.OrderNumber;
+
+            l_Data.SaveNew();
+
+            l_Data.UpdateOrderDataOrderID(l_Data.OrderNumber, l_Data.OrderId);
+        }
+
+        foreach (var orderLine in order.order_lines)
+        {
+            OrderDetail l_OrderDetail = new OrderDetail();
+
+            l_OrderDetail.UseConnection(string.Empty, l_Orders.Connection);
+
+            for (int i = 1; i <= Convert.ToInt32(orderLine.quantity); i++)
+            {
+                l_OrderDetail.OrderId = l_Orders.Id;
+                l_OrderDetail.LineNo = Convert.ToInt32(orderLine.order_line_index);
+                l_OrderDetail.LineQty = 1;
+                l_OrderDetail.ItemID = orderLine.offer_sku;
+                l_OrderDetail.UnitPrice = Convert.ToDecimal(orderLine.price_unit);
+                l_OrderDetail.Status = "NEW";
+                l_OrderDetail.order_line_id = orderLine.order_line_id;
+                l_OrderDetail.CreatedBy = userNo;
+                l_OrderDetail.CreatedDate = DateTime.Now;
+
+                l_OrderDetail.SaveNew();
+            }
+        }
+
+        route.SaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
+        route.SaveLog(LogTypeEnum.Debug, $"Processed Order [{l_Orders.OrderNumber}]", string.Empty, userNo);
+    }
+    catch (Exception ex)
+    {
+        route.SaveLog(LogTypeEnum.Error, $"Processing Error [{l_Orders.OrderNumber}]", ex.Message, userNo);
+    }
+}
 static void ProcessOrder(MacysOrder order, Routes route, Customers customer, ConnectorDataModel sourceConnector, ConnectorDataModel destinationConnector, int userNo)
 {
     RestResponse sourceResponse = new RestResponse();

@@ -250,66 +250,22 @@ namespace eSyncMate.Processor.Managers
             SCSPlaceOrderResponse l_SCSPlaceOrderResponse = new SCSPlaceOrderResponse();
 
             l_SCSPlaceOrderResponse = new SCSPlaceOrderResponse();
-
+            OrderData l_OrderData = new OrderData();
             string Body = PublicFunctions.ConvertNullAsString(l_Row["Data"], string.Empty);
             int l_ID = PublicFunctions.ConvertNullAsInteger(l_Row["Id"], 0);
 
             string jsonTransformation = new JsonTransformer().Transform(transformationMap, Body);
             jsonTransformation = jsonTransformation.Replace("@CUSTOMERID@", destinationConnector.CustomerID);
 
-            if (!string.IsNullOrWhiteSpace(Convert.ToString(l_Row["ShipViaCode"])))
+            try
             {
-                var node = JsonNode.Parse(jsonTransformation)!.AsObject();
-                node["order"]!["header"]!["ShipViaCode"] = Convert.ToString(l_Row["ShipViaCode"]);
-
-                jsonTransformation = node.ToJsonString(new JsonSerializerOptions
-                {
-                    WriteIndented = false,
-                    Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-                });
-            }
-           
-            route.SaveData("JSON-SNT", 0, jsonTransformation, userNo);
-
-            OrderData l_OrderData = new OrderData();
-
-            l_OrderData.UseConnection(sourceConnector.ConnectionString);
-            l_OrderData.DeleteWithType(l_ID, "ERP-SNT");
-
-            l_OrderData.Type = "ERP-SNT";
-            l_OrderData.Data = jsonTransformation;
-            l_OrderData.CreatedBy = userNo;
-            l_OrderData.CreatedDate = DateTime.Now;
-            l_OrderData.OrderId = l_ID;
-            l_OrderData.OrderNumber = PublicFunctions.ConvertNullAsString(l_Row["OrderNumber"], string.Empty);
-
-            l_OrderData.SaveNew();
-
-            sourceResponse = RestConnector.Execute(destinationConnector, jsonTransformation).GetAwaiter().GetResult();
-
-            if (sourceResponse.StatusCode == System.Net.HttpStatusCode.OK)
-            {
-                l_SCSPlaceOrderResponse = JsonConvert.DeserializeObject<SCSPlaceOrderResponse>(sourceResponse.Content);
-            }
-
-            if (l_SCSPlaceOrderResponse.OutPut.Success == true)
-            {
-                DBConnector connection = new DBConnector(sourceConnector.ConnectionString);
-                string command = string.Empty;
-
-                route.SaveLog(LogTypeEnum.Debug, $"Update order status processing start for order [{l_ID}].", string.Empty, userNo);
-
-                command = "EXEC SP_UpdateOrderStatus @p_CustomerID ='" + sourceConnector.CustomerID + "',@p_RouteType = '" + RouteTypesEnum.SCSPlaceOrder + "',@p_ExternalId = '" + l_SCSPlaceOrderResponse.OutPut.ObjectID + "',@p_OrderId = " + l_ID;
-
-                connection.Execute(command);
-
-                l_OrderData = new OrderData();
+                route.SaveData("JSON-SNT", 0, jsonTransformation, userNo);
 
                 l_OrderData.UseConnection(sourceConnector.ConnectionString);
-                l_OrderData.DeleteWithType(l_ID, "ERP-JSON");
+                l_OrderData.DeleteWithType(l_ID, "ERP-SNT");
 
-                l_OrderData.Type = "ERP-JSON";
-                l_OrderData.Data = sourceResponse.Content;
+                l_OrderData.Type = "ERP-SNT";
+                l_OrderData.Data = jsonTransformation;
                 l_OrderData.CreatedBy = userNo;
                 l_OrderData.CreatedDate = DateTime.Now;
                 l_OrderData.OrderId = l_ID;
@@ -317,83 +273,141 @@ namespace eSyncMate.Processor.Managers
 
                 l_OrderData.SaveNew();
 
-                route.SaveLog(LogTypeEnum.Info, $"Update order status processed for order [{l_ID}].", string.Empty, userNo);
-            }
-            else
-            {
-                l_OrderData = new OrderData();
-                DBConnector connection = new DBConnector(sourceConnector.ConnectionString);
-                string command = string.Empty;
+                sourceResponse = RestConnector.Execute(destinationConnector, jsonTransformation).GetAwaiter().GetResult();
 
-                command = "EXEC SP_UpdateOrderStatus @p_CustomerID ='" + sourceConnector.CustomerID + "',@p_RouteType = '" + RouteTypesEnum.SCSPlaceOrder + "Error',@p_ExternalId = '',@p_OrderId = " + l_ID;
-
-                connection.Execute(command);
-
-                string errorContent = sourceResponse.Content ?? string.Empty;
-                string orderNumber = PublicFunctions.ConvertNullAsString(l_Row["OrderNumber"], string.Empty);
-
-                l_OrderData.UseConnection(sourceConnector.ConnectionString);
-                l_OrderData.DeleteWithType(l_ID, "ERP-ERROR");
-
-                l_OrderData.Type = "ERP-ERROR";
-                l_OrderData.Data = errorContent;
-                l_OrderData.CreatedBy = userNo;
-                l_OrderData.CreatedDate = DateTime.Now;
-                l_OrderData.OrderId = l_ID;
-                l_OrderData.OrderNumber = orderNumber;
-                l_OrderData.SaveNew();
-
-                // NEW LOGIC: Handle SPARS already exists error
-                if (errorContent.Contains("already exist in SPARS with SO#"))
+                if (sourceResponse.StatusCode == System.Net.HttpStatusCode.OK)
                 {
-                    try
-                    {
-                        string soNumber = "";
-                        int soIndex = errorContent.IndexOf("SO#");
-                        if (soIndex > -1)
-                        {
-                            soNumber = errorContent.Substring(soIndex + 3).Trim().Split('"', '}', ']')[0].Trim();
-                        }
+                    l_SCSPlaceOrderResponse = JsonConvert.DeserializeObject<SCSPlaceOrderResponse>(sourceResponse.Content);
+                }
 
-                        // CHECK IF THIS SO# ALREADY EXISTS IN ANOTHER ORDER
-                        string checkSql = $@"
+                if (l_SCSPlaceOrderResponse.OutPut.Success == true)
+                {
+                    DBConnector connection = new DBConnector(sourceConnector.ConnectionString);
+                    string command = string.Empty;
+
+                    route.SaveLog(LogTypeEnum.Debug, $"Update order status processing start for order [{l_ID}].", string.Empty, userNo);
+
+                    command = "EXEC SP_UpdateOrderStatus @p_CustomerID ='" + sourceConnector.CustomerID + "',@p_RouteType = '" + RouteTypesEnum.SCSPlaceOrder + "',@p_ExternalId = '" + l_SCSPlaceOrderResponse.OutPut.ObjectID + "',@p_OrderId = " + l_ID;
+
+                    connection.Execute(command);
+
+                    l_OrderData = new OrderData();
+
+                    l_OrderData.UseConnection(sourceConnector.ConnectionString);
+                    l_OrderData.DeleteWithType(l_ID, "ERP-JSON");
+
+                    l_OrderData.Type = "ERP-JSON";
+                    l_OrderData.Data = sourceResponse.Content;
+                    l_OrderData.CreatedBy = userNo;
+                    l_OrderData.CreatedDate = DateTime.Now;
+                    l_OrderData.OrderId = l_ID;
+                    l_OrderData.OrderNumber = PublicFunctions.ConvertNullAsString(l_Row["OrderNumber"], string.Empty);
+
+                    l_OrderData.SaveNew();
+
+                    route.SaveLog(LogTypeEnum.Info, $"Update order status processed for order [{l_ID}].", string.Empty, userNo);
+                }
+                else
+                {
+                    l_OrderData = new OrderData();
+                    DBConnector connection = new DBConnector(sourceConnector.ConnectionString);
+                    string command = string.Empty;
+
+                    command = "EXEC SP_UpdateOrderStatus @p_CustomerID ='" + sourceConnector.CustomerID + "',@p_RouteType = '" + RouteTypesEnum.SCSPlaceOrder + "Error',@p_ExternalId = '',@p_OrderId = " + l_ID;
+
+                    connection.Execute(command);
+
+                    string errorContent = sourceResponse.Content ?? string.Empty;
+                    string orderNumber = PublicFunctions.ConvertNullAsString(l_Row["OrderNumber"], string.Empty);
+
+                    l_OrderData.UseConnection(sourceConnector.ConnectionString);
+                    l_OrderData.DeleteWithType(l_ID, "ERP-ERROR");
+
+                    l_OrderData.Type = "ERP-ERROR";
+                    l_OrderData.Data = errorContent;
+                    l_OrderData.CreatedBy = userNo;
+                    l_OrderData.CreatedDate = DateTime.Now;
+                    l_OrderData.OrderId = l_ID;
+                    l_OrderData.OrderNumber = orderNumber;
+                    l_OrderData.SaveNew();
+
+                    // NEW LOGIC: Handle SPARS already exists error
+                    if (errorContent.Contains("already exist in SPARS with SO#"))
+                    {
+                        try
+                        {
+                            string soNumber = "";
+                            int soIndex = errorContent.IndexOf("SO#");
+                            if (soIndex > -1)
+                            {
+                                soNumber = errorContent.Substring(soIndex + 3).Trim().Split('"', '}', ']')[0].Trim();
+                            }
+
+                            // CHECK IF THIS SO# ALREADY EXISTS IN ANOTHER ORDER
+                            string checkSql = $@"
                                             SELECT COUNT(*) AS Cnt 
                                             FROM Orders 
                                             WHERE ExternalId = '{soNumber.Replace("'", "''")}'";
 
-                        DataTable checkTable = new DataTable();
-                        connection.GetData(checkSql, ref checkTable);
+                            DataTable checkTable = new DataTable();
+                            connection.GetData(checkSql, ref checkTable);
 
-                        if (checkTable.Rows.Count > 0 && Convert.ToInt32(checkTable.Rows[0]["Cnt"]) == 0)
-                        {
-                            Orders l_Orders = new Orders();
-                            l_Orders.UseConnection(sourceConnector.ConnectionString);
-
-                            bool success = l_Orders.UpdateStatusAndExternalID(l_ID, orderNumber, soNumber, "SYNCED");
-
-                            if (success)
+                            if (checkTable.Rows.Count > 0 && Convert.ToInt32(checkTable.Rows[0]["Cnt"]) == 0)
                             {
-                                route.SaveLog(LogTypeEnum.Info, $"Order [{l_ID}] marked as SYNCED with SO# [{soNumber}]", "", userNo);
+                                Orders l_Orders = new Orders();
+                                l_Orders.UseConnection(sourceConnector.ConnectionString);
+
+                                bool success = l_Orders.UpdateStatusAndExternalID(l_ID, orderNumber, soNumber, "SYNCED");
+
+                                if (success)
+                                {
+                                    route.SaveLog(LogTypeEnum.Info, $"Order [{l_ID}] marked as SYNCED with SO# [{soNumber}]", "", userNo);
+                                }
+                                else
+                                {
+                                    route.SaveLog(LogTypeEnum.Warning, $"Order [{l_ID}] update failed (SO# = {soNumber})", "", userNo);
+                                }
                             }
                             else
                             {
-                                route.SaveLog(LogTypeEnum.Warning, $"Order [{l_ID}] update failed (SO# = {soNumber})", "", userNo);
+                                route.SaveLog(LogTypeEnum.Warning, $"Duplicate ExternalId [{soNumber}] found. Order [{l_ID}] skipped update.", "", userNo);
                             }
                         }
-                        else
+                        catch (Exception parseEx)
                         {
-                            route.SaveLog(LogTypeEnum.Warning, $"Duplicate ExternalId [{soNumber}] found. Order [{l_ID}] skipped update.", "", userNo);
+                            route.SaveLog(LogTypeEnum.Error, $"Failed to parse/update ExternalId for Order [{l_ID}]", parseEx.Message, userNo);
                         }
                     }
-                    catch (Exception parseEx)
-                    {
-                        route.SaveLog(LogTypeEnum.Error, $"Failed to parse/update ExternalId for Order [{l_ID}]", parseEx.Message, userNo);
-                    }
                 }
+
+                route.SaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
+                route.SaveLog(LogTypeEnum.Debug, $"SCSPlaceOrder processed for order [{l_ID}].", string.Empty, userNo);
+            }
+            catch (Exception)
+            {
+                    l_OrderData = new OrderData();
+                    DBConnector connection = new DBConnector(sourceConnector.ConnectionString);
+                    string command = string.Empty;
+
+                    command = "EXEC SP_UpdateOrderStatus @p_CustomerID ='" + sourceConnector.CustomerID + "',@p_RouteType = '" + RouteTypesEnum.SCSPlaceOrder + "Error',@p_ExternalId = '',@p_OrderId = " + l_ID;
+
+                    connection.Execute(command);
+
+                    string errorContent = sourceResponse.Content ?? "No Response from SPARS, please verify this order in SPARS before reprocessing.";
+                    string orderNumber = PublicFunctions.ConvertNullAsString(l_Row["OrderNumber"], string.Empty);
+
+                    l_OrderData.UseConnection(sourceConnector.ConnectionString);
+                    l_OrderData.DeleteWithType(l_ID, "ERP-ERROR");
+
+                    l_OrderData.Type = "ERP-ERROR";
+                    l_OrderData.Data = errorContent;
+                    l_OrderData.CreatedBy = userNo;
+                    l_OrderData.CreatedDate = DateTime.Now;
+                    l_OrderData.OrderId = l_ID;
+                    l_OrderData.OrderNumber = orderNumber;
+                    l_OrderData.SaveNew();
             }
 
-            route.SaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
-            route.SaveLog(LogTypeEnum.Debug, $"SCSPlaceOrder processed for order [{l_ID}].", string.Empty, userNo);
         }
     }
 }
