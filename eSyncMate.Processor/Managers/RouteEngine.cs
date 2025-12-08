@@ -311,6 +311,36 @@ namespace eSyncMate.Processor.Managers
                 {
                     GenerateEDI810ForRepaintRoute.Execute(_config, _logger, route);
                 }
+                ////////Knot Api///
+                else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.KnotInventoryUpload))
+                {
+                    KnotUpdateInventory.Execute(_config, _logger, route);
+                }
+                else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.KnotBulkItemPrices))
+                {
+                    KnotBulkItemPricesRoute.Execute(_config, _logger, route);
+                }
+                else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.KnotGetOrders))
+                {
+                    KnotGetOrderRoute.Execute(_config, _logger, route);
+                }
+                else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.KnotASNShipmentNotification))
+                {
+                    KnotASNShipmentNotificationRoute.Execute(_config, _logger, route);
+                }
+                else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.KnotCancellationLines))
+                {
+                    KnotCancellationRoute.Execute(_config, _logger, route);
+                }
+
+                else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.MichealInventoryUpload))
+                {
+                    MichealUpdateInventory.Execute(_config, _logger, route);
+                }
+                else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.MichealBulkItemPrices))
+                {
+                    MichealUpdatePrice.Execute(_config, _logger, route);
+                }
             }
             catch (Exception ex)
             {

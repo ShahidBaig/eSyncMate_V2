@@ -42,7 +42,7 @@ static void Main()
     IConfiguration config = new MyConfigurationImplementation();
     RouteEngine routeEngine = new RouteEngine(config);
     ////1, 4, 10,7 GECKO
-    int routeId = 100;
+    int routeId = 12;
     routeEngine.Execute(routeId);
 
     //MissingOrdersProcessed().GetAwaiter().GetResult();
