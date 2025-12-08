@@ -35,6 +35,8 @@ namespace eSyncMate.DB.Entities
         public int ATS_L60 { get; set; }
         public int ATS_L70 { get; set; }
         public int ATS_L91 { get; set; }
+        public int ATS_L56 { get; set; }
+        public int ATS_L57 { get; set; }
         public string Status { get; set; }
         public int CurrentPage { get; set; }
         public int TotalPages { get; set; }

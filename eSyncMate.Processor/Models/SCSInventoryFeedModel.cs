@@ -40,7 +40,8 @@
             public int ATS_L91 { get; set; }
             public int ATS_L29 { get; set; }
             public int ATS_L65 { get; set; }
-
+            public int ATS_L56 { get; set; }
+            public int ATS_L57 { get; set; }
 
         }
 

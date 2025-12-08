@@ -160,6 +160,8 @@ namespace eSyncMate.Processor.Managers
                                     row["ATS_L91"] = inventory.ATS_L91;
                                     row["ATS_L29"] = inventory.ATS_L29;
                                     row["ATS_L65"] = inventory.ATS_L65;
+                                    row["ATS_L56"] = inventory.ATS_L56;
+                                    row["ATS_L57"] = inventory.ATS_L57;
 
                                     row["CurrentPage"] = l_SCSInventory.CurrentPage;
                                     row["TotalPages"] = l_SCSInventory.TotalPages;
@@ -297,6 +299,8 @@ namespace eSyncMate.Processor.Managers
             p_DataTable.Columns.Add("ATS_L91", typeof(int));
             p_DataTable.Columns.Add("ATS_L29", typeof(int));
             p_DataTable.Columns.Add("ATS_L65", typeof(int));
+            p_DataTable.Columns.Add("ATS_L56", typeof(int));
+            p_DataTable.Columns.Add("ATS_L57", typeof(int));
             p_DataTable.Columns.Add("CurrentPage", typeof(int));
             p_DataTable.Columns.Add("TotalPages", typeof(int));
 
