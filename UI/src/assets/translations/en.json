@@ -15,6 +15,7 @@
   "OrderStatusError": "Error generating the order in SPARS.",
   "OrderStatusASNERROR": "Error generating the ASN in SPARS.",
   "OrderStatusDuplicate": "This order is already in SPARS.",
+  "OrderStatusINPROGRESS": "Order processing is in progress.",
   "CPCNEW": "Product is uploaded",
   "CPCAPPROVED": "Product Data is published",
   "CPCAPPROVED_PR": "Product pricing information is synced",

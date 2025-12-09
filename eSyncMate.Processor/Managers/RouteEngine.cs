@@ -32,7 +32,7 @@ namespace eSyncMate.Processor.Managers
                     this._logger?.LogError($"Invalid Route! [{routeId}]");
                     return;
                 }
-                
+
                 if (route.Status.ToUpper() == "IN-ACTIVE")
                 {
                     this.RemoveRouteJob(route);
@@ -340,6 +340,10 @@ namespace eSyncMate.Processor.Managers
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.MichealBulkItemPrices))
                 {
                     MichealUpdatePrice.Execute(_config, _logger, route);
+                }
+                else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.MichealGetOrders))
+                {
+                    MichealGetOrderRoute.Execute(_config, _logger, route);
                 }
             }
             catch (Exception ex)

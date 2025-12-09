@@ -73,7 +73,7 @@ export class OrdersComponent implements OnInit {
   showSpinnerforSearch: boolean = false;
   showSpinner: boolean = false;
   listOfStoresOrder: Order[] = [];
-  statusOptions = ['Select Status', 'ACKNOWLEDGED', 'ASNGEN', 'ASNMARK', 'COMPLETE', 'FINISHED', 'INVEDI', 'INVOICED', 'NEW', 'PROCESSED', 'SYNCERROR', 'SYNCED', 'SPLITED', 'CANCELLED', 'SHIPPED', 'ERROR', 'ASNERROR'];
+  statusOptions = ['Select Status', 'ACKNOWLEDGED', 'ASNGEN', 'ASNMARK', 'COMPLETE', 'FINISHED', 'INVEDI', 'INVOICED', 'NEW', 'PROCESSED', 'SYNCERROR', 'SYNCED', 'SPLITED', 'CANCELLED', 'SHIPPED', 'ERROR', 'ASNERROR','INPROGRESS'];
   isAdminUser: boolean = false;
   isCompany: string | undefined = '';
   customerOptions: Customers[] | undefined;
@@ -191,6 +191,8 @@ export class OrdersComponent implements OnInit {
         return { key: 'OrderStatusACKERROR' };
       case 'ACKNOWLEDGED':
         return { key: 'OrderStatusACKNOWLEDGED' };
+      case 'INPROGRESS':
+        return { key: 'OrderStatusINPROGRESS' };
       default:
         return '';
     }
@@ -236,7 +238,9 @@ export class OrdersComponent implements OnInit {
       return 'sysced-status';
     } else if (status.toUpperCase() === 'ACKERROR') {
       return 'syncerror-status';
-    } else if (status.toUpperCase() === 'ASNERROR') {
+    } else if (status.toUpperCase() === 'INPROGRESS') {
+      return 'sysced-status';
+    } else if (status.toUpperCase() === 'ACKERROR') {
       return 'syncerror-status';
     } else {
       return '';

@@ -67,7 +67,7 @@ namespace eSyncMate.Processor.Managers
 
                 if (l_SourceConnector.ConnectivityType == ConnectorTypesEnum.Rest.ToString())
                 {
-                    l_SourceConnector.Url = l_SourceConnector.BaseUrl + $"order/query?orderStatusList=PENDING_CONFIRMATION&pageSize=100";
+                    l_SourceConnector.Url = l_SourceConnector.BaseUrl + $"/order/query?orderStatusList=PENDING_CONFIRMATION&pageSize=100";
                     sourceResponse = RestConnector.Execute(l_SourceConnector, string.Empty).GetAwaiter().GetResult();
 
                     route.SaveData("JSON-SNT", 0, l_SourceConnector.Url, userNo);
@@ -195,6 +195,7 @@ namespace eSyncMate.Processor.Managers
             {
 
                 int l_OrderLineNo = 1;
+                
                 foreach (var orderLine in order.orderLines)
                 {
                     orderLine.LineNo = l_OrderLineNo;
@@ -278,14 +279,19 @@ namespace eSyncMate.Processor.Managers
                 l_Data.UseConnection(string.Empty, l_Orders.Connection);
             }
 
-            sourceConnector.Url = sourceConnector.BaseUrl + $"orders/{order.orderNumber}/acknowledge";
+            sourceConnector.Url = sourceConnector.BaseUrl + $"/order/confirm";
             sourceConnector.Method = "POST";
+
+            var confirmationModel = new MichealOrderConfirmationInputModel();
+            confirmationModel.orderNumbers.Add(l_Orders.OrderNumber);   
+
+            string jsonBody = JsonConvert.SerializeObject(confirmationModel);
 
             route.SaveData("JSON-SNT", 0, sourceConnector.Url, userNo);
             l_Data.DeleteWithType(l_Orders.Id, "API-ACK-SNT");
 
             l_Data.Type = "API-ACK-SNT";
-            l_Data.Data = sourceConnector.Url;
+            l_Data.Data = jsonBody;
             l_Data.CreatedBy = userNo;
             l_Data.CreatedDate = DateTime.Now;
             l_Data.OrderId = l_Orders.Id;
@@ -293,7 +299,7 @@ namespace eSyncMate.Processor.Managers
 
             l_Data.SaveNew();
 
-            sourceResponse = RestConnector.Execute(sourceConnector, "").GetAwaiter().GetResult();
+            sourceResponse = RestConnector.Execute(sourceConnector, jsonBody).GetAwaiter().GetResult();
 
             l_Data = new OrderData();
 
@@ -302,7 +308,7 @@ namespace eSyncMate.Processor.Managers
                 DBConnector connection = new DBConnector(destinationConnector.ConnectionString);
                 string Command = string.Empty;
 
-                Command = "EXEC SP_UpdateOrderStatus @p_CustomerID = '" + sourceConnector.CustomerID + "', @p_RouteType = '" + RouteTypesEnum.WalmartGetOrders + "ACKError', @p_OrderId = '" + l_Orders.Id + "'";
+                Command = "EXEC SP_UpdateOrderStatus @p_CustomerID = '" + sourceConnector.CustomerID + "', @p_RouteType = '" + RouteTypesEnum.MichealGetOrders + "ACKError', @p_OrderId = '" + l_Orders.Id + "'";
 
                 connection.Execute(Command);
 
@@ -336,7 +342,7 @@ namespace eSyncMate.Processor.Managers
                 DBConnector connection = new DBConnector(destinationConnector.ConnectionString);
                 string Command = string.Empty;
 
-                Command = "EXEC SP_UpdateOrderStatus @p_CustomerID = '" + sourceConnector.CustomerID + "', @p_RouteType = '" + RouteTypesEnum.WalmartGetOrders + "ACKErrorNew', @p_OrderId = '" + l_Orders.Id + "'";
+                Command = "EXEC SP_UpdateOrderStatus @p_CustomerID = '" + sourceConnector.CustomerID + "', @p_RouteType = '" + RouteTypesEnum.MichealGetOrders + "ACKErrorNew', @p_OrderId = '" + l_Orders.Id + "'";
 
                 connection.Execute(Command);
 

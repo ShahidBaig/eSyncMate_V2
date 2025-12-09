@@ -15,6 +15,7 @@
   "OrderStatusCancelled": "Pedido cancelado en SPARS.",
   "OrderStatusError": "Error al generar el pedido en SPARS.",
   "OrderStatusASNERROR": "Error al generar el ASN en SPARS.",
+  "OrderStatusINPROGRESS": "El procesamiento del pedido está en curso.",
   "OrderStatusDuplicate": "Este pedido ya está en SPARS.",
   "CPCNEW": "El producto esta subido",
   "CPCAPPROVED": "Los datos del producto están publicados",

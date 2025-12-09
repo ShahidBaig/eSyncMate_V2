@@ -19,6 +19,8 @@ using Nancy;
 using System.Text.Json.Nodes;
 using System.Text.Json;
 using System.Text.Encodings.Web;
+using DocumentFormat.OpenXml.Spreadsheet;
+using static eSyncMate.Processor.Models.LowesGetOrderResponseModel;
 
 namespace eSyncMate.Processor.Managers
 {
@@ -80,7 +82,7 @@ namespace eSyncMate.Processor.Managers
                     DataTable l_Data = new DataTable();
 
                     l_SourceConnector.Command = l_SourceConnector.Command.Replace("@DATATYPE@", "API-JSON");
-                    l_SourceConnector.Command = l_SourceConnector.Command.Replace("@ORDERSTATUS@", "New");
+                    l_SourceConnector.Command = l_SourceConnector.Command.Replace("@ORDERSTATUS@", "New,InProgress");
 
                     if (l_SourceConnector.CommandType == "SP")
                     {
@@ -96,6 +98,8 @@ namespace eSyncMate.Processor.Managers
 
                     foreach (DataRow l_Row in l_dataTable.Rows)
                     {
+
+
                         ProcessOrder(l_Row, route, l_DestinationConnector, l_SourceConnector, l_TransformationMap, userNo);
                     }
 
@@ -249,6 +253,8 @@ namespace eSyncMate.Processor.Managers
             RestResponse sourceResponse = new RestResponse();
             SCSPlaceOrderResponse l_SCSPlaceOrderResponse = new SCSPlaceOrderResponse();
 
+            SCSGetOrderInfoModel l_SCSGetOrderInfoModel = new SCSGetOrderInfoModel();
+
             l_SCSPlaceOrderResponse = new SCSPlaceOrderResponse();
             OrderData l_OrderData = new OrderData();
             string Body = PublicFunctions.ConvertNullAsString(l_Row["Data"], string.Empty);
@@ -256,9 +262,61 @@ namespace eSyncMate.Processor.Managers
 
             string jsonTransformation = new JsonTransformer().Transform(transformationMap, Body);
             jsonTransformation = jsonTransformation.Replace("@CUSTOMERID@", destinationConnector.CustomerID);
+            string OrderStatus = PublicFunctions.ConvertNullAsString(l_Row["Status"], "");
 
             try
             {
+                if (OrderStatus.ToUpper() == "INPROGRESS" || OrderStatus.ToUpper() == "ERROR")
+                {
+                    destinationConnector.Url = "Get_OrderInfo";
+
+                    var bodyObject = new
+                    {
+                        Input = new
+                        {
+                            CustomerPO = PublicFunctions.ConvertNullAsString(l_Row["OrderNumber"], string.Empty)
+                        }
+                    };
+
+                    string jsonBody = JsonConvert.SerializeObject(bodyObject);
+
+                    sourceResponse = RestConnector.Execute(destinationConnector, jsonBody).GetAwaiter().GetResult();
+                    
+                    if (sourceResponse.StatusCode == System.Net.HttpStatusCode.OK)
+                    {
+                        l_SCSGetOrderInfoModel = JsonConvert.DeserializeObject<SCSGetOrderInfoModel>(sourceResponse.Content);
+
+                        if (l_SCSGetOrderInfoModel.OutPut.Order != null)
+                        {
+                            Orders l_OrdersStaus = new Orders();
+                            l_OrdersStaus.UseConnection(sourceConnector.ConnectionString);
+                            string l_CustomerPO = PublicFunctions.ConvertNullAsString(l_Row["OrderNumber"], string.Empty);
+
+                            bool success = l_OrdersStaus.UpdateStatusAndExternalID(l_ID, l_CustomerPO, Convert.ToString(l_SCSGetOrderInfoModel.OutPut.Order.Header.OrderNo), "SYNCED");
+
+                            if (success)
+                            {
+                                route.SaveLog(LogTypeEnum.Info, $"Order [{l_ID}] marked as SYNCED with SO# [{l_SCSGetOrderInfoModel.OutPut.Order.Header.OrderNo}]", "", userNo);
+                            }
+                            else
+                            {
+                                route.SaveLog(LogTypeEnum.Warning, $"Order [{l_ID}] update failed (SO# = {l_SCSGetOrderInfoModel.OutPut.Order.Header.OrderNo})", "", userNo);
+                            }
+
+                            return;
+                        }
+                    }
+                }
+
+                DBConnector DBconnection = new DBConnector(sourceConnector.ConnectionString);
+                string l_command = string.Empty;
+
+                route.SaveLog(LogTypeEnum.Debug, $"Update order status In processing start for order [{l_ID}].", string.Empty, userNo);
+
+                l_command = "EXEC SP_UpdateOrderStatus @p_CustomerID ='" + sourceConnector.CustomerID + "',@p_RouteType = '" + RouteTypesEnum.SCSPlaceOrder + "InProgress',@p_ExternalId = '',@p_OrderId = " + l_ID;
+
+                DBconnection.Execute(l_command);
+
                 route.SaveData("JSON-SNT", 0, jsonTransformation, userNo);
 
                 l_OrderData.UseConnection(sourceConnector.ConnectionString);
@@ -272,6 +330,8 @@ namespace eSyncMate.Processor.Managers
                 l_OrderData.OrderNumber = PublicFunctions.ConvertNullAsString(l_Row["OrderNumber"], string.Empty);
 
                 l_OrderData.SaveNew();
+
+                destinationConnector.Url = "Place_Order";
 
                 sourceResponse = RestConnector.Execute(destinationConnector, jsonTransformation).GetAwaiter().GetResult();
 
@@ -385,27 +445,27 @@ namespace eSyncMate.Processor.Managers
             }
             catch (Exception)
             {
-                    l_OrderData = new OrderData();
-                    DBConnector connection = new DBConnector(sourceConnector.ConnectionString);
-                    string command = string.Empty;
+                l_OrderData = new OrderData();
+                DBConnector connection = new DBConnector(sourceConnector.ConnectionString);
+                string command = string.Empty;
 
-                    command = "EXEC SP_UpdateOrderStatus @p_CustomerID ='" + sourceConnector.CustomerID + "',@p_RouteType = '" + RouteTypesEnum.SCSPlaceOrder + "Error',@p_ExternalId = '',@p_OrderId = " + l_ID;
+                command = "EXEC SP_UpdateOrderStatus @p_CustomerID ='" + sourceConnector.CustomerID + "',@p_RouteType = '" + RouteTypesEnum.SCSPlaceOrder + "Error',@p_ExternalId = '',@p_OrderId = " + l_ID;
 
-                    connection.Execute(command);
+                connection.Execute(command);
 
-                    string errorContent = sourceResponse.Content ?? "No Response from SPARS, please verify this order in SPARS before reprocessing.";
-                    string orderNumber = PublicFunctions.ConvertNullAsString(l_Row["OrderNumber"], string.Empty);
+                string errorContent = sourceResponse.Content ?? "No Response from SPARS, please verify this order in SPARS before reprocessing.";
+                string orderNumber = PublicFunctions.ConvertNullAsString(l_Row["OrderNumber"], string.Empty);
 
-                    l_OrderData.UseConnection(sourceConnector.ConnectionString);
-                    l_OrderData.DeleteWithType(l_ID, "ERP-ERROR");
+                l_OrderData.UseConnection(sourceConnector.ConnectionString);
+                l_OrderData.DeleteWithType(l_ID, "ERP-ERROR");
 
-                    l_OrderData.Type = "ERP-ERROR";
-                    l_OrderData.Data = errorContent;
-                    l_OrderData.CreatedBy = userNo;
-                    l_OrderData.CreatedDate = DateTime.Now;
-                    l_OrderData.OrderId = l_ID;
-                    l_OrderData.OrderNumber = orderNumber;
-                    l_OrderData.SaveNew();
+                l_OrderData.Type = "ERP-ERROR";
+                l_OrderData.Data = errorContent;
+                l_OrderData.CreatedBy = userNo;
+                l_OrderData.CreatedDate = DateTime.Now;
+                l_OrderData.OrderId = l_ID;
+                l_OrderData.OrderNumber = orderNumber;
+                l_OrderData.SaveNew();
             }
 
         }
