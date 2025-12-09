@@ -33,11 +33,11 @@ namespace eSyncMate.Processor.Managers
                     return;
                 }
 
-                if (route.Status.ToUpper() == "IN-ACTIVE")
-                {
-                    this.RemoveRouteJob(route);
-                    return;
-                }
+                //if (route.Status.ToUpper() == "IN-ACTIVE")
+                //{
+                //    this.RemoveRouteJob(route);
+                //    return;
+                //}
 
                 if (currentRoutes.ContainsKey(routeId))
                 {
@@ -345,6 +345,10 @@ namespace eSyncMate.Processor.Managers
                 {
                     MichealGetOrderRoute.Execute(_config, _logger, route);
                 }
+                //else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.MichealASNShipmentNotification))
+                //{
+                //    KnotASNShipmentNotificationRoute.Execute(_config, _logger, route);
+                //}
             }
             catch (Exception ex)
             {
