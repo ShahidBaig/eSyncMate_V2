@@ -211,7 +211,7 @@ namespace eSyncMate.Processor.Managers
                     DataTable l_Data = new DataTable();
 
                     l_SourceConnector.Command = l_SourceConnector.Command.Replace("@DATATYPE@", "API-JSON");
-                    l_SourceConnector.Command = l_SourceConnector.Command.Replace("@ORDERSTATUS@", "New");
+                    l_SourceConnector.Command = l_SourceConnector.Command.Replace("@ORDERSTATUS@", "InProgress");
                     l_SourceConnector.Command += $", @p_OrderId = {orderId}";
 
                     if (l_SourceConnector.CommandType == "SP")
@@ -266,7 +266,7 @@ namespace eSyncMate.Processor.Managers
 
             try
             {
-                if (OrderStatus.ToUpper() == "INPROGRESS" || OrderStatus.ToUpper() == "ERROR")
+                if (OrderStatus.ToUpper() == "INPROGRESS")
                 {
                     destinationConnector.Url = "Get_OrderInfo";
 

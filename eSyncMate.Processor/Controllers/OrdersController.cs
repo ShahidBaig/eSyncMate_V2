@@ -1124,7 +1124,7 @@ namespace eSyncMate.Processor.Controllers
                 }
             }
 
-            Result? l_Result = l_order.SetOrderStatus(OrderId, "NEW");
+            Result? l_Result = l_order.SetOrderStatus(OrderId, "InProgress");
 
             if (l_Result.IsSuccess)
             {
