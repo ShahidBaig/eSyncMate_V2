@@ -240,7 +240,7 @@ export class OrdersComponent implements OnInit {
       return 'syncerror-status';
     } else if (status.toUpperCase() === 'INPROGRESS') {
       return 'sysced-status';
-    } else if (status.toUpperCase() === 'ACKERROR') {
+    } else if (status.toUpperCase() === 'ASNERROR') {
       return 'syncerror-status';
     } else {
       return '';
