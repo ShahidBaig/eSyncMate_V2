@@ -53,7 +53,7 @@
   &nbsp;
   <mat-card>
     <mat-card-content>
-      <table mat-table [dataSource]="routeExceptionsToDisplay">
+      <table mat-table [dataSource]="dataSource">
 
         <!-- Route Name -->
         <ng-container matColumnDef="name">
@@ -96,11 +96,12 @@
         <tr mat-row *matRowDef="let row; columns: columns"></tr>
       </table>
 
-      <mat-paginator *ngIf="listOfRouteExceptions"
+      <mat-paginator 
                      [length]="listOfRouteExceptions.length"
                      [pageSize]="10"
                      [pageSizeOptions]="[5, 10, 25, 100]"
-                     (page)="onPageChange($event)">
+                     showFirstLastButtons>
+
       </mat-paginator>
 
     </mat-card-content>

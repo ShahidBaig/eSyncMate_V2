@@ -25,6 +25,9 @@ import { MatPaginatorModule } from '@angular/material/paginator';
 import { PageEvent } from '@angular/material/paginator';
 import { LanguageService } from '../services/language.service';
 import { TranslateModule } from '@ngx-translate/core'; 
+import { MatTableDataSource } from '@angular/material/table';
+import { MatPaginator } from '@angular/material/paginator';
+import { ViewChild } from '@angular/core';
 
 @Component({
   selector: 'maps',
@@ -67,6 +70,8 @@ export class MapsComponent implements OnInit {
   endDate: string = '';
   showDataColumn: boolean = true;
   isAdminUser: boolean = false;
+  dataSource = new MatTableDataSource<Map>([]);
+  @ViewChild(MatPaginator) paginator!: MatPaginator;
 
   columns: string[] = [
     'id',
@@ -175,7 +180,14 @@ export class MapsComponent implements OnInit {
           return;
         }
 
-        this.mapsToDisplay = this.listOfMaps.slice(0, 10);
+        //this.mapsToDisplay = this.listOfMaps.slice(0, 10);
+
+        this.dataSource.data = this.listOfMaps;  // set full list
+
+        setTimeout(() => {
+          this.dataSource.paginator = this.paginator;
+        }, 0); // ensures paginator initializes
+
 
         if (this.code === 200) {
           this.showSpinnerforSearch = false;

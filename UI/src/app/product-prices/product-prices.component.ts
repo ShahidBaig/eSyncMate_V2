@@ -25,6 +25,9 @@ import { LanguageService } from '../services/language.service';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { ApiService } from '../services/api.service';
 import * as XLSX from 'xlsx';
+import { MatTableDataSource } from '@angular/material/table';
+import { MatPaginator } from '@angular/material/paginator';
+import { ViewChild } from '@angular/core';
 
 interface ItemTypes {
   item_Type_Id: string;
@@ -90,7 +93,8 @@ export class ProductPricesComponent {
   itemTypeFilter: string = '';
   desc: string = '';
   showProcessProductPrices: boolean = false;
-
+  dataSource = new MatTableDataSource<CustomerProductCatalog>([]);
+  @ViewChild(MatPaginator) paginator!: MatPaginator;
 
   columns: string[] = [
     'ProductId',
@@ -240,7 +244,13 @@ export class ProductPricesComponent {
           return;
         }
 
-        this.customerProductCatalogToDisplay = this.listOfCustomerProductCatalog.slice(0, 10);
+        //this.customerProductCatalogToDisplay = this.listOfCustomerProductCatalog.slice(0, 10);
+
+        this.dataSource.data = this.listOfCustomerProductCatalog;  // set full list
+
+        setTimeout(() => {
+          this.dataSource.paginator = this.paginator;
+        }, 0); // ensures paginator initializes
 
         if (this.code === 200) {
           this.showSpinnerforSearchData = false;

@@ -28,6 +28,12 @@ import { TranslateService } from '@ngx-translate/core';
 import { environment } from 'src/environments/environment';
 import { CustomerProductCatalogService } from '../services/customerProductCatalogDialog.service';
 import { OrderDetailComponent } from './order-detail/order-detail.component';
+import { MatTableDataSource } from '@angular/material/table';
+import { MatPaginator } from '@angular/material/paginator';
+import { ViewChild } from '@angular/core';
+import { LiveAnnouncer } from '@angular/cdk/a11y';
+import { AfterViewInit, inject } from '@angular/core';
+import { MatSort, Sort, MatSortModule } from '@angular/material/sort';
 interface Customers {
   erpCustomerID: string;
   name: string;
@@ -82,7 +88,8 @@ export class OrdersComponent implements OnInit {
   CustomerName: any = '';
   showDataColumn: boolean = true;
   name: string = '';
-
+  dataSource = new MatTableDataSource<Order>([]);
+  @ViewChild(MatPaginator) paginator!: MatPaginator;
 
   columns: string[] = [
     'id',
@@ -674,7 +681,12 @@ export class OrdersComponent implements OnInit {
           return;
         }
 
-        this.ordersToDisplay = this.listOfOrders.slice(0, 10);
+        //this.ordersToDisplay = this.listOfOrders.slice(0, 10);
+        this.dataSource.data = this.listOfOrders;  // set full list
+
+        setTimeout(() => {
+          this.dataSource.paginator = this.paginator;
+        }, 0); // ensures paginator initializes
 
         if (this.code === 200) {
           //this.toast.success({ detail: "SUCCESS", summary: this.msg, duration: 5000, position: 'topRight' });

@@ -97,7 +97,7 @@
   &nbsp;
   <mat-card>
     <mat-card-content>
-      <table mat-table [dataSource]="productUploadPricesToDisplay">
+      <table mat-table [dataSource]="dataSource">
 
         <ng-container matColumnDef="id">
           <th mat-header-cell *matHeaderCellDef>{{ 'id' | translate }}</th>
@@ -178,8 +178,10 @@
 
       </table>
 
-      <mat-paginator [length]="listOfProductUploadPrices.length" [pageSize]="10" [pageSizeOptions]="[5, 10, 15, 20, 100]"
-                     (page)="onPageChange($event)">
+      <mat-paginator [length]="listOfProductUploadPrices.length"
+                     [pageSize]="10"
+                     [pageSizeOptions]="[5, 10, 25, 100]"
+                     showFirstLastButtons>
       </mat-paginator>
 
     </mat-card-content>

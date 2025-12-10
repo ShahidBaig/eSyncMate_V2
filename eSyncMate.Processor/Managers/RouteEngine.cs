@@ -345,10 +345,14 @@ namespace eSyncMate.Processor.Managers
                 {
                     MichealGetOrderRoute.Execute(_config, _logger, route);
                 }
-                //else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.MichealASNShipmentNotification))
-                //{
-                //    KnotASNShipmentNotificationRoute.Execute(_config, _logger, route);
-                //}
+                else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.MichealASNShipmentNotification))
+                {
+                    MichealASNShipmentNotificationRoute.Execute(_config, _logger, route);
+                }
+                else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.MichealCancellationLines))
+                {
+                    MichealCancellationRoute.Execute(_config, _logger, route);
+                }
             }
             catch (Exception ex)
             {

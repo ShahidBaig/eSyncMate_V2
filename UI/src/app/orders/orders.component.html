@@ -71,7 +71,7 @@
   &nbsp;
   <mat-card>
     <mat-card-content>
-      <table mat-table [dataSource]="ordersToDisplay">
+      <table mat-table [dataSource]="dataSource">
 
         <!-- ID Column -->
         <ng-container matColumnDef="id">
@@ -246,9 +246,12 @@
         <tr mat-row *matRowDef="let row; columns: columns"></tr>
 
       </table>
-      <mat-paginator [length]="listOfOrders.length" [pageSize]="10" [pageSizeOptions]="[5, 10, 25, 100]"
-                     (page)="onPageChange($event)">
-      </mat-paginator>
+     
+                    <mat-paginator [length]="listOfOrders.length"
+                [pageSize]="10"
+                [pageSizeOptions]="[5, 10, 25, 100]"
+                showFirstLastButtons>
+ </mat-paginator>
 
     </mat-card-content>
   </mat-card>

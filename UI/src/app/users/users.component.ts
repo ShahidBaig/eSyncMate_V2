@@ -30,6 +30,9 @@ import { ApiService } from '../services/api.service';
 import { UserService } from '../services/user.service';
 import { EditUsersDialogComponent } from './edit-users-dialog/edit-users-dialog.component';
 import { RouterLink } from '@angular/router';
+import { MatTableDataSource } from '@angular/material/table';
+import { MatPaginator } from '@angular/material/paginator';
+import { ViewChild } from '@angular/core';
 
 @Component({
   selector: 'users',
@@ -74,6 +77,8 @@ export class UsersComponent {
   endDate: string = '';
   showDataColumn: boolean = true;
   isAdminUser: boolean = false;
+  dataSource = new MatTableDataSource<User>([]);
+  @ViewChild(MatPaginator) paginator!: MatPaginator;
 
   columns: string[] = [
     'id',
@@ -174,7 +179,13 @@ export class UsersComponent {
           return;
         }
 
-        this.UserToDisplay = this.listOfUsers.slice(0, 10);
+        //this.UserToDisplay = this.listOfUsers.slice(0, 10);
+
+        this.dataSource.data = this.listOfUsers;  // set full list
+
+        setTimeout(() => {
+          this.dataSource.paginator = this.paginator;
+        }, 0); // ensures paginator initializes
 
         if (this.code === 200) {
           this.showSpinnerforSearch = false;

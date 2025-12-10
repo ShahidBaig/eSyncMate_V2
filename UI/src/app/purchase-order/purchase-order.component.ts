@@ -27,7 +27,9 @@ import { PurchaseOrderService } from '../services/purchaseOrder.service';
 import { AddPurchaseOrderComponent } from './add-purchase-order/add-purchase-order.component';
 import { EditPurchaseOrderComponent } from './edit-purchase-order/edit-purchase-order.component';
 import { ViewPurchaseOrderComponent } from './view-purchase-order/view-purchase-order.component';
-
+import { MatTableDataSource } from '@angular/material/table';
+import { MatPaginator } from '@angular/material/paginator';
+import { ViewChild } from '@angular/core';
 
 
 @Component({
@@ -73,6 +75,8 @@ export class PurchaseOrderComponent implements OnInit {
   endDate: string = '';
   showDataColumn: boolean = true;
   isAdminUser: boolean = false;
+  dataSource = new MatTableDataSource<PurchaseOrder>([]);
+  @ViewChild(MatPaginator) paginator!: MatPaginator;
 
   columns: string[] = [
     'id',
@@ -254,7 +258,13 @@ export class PurchaseOrderComponent implements OnInit {
           return;
         }
 
-        this.mapsToDisplay = this.listOfPurchaseOrders.slice(0, 10);
+        //this.mapsToDisplay = this.listOfPurchaseOrders.slice(0, 10);
+
+        this.dataSource.data = this.listOfPurchaseOrders;  // set full list
+
+        setTimeout(() => {
+          this.dataSource.paginator = this.paginator;
+        }, 0); // ensures paginator initializes
 
         if (this.code === 200) {
           this.showSpinnerforSearch = false;

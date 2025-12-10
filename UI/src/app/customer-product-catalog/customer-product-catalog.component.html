@@ -139,7 +139,7 @@
   &nbsp;
   <mat-card>
     <mat-card-content>
-      <table mat-table [dataSource]="customerProductCatalogToDisplay">
+      <table mat-table [dataSource]="dataSource">
 
         <ng-container matColumnDef="ProductId">
           <th mat-header-cell *matHeaderCellDef>{{ 'id' | translate }} </th>
@@ -220,7 +220,7 @@
       <mat-paginator [length]="listOfCustomerProductCatalog.length"
                      [pageSize]="10"
                      [pageSizeOptions]="[5, 10, 25, 100]"
-                     (page)="onPageChange($event)">
+                     showFirstLastButtons>
       </mat-paginator>
 
     </mat-card-content>

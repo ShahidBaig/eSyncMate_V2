@@ -26,6 +26,9 @@ import { FileContentViewerDialogComponent } from '../file-content-viewer-dialog/
 import { LanguageService } from '../services/language.service';
 import { TranslateModule } from '@ngx-translate/core';
 import { environment } from 'src/environments/environment';
+import { MatTableDataSource } from '@angular/material/table';
+import { MatPaginator } from '@angular/material/paginator';
+import { ViewChild } from '@angular/core';
 
 @Component({
   selector: 'route-exception',
@@ -66,6 +69,8 @@ export class RouteExceptionComponent implements OnInit {
   routeOptions: any[] = [];
   loadingStates = new Map<number, boolean>();
   isAdminUser: boolean = false;
+  dataSource = new MatTableDataSource<RouteLog>([]);
+  @ViewChild(MatPaginator) paginator!: MatPaginator;
 
   columns: string[] = [
     'name',
@@ -203,7 +208,13 @@ export class RouteExceptionComponent implements OnInit {
           return;
         }
 
-        this.routeExceptionsToDisplay = this.listOfRouteExceptions.slice(0, 10);
+        //this.routeExceptionsToDisplay = this.listOfRouteExceptions.slice(0, 10);
+
+        this.dataSource.data = this.listOfRouteExceptions;  // set full list
+
+        setTimeout(() => {
+          this.dataSource.paginator = this.paginator;
+        }, 0); // ensures paginator initializes
 
         this.showSpinnerforSearch = false;
       },

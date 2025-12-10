@@ -27,7 +27,9 @@ import { TranslateModule } from '@ngx-translate/core';
 
 import { HttpClientModule, HttpClient } from '@angular/common/http';
 import { ApiService } from '../services/api.service';
-
+import { MatTableDataSource } from '@angular/material/table';
+import { MatPaginator } from '@angular/material/paginator';
+import { ViewChild } from '@angular/core';
 
 
 @Component({
@@ -72,6 +74,8 @@ export class RouteTypesComponent {
   endDate: string = '';
   showDataColumn: boolean = true;
   isAdminUser: boolean = false;
+  dataSource = new MatTableDataSource<RouteType>([]);
+  @ViewChild(MatPaginator) paginator!: MatPaginator;
 
   columns: string[] = [
     'id',
@@ -179,8 +183,12 @@ export class RouteTypesComponent {
           return;
         }
 
-        this.RouteTypeToDisplay = this.listOfRouteType.slice(0, 10);
+        //this.RouteTypeToDisplay = this.listOfRouteType.slice(0, 10);
+        this.dataSource.data = this.listOfRouteType;  // set full list
 
+        setTimeout(() => {
+          this.dataSource.paginator = this.paginator;
+        }, 0); // ensures paginator initializes
         if (this.code === 200) {
           this.showSpinnerforSearch = false;
         }

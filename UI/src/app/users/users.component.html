@@ -59,7 +59,7 @@
   &nbsp;
   <mat-card>
     <mat-card-content>
-      <table mat-table [dataSource]="UserToDisplay" class="mat-elevation-z8">
+      <table mat-table [dataSource]="dataSource" class="mat-elevation-z8">
         <ng-container matColumnDef="id">
           <th mat-header-cell *matHeaderCellDef>{{ 'id' | translate }}</th>
           <td mat-cell *matCellDef="let element"> {{ element.id }} </td>
@@ -110,8 +110,10 @@
         <tr mat-header-row *matHeaderRowDef="columns"></tr>
         <tr mat-row *matRowDef="let row; columns: columns"></tr>
       </table>
-      <mat-paginator [length]="listOfUsers.length" [pageSize]="10" [pageSizeOptions]="[5, 10, 25, 100]"
-        (page)="onPageChange($event)">
+      <mat-paginator [length]="listOfUsers.length"
+                     [pageSize]="10"
+                     [pageSizeOptions]="[5, 10, 25, 100]"
+                     showFirstLastButtons>  
       </mat-paginator>
     </mat-card-content>
   </mat-card>

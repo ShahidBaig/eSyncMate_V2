@@ -52,7 +52,7 @@
   &nbsp;
   <mat-card>
     <mat-card-content>
-      <table mat-table [dataSource]="RouteTypeToDisplay">
+      <table mat-table [dataSource]="dataSource">
         {{ 'idColumn' | translate }}
         <ng-container matColumnDef="id">
           <th mat-header-cell *matHeaderCellDef>{{ 'routeTypeID' | translate }}</th>
@@ -90,7 +90,7 @@
       <mat-paginator [length]="listOfRouteType.length"
                      [pageSize]="10"
                      [pageSizeOptions]="[5, 10, 25, 100]"
-                     (page)="onPageChange($event)">
+                     showFirstLastButtons>
       </mat-paginator>
     </mat-card-content>
   </mat-card>
