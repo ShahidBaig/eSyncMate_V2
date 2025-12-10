@@ -54,7 +54,7 @@
   &nbsp;
   <mat-card>
     <mat-card-content>
-      <table mat-table [dataSource]="customersToDisplay">
+      <table mat-table [dataSource]="dataSource">
 
         <!-- ID Column -->
         <ng-container matColumnDef="id">
@@ -125,7 +125,7 @@
       <mat-paginator [length]="listOfCustomers.length"
                      [pageSize]="10"
                      [pageSizeOptions]="[5, 10, 25, 100]"
-                     (page)="onPageChange($event)">
+                     showFirstLastButtons>
       </mat-paginator>
 
     </mat-card-content>

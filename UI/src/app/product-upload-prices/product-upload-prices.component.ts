@@ -24,7 +24,9 @@ import { PageEvent } from '@angular/material/paginator';
 import { LanguageService } from '../services/language.service';
 import { TranslateModule } from '@ngx-translate/core';
 import { ApiService } from '../services/api.service';
-
+import { MatTableDataSource } from '@angular/material/table';
+import { MatPaginator } from '@angular/material/paginator';
+import { ViewChild } from '@angular/core';
 interface Customers {
   erpCustomerID: string;
 }
@@ -74,6 +76,8 @@ export class ProductUploadPricesComponent {
   erpCustomerID: string = '';
   customersOptions: Customers[] | undefined;
   isAdminUser: boolean = false;
+  dataSource = new MatTableDataSource<ProductUploadPrices>([]);
+  @ViewChild(MatPaginator) paginator!: MatPaginator;
 
   columns: string[] =
     [
@@ -192,7 +196,11 @@ export class ProductUploadPricesComponent {
           return;
         }
 
-        this.productUploadPricesToDisplay = this.listOfProductUploadPrices.slice(0, 10);
+        this.dataSource.data = this.listOfProductUploadPrices;  // set full list
+
+        setTimeout(() => {
+          this.dataSource.paginator = this.paginator;
+        }, 0); // ensures paginator initializes
 
         if (this.code === 200) {
           this.showSpinnerforSearch = false;

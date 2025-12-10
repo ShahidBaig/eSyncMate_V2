@@ -53,7 +53,7 @@
   &nbsp;
   <mat-card>
     <mat-card-content>
-      <table mat-table [dataSource]="partnergroupsToDisplay">
+      <table mat-table [dataSource]="dataSource">
 
         {{ 'idColumn' | translate }}
         <ng-container matColumnDef="id">
@@ -103,7 +103,7 @@
       <mat-paginator [length]="listOfPartnerGroups.length"
                      [pageSize]="10"
                      [pageSizeOptions]="[5, 10, 25, 100]"
-                     (page)="onPageChange($event)">
+                     showFirstLastButtons>
       </mat-paginator>
 
     </mat-card-content>

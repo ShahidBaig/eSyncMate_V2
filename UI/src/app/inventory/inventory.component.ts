@@ -26,6 +26,9 @@ import { InventorypopupComponent } from './inventory-popup/inventory-popup.compo
 import { TranslateService } from '@ngx-translate/core';
 import { environment } from 'src/environments/environment';
 import { InventoryBatchwiseComponent } from './inventory-batchwise/inventory-batchwise.component';
+import { MatTableDataSource } from '@angular/material/table';
+import { MatPaginator } from '@angular/material/paginator';
+import { ViewChild } from '@angular/core';
 
 interface Customers {
   erpCustomerID: string;
@@ -76,6 +79,8 @@ export class InventoryComponent implements OnInit {
   showSpinnerforSearch: boolean = false;
   showSpinner: boolean = false;
   statusOptions = ['Select Status', 'PROCESSING', 'COMPLETED','ERROR'];
+  dataSource = new MatTableDataSource<Inventory>([]);
+  @ViewChild(MatPaginator) paginator!: MatPaginator;
 
   columns: string[] = [
     'CustomerID',
@@ -322,7 +327,13 @@ export class InventoryComponent implements OnInit {
           return;
         }
 
-        this.inventoryToDisplay = this.listOfInventory.slice(0, 10);
+        //this.inventoryToDisplay = this.listOfInventory.slice(0, 10);
+
+        this.dataSource.data = this.listOfInventory;  // set full list
+
+        setTimeout(() => {
+          this.dataSource.paginator = this.paginator;
+        }, 0); // ensures paginator initializes
 
         if (this.code === 200) {
           //this.toast.success({ detail: "SUCCESS", summary: this.msg, duration: 5000, position: 'topRight' });

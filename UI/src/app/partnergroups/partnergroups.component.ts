@@ -24,6 +24,9 @@ import { MatPaginatorModule } from '@angular/material/paginator';
 import { PageEvent } from '@angular/material/paginator';
 import { LanguageService } from '../services/language.service';
 import { TranslateModule } from '@ngx-translate/core';
+import { MatTableDataSource } from '@angular/material/table';
+import { MatPaginator } from '@angular/material/paginator';
+import { ViewChild } from '@angular/core';
 
 @Component({
   selector: 'partnergroups',
@@ -66,6 +69,8 @@ export class PartnerGroupsComponent implements OnInit {
   endDate: string = '';
   showDataColumn: boolean = true;
   isAdminUser: boolean = false;
+  dataSource = new MatTableDataSource<PartnerGroup>([]);
+  @ViewChild(MatPaginator) paginator!: MatPaginator;
 
   columns: string[] = [
     'id',
@@ -175,7 +180,14 @@ export class PartnerGroupsComponent implements OnInit {
           return;
         }
 
-        this.partnergroupsToDisplay = this.listOfPartnerGroups.slice(0, 10);
+        //this.partnergroupsToDisplay = this.listOfPartnerGroups.slice(0, 10);
+
+        this.dataSource.data = this.listOfPartnerGroups;  // set full list
+
+        setTimeout(() => {
+          this.dataSource.paginator = this.paginator;
+        }, 0); // ensures paginator initializes
+
 
         if (this.code === 200) {
           this.showSpinnerforSearch = false;

@@ -127,7 +127,9 @@ namespace eSyncMate.Processor.Managers
 
             try
             {
-                string url = $"{sourceConnector.BaseUrl}/api/orders?start_date={formattedStartDate}&order_state_codes={statusCode}";
+                //string url = $"{sourceConnector.BaseUrl}/api/orders?start_date={formattedStartDate}&order_state_codes={statusCode}";
+                string url = $"{sourceConnector.BaseUrl}/api/orders?order_state_codes={statusCode}&max=100";
+
                 sourceConnector.Url = url;
 
                 sourceResponse = RestConnector.Execute(sourceConnector, string.Empty).GetAwaiter().GetResult();

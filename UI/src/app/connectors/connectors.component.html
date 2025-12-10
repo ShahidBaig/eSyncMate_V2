@@ -56,7 +56,7 @@
 
   <mat-card>
     <mat-card-content>
-      <table mat-table [dataSource]="connectorsToDisplay">
+      <table mat-table [dataSource]="dataSource">
 
         <!-- ID Column -->
         <ng-container matColumnDef="id">
@@ -105,10 +105,16 @@
         <tr mat-row *matRowDef="let row; columns: columns"></tr>
 
       </table>
-      <mat-paginator [length]="listOfConnectors.length"
+      <!--<mat-paginator [length]="listOfConnectors.length"
+                 [pageSize]="10"
+                 [pageSizeOptions]="[5, 10, 15, 20, 100]"
+                 (page)="onPageChange($event)">
+  </mat-paginator>-->
+
+      <mat-paginator [length]="100"
                      [pageSize]="10"
-                     [pageSizeOptions]="[5, 10, 15, 20, 100]"
-                     (page)="onPageChange($event)">
+                     [pageSizeOptions]="[5, 10, 25, 100]"
+                     showFirstLastButtons>
       </mat-paginator>
     </mat-card-content>
   </mat-card>

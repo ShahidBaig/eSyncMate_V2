@@ -25,6 +25,9 @@ import { PageEvent } from '@angular/material/paginator';
 import { ApiService } from '../services/api.service';
 import { LanguageService } from '../services/language.service';
 import { TranslateModule } from '@ngx-translate/core';
+import { MatTableDataSource } from '@angular/material/table';
+import { MatPaginator } from '@angular/material/paginator';
+import { ViewChild } from '@angular/core';
 
 
 @Component({
@@ -67,6 +70,8 @@ export class CustomersComponent implements OnInit {
   startDate: string = '';
   endDate: string = '';
   isAdminUser: boolean = false;
+  dataSource = new MatTableDataSource<Customer>([]);
+  @ViewChild(MatPaginator) paginator!: MatPaginator;
 
   columns: string[] = [
     'id',
@@ -178,7 +183,14 @@ export class CustomersComponent implements OnInit {
           return;
         }
 
-        this.customersToDisplay = this.listOfCustomers.slice(0, 10);
+        //this.customersToDisplay = this.listOfCustomers.slice(0, 10);
+
+        this.dataSource.data = this.listOfCustomers;  // set full list
+
+        setTimeout(() => {
+          this.dataSource.paginator = this.paginator;
+        }, 0); // ensures paginator initializes
+
 
         if (this.code === 200) {
           this.showSpinnerforSearch = false;

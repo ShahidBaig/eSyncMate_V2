@@ -28,7 +28,9 @@ import { PageEvent } from '@angular/material/paginator';
 import { LanguageService } from '../services/language.service';
 import { TranslateModule } from '@ngx-translate/core';
 import { InventoryService } from '../services/inventory.service';
-
+import { MatTableDataSource } from '@angular/material/table';
+import { MatPaginator } from '@angular/material/paginator';
+import { ViewChild } from '@angular/core';
 interface Customers {
   erpCustomerID: string;
 }
@@ -77,6 +79,10 @@ export class RoutesComponent {
   showDataColumn: boolean = true;
   isAdminUser: boolean = false;
   customersOptions: Customers[] | undefined;
+
+  dataSource = new MatTableDataSource<Routes>([]);
+  @ViewChild(MatPaginator) paginator!: MatPaginator;
+
 
   columns: string[] = [
     'id',
@@ -197,7 +203,11 @@ export class RoutesComponent {
           return;
         }
 
-        this.routesToDisplay = this.listOfRoutes.slice(0, 10);
+        this.dataSource.data = this.listOfRoutes;  // set full list
+
+        setTimeout(() => {
+          this.dataSource.paginator = this.paginator;
+        }, 0); // ensures paginator initializes
 
         this.showSpinnerforSearch = false;
       },

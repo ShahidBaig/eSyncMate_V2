@@ -26,6 +26,9 @@ import { PageEvent } from '@angular/material/paginator';
 import { LanguageService } from '../services/language.service';
 import { TranslateModule } from '@ngx-translate/core'; 
 import { ApiService } from '../services/api.service';
+import { MatTableDataSource } from '@angular/material/table';
+import { MatPaginator } from '@angular/material/paginator';
+import { ViewChild } from '@angular/core';
 
 @Component({
   selector: 'connectors',
@@ -68,6 +71,8 @@ export class ConnectorsComponent implements OnInit {
   endDate: string = '';
   showDataColumn: boolean = true;
   isAdminUser: boolean = false;
+  dataSource = new MatTableDataSource<Connector>([]);
+  @ViewChild(MatPaginator) paginator!: MatPaginator;
 
   columns: string[] = [
     'id',
@@ -175,7 +180,11 @@ export class ConnectorsComponent implements OnInit {
           return;
         }
 
-        this.connectorsToDisplay = this.listOfConnectors.slice(0, 10);
+        this.dataSource.data = this.listOfConnectors;  // set full list
+
+        setTimeout(() => {
+          this.dataSource.paginator = this.paginator;
+        }, 0); // ensures paginator initializes
 
         if (this.code === 200) {
           this.showSpinnerforSearch = false;
