@@ -103,7 +103,7 @@ export class RoutesComponent {
 
   ngOnInit(): void {
     this.selectedOption = 'Select Route'; // Set default selected option
-    this.getRoutes();
+    this.getRoutes(true);
     this.getERPCustomer();
     this.isAdminUser = ["ADMIN", "WRITER"].includes(this.token.getTokenUserInfo()?.userType || '');
 
@@ -114,8 +114,12 @@ export class RoutesComponent {
       }
     }
     if (this.selectedOption === 'Select Route') {
-      this.getRoutes();
+      this.getRoutes(true);
     }
+  }
+
+  ngAfterViewInit(): void {
+    this.dataSource.paginator = this.paginator;
   }
 
   openAddRouteDialog(): void {
@@ -126,7 +130,7 @@ export class RoutesComponent {
 
     dialogRef.afterClosed().subscribe(result => {
       if (result === 'saved') {
-        this.getRoutes();
+        this.getRoutes(false);
       }
     });
   }
@@ -140,7 +144,7 @@ export class RoutesComponent {
 
     dialogRef.afterClosed().subscribe(result => {
       if (result === 'updated') {
-        this.getRoutes();
+        this.getRoutes(false);
       }
     });
   }
@@ -169,7 +173,7 @@ export class RoutesComponent {
     return year + '-' + month + '-' + day;
   }
 
-  getRoutes() {
+  getRoutes(resetPage: boolean = false) {
     this.showSpinnerforSearch = true;
 
     let stringFromDate = '';
@@ -191,9 +195,13 @@ export class RoutesComponent {
 
     this.api.getRoutes(this.selectedOption, this.searchValue).subscribe({
       next: (res: any) => {
-        this.listOfRoutes = res.routes;
         this.msg = res.message;
         this.code = res.code;
+
+        const oldPageIndex = this.paginator?.pageIndex ?? 0;
+        const oldPageSize = this.paginator?.pageSize ?? 10;
+
+        this.listOfRoutes = res.routes ?? [];
 
         if (this.listOfRoutes == null || this.listOfRoutes.length === 0) {
           this.toast.info({ detail: "INFO", summary: this.languageService.getTranslation('noFilterDataMessage'), duration: 5000, position: 'topRight' });
@@ -203,11 +211,16 @@ export class RoutesComponent {
           return;
         }
 
-        this.dataSource.data = this.listOfRoutes;  // set full list
+        this.dataSource.data = this.listOfRoutes;
 
-        setTimeout(() => {
-          this.dataSource.paginator = this.paginator;
-        }, 0); // ensures paginator initializes
+        if (resetPage) {
+          this.paginator?.firstPage();
+        } else {
+          const maxPageIndex = Math.max(Math.ceil(this.listOfRoutes.length / oldPageSize) - 1, 0);
+          this.paginator.pageIndex = Math.min(oldPageIndex, maxPageIndex);
+
+          this.paginator._changePageSize(this.paginator.pageSize);
+        }
 
         this.showSpinnerforSearch = false;
       },

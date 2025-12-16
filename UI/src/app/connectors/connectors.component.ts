@@ -96,7 +96,7 @@ export class ConnectorsComponent implements OnInit {
     }
 
     if (this.selectedOption === 'Select Connector') {
-      this.getConnectors();
+      this.getConnectors(true);
     }
   }
 
@@ -108,7 +108,7 @@ export class ConnectorsComponent implements OnInit {
 
     dialogRef.afterClosed().subscribe(result => {
       if (result === 'saved') {
-        this.getConnectors();
+        this.getConnectors(false);
       }
     });
   }
@@ -122,7 +122,7 @@ export class ConnectorsComponent implements OnInit {
 
     dialogRef.afterClosed().subscribe(result => {
       if (result === 'updated') {
-        this.getConnectors();
+        this.getConnectors(false);
       }
     });
   }
@@ -130,6 +130,10 @@ export class ConnectorsComponent implements OnInit {
   onPageChange(event: PageEvent) {
     const startIndex = event.pageIndex * event.pageSize;
     this.connectorsToDisplay = this.listOfConnectors.slice(startIndex, startIndex + event.pageSize);
+  }
+
+  ngAfterViewInit(): void {
+    this.dataSource.paginator = this.paginator;
   }
 
   get label(): string {
@@ -148,7 +152,7 @@ export class ConnectorsComponent implements OnInit {
     return year + '-' + month + '-' + day;
   }
 
-  getConnectors() {
+  getConnectors(resetPage: boolean = false) {
     this.showSpinnerforSearch = false;
     let stringFromDate = '';
     let stringToDate = '';
@@ -169,22 +173,37 @@ export class ConnectorsComponent implements OnInit {
 
     this.ConnectorsApi.getConnectors(this.selectedOption, this.searchValue).subscribe({
       next: (res: any) => {
-        this.listOfConnectors = res.connectors;
         this.msg = res.message;
         this.code = res.code;
+
+        // ✅ old page info BEFORE updating data
+        const oldPageIndex = this.paginator?.pageIndex ?? 0;
+        const oldPageSize = this.paginator?.pageSize ?? 10;
+
+        this.listOfConnectors = res.connectors ?? [];
+
 
         if (this.listOfConnectors == null || this.listOfConnectors.length === 0) {
           this.toast.info({ detail: "INFO", summary: this.languageService.getTranslation('noFilterDataMessage'), duration: 5000, /*sticky: true,*/ position: 'topRight' });
           this.showSpinnerforSearch = false;
           this.connectorsToDisplay = [];
+          this.dataSource.data = [];
+
           return;
         }
 
-        this.dataSource.data = this.listOfConnectors;  // set full list
+        this.dataSource.data = this.listOfConnectors;
 
-        setTimeout(() => {
-          this.dataSource.paginator = this.paginator;
-        }, 0); // ensures paginator initializes
+        // ✅ resetPage ? first page : keep old page
+        if (resetPage) {
+          this.paginator?.firstPage();
+        } else {
+          const maxPageIndex = Math.max(Math.ceil(this.listOfConnectors.length / oldPageSize) - 1, 0);
+          this.paginator.pageIndex = Math.min(oldPageIndex, maxPageIndex);
+
+          // force re-render on same page
+          this.paginator._changePageSize(this.paginator.pageSize);
+        }
 
         if (this.code === 200) {
           this.showSpinnerforSearch = false;

@@ -117,6 +117,10 @@ export class InventoryComponent implements OnInit {
     this.getRouteTypes();
   }
 
+  ngAfterViewInit(): void {
+    this.dataSource.paginator = this.paginator;
+  }
+
   getERPCustomer() {
     this.api.getERPCustomers().subscribe({
       next: (res: any) => {
@@ -258,7 +262,7 @@ export class InventoryComponent implements OnInit {
     this.inventoryToDisplay = this.listOfInventory.slice(startIndex, startIndex + event.pageSize);
   }
 
-  getInventory() {
+  getInventory(resetPage: boolean = false) {
     //let customerID = (this.InventoryForm.get('customerID') as FormControl).value;
     let itemID = (this.InventoryForm.get('itemID') as FormControl).value;
     let startDate = (this.InventoryForm.get('startDate') as FormControl).value;
@@ -314,26 +318,34 @@ export class InventoryComponent implements OnInit {
 
     this.api.getInventory(itemID, stringFromDate, stringToDate, status, customerID, routeType).subscribe({
       next: (res: any) => {
-        this.listOfInventory = res.inventory;
+        
         this.msg = res.message;
         this.code = res.code;
 
+        const oldPageIndex = this.paginator?.pageIndex ?? 0;
+        const oldPageSize = this.paginator?.pageSize ?? 10;
+
+        this.listOfInventory = res.inventory ?? [];
 
         if (this.listOfInventory == null || this.listOfInventory.length === 0) {
           this.toast.info({ detail: "INFO", summary: this.languageService.getTranslation('noFilterDataMessage'), duration: 5000, /*sticky: true,*/ position: 'topRight' });
           this.showSpinnerforSearch = false;
           this.inventoryToDisplay = [];
+          this.dataSource.data = [];
 
           return;
         }
 
-        //this.inventoryToDisplay = this.listOfInventory.slice(0, 10);
+        this.dataSource.data = this.listOfInventory;
 
-        this.dataSource.data = this.listOfInventory;  // set full list
+        if (resetPage) {
+          this.paginator?.firstPage();
+        } else {
+          const maxPageIndex = Math.max(Math.ceil(this.listOfInventory.length / oldPageSize) - 1, 0);
+          this.paginator.pageIndex = Math.min(oldPageIndex, maxPageIndex);
 
-        setTimeout(() => {
-          this.dataSource.paginator = this.paginator;
-        }, 0); // ensures paginator initializes
+          this.paginator._changePageSize(this.paginator.pageSize);
+        }
 
         if (this.code === 200) {
           //this.toast.success({ detail: "SUCCESS", summary: this.msg, duration: 5000, position: 'topRight' });

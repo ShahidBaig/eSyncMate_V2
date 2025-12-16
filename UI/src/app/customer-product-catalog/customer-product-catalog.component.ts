@@ -142,6 +142,10 @@ export class CustomerProductCatalogComponent {
     this.getERPCustomer();
   }
 
+  ngAfterViewInit(): void {
+    this.dataSource.paginator = this.paginator;
+  }
+
   getFilteredItemTypes(): any {
 
     const filterValue = (this.itemTypeFilter ?? '').toString().trim().toLowerCase();
@@ -273,7 +277,7 @@ export class CustomerProductCatalogComponent {
     this.customerProductCatalogToDisplay = this.listOfCustomerProductCatalog.slice(startIndex, startIndex + event.pageSize);
   }
 
-  getCustomerProductCatalog() {
+  getCustomerProductCatalog(resetPage: boolean = false) {
     this.showSpinnerforSearchData = true;
     let stringFromDate = '';
     let stringToDate = '';
@@ -294,25 +298,33 @@ export class CustomerProductCatalogComponent {
 
     this.api.getCustomerProductCatalog(this.selectedOption, this.searchValue).subscribe({
       next: (res: any) => {
-        this.listOfCustomerProductCatalog = res.customerProductCatalogDatatable;
         this.msg = res.message;
         this.code = res.code;
+
+        const oldPageIndex = this.paginator?.pageIndex ?? 0;
+        const oldPageSize = this.paginator?.pageSize ?? 10;
+
+        this.listOfCustomerProductCatalog = res.customerProductCatalogDatatable ?? [];
 
         if (this.listOfCustomerProductCatalog == null || this.listOfCustomerProductCatalog.length === 0) {
           this.toast.info({ detail: "INFO", summary: this.languageService.getTranslation('noFilterDataMessage'), duration: 5000, /*sticky: true,*/ position: 'topRight' });
           this.showSpinnerforSearchData = false;
           this.customerProductCatalogToDisplay = [];
+          this.dataSource.data = [];
 
           return;
         }
 
-        //this.customerProductCatalogToDisplay = this.listOfCustomerProductCatalog.slice(0, 10);
+        this.dataSource.data = this.listOfCustomerProductCatalog;
 
-        this.dataSource.data = this.listOfCustomerProductCatalog;  // set full list
+        if (resetPage) {
+          this.paginator?.firstPage();
+        } else {
+          const maxPageIndex = Math.max(Math.ceil(this.listOfCustomerProductCatalog.length / oldPageSize) - 1, 0);
+          this.paginator.pageIndex = Math.min(oldPageIndex, maxPageIndex);
 
-        setTimeout(() => {
-          this.dataSource.paginator = this.paginator;
-        }, 0); // ensures paginator initializes
+          this.paginator._changePageSize(this.paginator.pageSize);
+        }
 
         if (this.code === 200) {
           this.showSpinnerforSearchData = false;
@@ -362,11 +374,11 @@ export class CustomerProductCatalogComponent {
             this.code = res.code;
             if (this.code === 200) {
               this.toast.success({ detail: "SUCCESS", summary: this.msg, duration: 5000, sticky: true, position: 'topRight' });
-              this.getCustomerProductCatalog();
+              this.getCustomerProductCatalog(true);
             }
             else if (this.code === 201) {
               this.toast.warning({ detail: "Warning", summary: this.msg, duration: 5000, sticky: true, position: 'topRight' });
-              this.getCustomerProductCatalog();
+              this.getCustomerProductCatalog(true);
             }
             else if (this.code === 400) {
               this.toast.warning({ detail: "ERROR", summary: this.msg, duration: 5000, sticky: true, position: 'topRight' });

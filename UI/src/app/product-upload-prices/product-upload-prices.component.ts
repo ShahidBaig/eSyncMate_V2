@@ -102,10 +102,14 @@ export class ProductUploadPricesComponent {
 
   ngOnInit(): void {
     if (this.selectedOption === 'Select Product Upload Prices') {
-      this.getCustomerProductCatalog();
+      this.getCustomerProductCatalog(true);
     }
 
     this.getERPCustomer();
+  }
+
+  ngAfterViewInit(): void {
+    this.dataSource.paginator = this.paginator;
   }
 
   getERPCustomer() {
@@ -160,8 +164,7 @@ export class ProductUploadPricesComponent {
     this.productUploadPricesToDisplay = this.listOfProductUploadPrices.slice(startIndex, startIndex + event.pageSize);
   }
 
-
-  getCustomerProductCatalog() {
+  getCustomerProductCatalog(resetPage: boolean = false) {
     this.showSpinnerforSearch = false;
     let stringFromDate = '';
     let stringToDate = '';
@@ -182,25 +185,33 @@ export class ProductUploadPricesComponent {
 
     this.api.getProductUploadPrices(this.selectedOption, this.searchValue).subscribe({
       next: (res: any) => {
-        this.listOfProductUploadPrices = res.productUploadPrices;
         this.msg = res.message;
         this.code = res.code;
 
-        this.productUploadPricesToDisplay = this.listOfProductUploadPrices;
+        const oldPageIndex = this.paginator?.pageIndex ?? 0;
+        const oldPageSize = this.paginator?.pageSize ?? 10;
+
+        this.listOfProductUploadPrices = res.productUploadPrices ?? [];
 
         if (this.listOfProductUploadPrices == null || this.listOfProductUploadPrices.length === 0) {
           this.toast.info({ detail: "INFO", summary: this.languageService.getTranslation('noFilterDataMessage'), duration: 5000, /*sticky: true,*/ position: 'topRight' });
           this.showSpinnerforSearch = false;
           this.productUploadPricesToDisplay = [];
+          this.dataSource.data = [];
 
           return;
         }
 
-        this.dataSource.data = this.listOfProductUploadPrices;  // set full list
+        this.dataSource.data = this.listOfProductUploadPrices;
 
-        setTimeout(() => {
-          this.dataSource.paginator = this.paginator;
-        }, 0); // ensures paginator initializes
+        if (resetPage) {
+          this.paginator?.firstPage();
+        } else {
+          const maxPageIndex = Math.max(Math.ceil(this.listOfProductUploadPrices.length / oldPageSize) - 1, 0);
+          this.paginator.pageIndex = Math.min(oldPageIndex, maxPageIndex);
+
+          this.paginator._changePageSize(this.paginator.pageSize);
+        }
 
         if (this.code === 200) {
           this.showSpinnerforSearch = false;
@@ -272,11 +283,11 @@ export class ProductUploadPricesComponent {
             this.code = res.code;
             if (this.code === 200) {
               this.toast.success({ detail: "SUCCESS", summary: this.msg, duration: 5000, sticky: true, position: 'topRight' });
-              this.getCustomerProductCatalog();
+              this.getCustomerProductCatalog(true);
             }
             else if (this.code === 201) {
               this.toast.warning({ detail: "Warning", summary: this.msg, duration: 5000, sticky: true, position: 'topRight' });
-              this.getCustomerProductCatalog();
+              this.getCustomerProductCatalog(true);
             }
             else if (this.code === 400) {
               this.toast.warning({ detail: "ERROR", summary: this.msg, duration: 2000, sticky: true, position: 'topRight' });
