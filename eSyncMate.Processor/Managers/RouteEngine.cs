@@ -32,12 +32,11 @@ namespace eSyncMate.Processor.Managers
                     this._logger?.LogError($"Invalid Route! [{routeId}]");
                     return;
                 }
-
-                //if (route.Status.ToUpper() == "IN-ACTIVE")
-                //{
-                //    this.RemoveRouteJob(route);
-                //    return;
-                //}
+                if (route.Status.ToUpper() == "IN-ACTIVE")
+                {
+                    this.RemoveRouteJob(route);
+                    return;
+                }
 
                 if (currentRoutes.ContainsKey(routeId))
                 {

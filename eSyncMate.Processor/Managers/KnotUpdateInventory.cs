@@ -87,7 +87,7 @@ namespace eSyncMate.Processor.Managers
                         KnotOffer l_offers = new KnotOffer();
 
                         l_offers.price = Convert.ToDouble(row["ListPrice"]);
-                        l_offers.product_sku = row["CustomerItemCode"].ToString();
+                        //l_offers.product_sku = row["CustomerItemCode"].ToString();
                         l_offers.quantity = row["Total_ATS"].ToString();
                         l_offers.shop_sku = row["ItemId"].ToString();
                         l_offers.state_code = "11";

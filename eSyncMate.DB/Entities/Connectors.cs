@@ -21,17 +21,12 @@ namespace eSyncMate.DB.Entities
 
         public string Name { get; set; }
         public string Data { get; set; }
-
-        public DateTime ModifiedDate { get; set; }
-        public int ModifiedBy { get; set; }
-
         public DateTime CreatedDate { get; set; }
         public int CreatedBy { get; set; }
-
+        public DateTime ModifiedDate { get; set; }
+        public int ModifiedBy { get; set; }
         public string ConnectorType { get; set; }
-
         public string Party { get; set; }
-
         private static string TableName { get; set; }
         private static string ViewName { get; set; }
         private static string PrimaryKeyName { get; set; }

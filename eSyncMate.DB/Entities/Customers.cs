@@ -22,14 +22,12 @@ namespace eSyncMate.DB.Entities
         public string ISA856ReceiverId { get; set; }
         public string ISA810ReceiverId { get; set; }
         public string Marketplace { get; set; }
-        public DateTime ModifiedDate { get; set; }
-        public int ModifiedBy { get; set; }
         public DateTime CreatedDate { get; set; }
         public int CreatedBy { get; set; }
-
+        public DateTime ModifiedDate { get; set; }
+        public int ModifiedBy { get; set; }
         public List<CustomerMaps> Maps { get; set; }
         public List<CustomerConnectors> Connectors { get; set; }
-
         private static string TableName { get; set; }
         private static string ViewName { get; set; }
         private static string PrimaryKeyName { get; set; }

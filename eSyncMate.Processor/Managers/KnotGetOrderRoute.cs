@@ -314,7 +314,7 @@ namespace eSyncMate.Processor.Managers
                         l_OrderDetail.OrderId = l_Orders.Id;
                         l_OrderDetail.LineNo = Convert.ToInt32(orderLine.order_line_index);
                         l_OrderDetail.LineQty = 1;
-                        l_OrderDetail.ItemID = orderLine.ItemID;
+                        l_OrderDetail.ItemID = orderLine.offer_sku;
                         l_OrderDetail.UnitPrice = Convert.ToDecimal(orderLine.price_unit);
                         l_OrderDetail.Status = "NEW";
                         l_OrderDetail.order_line_id = orderLine.order_line_id;
