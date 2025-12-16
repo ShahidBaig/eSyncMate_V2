@@ -667,7 +667,6 @@ namespace eSyncMate.Maps
             }
         }
 
-
         public static string AmazonItemID(string value, string ASIN = "")
         {
             string dateValue = value;
@@ -684,5 +683,6 @@ namespace eSyncMate.Maps
 
             return ItemID;
         }
+
     }
 }
