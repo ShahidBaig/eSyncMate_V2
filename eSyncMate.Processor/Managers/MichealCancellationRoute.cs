@@ -91,7 +91,7 @@ namespace eSyncMate.Processor.Managers
                             l_InputCancellationLinesModel.orderNumber = Convert.ToString(l_Row["OrderNumber"]);
 
                             l_Order_Line_Cancelation.orderItemId = Convert.ToString(l_Row["order_line_id"]);
-                            l_Order_Line_Cancelation.orderItemCancelReason = "Customer Request";
+                            l_Order_Line_Cancelation.orderItemCancelReason = "Out of Stock";
 
 
                             l_InputCancellationLinesModel.cancelOrderLines.Add(l_Order_Line_Cancelation);

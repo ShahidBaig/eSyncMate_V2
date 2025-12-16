@@ -684,5 +684,29 @@ namespace eSyncMate.Maps
             return ItemID;
         }
 
+        public static string RepaintShipServiceCode(string value)
+        {
+            string dateValue = value;
+            string ServiceCode = string.Empty;
+
+            try
+            {
+                if (value.ToUpper() == "USPS_GROUND_ADVANTAGE")
+                {
+                    ServiceCode = "USPS_BC";
+                }
+                else
+                {
+                    ServiceCode = "UPSN_CG";
+                }
+                    
+            }
+            catch (Exception)
+            {
+
+            }
+
+            return ServiceCode;
+        }
     }
 }
