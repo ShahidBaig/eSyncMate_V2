@@ -85,7 +85,7 @@ export class CustomersComponent implements OnInit {
     'Edit',
   ];
 
-    constructor(private customersApi: CustomersService, private fb: FormBuilder, private toast: NgToastService, private dialog: MatDialog, private Userapi: ApiService, public languageService: LanguageService) {
+  constructor(private customersApi: CustomersService, private fb: FormBuilder, private toast: NgToastService, private dialog: MatDialog, private Userapi: ApiService, public languageService: LanguageService) {
     this.isAdminUser = ["ADMIN"].includes(this.Userapi.getTokenUserInfo()?.userType || '');
   }
 
@@ -99,9 +99,13 @@ export class CustomersComponent implements OnInit {
     }
 
     if (this.selectedOption === 'Select Customer') {
-      this.getCustomers();
+      this.getCustomers(true);
 
     }
+  }
+
+  ngAfterViewInit(): void {
+    this.dataSource.paginator = this.paginator;
   }
 
   openAddCustomerDialog(): void {
@@ -112,7 +116,7 @@ export class CustomersComponent implements OnInit {
 
     dialogRef.afterClosed().subscribe(result => {
       if (result === 'saved') {
-        this.getCustomers();
+        this.getCustomers(false);
       }
     });
   }
@@ -126,7 +130,7 @@ export class CustomersComponent implements OnInit {
 
     dialogRef.afterClosed().subscribe(result => {
       if (result === 'updated') {
-        this.getCustomers();
+        this.getCustomers(false);
       }
     });
   }
@@ -146,11 +150,13 @@ export class CustomersComponent implements OnInit {
 
     return year + '-' + month + '-' + day;
   }
+
   onPageChange(event: PageEvent) {
     const startIndex = event.pageIndex * event.pageSize;
     this.customersToDisplay = this.listOfCustomers.slice(startIndex, startIndex + event.pageSize);
   }
-  getCustomers() {
+
+  getCustomers(resetPage: boolean = false) {
     this.showSpinnerforSearch = false;
     let stringFromDate = '';
     let stringToDate = '';
@@ -171,42 +177,55 @@ export class CustomersComponent implements OnInit {
 
     this.customersApi.getCustomers(this.selectedOption, this.searchValue).subscribe({
       next: (res: any) => {
-        this.listOfCustomers = res.customers;
         this.msg = res.message;
         this.code = res.code;
 
+        // ✅ old page info BEFORE updating data
+        const oldPageIndex = this.paginator?.pageIndex ?? 0;
+        const oldPageSize = this.paginator?.pageSize ?? 10;
 
-        if (this.listOfCustomers == null || this.listOfCustomers.length === 0) {
-          this.toast.info({ detail: "INFO", summary: this.languageService.getTranslation('noFilterDataMessage'), duration: 5000, /*sticky: true,*/ position: 'topRight' });
-          this.showSpinnerforSearch = false;
+        this.listOfCustomers = res.customers ?? [];
+
+        if (this.listOfCustomers.length === 0) {
+          this.toast.info({
+            detail: "INFO",
+            summary: this.languageService.getTranslation('noFilterDataMessage'),
+            duration: 5000,
+            position: 'topRight'
+          });
+          this.dataSource.data = [];
           this.customersToDisplay = [];
+          this.showSpinnerforSearch = false;
           return;
         }
 
-        //this.customersToDisplay = this.listOfCustomers.slice(0, 10);
+        // ✅ set data once
+        this.dataSource.data = this.listOfCustomers;
 
-        this.dataSource.data = this.listOfCustomers;  // set full list
+        // ✅ resetPage ? first page : keep old page
+        if (resetPage) {
+          this.paginator?.firstPage();
+        } else {
+          const maxPageIndex = Math.max(Math.ceil(this.listOfCustomers.length / oldPageSize) - 1, 0);
+          this.paginator.pageIndex = Math.min(oldPageIndex, maxPageIndex);
 
-        setTimeout(() => {
-          this.dataSource.paginator = this.paginator;
-        }, 0); // ensures paginator initializes
-
+          // force re-render on same page
+          this.paginator._changePageSize(this.paginator.pageSize);
+        }
 
         if (this.code === 200) {
           this.showSpinnerforSearch = false;
-        }
-        else if (this.code === 400) {
-          this.toast.error({ detail: "ERROR", summary: this.msg, duration: 5000, /*sticky: true,*/ position: 'topRight' });
+        } else if (this.code === 400) {
+          this.toast.error({ detail: "ERROR", summary: this.msg, duration: 5000, position: 'topRight' });
           this.showSpinnerforSearch = false;
         } else {
-          this.toast.info({ detail: "INFO", summary: this.msg, duration: 5000, /*sticky: true,*/ position: 'topRight' });
+          this.toast.info({ detail: "INFO", summary: this.msg, duration: 5000, position: 'topRight' });
           this.showSpinnerforSearch = false;
         }
-
         this.showSpinnerforSearch = false;
       },
       error: (err: any) => {
-        this.toast.error({ detail: "ERROR", summary: err.message, duration: 5000, /*sticky: true,*/ position: 'topRight' });
+        this.toast.error({ detail: "ERROR", summary: err.message, duration: 5000, position: 'topRight' });
         this.showSpinnerforSearch = false;
       },
     });

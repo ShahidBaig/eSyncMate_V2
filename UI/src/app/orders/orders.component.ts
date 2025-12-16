@@ -34,6 +34,9 @@ import { ViewChild } from '@angular/core';
 import { LiveAnnouncer } from '@angular/cdk/a11y';
 import { AfterViewInit, inject } from '@angular/core';
 import { MatSort, Sort, MatSortModule } from '@angular/material/sort';
+
+
+
 interface Customers {
   erpCustomerID: string;
   name: string;
@@ -147,7 +150,7 @@ export class OrdersComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.getOrders();
+    this.getOrders(true);
     this.isCompany = this.api.getTokenUserInfo()?.company.toLocaleLowerCase();
     this.isAdminUser = ["ADMIN", "WRITER"].includes(this.api.getTokenUserInfo()?.userType || '');
     // if (!this.isAdminUser) {
@@ -174,6 +177,11 @@ export class OrdersComponent implements OnInit {
     }
     this.getERPCustomer();
 
+  }
+
+  ngAfterViewInit(): void {
+    // paginator ko ek dafa attach karo
+    this.dataSource.paginator = this.paginator;
   }
 
   getStatusTooltip(status: string, customerName: string): any {
@@ -268,7 +276,7 @@ export class OrdersComponent implements OnInit {
 
         if (code === 200) {
           this.toast.success({ detail: "SUCCESS", summary: message, duration: 5000, position: 'topRight' });
-          this.getOrders();
+          this.getOrders(false);
         } else if (code === 400) {
           this.toast.error({ detail: "ERROR", summary: message, duration: 5000, position: 'topRight' });
         } else {
@@ -305,7 +313,7 @@ export class OrdersComponent implements OnInit {
     // dialogRef.afterClosed()
     dialogRef.afterClosed().subscribe(result => {
       if (result === 'updated') {
-        this.getOrders();
+        this.getOrders(false);
       }
     });
   }
@@ -353,7 +361,7 @@ export class OrdersComponent implements OnInit {
 
         if (this.code === 200) {
           this.toast.success({ detail: "SUCCESS", summary: this.msg, duration: 5000, position: 'topRight' });
-          this.getOrders();
+          this.getOrders(false);
           this.showSpinner = false;
         }
         else if (this.code === 400) {
@@ -385,7 +393,7 @@ export class OrdersComponent implements OnInit {
 
         if (this.code === 200) {
           this.toast.success({ detail: "SUCCESS", summary: this.msg, duration: 5000, position: 'topRight' });
-          this.getOrders();
+          this.getOrders(false);
           this.showSpinner = false;
         }
         else if (this.code === 400) {
@@ -416,7 +424,7 @@ export class OrdersComponent implements OnInit {
 
         if (this.code === 200) {
           this.toast.success({ detail: "SUCCESS", summary: this.msg, duration: 5000, position: 'topRight' });
-          this.getOrders();
+          this.getOrders(false);
           this.showSpinner = false;
         }
         else if (this.code === 400) {
@@ -447,7 +455,7 @@ export class OrdersComponent implements OnInit {
 
         if (this.code === 200) {
           this.toast.success({ detail: "SUCCESS", summary: this.msg, duration: 5000, position: 'topRight' });
-          this.getOrders();
+          this.getOrders(false);
           this.showSpinner = false;
         }
         else if (this.code === 400) {
@@ -476,7 +484,7 @@ export class OrdersComponent implements OnInit {
 
         if (this.code === 200) {
           this.toast.success({ detail: "SUCCESS", summary: this.msg, duration: 5000, position: 'topRight' });
-          this.getOrders();
+          this.getOrders(false);
           this.showSpinner = false;
         }
         else if (this.code === 400) {
@@ -505,7 +513,7 @@ export class OrdersComponent implements OnInit {
 
         if (this.code === 200) {
           this.toast.success({ detail: "SUCCESS", summary: this.msg, duration: 5000, position: 'topRight' });
-          this.getOrders();
+          this.getOrders(false);
           this.showSpinner = false;
         }
         else if (this.code === 400) {
@@ -611,7 +619,7 @@ export class OrdersComponent implements OnInit {
     this.ordersToDisplay = this.listOfOrders.slice(startIndex, startIndex + event.pageSize);
   }
 
-  getOrders() {
+  getOrders(resetPage: boolean = false) {
     let orderId = (this.OrderForm.get('orderId') as FormControl).value;
     let fromDate = (this.OrderForm.get('fromDate') as FormControl).value;
     let toDate = (this.OrderForm.get('toDate') as FormControl).value;
@@ -669,43 +677,58 @@ export class OrdersComponent implements OnInit {
     }
     this.api.getOrders(orderId, stringFromDate, stringToDate, orderNo, status, soNo, customerName).subscribe({
       next: (res: any) => {
-        this.listOfOrders = res.ordersData;
         this.msg = res.message;
         this.code = res.code;
 
-        if (this.listOfOrders == null || this.listOfOrders.length === 0) {
-          this.toast.info({ detail: "INFO", summary: this.languageService.getTranslation('noFilterDataMessage'), duration: 5000, /*sticky: true,*/ position: 'topRight' });
-          this.showSpinnerforSearch = false;
-          this.ordersToDisplay = [];
+        // ✅ keep old page info BEFORE updating data
+        const oldPageIndex = this.paginator?.pageIndex ?? 0;
+        const oldPageSize = this.paginator?.pageSize ?? 10;
 
+        this.listOfOrders = res.ordersData ?? [];
+
+        if (this.listOfOrders.length === 0) {
+          this.toast.info({
+            detail: "INFO",
+            summary: this.languageService.getTranslation('noFilterDataMessage'),
+            duration: 5000,
+            position: 'topRight'
+          });
+          this.dataSource.data = [];
+          this.showSpinnerforSearch = false;
           return;
         }
 
-        //this.ordersToDisplay = this.listOfOrders.slice(0, 10);
-        this.dataSource.data = this.listOfOrders;  // set full list
+        // ✅ set data once
+        this.dataSource.data = this.listOfOrders;
 
-        setTimeout(() => {
-          this.dataSource.paginator = this.paginator;
-        }, 0); // ensures paginator initializes
+        // ✅ compare logic: resetPage ? first page : keep old page
+        if (resetPage) {
+          this.paginator?.firstPage();
+        } else {
+          const maxPageIndex = Math.max(Math.ceil(this.listOfOrders.length / oldPageSize) - 1, 0);
+          this.paginator.pageIndex = Math.min(oldPageIndex, maxPageIndex);
 
-        if (this.code === 200) {
-          //this.toast.success({ detail: "SUCCESS", summary: this.msg, duration: 5000, position: 'topRight' });
-          this.showSpinnerforSearch = false;
+          // force table to render correct page with updated data
+          this.paginator._changePageSize(this.paginator.pageSize);
         }
-        else if (this.code === 400) {
-          this.toast.error({ detail: "ERROR", summary: this.msg, duration: 5000, /*sticky: true,*/ position: 'topRight' });
+
+        // toast handling (same as your code)
+        if (this.code === 200) {
+          this.showSpinnerforSearch = false;
+        } else if (this.code === 400) {
+          this.toast.error({ detail: "ERROR", summary: this.msg, duration: 5000, position: 'topRight' });
           this.showSpinnerforSearch = false;
         } else {
-          this.toast.info({ detail: "INFO", summary: this.msg, duration: 5000, /*sticky: true,*/ position: 'topRight' });
+          this.toast.info({ detail: "INFO", summary: this.msg, duration: 5000, position: 'topRight' });
           this.showSpinnerforSearch = false;
         }
-
         this.showSpinnerforSearch = false;
       },
       error: (err: any) => {
-        this.toast.error({ detail: "ERROR", summary: err.message, duration: 5000, /*sticky: true,*/ position: 'topRight' });
+        this.toast.error({ detail: "ERROR", summary: err.message, duration: 5000, position: 'topRight' });
         this.showSpinnerforSearch = false;
       },
     });
+
   }
 }
