@@ -213,7 +213,7 @@ namespace eSyncMate.Processor.Managers
 
                 l_Data.SaveNew();
 
-                Thread.Sleep(1000);
+                Thread.Sleep(30000);
 
                 sourceConnector.Url = sourceConnector.BaseUrl + $"/api/orders?order_ids={order.order_id}";
                 sourceConnector.Method = "GET";
@@ -230,9 +230,17 @@ namespace eSyncMate.Processor.Managers
                     order = new KnotOrder();
                     order = OrdersList.orders[0];
 
+                    if (order?.customer?.shipping_address == null)
+                    {
+                        route.SaveLog(LogTypeEnum.Error, $"Order {order.order_id} missing shipping address", sourceResponse.Content, userNo);
+
+                        return;
+                    }
+
+
                     foreach (var orderLine in order.order_lines)
                     {
-                        var sku = orderLine?.product_sku?.Trim();
+                        var sku = orderLine?.offer_sku?.Trim();
 
                         DataRow row = p_SCSInventoryFeed.Select($"CustomerItemCode = '{sku}'").FirstOrDefault();
 
