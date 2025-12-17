@@ -79,7 +79,7 @@
             public int originalPrice { get; set; }
             public int shippingHandlingCharge { get; set; }
             public int refundedAmount { get; set; }
-            public int refundedTax { get; set; }
+            public float refundedTax { get; set; }
             public int itemSubtotal { get; set; }
             public float estimatedTax { get; set; }
             public int totalDiscount { get; set; }

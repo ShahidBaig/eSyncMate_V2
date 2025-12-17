@@ -648,6 +648,16 @@ namespace eSyncMate.DB.Entities
                                 orderJson["OrderAddress"]["payload"]["ShippingAddress"]["PostalCode"] = postalCode;
                                 orderJson["OrderAddress"]["payload"]["ShippingAddress"]["CountryCode"] = country; 
                             }
+                            else if (orderJson["orderNumber"] != null) // single order shape
+                            {
+                                orderJson["firstName"] = ShipToName;
+                                orderJson["address1"] = address1;
+                                orderJson["address2"] = address2;
+                                orderJson["city"] = city;
+                                orderJson["state"] = state;
+                                orderJson["zipCode"] = postalCode;
+                                orderJson["countryCode"] = country;
+                            }
                             else
                             {
                                 l_Result.IsSuccess = false;

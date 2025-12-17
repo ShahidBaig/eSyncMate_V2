@@ -146,6 +146,14 @@ namespace eSyncMate.Processor.Managers
             {
                 routeName = "Lowes Create Orders";
             }
+            else if (customerName == "KNO8068")
+            {
+                routeName = "Knot - Create Orders";
+            }
+            else if (customerName == "MIC1300MP")
+            {
+                routeName = "Micheal - Create Orders";
+            }
             else
             {
                 return $"No route configured for customer: {customerName}";

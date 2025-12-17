@@ -67,12 +67,9 @@ namespace eSyncMate.Processor.Managers
 
                 if (l_SourceConnector.ConnectivityType == ConnectorTypesEnum.Rest.ToString())
                 {
-                    l_SourceConnector.Url = l_SourceConnector.BaseUrl + $"/order/query?orderStatusList=PENDING_CONFIRMATION&pageSize=100";
-                    sourceResponse = RestConnector.Execute(l_SourceConnector, string.Empty).GetAwaiter().GetResult();
-
-                    route.SaveData("JSON-SNT", 0, l_SourceConnector.Url, userNo);
-                    OrdersList = JsonConvert.DeserializeObject<MichealGetOrderResponseModel>(sourceResponse.Content);
-                    route.SaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
+                    int pageNum = 1;
+                    int pageSize = 25;
+                    int totalPages = 1; 
 
                     if (l_DestinationConnector.ConnectivityType == ConnectorTypesEnum.SqlServer.ToString())
                     {
@@ -81,17 +78,45 @@ namespace eSyncMate.Processor.Managers
 
                         l_Customer.GetObject("ERPCustomerID", l_SourceConnector.CustomerID);
 
-                        foreach (var order in OrdersList.data.pageData)
+                        do
                         {
-                            l_OrderData = new DataTable();
+                            l_SourceConnector.Url =
+                                l_SourceConnector.BaseUrl +
+                                $"/order/query?orderStatusList=PENDING_CONFIRMATION&pageNum={pageNum}&pageSize={pageSize}";
 
-                            if (!l_Orders.GetViewList($"OrderNumber ='{order.orderNumber}'", string.Empty, ref l_OrderData))
+                            sourceResponse = RestConnector.Execute(l_SourceConnector, string.Empty).GetAwaiter().GetResult();
+
+                            route.SaveData("JSON-SNT", 0, l_SourceConnector.Url, userNo);
+                            route.SaveData("JSON-RVD", 0, sourceResponse.Content ?? string.Empty, userNo);
+
+                            OrdersList = JsonConvert.DeserializeObject<MichealGetOrderResponseModel>(sourceResponse.Content);
+
+                            var data = OrdersList?.data;
+
+                            // if response is invalid or has no orders, stop
+                            if (data?.pageData == null || data.pageData.Count == 0)
+                                break;
+
+                            // total pages from API
+                            totalPages = data.totalPages > 0 ? data.totalPages : pageNum;
+
+                            foreach (var order in data.pageData)
                             {
-                                ProcessOrder(order, route, l_Customer, l_SourceConnector, l_DestinationConnector, userNo);
+                                l_OrderData = new DataTable();
+
+                                // avoid duplicates
+                                if (!l_Orders.GetViewList($"OrderNumber ='{order.orderNumber}'", string.Empty, ref l_OrderData))
+                                {
+                                    ProcessOrder(order, route, l_Customer, l_SourceConnector, l_DestinationConnector, userNo);
+                                }
                             }
-                        }
+
+                            pageNum++;
+
+                        } while (pageNum <= totalPages);
                     }
                 }
+
 
                 route.SaveLog(LogTypeEnum.Info, $"Completed execution of route [{route.Id}]", string.Empty, userNo);
             }
