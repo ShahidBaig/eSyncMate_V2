@@ -86,6 +86,7 @@ namespace eSyncMate.Processor.Models
         MichealGetOrders = 59,
         MichealASNShipmentNotification = 60,
         MichealCancellationLines = 61,
+        AmazonWHSWInventoryUpload = 62,
         RepaintGetOrders = 500,
         RepaintCreateOrder = 501,
         RepaintGenerate855 = 502,
@@ -110,7 +111,7 @@ namespace eSyncMate.Processor.Models
         //public static string ConnectionString { get; set; } = "Server=rxo.geckotech.com.mx;Database=EDIProcessor;UID=sa;PWD=Gecko8079;";
        // public static string ConnectionString { get; set; } = "Server=192.168.0.44,7100;Database=ESYNCMATE;UID=esyncmate;PWD=eSyncMate786$$$;";
         //public static string ConnectionString { get; set; } = "Server=209.74.79.232;Database=SURGIMAC;UID=sa;PWD=Surgimac8079;";
-        public static string ConnectionString { get; set; } = "Server=192.168.0.44,7100;Database=ESYNCMATE;UID=esyncmate;PWD=eSyncMate786$$$;";
+        public static string ConnectionString { get; set; } = "Server=110.93.227.0,1433;Database=ESYNCMATE_TEST;UID=sa;PWD=eSoft#123456;";
         public static string MySqlConnectionString { get; set; } = "Server=162.241.63.30;Database=geckote1_edi;User=geckote1_esyncmate;Password=Gecko8079;";
 
         public static string Company = "eSyncMate";

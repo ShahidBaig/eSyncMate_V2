@@ -352,6 +352,10 @@ namespace eSyncMate.Processor.Managers
                 {
                     MichealCancellationRoute.Execute(_config, _logger, route);
                 }
+                else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.AmazonWHSWInventoryUpload))
+                {
+                    AmazonUploadWarehouseWiseInventoryRoute.Execute(_config, _logger, route);
+                }
             }
             catch (Exception ex)
             {

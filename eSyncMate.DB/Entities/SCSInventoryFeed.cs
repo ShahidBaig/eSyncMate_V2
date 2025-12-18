@@ -461,11 +461,11 @@ namespace eSyncMate.DB.Entities
             return this.Connection.GetData(l_Query, ref p_dataTable);
         }
 
-        public bool TargetPlusShipNode(ref DataTable p_dataTable)
+        public bool TargetPlusShipNode(string CustomerID,ref DataTable p_dataTable)
         {
             string l_Query = string.Empty;
 
-            l_Query = "SELECT * FROM TargetPlusShipNodes";
+            l_Query = $"SELECT * FROM TargetPlusShipNodes WHERE CustomerID = '{CustomerID}'";
 
             return this.Connection.GetData(l_Query, ref p_dataTable);
         }
