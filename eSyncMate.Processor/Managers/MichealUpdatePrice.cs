@@ -251,7 +251,7 @@ namespace eSyncMate.Processor.Managers
                 l_MichealPriceUploadRequestModel.Add(new MichealPriceUploadRequestModel
                 {
                     sellerSkuNumber = row["ItemId"].ToString(),
-                    price = Convert.ToInt64(row["ListPrice"])
+                    price = Convert.ToDouble(row["ListPrice"])
                 });
 
 

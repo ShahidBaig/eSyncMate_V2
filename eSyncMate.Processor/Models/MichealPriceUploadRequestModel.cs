@@ -3,6 +3,6 @@
     public class MichealPriceUploadRequestModel
     {
         public string sellerSkuNumber { get; set; }
-        public long price { get; set; }
+        public Double price { get; set; }
     }
 }

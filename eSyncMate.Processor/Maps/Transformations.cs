@@ -708,5 +708,66 @@ namespace eSyncMate.Maps
 
             return ServiceCode;
         }
+
+        public static string KnotformatDate(string value, string format = "",string AddDays = "")
+        {
+            var cultureInfo = new CultureInfo("en-US");
+            string dateValue = value;
+            DateTime date = DateTime.MinValue;
+
+            try
+            {
+                if (IsValidDateFormat(dateValue, "yyyy-MM-dd'T'HH:mm:ss'Z'", CultureInfo.InvariantCulture))
+                {
+                    date = DateTime.ParseExact(dateValue, "yyyy-MM-dd'T'HH:mm:ss'Z'", CultureInfo.InvariantCulture);
+                }
+                else if (IsValidDateFormat(dateValue, "yyyy-MM-dd'T'HH:mm:ss.fff'Z'", cultureInfo))
+                {
+                    date = DateTime.ParseExact(dateValue, "yyyy-MM-dd'T'HH:mm:ss.fff'Z'", cultureInfo);
+                }
+                else if (IsValidDateFormat(dateValue, "yyyy-MM-dd", cultureInfo))
+                {
+                    date = DateTime.ParseExact(dateValue, "yyyy-MM-dd", cultureInfo);
+                }
+                else
+                {
+                    if (!string.IsNullOrWhiteSpace(dateValue) &&
+                                 DateTime.TryParse(dateValue, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed))
+                    {
+                        date = parsed;
+
+                    }
+                    else
+                    {
+                        date = DateTime.ParseExact(dateValue, "yyyyMMdd", cultureInfo);
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                try
+                {
+                    date = DateTime.ParseExact(dateValue, "MM/dd/yyyy", cultureInfo);
+                }
+                catch (Exception)
+                {
+                    try
+                    {
+                        date = DateTime.ParseExact(dateValue, "dd/MM/yyyy", cultureInfo);
+                    }
+                    catch (Exception)
+                    {
+                        return string.Empty;
+                    }
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(AddDays) && int.TryParse(AddDays, out var days))
+            {
+                date = date.AddDays(days);
+            }
+
+            return date.ToString(string.IsNullOrEmpty(format) ? "yyyyMMdd" : format);
+        }
     }
 }

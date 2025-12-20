@@ -95,7 +95,7 @@ namespace eSyncMate.Processor.Managers
 
                     l_InventoryBatchWise.StartDate = Convert.ToDateTime(DateTime.Now);
                     l_InventoryBatchWise.Status = "Processing";
-                    l_InventoryBatchWise.RouteType = RouteTypesEnum.AmazonInventoryUpload.ToString();
+                    l_InventoryBatchWise.RouteType = RouteTypesEnum.AmazonWHSWInventoryUpload.ToString();
                     l_InventoryBatchWise.CustomerID = l_SourceConnector.CustomerID;
 
                     l_SCSInventoryFeed.InsertInventoryBatchWise(l_InventoryBatchWise);
