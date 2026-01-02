@@ -162,6 +162,7 @@ namespace eSyncMate.Processor.Managers
             l_Orders.UseConnection(destinationConnector.ConnectionString);
             //jsonString = JsonConvert.SerializeObject(order);
             KnotGetOrderResponseModel OrdersList = new KnotGetOrderResponseModel();
+            DataTable l_OrderData = new DataTable();
 
             try
             {
@@ -292,6 +293,14 @@ namespace eSyncMate.Processor.Managers
                     l_Orders.CreatedDate = DateTime.Now;
                 }
 
+                if (l_Orders.GetViewList($"OrderNumber ='{order.order_id}'", string.Empty, ref l_OrderData))
+                {
+                    route.SaveLog(LogTypeEnum.Error, $"Order {order.order_id} already in eSyncmate", sourceResponse.Content, userNo);
+
+                    return;
+                }
+
+
                 if (l_Orders.SaveNew().IsSuccess)
                 {
                     l_Data = new OrderData();
@@ -339,6 +348,10 @@ namespace eSyncMate.Processor.Managers
             catch (Exception ex)
             {
                 route.SaveLog(LogTypeEnum.Error, $"Processing Error [{l_Orders.OrderNumber}]", ex.Message, userNo);
+            }
+            finally
+            {
+                l_OrderData.Dispose();  
             }
         }
     }

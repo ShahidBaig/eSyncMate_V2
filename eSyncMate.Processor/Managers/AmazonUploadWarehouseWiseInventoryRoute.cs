@@ -321,8 +321,7 @@ namespace eSyncMate.Processor.Managers
             }
             catch (Exception ex)
             {
-
-                Console.WriteLine(ex.Message);
+                this.route.SaveLog(LogTypeEnum.Error, ex.Message, string.Empty, userNo);
             }
 
             

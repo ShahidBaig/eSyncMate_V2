@@ -71,22 +71,22 @@
             public string itemDescription { get; set; }
             public string thumbnail { get; set; }
             public string productName { get; set; }
-            public float rating { get; set; }
-            public int returnAvailableQuantity { get; set; }
+            public double rating { get; set; }
+            public double returnAvailableQuantity { get; set; }
             public int quantity { get; set; }
             public int fulfilledQuantity { get; set; }
             public bool hazmat { get; set; }
-            public int originalPrice { get; set; }
-            public int shippingHandlingCharge { get; set; }
-            public int refundedAmount { get; set; }
-            public float refundedTax { get; set; }
-            public int itemSubtotal { get; set; }
-            public float estimatedTax { get; set; }
-            public int totalDiscount { get; set; }
-            public int price { get; set; }
+            public double originalPrice { get; set; }
+            public double shippingHandlingCharge { get; set; }
+            public double refundedAmount { get; set; }
+            public double refundedTax { get; set; }
+            public double itemSubtotal { get; set; }
+            public double estimatedTax { get; set; }
+            public double totalDiscount { get; set; }
+            public double price { get; set; }
             public object taxRate { get; set; } = new object();
-            public int shippingLabelCost { get; set; }
-            public int returnValue { get; set; }
+            public double shippingLabelCost { get; set; }
+            public double returnValue { get; set; }
             public string taxation { get; set; }
             public string refundable { get; set; }
             public string cancelDeadline { get; set; }

@@ -496,19 +496,26 @@ namespace eSyncMate.DB.Entities
 
         public bool InsertInventoryBatchWiseFeedDetail(string BatchID,string Status,string FeedDocumentID,string CustomerID)
         {
-            string insertQuery = "INSERT INTO InventoryBatchWiseFeedDetail (BatchID, CreatedDate, Status, FeedDocumentID,CustomerID) " +
+            try
+            {
+                string insertQuery = "INSERT INTO InventoryBatchWiseFeedDetail (BatchID, CreatedDate, Status, FeedDocumentID,CustomerID) " +
                         "VALUES (@BatchID, GETDATE(), @Status, @FeedDocumentID,@CustomerID)";
 
-            SqlParameter[] parameters = new SqlParameter[]
-            {
+                SqlParameter[] parameters = new SqlParameter[]
+                {
                 new SqlParameter("@BatchID", SqlDbType.VarChar) { Value = BatchID },
                 new SqlParameter("@Status", SqlDbType.VarChar) { Value = Status },
                 new SqlParameter("@FeedDocumentID", SqlDbType.VarChar) { Value = FeedDocumentID },
                 new SqlParameter("@CustomerID", SqlDbType.VarChar) { Value = CustomerID }
 
-            };
+                };
 
-            return this.Connection.Execute(insertQuery, p_SQLParams: parameters);
+                return this.Connection.Execute(insertQuery, p_SQLParams: parameters);
+            }
+            catch (Exception)
+            {
+                throw;
+            }
         }
 
 
