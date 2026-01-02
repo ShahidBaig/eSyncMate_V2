@@ -58,6 +58,65 @@
     public class CustomersListModel
     {
         public int ID { get; set; }
-        public string Name { get; set; }
+        public string Emails { get; set; }
+    }
+
+
+    public class CustomerAlertConfigModel
+    {
+        public int Id { get; set; }
+        public int CustomerId { get; set; }
+        public int AlertId { get; set; }
+        public string AlertName { get; set; } = string.Empty;      // join from AlertConfiguration table
+        //public string Status { get; set; } = string.Empty;         // Active / Inactive
+        public string FrequencyType { get; set; } = string.Empty;
+        public int RepeatCount { get; set; }
+        public string ExecutionTime { get; set; }
+        public string WeekDays { get; set; }
+        public string DayOfMonth { get; set; }
+        public string Emails { get; set; }
+        public string EmailSubject { get; set; }
+        public string EmailBody { get; set; }
+    }
+
+    public class GetCustomerAlertsResponseModel
+    {
+        public int Code { get; set; }
+        public string Message { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+
+        public List<CustomerAlertConfigModel> Alerts { get; set; } = new();
+    }
+
+    public class SaveCustomerAlertRequestModel
+    {
+        public int Id { get; set; }              // 0 = new, >0 = update
+        public int CustomerId { get; set; }
+        public int AlertId { get; set; }
+        //public string Status { get; set; } = string.Empty;
+        public string FrequencyType { get; set; } = string.Empty;
+        public int RepeatCount { get; set; }
+        public string ExecutionTime { get; set; }
+        public string WeekDays { get; set; }
+        public string DayOfMonth { get; set; }
+        public string Emails { get; set; }
+        public string EmailSubject { get; set; }
+        public string EmailBody { get; set; }
+    }
+
+    public class DeleteCustomerAlertRequestModel
+    {
+        public int Id { get; set; }              // 0 = new, >0 = update
+        public int CustomerId { get; set; }
+        public int AlertId { get; set; }
+        //public string Status { get; set; } = string.Empty;
+        public string FrequencyType { get; set; } = string.Empty;
+        public int RepeatCount { get; set; }
+        public string ExecutionTime { get; set; }
+        public string WeekDays { get; set; }
+        public string DayOfMonth { get; set; }
+        public string Emails { get; set; }
+        public string EmailSubject { get; set; }
+        public string EmailBody { get; set; }
     }
 }

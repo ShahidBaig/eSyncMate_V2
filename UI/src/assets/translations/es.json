@@ -58,6 +58,7 @@
   "documentDate": "Fecha del documento",
   "receivedDate": "Fecha de recepción",
   "actions": "Comportamiento",
+  "alertType": "Tipo de alerta",
   "searchBy": "Búsqueda por",
   "searchConnectors": "Conectores de búsqueda",
   "addConnector": "Agregar conector",
@@ -77,6 +78,8 @@
   "sampleFileDownload": "Descarga de archivo de muestra",
   "processProductCatalog": "Catálogo de productos de proceso",
   "search": "Buscar",
+  "emailBody": "Cuerpo del correo electrónico",
+  "emailSubject": "Asunto del correo electrónico",
   "productID": "ID del Producto",
   "expirationDate": "fecha de expiración",
   "lotNumber": "número de lote",
@@ -246,7 +249,8 @@
   "trackingNo": "Número de seguimiento",
   "SSCC": "SSCC",
   "bolNo": "Bol No",
-
+  "alertName": "Nombre de alerta",
+  "alertID": "ID de alerta",
   "nav": {
     "carrierLoadTender": "Carga de Transportista",
     "orders": "Pedidos",
@@ -263,7 +267,8 @@
     "userManagement": "Gestión de usuarios",
     "ediFileCounter": "Recuento de archivos EDI",
     "inventory": "inventario",
-    "productPrices": "Precios de productos"
+    "productPrices": "Precios de productos",
+    "alertConfiguration": "Configuración de alerta"
   },
   "passwordMessage": "Debe ser igual que la Contraseña.",
   "emailError": "Correo electronico es requerido!",

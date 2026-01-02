@@ -1,0 +1,61 @@
+/* Same base styles as Add/Modify Customer dialog */
+.dialog-content {
+  padding: 24px;
+}
+
+.dialog-title {
+  margin-bottom: 20px;
+  font-size: 24px;
+  font-weight: bold;
+}
+
+/* Toolbar with Add button */
+.alerts-toolbar {
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 16px;
+}
+
+/* Table */
+.alerts-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.alerts-table th.mat-header-cell {
+  font-weight: 600;
+}
+
+/* Loading / empty state */
+.spinner-container,
+.no-data {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 80px;
+  color: #666;
+  font-style: italic;
+}
+
+/* Footer actions */
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 24px 16px;
+}
+
+.cancel-button {
+  color: #666;
+}
+
+/* Optional: limit internal height so whole dialog doesn’t grow too much */
+.alerts-dialog-content {
+  min-width: 700px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+/* Ensure form-fields / table take full width */
+mat-form-field {
+  width: 100%;
+}

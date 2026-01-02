@@ -113,6 +113,13 @@
               <button mat-icon-button (click)="openEditDialog(element)" aria-label="normal button" color="accent" matTooltip="Edit Customer" matTooltipPosition="above">
                 <mat-icon>edit</mat-icon>
               </button>
+              <button mat-icon-button
+                      color="primary"
+                      (click)="openAlertsConfigurationDialog(element)"
+                      matTooltip="Alerts Configuration">
+                <mat-icon>notifications</mat-icon>
+              </button>
+
             </td>
           </ng-container>
         </ng-container>

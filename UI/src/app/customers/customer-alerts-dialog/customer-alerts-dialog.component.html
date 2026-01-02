@@ -1,0 +1,64 @@
+<div mat-dialog-content class="dialog-content alerts-dialog-content">
+  <h1 class="dialog-title">
+    Alerts Configuration – {{ data.customerName }}
+  </h1>
+
+  <div class="alerts-toolbar">
+    <button mat-raised-button color="primary" (click)="onAdd()">
+      Add Alert
+    </button>
+  </div>
+
+  <div *ngIf="loading" class="spinner-container">
+    <mat-spinner diameter="40"></mat-spinner>
+  </div>
+
+  <ng-container *ngIf="!loading">
+    <table mat-table [dataSource]="dataSource" class="alerts-table mat-elevation-z1">
+
+      <ng-container matColumnDef="alertName">
+        <th mat-header-cell *matHeaderCellDef>Alert Name</th>
+        <td mat-cell *matCellDef="let row">{{ row.alertName }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="frequencyType">
+        <th mat-header-cell *matHeaderCellDef>Frequency</th>
+        <td mat-cell *matCellDef="let row">{{ row.frequencyType }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="emails">
+        <th mat-header-cell *matHeaderCellDef>Emails</th>
+        <td mat-cell *matCellDef="let row">{{ row.emails }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef>Action</th>
+        <td mat-cell *matCellDef="let row">
+          <button mat-icon-button color="primary" matTooltip="Edit Alert" (click)="onEdit(row)">
+            <mat-icon>edit</mat-icon>
+          </button>
+
+          <button mat-icon-button color="warn" matTooltip="Delete Alert" (click)="onDelete(row)">
+            <mat-icon>delete</mat-icon>
+          </button>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+    </table>
+
+    <mat-paginator [pageSize]="10"
+                   [pageSizeOptions]="[5, 10, 25, 100]"
+                   showFirstLastButtons>
+    </mat-paginator>
+
+    <div *ngIf="!alerts.length" class="no-data">
+      No alerts configured yet.
+    </div>
+  </ng-container>
+</div>
+
+<div mat-dialog-actions class="dialog-actions">
+  <button mat-button class="cancel-button" (click)="close()">cancel</button>
+</div>

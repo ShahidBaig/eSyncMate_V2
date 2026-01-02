@@ -38,6 +38,8 @@
   "shipmentID": "Shipment ID",
   "invoiceNo": "Invoice No",
   "shipperNo": "Shipment Shipper No",
+  "emailBody": "Email Body",
+  "emailSubject": "Email Subject",
   "fromDate": "From Date",
   "toDate": "To Date",
   "status": "Status",
@@ -60,6 +62,11 @@
   "modifyConnector": "Modify Connector",
   "connectorID": "Connector ID",
   "connectorName": "Connector Name",
+  "alertName": "Alert Name",
+  "query": "Query",
+  "addAlertConfiguration": "Add Alert Configuration",
+  "alertType": "Alert Type",
+  "searchAlertsConfiguration": "Search Alerts Configuration",
   "connectorType": "Connector Type",
   "connectivityType": "Connectivity Type",
   "createdDate": "Created Date",
@@ -252,6 +259,9 @@
   "qty": "Qty",
   "etaDate": "ETA Date",
   "etaQty": "ETA Qty",
+  "alertName": "Alert Name",
+  "alertID": "Alert ID",
+
   "nav": {
     "carrierLoadTender": "Carrier Load Tender",
     "orders": "Orders",
@@ -273,8 +283,8 @@
     "purchaseOrder": "Purchase Order",
     "sipmentFromNdc": "Shipment From NDC",
     "salesInvoiceNdc": "Sales Invoice NDC",
-    "purchaseOrdersTracking": "Purchase Orders Tracking"
-
+    "purchaseOrdersTracking": "Purchase Orders Tracking",
+    "alertConfiguration": "Alert Configuration"
   },
   "orderReceived": "Order Received",
   "orderLogs": "Order [Customer PO] Logs",

@@ -1,0 +1,67 @@
+.dialog-content {
+  padding: 24px;
+}
+
+.dialog-content1 {
+  height: 400px;
+  overflow: auto;
+}
+
+.dialog-title {
+  margin-bottom: 20px;
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.connector-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.form-row {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap; /* Allows fields to wrap on smaller screens */
+}
+
+.form-field {
+  flex: 1 1 0;
+}
+
+
+.full-width {
+  flex: 1 1 100%;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: space-between;
+  padding: 16px 24px 24px;
+  border-top: 1px solid #eee;
+}
+
+.cancel-button {
+  color: #666;
+}
+
+/* Additional global styles */
+mat-form-field {
+  width: 100%;
+}
+
+input[matInput] {
+  padding: 8px 12px;
+}
+
+.custom-css {
+  height: 400px !important;
+}
+
+@media only screen and (max-width: 768px) {
+  .custom-css {
+    height: 300px !important;
+  }
+}
+
+

@@ -93,8 +93,13 @@ namespace eSyncMate.Processor.Models
         Download856FromShipStation = 503,
         GenerateEDI856ForRepaintRoute = 504,
         GenerateEDI810ForRepaintRoute = 505,
+       
 
+    }
 
+    public enum AlertTypesEnum
+    { 
+        Customer=1,
     }
     public enum ConnectorTypesEnum
     {
@@ -113,6 +118,10 @@ namespace eSyncMate.Processor.Models
         //public static string ConnectionString { get; set; } = "Server=209.74.79.232;Database=SURGIMAC;UID=sa;PWD=Surgimac8079;";
         public static string ConnectionString { get; set; } = "Server=110.93.227.0,1433;Database=ESYNCMATE_TEST;UID=sa;PWD=eSoft#123456;";
         public static string MySqlConnectionString { get; set; } = "Server=162.241.63.30;Database=geckote1_edi;User=geckote1_esyncmate;Password=Gecko8079;";
+        public static string SMTPHost { get; set; } = "smtpout.secureserver.net";
+        public static int SMTPPort { get; set; } = 465;
+        public static string FromEmailAccount { get; set; } = "Tanveer@esoftage.com";
+        public static string FromEmailPWD { get; set; } = "Tanveer#1122";
 
         public static string Company = "eSyncMate";
 

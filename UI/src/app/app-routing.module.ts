@@ -29,6 +29,7 @@ import { PurchaseOrderComponent } from './purchase-order/purchase-order.componen
 import { SipmentFromNdcComponent } from './sipment-from-ndc/sipment-from-ndc.component';
 import { SalesInvoiceNdcComponent } from './sales-invoice-ndc/sales-invoice-ndc.component';
 import { PurchaseOrdersTrackingComponent } from './purchase-orders-tracking/purchase-orders-tracking.component';
+import { AlertConfigurationComponent } from './alert-configuration/alert-configuration.component';
 
 
 const routes: Routes = [
@@ -164,6 +165,11 @@ const routes: Routes = [
     path: 'edi/purchaseOrdersTracking',
     component: PurchaseOrdersTrackingComponent,
     //canActivate: [AuthorizationGuard],
+  },
+  {
+    path: 'edi/alertConfiguration',
+    component: AlertConfigurationComponent,
+    canActivate: [AuthenticationGuard],
   },
   {
     path: "**",

@@ -139,6 +139,11 @@ export class SideNavComponent {
       link: 'edi/purchaseOrdersTracking',
       visible: this.api.getTokenUserInfo()?.company.toUpperCase() === 'SURGIMAC' ? true : false
     },
+    {
+      title: 'nav.alertConfiguration',
+      link: 'edi/alertConfiguration',
+      visible: this.api.getTokenUserInfo()?.company.toLocaleUpperCase() === 'ESYNCMATE' ? true : false
+    }
   ];
 
   goToLink(option: SideNavItem) {

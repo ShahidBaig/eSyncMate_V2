@@ -1,0 +1,215 @@
+<div mat-dialog-content class="dialog-content">
+  <h1 class="dialog-title">
+    {{ data.alert ? 'Modify Alert' : 'Add Alert' }} – {{ data.customerName }}
+  </h1>
+
+  <form [formGroup]="form" class="alert-form">
+    <!-- Row 1: Alert / Status / Frequency -->
+    <div class="form-row">
+      <!-- Add mode -->
+      <ng-container *ngIf="!isEdit; else readonlyAlert">
+        <mat-form-field class="form-field">
+          <mat-label>Alert</mat-label>
+          <mat-select formControlName="alertId">
+            <mat-option *ngFor="let alert of filteredAlertOption" [value]="alert.alertID">
+              {{ alert.alertName }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+      </ng-container>
+
+      <!-- Edit mode: simple readonly field -->
+      <ng-template #readonlyAlert>
+        <mat-form-field class="form-field">
+          <mat-label>Alert</mat-label>
+          <input matInput
+                 [value]="getAlertName(form.get('alertId')?.value)"
+                 readonly />
+        </mat-form-field>
+      </ng-template>
+
+      <mat-form-field class="form-field">
+        <mat-label>Frequency Type*</mat-label>
+        <mat-select formControlName="frequencyType"
+                    (selectionChange)="onFrequencyTypeChange()">
+          <mat-option *ngFor="let f of frequencyTypes" [value]="f">
+            {{ f }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+    </div>
+    <div class="form-row" [ngSwitch]="frequencyTypeValue">
+      <!-- Minutely -->
+      <ng-container *ngSwitchCase="'Minutely'">
+        <mat-form-field class="form-field full-width">
+          <mat-label>Repeat Count (minutes)</mat-label>
+          <input matInput type="number" min="1" formControlName="repeatCount" />
+        </mat-form-field>
+      </ng-container>
+
+      <!-- Hourly -->
+      <ng-container *ngSwitchCase="'Hourly'">
+        <mat-form-field class="form-field full-width">
+          <mat-label>Repeat Count (hours)</mat-label>
+          <input matInput type="number" min="1" formControlName="repeatCount" />
+        </mat-form-field>
+      </ng-container>
+
+      <!-- Daily -->
+      <ng-container *ngSwitchCase="'Daily'">
+        <mat-form-field class="form-field full-width">
+          <mat-label>Execution Time(s)</mat-label>
+
+          <mat-chip-grid #dailyTimeChipGrid aria-label="Daily execution times">
+            <mat-chip-row *ngFor="let t of dailyTimeChips; let i = index"
+                          [removable]="true"
+                          (removed)="removeDailyTime(i)">
+              {{ t }}
+              <button matChipRemove>
+                <mat-icon>cancel</mat-icon>
+              </button>
+            </mat-chip-row>
+
+            <input matInput
+                   type="time"
+                   [matChipInputFor]="dailyTimeChipGrid"
+                   [matChipInputSeparatorKeyCodes]="separatorKeysCodes"
+                   [matChipInputAddOnBlur]="true"
+                   (matChipInputTokenEnd)="addDailyTime($event)" />
+          </mat-chip-grid>
+
+          <mat-hint>Multiple times allowed (comma separated in DB).</mat-hint>
+        </mat-form-field>
+      </ng-container>
+
+      <!-- Weekly -->
+      <ng-container *ngSwitchCase="'Weekly'">
+        <div class="weekdays-container full-width">
+          <mat-label>Weekdays</mat-label>
+          <div class="weekdays-checkboxes">
+            <mat-checkbox formControlName="monday">Monday</mat-checkbox>
+            <mat-checkbox formControlName="tuesday">Tuesday</mat-checkbox>
+            <mat-checkbox formControlName="wednesday">Wednesday</mat-checkbox>
+            <mat-checkbox formControlName="thursday">Thursday</mat-checkbox>
+            <mat-checkbox formControlName="friday">Friday</mat-checkbox>
+            <mat-checkbox formControlName="saturday">Saturday</mat-checkbox>
+            <mat-checkbox formControlName="sunday">Sunday</mat-checkbox>
+          </div>
+        </div>
+
+        <mat-form-field class="form-field full-width">
+  <mat-label>Execution Time(s)</mat-label>
+
+  <mat-chip-grid #dailyTimeChipGrid aria-label="Daily execution times">
+    <mat-chip-row *ngFor="let t of dailyTimeChips; let i = index"
+                  [removable]="true"
+                  (removed)="removeDailyTime(i)">
+      {{ t }}
+      <button matChipRemove>
+        <mat-icon>cancel</mat-icon>
+      </button>
+    </mat-chip-row>
+
+    <input matInput
+           type="time"
+           [matChipInputFor]="dailyTimeChipGrid"
+           [matChipInputSeparatorKeyCodes]="separatorKeysCodes"
+           [matChipInputAddOnBlur]="true"
+           (matChipInputTokenEnd)="addDailyTime($event)" />
+  </mat-chip-grid>
+
+  <mat-hint>Multiple times allowed (comma separated in DB).</mat-hint>
+</mat-form-field>
+      </ng-container>
+
+      <!-- Monthly -->
+      <ng-container *ngSwitchCase="'Monthly'">
+        <mat-form-field class="form-field full-width">
+          <mat-label>On Day(s)</mat-label>
+
+          <mat-chip-grid #dayChipGrid aria-label="Day of month selection">
+            <mat-chip-row *ngFor="let day of dayOfMonthChips; let i = index"
+                          [removable]="true"
+                          (removed)="removeDayOfMonth(i)">
+              {{ day }}
+              <button matChipRemove>
+                <mat-icon>cancel</mat-icon>
+              </button>
+            </mat-chip-row>
+
+            <input matInput
+                   type="number"
+                   min="1"
+                   max="31"
+                   placeholder="Add day and press Enter"
+                   [matChipInputFor]="dayChipGrid"
+                   [matChipInputSeparatorKeyCodes]="separatorKeysCodes"
+                   [matChipInputAddOnBlur]="true"
+                   (matChipInputTokenEnd)="addDayOfMonth($event)" />
+          </mat-chip-grid>
+
+          <mat-hint>Multiple days allowed (comma separated in DB).</mat-hint>
+        </mat-form-field>
+      </ng-container>
+    </div>
+
+    <div class="form-row">
+      <!-- Add mode -->
+      <ng-container>
+        <mat-form-field class="form-field full-width">
+          <mat-label>Email Subject</mat-label>
+          <input matInput type="text" formControlName="emailSubject" />
+        </mat-form-field>
+      </ng-container>
+
+    </div>
+    <div class="form-row">
+      <!-- Add mode -->
+      <ng-container>
+        <mat-form-field class="form-field full-width">
+          <mat-label>Email Body</mat-label>
+          <textarea matInput formControlName="emailBody" rows="6"></textarea>
+        </mat-form-field>
+      </ng-container>
+
+    </div>
+
+    <!-- Row 2: Frequency specific controls -->
+    <!-- Row 3: Email(s) -->
+    <div class="form-row">
+      <mat-form-field class="form-field full-width">
+        <mat-label>Email(s)</mat-label>
+
+        <mat-chip-grid #emailChipGrid aria-label="Email list">
+          <mat-chip-row *ngFor="let email of emailChips; let i = index"
+                        [removable]="true"
+                        (removed)="removeEmail(i)">
+            {{ email }}
+            <button matChipRemove>
+              <mat-icon>cancel</mat-icon>
+            </button>
+          </mat-chip-row>
+
+          <input matInput
+                 type="email"
+                 placeholder="Add email and press Enter"
+                 [matChipInputFor]="emailChipGrid"
+                 [matChipInputSeparatorKeyCodes]="separatorKeysCodes"
+                 [matChipInputAddOnBlur]="true"
+                 (matChipInputTokenEnd)="addEmail($event)" />
+        </mat-chip-grid>
+
+        <mat-hint>Multiple emails allowed. Stored as comma separated.</mat-hint>
+      </mat-form-field>
+    </div>
+  </form>
+</div>
+
+<div mat-dialog-actions class="dialog-actions">
+  <button mat-button class="cancel-button" (click)="onCancel()">cancel</button>
+  <button mat-raised-button color="primary"
+          (click)="onSave()"
+          [disabled]="form.invalid">
+    {{ data.alert ? 'Update' : 'Save' }}
+  </button>
+</div>

@@ -7,6 +7,7 @@ using eSyncMate.DB;
 using Hangfire;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
+using eSyncMate.Processor.Managers;
 
 namespace eSyncMate.Processor.Controllers
 {
@@ -16,7 +17,7 @@ namespace eSyncMate.Processor.Controllers
     public class CustomersController : ControllerBase
     {
         private readonly ILogger<CustomersController> _logger;
-
+        private readonly IConfiguration _config;
         public CustomersController(ILogger<CustomersController> logger)
         {
             _logger = logger;
@@ -282,5 +283,229 @@ namespace eSyncMate.Processor.Controllers
             return l_Response;
         }
 
+        [HttpGet]
+        [Route("getCustomerAlerts")]
+        public async Task<GetCustomerAlertsResponseModel> GetCustomerAlerts([FromQuery] int customerId)
+        {
+            MethodBase l_Me = MethodBase.GetCurrentMethod();
+            GetCustomerAlertsResponseModel l_Response = new GetCustomerAlertsResponseModel();
+            DataTable l_Data = new DataTable();
+
+            try
+            {
+                CustomerAlerts l_Entity = new CustomerAlerts();   // <-- your new Alerts entity/table
+                l_Entity.UseConnection(CommonUtils.ConnectionString);
+
+                l_Response.Code = (int)ResponseCodes.Error;
+
+                // TODO: implement this method in CustomersAlerts entity or call your SP here
+                // Example: l_Entity.GetCustomerAlerts(customerId, ref l_Data);
+
+                l_Entity.GetList($"CustomerID = '{customerId}'", string.Empty, ref l_Data, "Id DESC");
+
+                l_Response.Alerts = new List<CustomerAlertConfigModel>();
+
+                foreach (DataRow row in l_Data.Rows)
+                {
+                    CustomerAlertConfigModel alertRow = new CustomerAlertConfigModel();
+                    DBEntity.PopulateObjectFromRow(alertRow, l_Data, row);
+                    l_Response.Alerts.Add(alertRow);
+                }
+
+                l_Response.Code = (int)ResponseCodes.Success;
+                l_Response.Message = "Customer alerts fetched successfully!";
+            }
+            catch (Exception ex)
+            {
+                l_Response.Code = (int)ResponseCodes.Exception;
+                l_Response.Message = ex.Message;
+                l_Response.Description = ex.ToString();
+                this._logger.LogError(ex, $"[{l_Me.ReflectedType?.Name}.{l_Me.Name}] - Error while getting customer alerts.");
+            }
+            finally
+            {
+                l_Data.Dispose();
+            }
+
+            return l_Response;
+        }
+
+
+        [HttpGet]
+        [Route("getAlertConfigurations")]
+        public async Task<GetAlertsConfigurationResponseModel> GetAlertConfigurations()
+        {
+            MethodBase l_Me = MethodBase.GetCurrentMethod();
+            GetAlertsConfigurationResponseModel l_Response = new GetAlertsConfigurationResponseModel();
+            DataTable l_Data = new DataTable();
+
+            try
+            {
+                string l_Criteria = string.Empty;
+                AlertsConfiguration l_AlertsConfiguration = new AlertsConfiguration();
+
+                l_Response.Code = (int)ResponseCodes.Error;
+
+                this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Building search criteria.");
+
+                l_AlertsConfiguration.UseConnection(CommonUtils.ConnectionString);
+
+                this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Search criteria ready ({l_Criteria}).");
+                this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Staring Partner Group search.");
+
+                l_AlertsConfiguration.GetList(l_Criteria, string.Empty, ref l_Data, "AlertId DESC");
+
+                this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Partner Group searched {{{l_Data.Rows.Count}}}.");
+                this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Populating Partner Group.");
+
+                l_Response.AlertsConfiguration = new List<AlertsConfigurationDataModel>();
+                foreach (DataRow l_Row in l_Data.Rows)
+                {
+                    AlertsConfigurationDataModel l_AlertsConfigurationRow = new AlertsConfigurationDataModel();
+
+                    DBEntity.PopulateObjectFromRow(l_AlertsConfigurationRow, l_Data, l_Row);
+
+                    l_Response.AlertsConfiguration.Add(l_AlertsConfigurationRow);
+                }
+
+                l_Response.Code = (int)ResponseCodes.Success;
+                l_Response.Message = "Alerts Configuration fetched successfully!";
+
+                this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Alert Configuration are ready.");
+            }
+            catch (Exception ex)
+            {
+                l_Response.Code = (int)ResponseCodes.Exception;
+                this._logger.LogCritical($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - {ex}");
+            }
+            finally
+            {
+                l_Data.Dispose();
+            }
+
+            return l_Response;
+        }
+
+        [HttpPost]
+        [Route("saveCustomerAlert")]
+        public async Task<CustomersResponseModel> SaveCustomerAlert([FromBody] SaveCustomerAlertRequestModel model)
+        {
+            MethodBase l_Me = MethodBase.GetCurrentMethod();
+            CustomersResponseModel l_Response = new CustomersResponseModel();
+            Result l_Result = new Result();
+            string l_JobID = string.Empty;
+
+            try
+            {
+                DB.Entities.CustomerAlerts l_CustomerAlerts = new DB.Entities.CustomerAlerts();
+                l_CustomerAlerts.UseConnection(CommonUtils.ConnectionString);
+
+                PublicFunctions.CopyTo(model, l_CustomerAlerts);
+
+                l_JobID = this.SetupAlertJob(l_CustomerAlerts);
+                l_CustomerAlerts.JobID = l_JobID;
+
+                if (model.Id == 0)
+                {
+                    // Insert
+                    l_CustomerAlerts.CreatedBy = l_CustomerAlerts.CreatedBy;
+                    l_CustomerAlerts.CreatedDate = DateTime.Now;
+                    l_Result = l_CustomerAlerts.SaveNew();
+                }
+                else
+                {
+                    // Update
+                    l_CustomerAlerts.ModifiedBy = l_CustomerAlerts.CreatedBy;
+                    l_CustomerAlerts.ModifiedDate = DateTime.Now;
+                    l_Result = l_CustomerAlerts.Modify();
+                }
+
+                if (l_Result.IsSuccess)
+                {
+                    l_Response.Code = l_Result.Code;
+                    l_Response.Message = l_Result.Description;
+                    l_Response.Description = "Customer alert saved successfully.";
+                }
+                else
+                {
+                    l_Response.Code = (int)ResponseCodes.Error;
+                    l_Response.Message = l_Result.Description;
+                }
+            }
+            catch (Exception ex)
+            {
+                l_Response.Code = (int)ResponseCodes.Exception;
+                l_Response.Message = ex.Message;
+                this._logger.LogError(ex, $"[{l_Me.ReflectedType?.Name}.{l_Me.Name}] - Error while saving customer alert.");
+            }
+            finally
+            {
+                // dispose result if needed
+            }
+
+            return l_Response;
+        }
+
+
+        [HttpPost]
+        [Route("deleteCustomerAlert")]
+        public async Task<CustomersResponseModel> DeleteCustomerAlert([FromBody] DeleteCustomerAlertRequestModel model)
+        {
+            MethodBase l_Me = MethodBase.GetCurrentMethod();
+            CustomersResponseModel l_Response = new CustomersResponseModel();
+            Result l_Result = new Result();
+            string l_JobID = string.Empty;
+
+            try
+            {
+                CustomerAlerts l_Entity = new CustomerAlerts();
+                l_Entity.UseConnection(CommonUtils.ConnectionString);
+
+                PublicFunctions.CopyTo(model, l_Entity);
+
+                l_Result = l_Entity.Delete();
+
+                if (l_Result.IsSuccess)
+                {
+
+                    this.RemoveAlertJob(l_Entity);
+
+                    l_Response.Code = l_Result.Code;
+                    l_Response.Message = l_Result.Description;
+                    l_Response.Description = "Customer alert Delete successfully.";
+                }
+                else
+                {
+                    l_Response.Code = (int)ResponseCodes.Error;
+                    l_Response.Message = l_Result.Description;
+                }
+            }
+            catch (Exception ex)
+            {
+                l_Response.Code = (int)ResponseCodes.Exception;
+                l_Response.Message = ex.Message;
+                this._logger.LogError(ex, $"[{l_Me.ReflectedType?.Name}.{l_Me.Name}] - Error while saving customer alert.");
+            }
+            finally
+            {
+                // dispose result if needed
+            }
+
+            return l_Response;
+        }
+
+        private string SetupAlertJob(CustomerAlerts alert)
+        {
+            AlertEngine l_Engine = new AlertEngine(this._config);
+
+            return BackgroundJob.Schedule(() => l_Engine.Schedule(alert.Id), alert.StartDate - DateTime.Now);
+        }
+
+        private void RemoveAlertJob(CustomerAlerts route)
+        {
+            AlertEngine l_Engine = new AlertEngine(this._config);
+
+            l_Engine.RemoveRouteJob(route);
+        }
     }
 }

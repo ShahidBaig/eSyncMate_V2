@@ -1,0 +1,140 @@
+
+<div class="mat-table-container">
+
+  <mat-card>
+    <mat-card-content>
+      <mat-form-field appearance="fill" color="accent">
+        <mat-label>{{ 'searchBy' | translate }}:</mat-label>
+        <mat-select id="myComboBox" [(ngModel)]="selectedOption" (click)="onSelectionChange()">
+          <mat-option *ngFor="let option of options" [value]="option">
+            {{ option }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      &nbsp;
+      <ng-template #defaultField>
+        <ng-container *ngIf="selectedOption !== 'Created Date' else dateRangeField">
+          <mat-form-field appearance="fill" color="accent">
+            <mat-label>{{ label }}</mat-label>
+            <input matInput [(ngModel)]="searchValue" />
+          </mat-form-field>
+        </ng-container>
+      </ng-template>
+
+        <ng-container *ngIf="selectedOption === 'Customer ID' else defaultField">
+          <mat-form-field appearance="fill" color="accent">
+            <mat-label>Customer ID</mat-label>
+            <mat-select [(ngModel)]="searchValue">
+              <mat-option *ngFor="let customer of customersOptions" [value]="customer.erpCustomerID">
+                {{ customer.erpCustomerID }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+        </ng-container>
+
+
+
+        <ng-template #dateRangeField>
+          <mat-form-field appearance="fill" color="accent">
+            <mat-label>{{ label }}</mat-label>
+            <mat-date-range-input [rangePicker]="picker">
+              <input matStartDate [(ngModel)]="startDate" placeholder="Start date">
+              <input matEndDate [(ngModel)]="endDate" placeholder="End date">
+            </mat-date-range-input>
+            <mat-hint>MM/DD/YYYY – MM/DD/YYYY</mat-hint>
+            <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+            <mat-date-range-picker #picker></mat-date-range-picker>
+          </mat-form-field>
+        </ng-template>
+
+        &nbsp;
+
+        <button mat-flat-button color="accent" (click)="getAlertsConfiguration()">
+          <span>{{ 'searchAlertsConfiguration' | translate }}</span>
+          <mat-spinner *ngIf="showSpinnerforSearch" diameter="20"></mat-spinner>
+        </button>
+
+        &nbsp;
+
+        <button mat-flat-button color="accent" (click)="openAddCustomerDialog()" *ngIf="isAdminUser">
+          <span>{{ 'addAlertConfiguration' | translate }}</span>
+          <mat-spinner *ngIf="showSpinnerforSearch" diameter="20"></mat-spinner>
+        </button>
+
+    </mat-card-content>
+  </mat-card>
+
+
+  &nbsp;
+
+  <mat-card>
+    <mat-card-content>
+      <table mat-table [dataSource]="dataSource">
+
+        <!-- ID Column -->
+        <ng-container matColumnDef="AlertID">
+          <th mat-header-cell *matHeaderCellDef>{{ 'alertID' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.alertID}} </td>
+        </ng-container>
+
+        <!-- Connector Name -->
+        <ng-container matColumnDef="AlertName">
+          <th mat-header-cell *matHeaderCellDef>{{ 'alertName' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.alertName}} </td>
+        </ng-container>
+
+        <!-- ConnectorType -->
+        <!--<ng-container matColumnDef="CustomerID">
+          <th mat-header-cell *matHeaderCellDef>{{ 'customerID' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.customerID}} </td>
+        </ng-container>-->
+
+        <!-- Created Date -->
+        <ng-container matColumnDef="CreatedDate">
+          <th mat-header-cell *matHeaderCellDef>{{ 'createdDate' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{element.createdDate | date:'MMM-dd-yyyy HH:mm:ss'}} </td>
+        </ng-container>
+
+        <!-- Data -->
+        <!--<ng-container matColumnDef="Data" [style.display]="showDataColumn ? 'none' : 'none'">
+          <th mat-header-cell *matHeaderCellDef [style.display]="showDataColumn ? 'none' : 'none'">{{ 'data' | translate }}</th>
+          <td mat-cell *matCellDef="let element" [style.display]="showDataColumn ? 'none' : 'none'">
+            {{element.data}}
+          </td>
+        </ng-container>-->
+
+
+        <!--Edit-->
+        <ng-container matColumnDef="Edit" *ngIf="isAdminUser">
+          <th mat-header-cell *matHeaderCellDef> {{ 'actions' | translate }}</th>
+          <td mat-cell *matCellDef="let element">
+            <button mat-icon-button aria-label="normal button" (click)="openEditDialog(element)" color="accent" matTooltip="Edit Connector" matTooltipPosition="above">
+              <mat-icon>edit</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="columns"></tr>
+        <tr mat-row *matRowDef="let row; columns: columns"></tr>
+
+      </table>
+      <!--<mat-paginator [length]="listOfConnectors.length"
+                     [pageSize]="10"
+                     [pageSizeOptions]="[5, 10, 15, 20, 100]"
+                     (page)="onPageChange($event)">
+      </mat-paginator>-->
+
+      <mat-paginator [length]="100"
+                     [pageSize]="10"
+                     [pageSizeOptions]="[5, 10, 25, 100]"
+                     showFirstLastButtons>
+      </mat-paginator>
+    </mat-card-content>
+  </mat-card>
+
+</div>
+
+<div *ngIf="showSpinner" class="spinner-overlay">
+  <mat-spinner></mat-spinner>
+</div>

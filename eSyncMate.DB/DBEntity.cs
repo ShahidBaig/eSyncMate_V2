@@ -676,6 +676,19 @@ namespace eSyncMate.DB
         }
 
 
+        public string PrepareDeleteQueryCustom(object instance, string tableName, string primaryKey)
+        {
+            string l_Criteria = string.Empty;
+            l_Criteria = PrepareCriteria(instance, primaryKey);
+            if (string.IsNullOrEmpty(l_Criteria))
+            {
+                return string.Empty;
+            }
+
+            return $"DELETE FROM [{tableName}]  {l_Criteria}";
+        }
+
+
         /// <summary>
         /// Prepares the Delete Query Using Required Parameters.
         /// </summary>

@@ -86,14 +86,14 @@ export interface Order {
 }
 
 export interface Customer {
-  Id: number,
-  Name: string,
-  ERPCustomerID: string,
-  ISACustomerID: string,
-  ISA810ReceiverId: string,
-  Marketplace: string,
-  CreatedDate: Date,
-  CreatedBy: number
+  id: number;
+  name: string;
+  erpCustomerId: string;
+  isaCustomerId: string;
+  isa810ReceiverId: string;
+  marketplace: string;
+  createdDate: Date;   // or string if your API sends string
+  createdBy: number;
 }
 
 export interface Map {
@@ -456,5 +456,17 @@ export interface PurchaseOrdersTracking {
   ReceivedDate: Date,
   ReceivedQty: number,
   BackOrderQty: number,
+}
+
+
+export interface AlertConfiguration {
+  AlertID: number,
+  AlertName: string,
+  CustomerID: string,
+  Query: number,
+  CreatedDate: Date,
+  CreatedBy: number,
+  ConnectorType: string
+ 
 }
 

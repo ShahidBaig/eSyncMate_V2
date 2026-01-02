@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { Customer } from '../models/models';
+import { AlertConfiguration, Connector } from '../models/models';
 import { DatePipe, NgIf, formatDate } from '@angular/common';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
@@ -13,28 +13,33 @@ import { MatNativeDateModule } from '@angular/material/core';
 import { NgToastService } from 'ng-angular-popup';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatIconModule } from '@angular/material/icon';
+import { PopupComponent } from '../popup/popup.component';
 import { MatDialog } from '@angular/material/dialog';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { CommonModule } from '@angular/common';
 import { MatSelectModule } from '@angular/material/select';
-import { AddCustomerDialogComponent } from './add-customer-dialog/add-customer-dialog.component';
-import { CustomersService } from '../services/customers.service';
-import { EditCustomerPopupComponent } from './edit-customer-popup/edit-customer-popup.component';
+//import { AddConnectorDialogComponent } from './add-connector-dialog/add-connector-dialog.component';
+//import { EditConnectorDialogComponent } from './edit-connector-dialog/edit-connector-dialog.component';
+import { ConnectorsService } from '../services/connectors.service';
 import { MatPaginatorModule } from '@angular/material/paginator';
 import { PageEvent } from '@angular/material/paginator';
-import { ApiService } from '../services/api.service';
 import { LanguageService } from '../services/language.service';
 import { TranslateModule } from '@ngx-translate/core';
+import { ApiService } from '../services/api.service';
 import { MatTableDataSource } from '@angular/material/table';
 import { MatPaginator } from '@angular/material/paginator';
 import { ViewChild } from '@angular/core';
-import { CustomerAlertsDialogComponent } from './customer-alerts-dialog/customer-alerts-dialog.component';
-
+import { alertsConfigurationService } from '../services/alertsConfiguration.service';
+import { AddAlertConfigurationDialogComponent } from './add-alert-configuration-dialog/add-alert-configuration-dialog.component';
+import { EditAlertConfigurationComponent } from './edit-alert-configuration/edit-alert-configuration.component';
+interface Customers {
+  erpCustomerID: string;
+}
 
 @Component({
-  selector: 'customers',
-  templateUrl: './customers.component.html',
-  styleUrls: ['./customers.component.scss'],
+  selector: 'alert-configuration',
+  templateUrl: './alert-configuration.component.html',
+  styleUrls: ['./alert-configuration.component.scss'],
   standalone: true,
   imports: [
     MatButtonToggleModule,
@@ -58,106 +63,93 @@ import { CustomerAlertsDialogComponent } from './customer-alerts-dialog/customer
     TranslateModule
   ],
 })
-export class CustomersComponent implements OnInit {
-  listOfCustomers: Customer[] = [];
-  customersToDisplay: Customer[] = [];
+export class AlertConfigurationComponent implements OnInit {
+  listOfConnectors: AlertConfiguration[] = [];
+  connectorsToDisplay: AlertConfiguration[] = [];
   msg: string = '';
   code: number = 0;
   showSpinnerforSearch: boolean = false;
   showSpinner: boolean = false;
-  options = ['Select Customer', 'Id', 'Customer Name', 'ERP Customer ID', 'ISA Customer ID', 'ISA 810 Receiver ID', 'Market Place', 'Created Date'];
-  selectedOption: string = 'Select Customer';
+  options = ['Select Connector', 'AlertID', 'Alert Name', 'Customer ID', 'Created Date'];
+  selectedOption: string = 'Select Alerts Configuration';
   searchValue: string = '';
   startDate: string = '';
   endDate: string = '';
+  showDataColumn: boolean = true;
   isAdminUser: boolean = false;
-  dataSource = new MatTableDataSource<Customer>([]);
+  dataSource = new MatTableDataSource<AlertConfiguration>([]);
   @ViewChild(MatPaginator) paginator!: MatPaginator;
+  customersOptions: Customers[] | undefined;
 
   columns: string[] = [
-    'id',
-    'Name',
-    'ERPCustomerID',
-    'ISACustomerID',
-    'ISA810ReceiverId',
-    'ISA856ReceiverId',
-    'Marketplace',
+    'AlertID',
+    'AlertName',
+    //'CustomerID',
     'CreatedDate',
     'Edit',
   ];
 
-  constructor(private customersApi: CustomersService, private fb: FormBuilder, private toast: NgToastService, private dialog: MatDialog, private Userapi: ApiService, public languageService: LanguageService) {
-    this.isAdminUser = ["ADMIN"].includes(this.Userapi.getTokenUserInfo()?.userType || '');
+  constructor(private alertsConfigurationApi: alertsConfigurationService, private fb: FormBuilder, private toast: NgToastService, private dialog: MatDialog, private api: ApiService, public languageService: LanguageService) {
+    this.isAdminUser = ["ADMIN"].includes(this.api.getTokenUserInfo()?.userType || '');
   }
 
   ngOnInit(): void {
-
     if (!this.isAdminUser) {
       const editIndex = this.columns.indexOf('Edit');
       if (editIndex !== -1) {
         this.columns.splice(editIndex, 1);
       }
+      
     }
 
-    if (this.selectedOption === 'Select Customer') {
-      this.getCustomers(true);
-
+    if (this.selectedOption === 'Select Alerts Configuration') {
+      this.getAlertsConfiguration();
     }
+    this.getERPCustomer();
   }
 
-  ngAfterViewInit(): void {
-    this.dataSource.paginator = this.paginator;
+  getERPCustomer() {
+    this.alertsConfigurationApi.getERPCustomers().subscribe({
+      next: (res: any) => {
+        this.customersOptions = res.customers;
+      },
+    });
   }
 
   openAddCustomerDialog(): void {
-    const dialogRef = this.dialog.open(AddCustomerDialogComponent, {
+    const dialogRef = this.dialog.open(AddAlertConfigurationDialogComponent, {
       width: '800px',
       disableClose: true
     });
 
     dialogRef.afterClosed().subscribe(result => {
       if (result === 'saved') {
-        this.getCustomers(false);
+        this.getAlertsConfiguration();
       }
     });
   }
 
-  openEditDialog(customerData: any) {
-    const dialogRef = this.dialog.open(EditCustomerPopupComponent, {
+  openEditDialog(connectorData: any) {
+    const dialogRef = this.dialog.open(EditAlertConfigurationComponent, {
       width: '800px',
-      data: customerData,
+      data: connectorData,
       disableClose: true
     });
 
     dialogRef.afterClosed().subscribe(result => {
       if (result === 'updated') {
-        this.getCustomers(false);
+        this.getAlertsConfiguration();
       }
     });
   }
 
-  openAlertsConfigurationDialog(customer: Customer): void {
-    const dialogRef = this.dialog.open(CustomerAlertsDialogComponent, {
-      width: '1200px',
-      height: '500px',          // same as Modify Customer
-      // same as Modify Customer
-      disableClose: true,
-      data: {
-        customerId: customer.id,
-        customerName: customer.name
-      }
-    });
-
-    dialogRef.afterClosed().subscribe(result => {
-      if (result === 'updated') {
-        // optional: this.getCustomers();
-      }
-    });
+  onPageChange(event: PageEvent) {
+    const startIndex = event.pageIndex * event.pageSize;
+    this.connectorsToDisplay = this.listOfConnectors.slice(startIndex, startIndex + event.pageSize);
   }
-
 
   get label(): string {
-    return this.selectedOption === 'Select Customer' ? 'Select Customer' : this.selectedOption;
+    return this.selectedOption === 'Select Connector' ? 'Select Connector' : this.selectedOption;
   }
 
   onSelectionChange() {
@@ -172,17 +164,12 @@ export class CustomersComponent implements OnInit {
     return year + '-' + month + '-' + day;
   }
 
-  onPageChange(event: PageEvent) {
-    const startIndex = event.pageIndex * event.pageSize;
-    this.customersToDisplay = this.listOfCustomers.slice(startIndex, startIndex + event.pageSize);
-  }
-
-  getCustomers(resetPage: boolean = false) {
+  getAlertsConfiguration() {
     this.showSpinnerforSearch = false;
     let stringFromDate = '';
     let stringToDate = '';
 
-    if (this.selectedOption === 'Select Customer') {
+    if (this.selectedOption === 'Select Alerts Configuration') {
       this.searchValue = 'ALL';
     }
 
@@ -196,57 +183,40 @@ export class CustomersComponent implements OnInit {
       this.searchValue = stringFromDate + '/' + stringToDate;
     }
 
-    this.customersApi.getCustomers(this.selectedOption, this.searchValue).subscribe({
+    this.alertsConfigurationApi.getAlertsConfiguration(this.selectedOption, this.searchValue).subscribe({
       next: (res: any) => {
+        this.listOfConnectors = res.alertsConfiguration;
         this.msg = res.message;
         this.code = res.code;
 
-        // ✅ old page info BEFORE updating data
-        const oldPageIndex = this.paginator?.pageIndex ?? 0;
-        const oldPageSize = this.paginator?.pageSize ?? 10;
-
-        this.listOfCustomers = res.customers ?? [];
-
-        if (this.listOfCustomers.length === 0) {
-          this.toast.info({
-            detail: "INFO",
-            summary: this.languageService.getTranslation('noFilterDataMessage'),
-            duration: 5000,
-            position: 'topRight'
-          });
-          this.dataSource.data = [];
-          this.customersToDisplay = [];
+        if (this.listOfConnectors == null || this.listOfConnectors.length === 0) {
+          this.toast.info({ detail: "INFO", summary: this.languageService.getTranslation('noFilterDataMessage'), duration: 5000, /*sticky: true,*/ position: 'topRight' });
           this.showSpinnerforSearch = false;
+          this.connectorsToDisplay = [];
           return;
         }
 
-        // ✅ set data once
-        this.dataSource.data = this.listOfCustomers;
+        this.dataSource.data = this.listOfConnectors;  // set full list
 
-        // ✅ resetPage ? first page : keep old page
-        if (resetPage) {
-          this.paginator?.firstPage();
-        } else {
-          const maxPageIndex = Math.max(Math.ceil(this.listOfCustomers.length / oldPageSize) - 1, 0);
-          this.paginator.pageIndex = Math.min(oldPageIndex, maxPageIndex);
-
-          // force re-render on same page
-          this.paginator._changePageSize(this.paginator.pageSize);
-        }
+        setTimeout(() => {
+          this.dataSource.paginator = this.paginator;
+        }, 0); // ensures paginator initializes
 
         if (this.code === 200) {
           this.showSpinnerforSearch = false;
-        } else if (this.code === 400) {
-          this.toast.error({ detail: "ERROR", summary: this.msg, duration: 5000, position: 'topRight' });
+        }
+        else if (this.code === 400) {
+          this.toast.error({ detail: "ERROR", summary: this.msg, duration: 5000, /*sticky: true,*/ position: 'topRight' });
           this.showSpinnerforSearch = false;
         } else {
-          this.toast.info({ detail: "INFO", summary: this.msg, duration: 5000, position: 'topRight' });
+          this.toast.info({ detail: "INFO", summary: this.msg, duration: 5000, /*sticky: true,*/ position: 'topRight' });
           this.showSpinnerforSearch = false;
         }
+
         this.showSpinnerforSearch = false;
       },
       error: (err: any) => {
-        this.toast.error({ detail: "ERROR", summary: err.message, duration: 5000, position: 'topRight' });
+        this.toast.error({ detail: "ERROR", summary: err.message, duration: 5000, /*sticky: true,*/ position: 'topRight' });
         this.showSpinnerforSearch = false;
       },
     });

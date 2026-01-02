@@ -1,0 +1,57 @@
+
+<div mat-dialog-content class="dialog-content">
+  <h1 class="dialog-title">{{ 'addAlertConfiguration' | translate }}</h1>
+  <form [formGroup]="newConnectorForm" class="connector-form">
+
+    <!-- Row 1: Customer Name and ERP Customer ID -->
+    <div class="form-row">
+      <mat-form-field class="form-field full-width">
+        <mat-label>{{ 'alertName' | translate }}</mat-label>
+        <input matInput formControlName="alertName">
+      </mat-form-field>
+
+    </div>
+
+    <div class="form-row">
+      <mat-form-field class="form-field full-width">
+        <mat-label>{{ 'alertType' | translate }}</mat-label>
+        <mat-select formControlName="alertType">
+          <mat-option value="Customer">Customer</mat-option>
+          <mat-option value="System">System</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+    </div>
+    <div class="form-row">
+      <mat-form-field class="form-field full-width">
+        <mat-label>{{ 'query' | translate }}</mat-label>
+        <input matInput formControlName="query">
+      </mat-form-field>
+
+    </div>
+    <div class="form-row">
+      <mat-form-field class="form-field full-width">
+        <mat-label>{{ 'emailSubject' | translate }}</mat-label>
+        <input matInput formControlName="emailSubject">
+      </mat-form-field>
+
+    </div>
+    <div class="form-row">
+
+      <ng-container>
+        <mat-form-field class="form-field full-width">
+          <mat-label>Email Body</mat-label>
+          <textarea matInput formControlName="emailBody" rows="6"></textarea>
+        </mat-form-field>
+      </ng-container>
+
+    </div>
+
+
+  </form>
+</div>
+
+<div mat-dialog-actions class="dialog-actions">
+  <button mat-button class="cancel-button" (click)="onCancel()">{{ 'cancel' | translate }}</button>
+  <button mat-raised-button color="primary" [disabled]="!newConnectorForm.valid" (click)="onSave()">{{ 'save' | translate }}</button>
+</div>

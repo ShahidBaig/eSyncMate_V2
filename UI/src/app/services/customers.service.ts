@@ -29,4 +29,22 @@ export class CustomersService {
   getCustomersList(): Observable <any> {
     return this.http.get(`${this.apiUrl}api/Customers/getCustomersList`);
   }
+
+  getCustomerAlerts(customerId: number): Observable<any> {
+    const params = new HttpParams().set('customerId', customerId.toString());
+    return this.http.get<any>(`${this.apiUrl}api/Customers/getCustomerAlerts`, { params });
+  }
+
+  // POST: insert / update a single alert row
+  saveCustomerAlert(model: any): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}api/Customers/saveCustomerAlert`, model);
+  }
+
+  getAlertConfigurations(): Observable<any> {
+    return this.http.get(`${this.apiUrl}api/Customers/getAlertConfigurations`);
+  }
+
+  deleteCustomerAlert(model: any): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}api/Customers/deleteCustomerAlert`, model);
+  }
 }

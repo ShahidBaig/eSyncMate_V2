@@ -63,6 +63,21 @@
     </mat-list>
   </mat-expansion-panel>
 
+  <mat-expansion-panel *ngIf="isSectionVisible(['edi/alertConfiguration']) && company != 'GECKOTECH' && company != 'RepaintStudios'">
+    <mat-expansion-panel-header>
+      <mat-panel-title> Alerts Configuration </mat-panel-title>
+    </mat-expansion-panel-header>
+    <mat-list role="list">
+      <ng-container *ngFor="let option of sideNavContent">
+        <mat-list-item role="listitem" (click)="goToLink(option)" *ngIf="option.visible && (option.link === 'edi/alertConfiguration' )">
+          <a style="cursor: pointer">
+            {{ option.title | translate }}
+          </a>
+        </mat-list-item>
+      </ng-container>
+    </mat-list>
+  </mat-expansion-panel>
+
   <!-- Setup -->
   <mat-expansion-panel *ngIf="isSectionVisible(['nav.connectors', 'nav.maps', 'nav.partnerGroups', 'nav.routes', 'nav.routeTypes', 'hangfire/dashboard']) && isSetupMenu">
     <mat-expansion-panel-header>

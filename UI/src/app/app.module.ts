@@ -77,6 +77,8 @@ import { SipmentFromNdcComponent } from './sipment-from-ndc/sipment-from-ndc.com
 import { DetailShipmentFromNdcComponent } from './sipment-from-ndc/detail-shipment-from-ndc/detail-shipment-from-ndc.component';
 import { PurchaseOrdersTrackingComponent } from './purchase-orders-tracking/purchase-orders-tracking.component';
 import { SalesInvoiceNdcComponent } from './sales-invoice-ndc/sales-invoice-ndc.component';
+import { AlertConfigurationComponent } from './alert-configuration/alert-configuration.component';
+import { AddAlertConfigurationDialogComponent } from './alert-configuration/add-alert-configuration-dialog/add-alert-configuration-dialog.component';
 
 @NgModule({
   declarations: [AppComponent  ],
@@ -156,6 +158,8 @@ import { SalesInvoiceNdcComponent } from './sales-invoice-ndc/sales-invoice-ndc.
     DetailShipmentFromNdcComponent,
     SalesInvoiceNdcComponent,
     PurchaseOrdersTrackingComponent,
+    AlertConfigurationComponent,
+    AddAlertConfigurationDialogComponent,
     TranslateModule.forRoot({
       loader: {
         provide: TranslateLoader,

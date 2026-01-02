@@ -98,6 +98,14 @@ CommonUtils.Company = builder.Configuration["CompanyName"];
 CommonUtils.UploadInventoryTotalThread = Convert.ToInt32(builder.Configuration["UploadInventoryTotalThread"]);
 CommonUtils.MySqlConnectionString = builder.Configuration["MySQLConnection"];
 
+
+//CommonUtils.GmailClientID = builder.Configuration["GoogleGmail:ClientId"];
+//CommonUtils.GmailClientSecret = builder.Configuration["GoogleGmail:ClientSecret"];
+//CommonUtils.GmailRefreshToken = builder.Configuration["GoogleGmail:RefreshToken"];
+//CommonUtils.GmailAccount = builder.Configuration["GoogleGmail:FromEmail"];
+
+
+
 // -------------------- SWAGGER --------------------
 if (app.Environment.IsDevelopment() || app.Environment.IsProduction())
 {
