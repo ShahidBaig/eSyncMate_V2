@@ -586,11 +586,11 @@ namespace eSyncMate.DB.Entities
 
         public bool UpdateSCSAmazonFeedData(string p_BatchID, string p_FeedDocumentID,string p_Guid)
         {
-            string DeleteQuery = $"UPDATE SCSAmazonFeedData SET FeedDocumentID = '{p_FeedDocumentID}' ";
+            string updateQuery = $"UPDATE SCSAmazonFeedData SET FeedDocumentID = '{p_FeedDocumentID}' ";
 
-            DeleteQuery += $"WHERE FeedDocumentID = '{p_Guid}' AND BatchID = '{p_BatchID}'";
+            updateQuery += $"WHERE FeedDocumentID = '{p_Guid}' AND BatchID = '{p_BatchID}'";
 
-            return this.Connection.Execute(DeleteQuery);
+            return this.Connection.Execute(updateQuery);
         }
         public Result SaveData(string type, string CustomerId, string ItemId, string Data, int userNo,string batchID)
         {

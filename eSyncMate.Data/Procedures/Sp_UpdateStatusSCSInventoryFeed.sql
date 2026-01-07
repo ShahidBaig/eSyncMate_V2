@@ -21,7 +21,7 @@ BEGIN
         SET @l_MessageID = @p_MessageID;
 
 		SELECT @l_ItemID = ItemID 
-		FROM SCSAmazonFeedData 
+		FROM SCSAmazonFeedData  WITH (NOLOCK)
 		WHERE BatchID = @l_BatchID AND FeedDocumentID = @l_FeedDocumentID AND MessageID = @l_MessageID
 
 		UPDATE SCSInventoryFeed 

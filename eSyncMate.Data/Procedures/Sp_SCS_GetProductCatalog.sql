@@ -171,7 +171,7 @@ BEGIN
 		ELSE IF  @l_RouteTypeID = 'AmazonInventoryStatus'
 		BEGIN
 			SELECT BatchID,Status,FeedDocumentID,CustomerID 
-			FROM InventoryBatchWiseFeedDetail 
+			FROM InventoryBatchWiseFeedDetail WITH (NOLOCK)
 			WHERE CustomerID = @l_CustomerID AND Status = 'NEW'
 		END
 

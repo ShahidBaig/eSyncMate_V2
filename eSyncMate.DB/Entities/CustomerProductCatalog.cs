@@ -1046,7 +1046,7 @@ namespace eSyncMate.DB.Entities
             return this.Connection.Execute(updateQuery);
         }
 
-        public bool UpdateStatusSCSInventoryFeed( string p_CustomerID, string BatchID,string FeedDocumentID,long MessageID)
+        public bool UpdateStatusSCSInventoryFeed(string CustomerID, string BatchID, string FeedDocumentID, long MessageID)
         {
             string l_Query = string.Empty;
             string l_Param = string.Empty;
@@ -1055,7 +1055,7 @@ namespace eSyncMate.DB.Entities
             {
                 l_Query = "EXEC Sp_UpdateStatusSCSInventoryFeed";
 
-                PublicFunctions.FieldToParam(p_CustomerID, ref l_Param, Declarations.FieldTypes.String);
+                PublicFunctions.FieldToParam(CustomerID, ref l_Param, Declarations.FieldTypes.String);
                 l_Query += l_Param;
 
                 PublicFunctions.FieldToParam(BatchID, ref l_Param, Declarations.FieldTypes.String);
