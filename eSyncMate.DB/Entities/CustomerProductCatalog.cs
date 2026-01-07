@@ -1035,15 +1035,45 @@ namespace eSyncMate.DB.Entities
             return this.Connection.Execute(updateQuery);
         }
 
-        public bool UpdateInventoryBacthwiseStatus(string p_batchID, string p_FeedDocumentID, string p_Status, string CustomerID = "")
+        public bool UpdateInventoryBacthwiseStatus(string p_batchID, string p_FeedDocumentID, string p_Status, string CustomerID = "",string Data = "")
         {
             string updateQuery = $"UPDATE InventoryBatchWiseFeedDetail " +
-                     $"SET Status = '{p_Status}' ";
+                     $"SET Status = '{p_Status}' , Data = '{Data}'   ";
 
 
             updateQuery += $"WHERE batchID = '{p_batchID}' AND CustomerID = '{CustomerID}' AND FeedDocumentID = '{p_FeedDocumentID}'";
 
             return this.Connection.Execute(updateQuery);
+        }
+
+        public bool UpdateStatusSCSInventoryFeed( string p_CustomerID, string BatchID,string FeedDocumentID,long MessageID)
+        {
+            string l_Query = string.Empty;
+            string l_Param = string.Empty;
+
+            try
+            {
+                l_Query = "EXEC Sp_UpdateStatusSCSInventoryFeed";
+
+                PublicFunctions.FieldToParam(p_CustomerID, ref l_Param, Declarations.FieldTypes.String);
+                l_Query += l_Param;
+
+                PublicFunctions.FieldToParam(BatchID, ref l_Param, Declarations.FieldTypes.String);
+                l_Query += ", " + l_Param;
+
+                PublicFunctions.FieldToParam(FeedDocumentID, ref l_Param, Declarations.FieldTypes.String);
+                l_Query += ", " + l_Param;
+                
+                PublicFunctions.FieldToParam(MessageID, ref l_Param, Declarations.FieldTypes.Number);
+                l_Query += ", " + l_Param;
+
+
+                return this.Connection.Execute(l_Query);
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
         }
 
     }

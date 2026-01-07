@@ -20,6 +20,10 @@ using static eSyncMate.Processor.Models.SCS_VAPProductCatalogModel;
 using static eSyncMate.Processor.Models.SCS_ProductCatalogStatusResponseModel;
 using System.Net.Http.Json;
 using static eSyncMate.Processor.Models.MacysInventoryUploadRequestModel;
+using System.Text.Json;
+using System.Text;
+using System.IO.Compression;
+using Microsoft.AspNetCore.Http.HttpResults;
 
 
 namespace eSyncMate.Processor.Managers
@@ -86,22 +90,56 @@ namespace eSyncMate.Processor.Managers
 
                     foreach (DataRow item in l_data.Rows)
                     {
-                        l_DestinationConnector.Url = l_DestinationConnector.BaseUrl + $"/feeds/2021-06-30/feeds/{Convert.ToString(l_data.Rows[0]["FeedDocumentID"])}";
+                        l_DestinationConnector.Url = l_DestinationConnector.BaseUrl + $"/feeds/2021-06-30/feeds/{Convert.ToString(item["FeedDocumentID"])}";
                         route.SaveData("JSON-SNT", 0, l_DestinationConnector.Url, userNo);
 
                         sourceResponse = RestConnector.Execute(l_DestinationConnector, Body).GetAwaiter().GetResult();
 
                         if (sourceResponse.StatusCode == System.Net.HttpStatusCode.OK)
                         {
+                            string l_Content = string.Empty;
                             AmazonInventoryStatusResponseModel l_AmazonInventoryStatusResponseModel = new AmazonInventoryStatusResponseModel();
-
                             l_AmazonInventoryStatusResponseModel = JsonConvert.DeserializeObject<AmazonInventoryStatusResponseModel>(sourceResponse.Content);
 
-                            route.SaveLog(LogTypeEnum.Debug, $"Amazon Inventory Status updated for FeedDocumentID [{item["FeedDocumentID"]}].", string.Empty, userNo);
+                            if (!string.IsNullOrEmpty(l_AmazonInventoryStatusResponseModel.resultFeedDocumentId))
+                            {
+                                l_DestinationConnector.Url = l_DestinationConnector.BaseUrl + $"/feeds/2021-06-30/documents/{l_AmazonInventoryStatusResponseModel.resultFeedDocumentId}";
 
-                            l_CustomerProductCatalog.UseConnection(l_SourceConnector.ConnectionString);
-                            l_CustomerProductCatalog.UpdateInventoryBacthwiseStatus(Convert.ToString(item["BatchID"]), Convert.ToString(item["FeedDocumentID"]), l_AmazonInventoryStatusResponseModel.processingStatus, l_SourceConnector.CustomerID);
+                                route.SaveData("JSON-SNT", 0, l_DestinationConnector.Url, userNo);
+                                
+                                sourceResponse = RestConnector.Execute(l_DestinationConnector, Body).GetAwaiter().GetResult();
 
+                                AmazonInventoryFeedDocumentResponseModel l_AmazonInventoryFeedDocumentResponseModel = new AmazonInventoryFeedDocumentResponseModel();
+                                AmazonInventoryFeedReportDownloadResponseModel l_AmazonInventoryFeedReportDownloadResponseModel = new AmazonInventoryFeedReportDownloadResponseModel();
+                               
+
+                                if (sourceResponse.StatusCode == System.Net.HttpStatusCode.OK)
+                                {
+                                    l_AmazonInventoryFeedDocumentResponseModel = JsonConvert.DeserializeObject<AmazonInventoryFeedDocumentResponseModel>(sourceResponse.Content);
+
+                                    if (!string.IsNullOrEmpty(l_AmazonInventoryFeedDocumentResponseModel.url))
+                                    {
+                                        l_Content = ReadFeedIssuesAsync(l_AmazonInventoryFeedDocumentResponseModel.url).GetAwaiter().GetResult();
+
+                                        l_AmazonInventoryFeedReportDownloadResponseModel = JsonConvert.DeserializeObject<AmazonInventoryFeedReportDownloadResponseModel>(l_Content);
+                                        l_CustomerProductCatalog.UseConnection(l_SourceConnector.ConnectionString);
+
+
+                                        if (l_AmazonInventoryFeedReportDownloadResponseModel.issues.Count > 0)
+                                        {
+                                            foreach (var issue in l_AmazonInventoryFeedReportDownloadResponseModel.issues)
+                                            {
+                                                l_CustomerProductCatalog.UpdateStatusSCSInventoryFeed(l_SourceConnector.CustomerID, item["BatchID"].ToString(), item["FeedDocumentID"].ToString(), Convert.ToInt64(issue.messageId));
+                                            }
+                                        }
+                                    }
+                                    
+                                    route.SaveLog(LogTypeEnum.Debug, $"Amazon Inventory Status updated for FeedDocumentID [{item["FeedDocumentID"]}].", string.Empty, userNo);
+
+                                    l_CustomerProductCatalog.UseConnection(l_SourceConnector.ConnectionString);
+                                    l_CustomerProductCatalog.UpdateInventoryBacthwiseStatus(Convert.ToString(item["BatchID"]), Convert.ToString(item["FeedDocumentID"]), "Completed", l_SourceConnector.CustomerID, l_Content);
+                                }
+                            }
                         }
                         else
                         {
@@ -123,6 +161,44 @@ namespace eSyncMate.Processor.Managers
             finally
             {
                 l_data.Dispose();
+            }
+        }
+
+
+        static async Task<string> DownloadAndGunzipAsync(string url)
+        {
+            try
+            {
+                using var http = new HttpClient();
+                var bytes = await http.GetByteArrayAsync(url);
+
+                using var input = new MemoryStream(bytes);
+                using var gzip = new GZipStream(input, CompressionMode.Decompress);
+                using var reader = new StreamReader(gzip, Encoding.UTF8);
+
+                return await reader.ReadToEndAsync();
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+           
+        }
+
+        static async Task<string> ReadFeedIssuesAsync(string url)
+        {
+            try
+            {
+                var text = await DownloadAndGunzipAsync(url);
+
+
+                return text;
+
+            }
+            catch (Exception)
+            {
+
+                throw;
             }
         }
     }

@@ -86,7 +86,7 @@ namespace eSyncMate.Processor.Managers
                             l_EmailSendingData.Type = "Failed";
                             l_EmailSendingData.CustomerAlertID = customerAlerts.Id;
                             l_EmailSendingData.Email = item;
-                            l_EmailSendingData.Data = Convert.ToString(l_data.Rows[0]["Data"]);
+                            l_EmailSendingData.Data = result.Error;
                             l_EmailSendingData.CreatedDate = DateTime.Now;
                             l_EmailSendingData.CreatedBy = 1;
 
@@ -116,17 +116,17 @@ namespace eSyncMate.Processor.Managers
             // Use N'' for Unicode
             return "N'" + value + "'";
         }
-      
+
         private static async Task<(bool Success, string MessageId, string Error)> SendEmailSmtpAsync(
-            string to,
-            string subject,
-            string body)
+    string to,
+    string subject,
+    string body)
         {
             try
             {
                 // ✅ Build email (MimeKit)
                 var emailMessage = new MimeMessage();
-                emailMessage.From.Add(new MailboxAddress(CommonUtils.FromEmailAccount ?? "", CommonUtils.FromEmailAccount));
+                emailMessage.From.Add(MailboxAddress.Parse(CommonUtils.FromEmailAccount));
                 emailMessage.To.Add(MailboxAddress.Parse(to));
                 emailMessage.Subject = subject;
 
@@ -135,35 +135,25 @@ namespace eSyncMate.Processor.Managers
                     Text = body
                 };
 
-                // Message-Id is generated when saving/sending; we can use it as MessageId
-                // If not generated, we fallback to empty.
-                var messageId = emailMessage.MessageId ?? "";
-
-                // ✅ Send via SMTP (MailKit)
-                using var smtp = new MailKit.Net.Smtp.SmtpClient(); // Use MailKit's SmtpClient
-
-                // Optional: accept all certs (NOT recommended for production)
-                // smtp.ServerCertificateValidationCallback = (s, c, h, e) => true;
-
-                await smtp.ConnectAsync(
-                        CommonUtils.SMTPHost,
-                        CommonUtils.SMTPPort,   // e.g. 465
-                        SecureSocketOptions.SslOnConnect
-                    );
-
-
-                // If your server does not need auth, skip AuthenticateAsync
-                if (!string.IsNullOrWhiteSpace(CommonUtils.FromEmailAccount))
+                using var smtp = new MailKit.Net.Smtp.SmtpClient
                 {
-                    await smtp.AuthenticateAsync(CommonUtils.FromEmailAccount, CommonUtils.FromEmailPWD);
-                }
+                    Timeout = 30000,
+                    CheckCertificateRevocation = false
+                };
+
+                // ✅ IMPORTANT: choose correct TLS option based on port
+                var socketOption = CommonUtils.SMTPPort == 465
+                    ? SecureSocketOptions.SslOnConnect   // 465 = implicit SSL
+                    : SecureSocketOptions.StartTls;      // 587 = STARTTLS
+
+                await smtp.ConnectAsync(CommonUtils.SMTPHost, CommonUtils.SMTPPort, socketOption);
+
+                await smtp.AuthenticateAsync(CommonUtils.FromEmailAccount, CommonUtils.FromEmailPWD);
 
                 await smtp.SendAsync(emailMessage);
                 await smtp.DisconnectAsync(true);
 
-                messageId = emailMessage.MessageId ?? messageId ?? "";
-
-                return (true, messageId, "");
+                return (true, emailMessage.MessageId ?? "", "");
             }
             catch (SmtpCommandException ex)
             {
@@ -175,9 +165,11 @@ namespace eSyncMate.Processor.Managers
             }
             catch (Exception ex)
             {
-                return (false, "", ex.Message);
+                // keep full details (inner exception etc.)
+                return (false, "", ex.ToString());
             }
         }
+
 
     }
 

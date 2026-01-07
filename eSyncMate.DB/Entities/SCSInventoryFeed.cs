@@ -552,6 +552,46 @@ namespace eSyncMate.DB.Entities
             }
         }
 
+        public void BulkAmazonFeedData(string connectionString, string destinationTableName, DataTable dataTable)
+        {
+            using (SqlConnection connection = new SqlConnection(connectionString))
+            {
+                connection.Open();
+
+                using (SqlBulkCopy bulkCopy = new SqlBulkCopy(connection))
+                {
+                    bulkCopy.DestinationTableName = destinationTableName;
+                    bulkCopy.BulkCopyTimeout = 600;
+
+                    try
+                    {
+                        
+                        bulkCopy.ColumnMappings.Add("BatchID", "BatchID");
+                        bulkCopy.ColumnMappings.Add("ItemID", "ItemID");
+                        bulkCopy.ColumnMappings.Add("CustomerID", "CustomerID");
+                        bulkCopy.ColumnMappings.Add("MessageID", "MessageID");
+                        bulkCopy.ColumnMappings.Add("FeedDocumentID", "FeedDocumentID");
+                        bulkCopy.ColumnMappings.Add("Data", "Data");
+
+                        // Perform bulk insert
+                        bulkCopy.WriteToServer(dataTable);
+                    }
+                    catch (Exception ex)
+                    {
+                        throw new Exception("Error during bulk insert", ex);
+                    }
+                }
+            }
+        }
+
+        public bool UpdateSCSAmazonFeedData(string p_BatchID, string p_FeedDocumentID,string p_Guid)
+        {
+            string DeleteQuery = $"UPDATE SCSAmazonFeedData SET FeedDocumentID = '{p_FeedDocumentID}' ";
+
+            DeleteQuery += $"WHERE FeedDocumentID = '{p_Guid}' AND BatchID = '{p_BatchID}'";
+
+            return this.Connection.Execute(DeleteQuery);
+        }
         public Result SaveData(string type, string CustomerId, string ItemId, string Data, int userNo,string batchID)
         {
             Result l_Result = Result.GetFailureResult();

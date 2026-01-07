@@ -22,6 +22,255 @@ namespace eSyncMate.Processor.Managers
 {
     public class MichealASNShipmentNotificationRoute
     {
+        //public static void Execute(IConfiguration config, ILogger logger, Routes route)
+        //{
+        //    int userNo = 1;
+        //    string destinationData = string.Empty;
+        //    string sourceData = string.Empty;
+        //    string Body = string.Empty;
+        //    int l_ID = 0;
+        //    DataTable l_dataTable = new DataTable();
+        //    RestResponse sourceResponse = new RestResponse();
+        //    SCSPlaceOrderResponse l_SCSPlaceOrderResponse = new SCSPlaceOrderResponse();
+
+        //    try
+        //    {
+        //        ConnectorDataModel? l_SourceConnector = JsonConvert.DeserializeObject<ConnectorDataModel>(route.SourceConnectorObject.Data);
+        //        ConnectorDataModel? l_DestinationConnector = JsonConvert.DeserializeObject<ConnectorDataModel>(route.DestinationConnectorObject.Data);
+
+        //        route.SaveLog(LogTypeEnum.Info, $"Started executing route [{route.Id}]", string.Empty, userNo);
+
+        //        if (l_SourceConnector == null)
+        //        {
+        //            logger.LogError("Source Connector is not setup properly");
+        //            route.SaveLog(LogTypeEnum.Error, "Source Connector is not setup properly", string.Empty, userNo);
+        //            return;
+        //        }
+
+        //        if (l_DestinationConnector == null)
+        //        {
+        //            logger.LogError("Destination Connector is not setup properly");
+        //            route.SaveLog(LogTypeEnum.Error, "Destination Connector is not setup properly", string.Empty, userNo);
+        //            return;
+        //        }
+
+        //        //eSyncMate.DB.Entities.Maps map = new eSyncMate.DB.Entities.Maps();
+        //        //string l_TransformationMap = string.Empty;
+
+        //        //map.UseConnection(l_SourceConnector.ConnectionString);
+        //        //map.GetObject(route.MapId);
+
+        //        //l_TransformationMap = map.Map;
+
+        //        //if (string.IsNullOrEmpty(l_TransformationMap))
+        //        //{
+        //        //    route.SaveLog(LogTypeEnum.Error, $"Required map for ASN processing is missing.", string.Empty, userNo);
+        //        //    return;
+        //        //}
+
+        //        if (l_SourceConnector.ConnectivityType == ConnectorTypesEnum.SqlServer.ToString())
+        //        {
+        //            if (l_SourceConnector.Parmeters != null)
+        //            {
+        //                foreach (Models.Parameter l_Parameter in l_SourceConnector.Parmeters)
+        //                {
+        //                    l_Parameter.Value = l_Parameter.Value.Replace("@CUSTOMERID@", route.SourcePartyObject.ERPCustomerID);
+        //                }
+        //            }
+
+        //            route.SaveLog(LogTypeEnum.Debug, "Source connector processing start...", string.Empty, userNo);
+
+        //            DBConnector connection = new DBConnector(l_SourceConnector.ConnectionString);
+
+        //            l_SourceConnector.Command = l_SourceConnector.Command.Replace("@DATATYPE@", "ERPASN-JSON");
+        //            l_SourceConnector.Command = l_SourceConnector.Command.Replace("@ORDERSTATUS@", "SYNCED");
+        //            l_SourceConnector.Command = l_SourceConnector.Command.Replace("@ORDERDATASTATUS@", "ASNGEN");
+
+        //            if (l_SourceConnector.CommandType == "SP")
+        //            {
+        //               connection.GetDataSP(l_SourceConnector.Command,ref l_dataTable);
+        //            }
+
+        //            route.SaveLog(LogTypeEnum.Debug, "Source connector processed.", string.Empty, userNo);
+        //        }
+
+        //        if (l_DestinationConnector.ConnectivityType == ConnectorTypesEnum.Rest.ToString() && l_dataTable.Rows.Count > 0)
+        //        {
+        //            route.SaveLog(LogTypeEnum.Debug, "Destination connector processing start...", string.Empty, userNo);
+
+        //            DataTable l_Orders = l_dataTable.DefaultView.ToTable(true, new string[] { "Id", "OrderNumber", "ExternalId" });
+
+        //            l_Orders.Columns.Add("Data", typeof(string));
+        //            l_Orders.Columns.Add("Trackings", typeof(string));
+
+        //            foreach (DataRow l_Row in l_Orders.Rows)
+        //            {
+        //                string trackings = string.Empty;
+        //                MichealAsnRequestModel l_MichealAsnRequestModel = new MichealAsnRequestModel();
+        //                Shipmentslist l_Shipmentslist = new Shipmentslist();
+        //                Shipmentitemlist l_Shipmentitemlist = new Shipmentitemlist();
+
+
+        //                l_dataTable.DefaultView.RowFilter = $"Id = {l_Row["Id"].ToString()}";
+
+
+        //                foreach (DataRowView l_VRow in l_dataTable.DefaultView)
+        //                {
+        //                    l_Shipmentslist = new Shipmentslist();
+        //                    l_Shipmentitemlist = new Shipmentitemlist();
+
+        //                    l_MichealAsnRequestModel.orderNumber = l_VRow["OrderNumber"].ToString();
+
+
+        //                    l_Shipmentslist.trackingNumber = l_VRow["TrackingNo"].ToString();
+        //                    l_Shipmentslist.carrier = l_VRow["LevelOfService"].ToString();
+
+
+        //                    l_Shipmentitemlist.quantity = Convert.ToInt32(l_VRow["LineQty"]);
+        //                    l_Shipmentitemlist.orderItemId = Convert.ToString(l_VRow["order_line_id"]);
+
+        //                    l_Shipmentslist.shipmentItemList.Add(l_Shipmentitemlist);
+        //                    l_MichealAsnRequestModel.shipmentsList.Add(l_Shipmentslist);
+
+
+        //                    trackings += $"{l_VRow["TrackingNo"].ToString()},";
+
+        //                }
+
+        //                l_Row["Trackings"] = trackings;
+        //                l_Row["Data"] = JsonConvert.SerializeObject(l_MichealAsnRequestModel);
+        //            }
+
+        //            foreach (DataRow l_Row in l_Orders.Rows)
+        //            {
+        //                Body = PublicFunctions.ConvertNullAsString(l_Row["Data"], string.Empty);
+        //                l_ID = PublicFunctions.ConvertNullAsInteger(l_Row["Id"], 0);
+
+        //                route.SaveData("JSON-SNT", 0, Body, userNo);
+
+        //                l_DestinationConnector.Url = l_DestinationConnector.BaseUrl + "/order/shipped";
+        //                l_DestinationConnector.Method = "POST";
+
+        //                OrderData l_OrderData = new OrderData();
+
+        //                l_OrderData.UseConnection(l_SourceConnector.ConnectionString);
+
+        //                l_OrderData.Type = "ASN-SNT";
+        //                l_OrderData.Data = Body;
+        //                l_OrderData.CreatedBy = userNo;
+        //                l_OrderData.CreatedDate = DateTime.Now;
+        //                l_OrderData.OrderId = Convert.ToInt32(l_Row["Id"]);
+        //                l_OrderData.OrderNumber = PublicFunctions.ConvertNullAsString(l_Row["OrderNumber"], string.Empty);
+
+        //                l_OrderData.SaveNew();
+
+        //                sourceResponse = RestConnector.Execute(l_DestinationConnector, Body).GetAwaiter().GetResult();
+
+        //                route.SaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
+        //                route.SaveLog(LogTypeEnum.Debug, $"SCSASN processed for order [{l_Row["Id"]}].", string.Empty, userNo);
+
+        //                if (sourceResponse.StatusCode == System.Net.HttpStatusCode.OK || sourceResponse.StatusCode == System.Net.HttpStatusCode.Created)
+        //                {
+        //                    DBConnector connection = new DBConnector(l_SourceConnector.ConnectionString);
+        //                    string Command = string.Empty;
+
+        //                    route.SaveLog(LogTypeEnum.Debug, $"Update order status processing start for order [{l_Row["Id"]}].", string.Empty, userNo);
+
+        //                    OrderDetail l_Detail = new OrderDetail();
+
+        //                    l_Detail.UseConnection(l_SourceConnector.ConnectionString);
+        //                    foreach (string tracking in l_Row["Trackings"].ToString().Split(','))
+        //                    {
+        //                        if(!string.IsNullOrEmpty(tracking))
+        //                            l_Detail.UpdateASNSent(Convert.ToInt32(l_Row["Id"]), tracking);
+        //                    }
+
+        //                    Command = "EXEC SP_UpdateOrderStatus @p_CustomerID = '" + l_SourceConnector.CustomerID + "', @p_RouteType = '" + RouteTypesEnum.SCSASN + "', @p_ExternalId = '" + l_Row["ExternalId"] + "'";
+
+        //                    connection.Execute(Command);
+
+        //                    l_OrderData = new OrderData();
+
+        //                    l_OrderData.UseConnection(l_SourceConnector.ConnectionString);
+        //                    l_OrderData.DeleteWithType(Convert.ToInt32(l_Row["Id"]), "ASN-RES", "Bad Request");
+
+        //                    l_OrderData.Type = "ASN-RES";
+        //                    l_OrderData.Data = sourceResponse.Content;
+        //                    l_OrderData.CreatedBy = userNo;
+        //                    l_OrderData.CreatedDate = DateTime.Now;
+        //                    l_OrderData.OrderId = Convert.ToInt32(l_Row["Id"]);
+        //                    l_OrderData.OrderNumber = PublicFunctions.ConvertNullAsString(l_Row["OrderNumber"], string.Empty);
+
+        //                    l_OrderData.SaveNew();
+
+        //                    route.SaveLog(LogTypeEnum.Debug, $"Update order status processed for order [{l_Row["Id"]}].", string.Empty, userNo);
+
+
+        //                }
+        //                else
+        //                {
+        //                    DBConnector connection = new DBConnector(l_SourceConnector.ConnectionString);
+        //                    string Command = string.Empty;
+
+        //                    Command = "EXEC SP_UpdateOrderStatus @p_CustomerID = '" + l_SourceConnector.CustomerID + "', @p_RouteType = '" + RouteTypesEnum.SCSASN + "Error', @p_ExternalId = '" + l_Row["ExternalId"] + "'";
+
+        //                    connection.Execute(Command);
+
+        //                    l_OrderData = new OrderData();
+
+        //                    l_OrderData.UseConnection(l_SourceConnector.ConnectionString);
+
+        //                    l_OrderData.Type = "ASN-ERR";
+        //                    l_OrderData.Data = sourceResponse.Content;
+        //                    l_OrderData.CreatedBy = userNo;
+        //                    l_OrderData.CreatedDate = DateTime.Now;
+        //                    l_OrderData.OrderId = Convert.ToInt32(l_Row["Id"]);
+        //                    l_OrderData.OrderNumber = PublicFunctions.ConvertNullAsString(l_Row["OrderNumber"], string.Empty);
+
+        //                    l_OrderData.SaveNew();
+        //                }
+
+        //                //string sql = $@"SELECT  O.Id
+        //                //                FROM Orders O WITH (NOLOCK)
+        //                //                 JOIN OrderDetail D WITH (NOLOCK) ON O.Id = D.OrderId
+        //                //                WHERE O.OrderNumber = '{l_Row["OrderNumber"].ToString()}'
+        //                //                GROUP BY O.Id
+        //                //                HAVING SUM(D.LineQty) - SUM(ISNULL(D.CancelQty,0)) <> SUM(ISNULL(D.ASNQty,0))";
+
+        //                //DBConnector conn = new DBConnector(l_SourceConnector.ConnectionString);
+        //                //DataTable l_Data = new DataTable();
+
+        //                //conn.GetData(sql, ref l_Data);
+
+        //                //if (l_Data.Rows.Count == 0)
+        //                //{
+        //                //    l_DestinationConnector.Url = l_DestinationConnector.BaseUrl + $"/api/orders/{l_Row["OrderNumber"].ToString()}/ship";
+        //                //    l_DestinationConnector.Method = "PUT";
+
+        //                //    route.SaveData("JSON-SNT", 0, l_DestinationConnector.Url, userNo);
+
+        //                //    sourceResponse = RestConnector.Execute(l_DestinationConnector, Body).GetAwaiter().GetResult();
+
+        //                //    route.SaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
+        //                //}
+        //            }
+
+        //            route.SaveLog(LogTypeEnum.Debug, "Destination connector processed.", string.Empty, userNo);
+        //        }
+
+        //        route.SaveLog(LogTypeEnum.Info, $"Completed execution of route [{route.Id}]", string.Empty, userNo);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        route.SaveLog(LogTypeEnum.Exception, $"Error executing the route [{route.Id}]", ex.ToString(), userNo);
+        //    }
+        //    finally 
+        //    {
+        //        l_dataTable.Dispose();
+        //    }
+        //}
+
+
         public static void Execute(IConfiguration config, ILogger logger, Routes route)
         {
             int userNo = 1;
@@ -54,20 +303,6 @@ namespace eSyncMate.Processor.Managers
                     return;
                 }
 
-                //eSyncMate.DB.Entities.Maps map = new eSyncMate.DB.Entities.Maps();
-                //string l_TransformationMap = string.Empty;
-
-                //map.UseConnection(l_SourceConnector.ConnectionString);
-                //map.GetObject(route.MapId);
-
-                //l_TransformationMap = map.Map;
-
-                //if (string.IsNullOrEmpty(l_TransformationMap))
-                //{
-                //    route.SaveLog(LogTypeEnum.Error, $"Required map for ASN processing is missing.", string.Empty, userNo);
-                //    return;
-                //}
-
                 if (l_SourceConnector.ConnectivityType == ConnectorTypesEnum.SqlServer.ToString())
                 {
                     if (l_SourceConnector.Parmeters != null)
@@ -88,125 +323,139 @@ namespace eSyncMate.Processor.Managers
 
                     if (l_SourceConnector.CommandType == "SP")
                     {
-                       connection.GetDataSP(l_SourceConnector.Command,ref l_dataTable);
+                        connection.GetDataSP(l_SourceConnector.Command, ref l_dataTable);
                     }
 
                     route.SaveLog(LogTypeEnum.Debug, "Source connector processed.", string.Empty, userNo);
                 }
 
-
                 if (l_DestinationConnector.ConnectivityType == ConnectorTypesEnum.Rest.ToString() && l_dataTable.Rows.Count > 0)
                 {
                     route.SaveLog(LogTypeEnum.Debug, "Destination connector processing start...", string.Empty, userNo);
 
-                    // Distinct orders from the detail table
                     DataTable l_Orders = l_dataTable.DefaultView.ToTable(true, new string[] { "Id", "OrderNumber", "ExternalId" });
 
-                    // Optional reference columns
                     l_Orders.Columns.Add("Data", typeof(string));
                     l_Orders.Columns.Add("Trackings", typeof(string));
+                    l_Orders.Columns.Add("SendMode", typeof(string)); // ✅ added (SINGLE / SPLIT)
 
+                    // =========================
+                    // BUILD REQUEST PER ORDER
+                    // =========================
+                    foreach (DataRow l_Row in l_Orders.Rows)
+                    {
+                        int orderId = Convert.ToInt32(l_Row["Id"]);
+                        string orderNumber = Convert.ToString(l_Row["OrderNumber"]);
+
+                        l_dataTable.DefaultView.RowFilter = $"Id = {orderId}";
+                        var orderRows = l_dataTable.DefaultView.Cast<DataRowView>().ToList();
+                        if (orderRows.Count == 0) continue;
+
+                        // group by TrackingNo
+                        var trackingGroups = orderRows
+                            .Where(v => !string.IsNullOrWhiteSpace(Convert.ToString(v["TrackingNo"])))
+                            .GroupBy(v => Convert.ToString(v["TrackingNo"]).Trim(), StringComparer.OrdinalIgnoreCase)
+                            .ToList();
+
+                        if (trackingGroups.Count == 0) continue;
+
+                        l_Row["Trackings"] = string.Join(",", trackingGroups.Select(g => g.Key));
+
+                        // detect duplicates: same orderItemId across different trackings
+                        bool hasDuplicateOrderItemAcrossTrackings = false;
+                        var itemIdToTracking = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+                        foreach (var tg in trackingGroups)
+                        {
+                            foreach (var v in tg)
+                            {
+                                string itemId = Convert.ToString(v["order_line_id"])?.Trim();
+                                if (string.IsNullOrWhiteSpace(itemId)) continue;
+
+                                if (itemIdToTracking.TryGetValue(itemId, out var prevTracking))
+                                {
+                                    if (!prevTracking.Equals(tg.Key, StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        hasDuplicateOrderItemAcrossTrackings = true;
+                                        break;
+                                    }
+                                }
+                                else
+                                {
+                                    itemIdToTracking[itemId] = tg.Key;
+                                }
+                            }
+                            if (hasDuplicateOrderItemAcrossTrackings) break;
+                        }
+
+                        // if duplicate case -> send per tracking (split)
+                        if (hasDuplicateOrderItemAcrossTrackings)
+                        {
+                            l_Row["SendMode"] = "SPLIT";
+                            l_Row["Data"] = ""; // not used
+                            continue;
+                        }
+
+                        // normal case -> single request with multi shipmentsList
+                        var req = new MichealAsnRequestModel();
+                        req.orderNumber = orderNumber;
+
+                        foreach (var tg in trackingGroups)
+                        {
+                            var shipment = new Shipmentslist();
+                            shipment.trackingNumber = tg.Key;
+                            shipment.carrier = NormalizeMichaelsCarrier(Convert.ToString(tg.First()["LevelOfService"]));
+
+                            // group items inside same tracking, sum qty
+                            var itemGroups = tg
+                                .Where(v => !string.IsNullOrWhiteSpace(Convert.ToString(v["order_line_id"])))
+                                .GroupBy(v => Convert.ToString(v["order_line_id"]).Trim(), StringComparer.OrdinalIgnoreCase);
+
+                            foreach (var ig in itemGroups)
+                            {
+                                int qtySum = ig.Sum(x => Convert.ToInt32(x["LineQty"]));
+                                if (qtySum <= 0) continue;
+
+                                var it = new Shipmentitemlist();
+                                it.orderItemId = ig.Key;
+                                it.quantity = qtySum;
+
+                                shipment.shipmentItemList.Add(it);
+                            }
+
+                            if (shipment.shipmentItemList.Count > 0)
+                                req.shipmentsList.Add(shipment);
+                        }
+
+                        l_Row["SendMode"] = "SINGLE";
+                        l_Row["Data"] = JsonConvert.SerializeObject(req);
+                    }
+
+                    // =========================
+                    // SEND REQUESTS
+                    // =========================
                     foreach (DataRow l_Row in l_Orders.Rows)
                     {
                         int orderId = Convert.ToInt32(l_Row["Id"]);
                         string orderNumber = Convert.ToString(l_Row["OrderNumber"]);
                         string externalId = Convert.ToString(l_Row["ExternalId"]);
+                        string sendMode = Convert.ToString(l_Row["SendMode"]);
 
-                        route.SaveLog(LogTypeEnum.Debug, $"Destination connector processing start for order [{orderId}].", string.Empty, userNo);
+                        l_DestinationConnector.Url = l_DestinationConnector.BaseUrl + "/order/shipped";
+                        l_DestinationConnector.Method = "POST";
 
-                        // Filter all detail rows for this order
-                        l_dataTable.DefaultView.RowFilter = $"Id = {orderId}";
-                        DataView orderView = l_dataTable.DefaultView;
+                        var succeededTrackings = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                        string lastResponseContent = "";
 
-                        if (orderView.Count == 0)
-                            continue;
-
-                        // Group detail rows by TrackingNo: one API call per tracking number
-                        var shipmentsByTracking = new Dictionary<string, List<DataRowView>>();
-                        foreach (DataRowView vRow in orderView)
+                        if (sendMode == "SINGLE")
                         {
-                            string trackingNo = Convert.ToString(vRow["TrackingNo"]);
-                            if (string.IsNullOrWhiteSpace(trackingNo))
-                                continue;
+                            Body = PublicFunctions.ConvertNullAsString(l_Row["Data"], string.Empty);
+                            if (string.IsNullOrWhiteSpace(Body)) continue;
 
-                            if (!shipmentsByTracking.TryGetValue(trackingNo, out var list))
-                            {
-                                list = new List<DataRowView>();
-                                shipmentsByTracking[trackingNo] = list;
-                            }
-
-                            list.Add(vRow);
-                        }
-
-                        // For reference: all trackings for this order
-                        l_Row["Trackings"] = string.Join(",", shipmentsByTracking.Keys);
-
-                        // Now send ONE /order/shipped call PER tracking number
-                        foreach (var kvp in shipmentsByTracking)
-                        {
-                            string trackingNo = kvp.Key;
-                            List<DataRowView> trackingRows = kvp.Value;
-
-                            // --- Build Michaels request model ---
-                            var asnRequest = new MichealAsnRequestModel
-                            {
-                                orderNumber = orderNumber
-                            };
-
-                            var shipment = new MichealAsnRequestModel.Shipmentslist
-                            {
-                                trackingNumber = trackingNo
-                            };
-
-                            // Carrier value (must be UPS / USPS / FEDEX / DHL)
-                            string rawCarrier = Convert.ToString(trackingRows[0]["LevelOfService"]);
-                            // TODO: map rawCarrier to valid carrier values if needed (UPS, USPS, FEDEX, DHL)
-                            shipment.carrier = rawCarrier;
-
-                            // Group by orderItemId within this tracking, sum quantities
-                            var qtyByOrderItem = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-
-                            foreach (var v in trackingRows)
-                            {
-                                string orderItemId = Convert.ToString(v["order_line_id"]);
-                                if (string.IsNullOrWhiteSpace(orderItemId))
-                                    continue;
-
-                                int qty = Convert.ToInt32(v["LineQty"]);
-                                if (qty <= 0)
-                                    continue;
-
-                                if (qtyByOrderItem.ContainsKey(orderItemId))
-                                    qtyByOrderItem[orderItemId] += qty;
-                                else
-                                    qtyByOrderItem[orderItemId] = qty;
-                            }
-
-                            foreach (var item in qtyByOrderItem)
-                            {
-                                var shipmentItem = new MichealAsnRequestModel.Shipmentitemlist
-                                {
-                                    orderItemId = item.Key,
-                                    quantity = item.Value
-                                };
-
-                                shipment.shipmentItemList.Add(shipmentItem);
-                            }
-
-                            asnRequest.shipmentsList.Add(shipment);
-
-                            Body = JsonConvert.SerializeObject(asnRequest);
-                            l_Row["Data"] = Body; // last body for this order, for reference
-
-                            // --- SEND TO DESTINATION ---
                             route.SaveData("JSON-SNT", 0, Body, userNo);
-
-                            l_DestinationConnector.Url = l_DestinationConnector.BaseUrl + "/order/shipped";
-                            l_DestinationConnector.Method = "POST";
 
                             OrderData l_OrderData = new OrderData();
                             l_OrderData.UseConnection(l_SourceConnector.ConnectionString);
-
                             l_OrderData.Type = "ASN-SNT";
                             l_OrderData.Data = Body;
                             l_OrderData.CreatedBy = userNo;
@@ -216,237 +465,121 @@ namespace eSyncMate.Processor.Managers
                             l_OrderData.SaveNew();
 
                             sourceResponse = RestConnector.Execute(l_DestinationConnector, Body).GetAwaiter().GetResult();
+                            lastResponseContent = sourceResponse.Content;
 
                             route.SaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
-                            route.SaveLog(LogTypeEnum.Debug, $"SCSASN processed for order [{orderId}], tracking [{trackingNo}].", string.Empty, userNo);
+                            route.SaveLog(LogTypeEnum.Debug, $"SCSASN processed for order [{orderId}] SINGLE.", string.Empty, userNo);
 
-                            DBConnector connection = new DBConnector(l_SourceConnector.ConnectionString);
-                            string Command;
-
-                            if (sourceResponse.StatusCode == System.Net.HttpStatusCode.OK ||
-                                sourceResponse.StatusCode == System.Net.HttpStatusCode.Created)
+                            if (sourceResponse.StatusCode == System.Net.HttpStatusCode.OK || sourceResponse.StatusCode == System.Net.HttpStatusCode.Created)
                             {
-                                route.SaveLog(LogTypeEnum.Debug, $"Update order status processing start for order [{orderId}], tracking [{trackingNo}].", string.Empty, userNo);
+                                foreach (var t in Convert.ToString(l_Row["Trackings"]).Split(','))
+                                {
+                                    if (!string.IsNullOrWhiteSpace(t))
+                                        succeededTrackings.Add(t.Trim());
+                                }
 
-                                // Mark ASN sent for this tracking
-                                OrderDetail l_Detail = new OrderDetail();
-                                l_Detail.UseConnection(l_SourceConnector.ConnectionString);
-                                l_Detail.UpdateASNSent(orderId, trackingNo);
-
-                                Command = "EXEC SP_UpdateOrderStatus " +
-                                          "@p_CustomerID = '" + l_SourceConnector.CustomerID + "', " +
-                                          "@p_RouteType = '" + RouteTypesEnum.SCSASN + "', " +
-                                          "@p_ExternalId = '" + externalId + "'";
-
-                                connection.Execute(Command);
-
-                                l_OrderData = new OrderData();
-                                l_OrderData.UseConnection(l_SourceConnector.ConnectionString);
-                                l_OrderData.DeleteWithType(orderId, "ASN-RES", "Bad Request");
-
-                                l_OrderData.Type = "ASN-RES";
-                                l_OrderData.Data = sourceResponse.Content;
-                                l_OrderData.CreatedBy = userNo;
-                                l_OrderData.CreatedDate = DateTime.Now;
-                                l_OrderData.OrderId = orderId;
-                                l_OrderData.OrderNumber = orderNumber;
-                                l_OrderData.SaveNew();
-
-                                route.SaveLog(LogTypeEnum.Debug, $"Update order status processed for order [{orderId}], tracking [{trackingNo}].", string.Empty, userNo);
+                                UpdateAsnSuccess(route, l_SourceConnector, orderId, orderNumber, externalId, succeededTrackings, lastResponseContent, userNo);
                             }
                             else
                             {
-                                Command = "EXEC SP_UpdateOrderStatus " +
-                                          "@p_CustomerID = '" + l_SourceConnector.CustomerID + "', " +
-                                          "@p_RouteType = '" + RouteTypesEnum.SCSASN + "Error', " +
-                                          "@p_ExternalId = '" + externalId + "'";
+                                UpdateAsnError(route, l_SourceConnector, orderId, orderNumber, externalId, lastResponseContent, userNo);
+                            }
+                        }
+                        else if (sendMode == "SPLIT")
+                        {
+                            // Send 1 API call per tracking
+                            l_dataTable.DefaultView.RowFilter = $"Id = {orderId}";
+                            var orderRows = l_dataTable.DefaultView.Cast<DataRowView>().ToList();
+                            if (orderRows.Count == 0) continue;
 
-                                connection.Execute(Command);
+                            var trackingGroups = orderRows
+                                .Where(v => !string.IsNullOrWhiteSpace(Convert.ToString(v["TrackingNo"])))
+                                .GroupBy(v => Convert.ToString(v["TrackingNo"]).Trim(), StringComparer.OrdinalIgnoreCase)
+                                .ToList();
 
-                                l_OrderData = new OrderData();
+                            bool anyFailed = false;
+
+                            foreach (var tg in trackingGroups)
+                            {
+                                string trackingNo = tg.Key;
+
+                                var req = new MichealAsnRequestModel();
+                                req.orderNumber = orderNumber;
+
+                                var shipment = new Shipmentslist();
+                                shipment.trackingNumber = trackingNo;
+                                shipment.carrier = NormalizeMichaelsCarrier(Convert.ToString(tg.First()["LevelOfService"]));
+
+                                var itemGroups = tg
+                                    .Where(v => !string.IsNullOrWhiteSpace(Convert.ToString(v["order_line_id"])))
+                                    .GroupBy(v => Convert.ToString(v["order_line_id"]).Trim(), StringComparer.OrdinalIgnoreCase);
+
+                                foreach (var ig in itemGroups)
+                                {
+                                    int qtySum = ig.Sum(x => Convert.ToInt32(x["LineQty"]));
+                                    if (qtySum <= 0) continue;
+
+                                    var it = new Shipmentitemlist();
+                                    it.orderItemId = ig.Key;
+                                    it.quantity = qtySum;
+                                    shipment.shipmentItemList.Add(it);
+                                }
+
+                                if (shipment.shipmentItemList.Count == 0)
+                                    continue;
+
+                                req.shipmentsList.Add(shipment);
+                                Body = JsonConvert.SerializeObject(req);
+
+                                route.SaveData("JSON-SNT", 0, Body, userNo);
+
+                                OrderData l_OrderData = new OrderData();
                                 l_OrderData.UseConnection(l_SourceConnector.ConnectionString);
-
-                                l_OrderData.Type = "ASN-ERR";
-                                l_OrderData.Data = sourceResponse.Content;
+                                l_OrderData.Type = "ASN-SNT";
+                                l_OrderData.Data = Body;
                                 l_OrderData.CreatedBy = userNo;
                                 l_OrderData.CreatedDate = DateTime.Now;
                                 l_OrderData.OrderId = orderId;
                                 l_OrderData.OrderNumber = orderNumber;
                                 l_OrderData.SaveNew();
-                            }
-                        }
 
-                        route.SaveLog(LogTypeEnum.Debug, $"Destination connector processed for order [{orderId}].", string.Empty, userNo);
+                                sourceResponse = RestConnector.Execute(l_DestinationConnector, Body).GetAwaiter().GetResult();
+                                lastResponseContent = sourceResponse.Content;
+
+                                route.SaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
+                                route.SaveLog(LogTypeEnum.Debug, $"SCSASN processed for order [{orderId}] tracking [{trackingNo}] SPLIT.", string.Empty, userNo);
+
+                                if (sourceResponse.StatusCode == System.Net.HttpStatusCode.OK || sourceResponse.StatusCode == System.Net.HttpStatusCode.Created)
+                                {
+                                    succeededTrackings.Add(trackingNo);
+                                }
+                                else
+                                {
+                                    anyFailed = true;
+
+                                    // if locked out, stop remaining trackings
+                                    if (IsTransactionLockedOut(sourceResponse.Content))
+                                    {
+                                        route.SaveLog(LogTypeEnum.Error, $"Transaction locked out for order [{orderId}] at tracking [{trackingNo}]. Stopping.", sourceResponse.Content, userNo);
+                                        break;
+                                    }
+                                }
+                            }
+
+                            if (!anyFailed && succeededTrackings.Count > 0)
+                                UpdateAsnSuccess(route, l_SourceConnector, orderId, orderNumber, externalId, succeededTrackings, lastResponseContent, userNo);
+                            else
+                                UpdateAsnError(route, l_SourceConnector, orderId, orderNumber, externalId, lastResponseContent, userNo);
+                        }
+                        else
+                        {
+                            // if SendMode empty, do nothing
+                            continue;
+                        }
                     }
 
                     route.SaveLog(LogTypeEnum.Debug, "Destination connector processed.", string.Empty, userNo);
                 }
-
-
-
-                //if (l_DestinationConnector.ConnectivityType == ConnectorTypesEnum.Rest.ToString() && l_dataTable.Rows.Count > 0)
-                //{
-                //    route.SaveLog(LogTypeEnum.Debug, "Destination connector processing start...", string.Empty, userNo);
-
-                //    DataTable l_Orders = l_dataTable.DefaultView.ToTable(true, new string[] { "Id", "OrderNumber", "ExternalId" });
-
-                //    l_Orders.Columns.Add("Data", typeof(string));
-                //    l_Orders.Columns.Add("Trackings", typeof(string));
-
-                //    foreach (DataRow l_Row in l_Orders.Rows)
-                //    {
-                //        string trackings = string.Empty;
-                //        MichealAsnRequestModel l_MichealAsnRequestModel = new MichealAsnRequestModel();
-                //        Shipmentslist l_Shipmentslist = new Shipmentslist();
-                //        Shipmentitemlist l_Shipmentitemlist = new Shipmentitemlist();
-
-
-                //        l_dataTable.DefaultView.RowFilter = $"Id = {l_Row["Id"].ToString()}";
-
-
-                //        foreach (DataRowView l_VRow in l_dataTable.DefaultView)
-                //        {
-                //            l_Shipmentslist = new Shipmentslist();
-                //            l_Shipmentitemlist = new Shipmentitemlist();
-
-                //            l_MichealAsnRequestModel.orderNumber = l_VRow["OrderNumber"].ToString();
-
-
-                //            l_Shipmentslist.trackingNumber = l_VRow["TrackingNo"].ToString();
-                //            l_Shipmentslist.carrier = l_VRow["LevelOfService"].ToString();
-
-
-                //            l_Shipmentitemlist.quantity = Convert.ToInt32(l_VRow["LineQty"]);
-                //            l_Shipmentitemlist.orderItemId = Convert.ToString(l_VRow["order_line_id"]);
-
-                //            l_Shipmentslist.shipmentItemList.Add(l_Shipmentitemlist);
-                //            l_MichealAsnRequestModel.shipmentsList.Add(l_Shipmentslist);
-
-
-                //            trackings += $"{l_VRow["TrackingNo"].ToString()},";
-
-                //        }
-
-                //        l_Row["Trackings"] = trackings;
-                //        l_Row["Data"] = JsonConvert.SerializeObject(l_MichealAsnRequestModel);
-                //    }
-
-                //    foreach (DataRow l_Row in l_Orders.Rows)
-                //    {
-                //        Body = PublicFunctions.ConvertNullAsString(l_Row["Data"], string.Empty);
-                //        l_ID = PublicFunctions.ConvertNullAsInteger(l_Row["Id"], 0);
-
-                //        route.SaveData("JSON-SNT", 0, Body, userNo);
-
-                //        l_DestinationConnector.Url = l_DestinationConnector.BaseUrl + "/order/shipped";
-                //        l_DestinationConnector.Method = "POST";
-
-                //        OrderData l_OrderData = new OrderData();
-
-                //        l_OrderData.UseConnection(l_SourceConnector.ConnectionString);
-
-                //        l_OrderData.Type = "ASN-SNT";
-                //        l_OrderData.Data = Body;
-                //        l_OrderData.CreatedBy = userNo;
-                //        l_OrderData.CreatedDate = DateTime.Now;
-                //        l_OrderData.OrderId = Convert.ToInt32(l_Row["Id"]);
-                //        l_OrderData.OrderNumber = PublicFunctions.ConvertNullAsString(l_Row["OrderNumber"], string.Empty);
-
-                //        l_OrderData.SaveNew();
-
-                //        sourceResponse = RestConnector.Execute(l_DestinationConnector, Body).GetAwaiter().GetResult();
-
-                //        route.SaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
-                //        route.SaveLog(LogTypeEnum.Debug, $"SCSASN processed for order [{l_Row["Id"]}].", string.Empty, userNo);
-
-                //        if (sourceResponse.StatusCode == System.Net.HttpStatusCode.OK || sourceResponse.StatusCode == System.Net.HttpStatusCode.Created)
-                //        {
-                //            DBConnector connection = new DBConnector(l_SourceConnector.ConnectionString);
-                //            string Command = string.Empty;
-
-                //            route.SaveLog(LogTypeEnum.Debug, $"Update order status processing start for order [{l_Row["Id"]}].", string.Empty, userNo);
-
-                //            OrderDetail l_Detail = new OrderDetail();
-
-                //            l_Detail.UseConnection(l_SourceConnector.ConnectionString);
-                //            foreach (string tracking in l_Row["Trackings"].ToString().Split(','))
-                //            {
-                //                if(!string.IsNullOrEmpty(tracking))
-                //                    l_Detail.UpdateASNSent(Convert.ToInt32(l_Row["Id"]), tracking);
-                //            }
-
-                //            Command = "EXEC SP_UpdateOrderStatus @p_CustomerID = '" + l_SourceConnector.CustomerID + "', @p_RouteType = '" + RouteTypesEnum.SCSASN + "', @p_ExternalId = '" + l_Row["ExternalId"] + "'";
-
-                //            connection.Execute(Command);
-
-                //            l_OrderData = new OrderData();
-
-                //            l_OrderData.UseConnection(l_SourceConnector.ConnectionString);
-                //            l_OrderData.DeleteWithType(Convert.ToInt32(l_Row["Id"]), "ASN-RES", "Bad Request");
-
-                //            l_OrderData.Type = "ASN-RES";
-                //            l_OrderData.Data = sourceResponse.Content;
-                //            l_OrderData.CreatedBy = userNo;
-                //            l_OrderData.CreatedDate = DateTime.Now;
-                //            l_OrderData.OrderId = Convert.ToInt32(l_Row["Id"]);
-                //            l_OrderData.OrderNumber = PublicFunctions.ConvertNullAsString(l_Row["OrderNumber"], string.Empty);
-
-                //            l_OrderData.SaveNew();
-
-                //            route.SaveLog(LogTypeEnum.Debug, $"Update order status processed for order [{l_Row["Id"]}].", string.Empty, userNo);
-
-
-                //        }
-                //        else
-                //        {
-                //            DBConnector connection = new DBConnector(l_SourceConnector.ConnectionString);
-                //            string Command = string.Empty;
-
-                //            Command = "EXEC SP_UpdateOrderStatus @p_CustomerID = '" + l_SourceConnector.CustomerID + "', @p_RouteType = '" + RouteTypesEnum.SCSASN + "Error', @p_ExternalId = '" + l_Row["ExternalId"] + "'";
-
-                //            connection.Execute(Command);
-
-                //            l_OrderData = new OrderData();
-
-                //            l_OrderData.UseConnection(l_SourceConnector.ConnectionString);
-
-                //            l_OrderData.Type = "ASN-ERR";
-                //            l_OrderData.Data = sourceResponse.Content;
-                //            l_OrderData.CreatedBy = userNo;
-                //            l_OrderData.CreatedDate = DateTime.Now;
-                //            l_OrderData.OrderId = Convert.ToInt32(l_Row["Id"]);
-                //            l_OrderData.OrderNumber = PublicFunctions.ConvertNullAsString(l_Row["OrderNumber"], string.Empty);
-
-                //            l_OrderData.SaveNew();
-                //        }
-
-                //        //string sql = $@"SELECT  O.Id
-                //        //                FROM Orders O WITH (NOLOCK)
-                //        //                 JOIN OrderDetail D WITH (NOLOCK) ON O.Id = D.OrderId
-                //        //                WHERE O.OrderNumber = '{l_Row["OrderNumber"].ToString()}'
-                //        //                GROUP BY O.Id
-                //        //                HAVING SUM(D.LineQty) - SUM(ISNULL(D.CancelQty,0)) <> SUM(ISNULL(D.ASNQty,0))";
-
-                //        //DBConnector conn = new DBConnector(l_SourceConnector.ConnectionString);
-                //        //DataTable l_Data = new DataTable();
-
-                //        //conn.GetData(sql, ref l_Data);
-
-                //        //if (l_Data.Rows.Count == 0)
-                //        //{
-                //        //    l_DestinationConnector.Url = l_DestinationConnector.BaseUrl + $"/api/orders/{l_Row["OrderNumber"].ToString()}/ship";
-                //        //    l_DestinationConnector.Method = "PUT";
-
-                //        //    route.SaveData("JSON-SNT", 0, l_DestinationConnector.Url, userNo);
-
-                //        //    sourceResponse = RestConnector.Execute(l_DestinationConnector, Body).GetAwaiter().GetResult();
-
-                //        //    route.SaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
-                //        //}
-                //    }
-
-                //    route.SaveLog(LogTypeEnum.Debug, "Destination connector processed.", string.Empty, userNo);
-                //}
 
                 route.SaveLog(LogTypeEnum.Info, $"Completed execution of route [{route.Id}]", string.Empty, userNo);
             }
@@ -454,11 +587,103 @@ namespace eSyncMate.Processor.Managers
             {
                 route.SaveLog(LogTypeEnum.Exception, $"Error executing the route [{route.Id}]", ex.ToString(), userNo);
             }
-            finally 
+            finally
             {
                 l_dataTable.Dispose();
             }
         }
+
+        // ===================== HELPERS (minimal) =====================
+
+        private static string NormalizeMichaelsCarrier(string raw)
+        {
+            raw = (raw ?? "").Trim().ToUpperInvariant();
+
+            if (raw.Contains("FEDEX")) return "FEDEX";
+            if (raw.Contains("UPS")) return "UPS";
+            if (raw.Contains("USPS")) return "USPS";
+            if (raw.Contains("DHL")) return "DHL";
+
+            return "FEDEX";
+        }
+
+        private static bool IsTransactionLockedOut(string responseContent)
+        {
+            if (string.IsNullOrWhiteSpace(responseContent)) return false;
+            string s = responseContent.ToLowerInvariant();
+            return s.Contains("locked out") || s.Contains("transaction is locked");
+        }
+
+        private static void UpdateAsnSuccess(
+            Routes route,
+            ConnectorDataModel sourceConnector,
+            int orderId,
+            string orderNumber,
+            string externalId,
+            HashSet<string> succeededTrackings,
+            string responseContent,
+            int userNo)
+        {
+            DBConnector connection = new DBConnector(sourceConnector.ConnectionString);
+
+            route.SaveLog(LogTypeEnum.Debug, $"Update order status processing start for order [{orderId}].", string.Empty, userNo);
+
+            OrderDetail l_Detail = new OrderDetail();
+            l_Detail.UseConnection(sourceConnector.ConnectionString);
+
+            foreach (var tracking in succeededTrackings)
+                l_Detail.UpdateASNSent(orderId, tracking);
+
+            string Command = "EXEC SP_UpdateOrderStatus @p_CustomerID = '" + sourceConnector.CustomerID +
+                             "', @p_RouteType = '" + RouteTypesEnum.SCSASN +
+                             "', @p_ExternalId = '" + externalId + "'";
+
+            connection.Execute(Command);
+
+            OrderData l_OrderData = new OrderData();
+            l_OrderData.UseConnection(sourceConnector.ConnectionString);
+            l_OrderData.DeleteWithType(orderId, "ASN-RES", "Bad Request");
+
+            l_OrderData.Type = "ASN-RES";
+            l_OrderData.Data = responseContent;
+            l_OrderData.CreatedBy = userNo;
+            l_OrderData.CreatedDate = DateTime.Now;
+            l_OrderData.OrderId = orderId;
+            l_OrderData.OrderNumber = orderNumber;
+            l_OrderData.SaveNew();
+
+            route.SaveLog(LogTypeEnum.Debug, $"Update order status processed for order [{orderId}].", string.Empty, userNo);
+        }
+
+        private static void UpdateAsnError(
+            Routes route,
+            ConnectorDataModel sourceConnector,
+            int orderId,
+            string orderNumber,
+            string externalId,
+            string responseContent,
+            int userNo)
+        {
+            DBConnector connection = new DBConnector(sourceConnector.ConnectionString);
+
+            string Command = "EXEC SP_UpdateOrderStatus @p_CustomerID = '" + sourceConnector.CustomerID +
+                             "', @p_RouteType = '" + RouteTypesEnum.SCSASN + "Error" +
+                             "', @p_ExternalId = '" + externalId + "'";
+
+            connection.Execute(Command);
+
+            OrderData l_OrderData = new OrderData();
+            l_OrderData.UseConnection(sourceConnector.ConnectionString);
+
+            l_OrderData.Type = "ASN-ERR";
+            l_OrderData.Data = responseContent;
+            l_OrderData.CreatedBy = userNo;
+            l_OrderData.CreatedDate = DateTime.Now;
+            l_OrderData.OrderId = orderId;
+            l_OrderData.OrderNumber = orderNumber;
+            l_OrderData.SaveNew();
+        }
+
 
         public static ResponseModel ExecuteShipment(string OrderNumber)
         {

@@ -257,6 +257,7 @@ namespace eSyncMate.Processor.Managers
         {
             AmazonCreateDocumentResponseModel l_AmazonCreateDocumentResponseModel = new AmazonCreateDocumentResponseModel();
             RestResponse sourceResponse = new RestResponse();
+            string l_Guid = Guid.NewGuid().ToString();
 
             try
             {
@@ -277,7 +278,7 @@ namespace eSyncMate.Processor.Managers
                 string feedDocumentId = createDocumentResponse["feedDocumentId"].ToString();
                 string feedUrl = createDocumentResponse["url"].ToString();
 
-                string jsonrequest = GenerateInventoryFeedXml(this.data, this.feed, this.sourceConnector.ConnectionString, this.bacthID,this.ShipNodeData);
+                string jsonrequest = GenerateInventoryFeedXml(this.data, this.feed, this.sourceConnector.ConnectionString, this.bacthID,this.ShipNodeData, l_Guid);
 
                 if (!string.IsNullOrWhiteSpace(jsonrequest))
                 {
@@ -317,6 +318,7 @@ namespace eSyncMate.Processor.Managers
                     
                     feed.BulkNewInsertData(this.sourceConnector.ConnectionString, "SCSInventoryFeedData", bulkInsertTable);
                     this.feed.InsertInventoryBatchWiseFeedDetail(this.bacthID, "NEW", feedId, this.destinationConnector.CustomerID);
+                    this.feed.UpdateSCSAmazonFeedData(this.bacthID, feedId,l_Guid);
                 }
             }
             catch (Exception ex)
@@ -381,7 +383,7 @@ namespace eSyncMate.Processor.Managers
         //    }
         //}
 
-        private static string GenerateInventoryFeedXml(DataTable inventoryData, SCSInventoryFeed feed,string ConnectionString , string batchID,DataTable shipNodeData)
+        private static string GenerateInventoryFeedXml(DataTable inventoryData, SCSInventoryFeed feed,string ConnectionString , string batchID,DataTable shipNodeData,string p_Guid)
         {
             StringBuilder xml = new StringBuilder();
             feed.UseConnection(ConnectionString);
@@ -389,6 +391,8 @@ namespace eSyncMate.Processor.Managers
             try
             {
                 DataTable bulkInsertTable = CreateBulkInsertDataTable();
+                DataTable bulkSCSAmazonFeedData = CreateBulkInsertSCSAmazonFeedData();
+
                 AmazonInventoryRequestModel l_AmazonInventoryRequestModel = new AmazonInventoryRequestModel();
 
                 l_AmazonInventoryRequestModel.header.sellerId = "A3NX96R6O9JSG4";
@@ -443,6 +447,18 @@ namespace eSyncMate.Processor.Managers
 
                     bulkInsertTable.Rows.Add(bulkRow);
 
+
+                    DataRow bulkSCSAmazonFeedDataRow = bulkSCSAmazonFeedData.NewRow();
+                    bulkSCSAmazonFeedDataRow["BatchID"] = batchID;
+                    bulkSCSAmazonFeedDataRow["ItemId"] = row["ItemId"];
+                    bulkSCSAmazonFeedDataRow["CustomerId"] = row["CustomerId"];
+                    bulkSCSAmazonFeedDataRow["MessageID"] = messageId;
+                    bulkSCSAmazonFeedDataRow["FeedDocumentID"] = p_Guid;
+                    bulkSCSAmazonFeedDataRow["Data"] = perItemJson;
+
+                    bulkSCSAmazonFeedData.Rows.Add(bulkSCSAmazonFeedDataRow);
+
+
                     messageId++;
                 }
 
@@ -453,6 +469,7 @@ namespace eSyncMate.Processor.Managers
                     );
 
                 feed.BulkNewInsertData(ConnectionString, "SCSInventoryFeedData", bulkInsertTable);
+                feed.BulkAmazonFeedData(ConnectionString, "SCSAmazonFeedData", bulkSCSAmazonFeedData);
 
                 return fullFeedJson;
             }
@@ -480,6 +497,22 @@ namespace eSyncMate.Processor.Managers
             bulkInsertTable.Columns.Add("CreatedBy", typeof(int));
             bulkInsertTable.Columns.Add("BatchID", typeof(string));
 
+            return bulkInsertTable;
+        }
+
+        public static DataTable CreateBulkInsertSCSAmazonFeedData()
+        {
+            // Create a new DataTable to hold the necessary columns
+            DataTable bulkInsertTable = new DataTable();
+
+            // Add the required columns
+            bulkInsertTable.Columns.Add("BatchID", typeof(string));
+            bulkInsertTable.Columns.Add("ItemId", typeof(string));
+            bulkInsertTable.Columns.Add("CustomerId", typeof(string));
+            bulkInsertTable.Columns.Add("MessageID", typeof(Int64));
+            bulkInsertTable.Columns.Add("FeedDocumentID", typeof(string));
+            bulkInsertTable.Columns.Add("Data", typeof(string));
+            
             return bulkInsertTable;
         }
 

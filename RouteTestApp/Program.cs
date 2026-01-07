@@ -25,6 +25,8 @@ using static eSyncMate.DB.Declarations;
 using Microsoft.Extensions.Logging;
 using Mysqlx.Prepare;
 using static eSyncMate.Processor.Models.LowesGetOrderResponseModel;
+using System.Text.Json;
+using System.IO.Compression;
 
 static void Main()
 {
@@ -42,8 +44,10 @@ static void Main()
     IConfiguration config = new MyConfigurationImplementation();
     RouteEngine routeEngine = new RouteEngine(config);
     ////1, 4, 10,7 GECKO
-    int routeId = 92;
+    int routeId = 109;
     routeEngine.Execute(routeId);
+
+    //ReadFeedIssuesAsync("https://tortuga-prod-na.s3-external-1.amazonaws.com/9b15da00-673d-4634-8e14-55604adfb0f3.amzn1.tortuga.4.na.T1TUXS217N9PDC?response-content-encoding=identity&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20260107T073048Z&X-Amz-SignedHeaders=host&X-Amz-Expires=300&X-Amz-Credential=AKIA5U6MO6RAFWDBC36B%2F20260107%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Signature=62f34f854524fe82d4f9b7d29ecf48c1d3a0c21b810a9d56c40b5ab64449e6bc").GetAwaiter().GetResult();
 
     //MissingOrdersProcessed().GetAwaiter().GetResult();
 
@@ -1684,7 +1688,43 @@ Console.WriteLine("Hello, World!");
 
 
 
+ static async Task<string> DownloadAndGunzipAsync(string url)
+{
+    using var http = new HttpClient();
+    var bytes = await http.GetByteArrayAsync(url);
 
+    using var input = new MemoryStream(bytes);
+    using var gzip = new GZipStream(input, CompressionMode.Decompress);
+    using var reader = new StreamReader(gzip, Encoding.UTF8);
+
+    return await reader.ReadToEndAsync(); // JSON text (usually)
+}
+
+ static async Task ReadFeedIssuesAsync(string url)
+{
+    var text = await DownloadAndGunzipAsync(url);
+
+    using var doc = JsonDocument.Parse(text);
+    var root = doc.RootElement;
+
+    // Try common keys
+    if (!root.TryGetProperty("issues", out var issuesEl) &&
+        !root.TryGetProperty("errors", out issuesEl))
+    {
+        Console.WriteLine("No 'issues'/'errors' found. First 500 chars:");
+        Console.WriteLine(text.Substring(0, Math.Min(500, text.Length)));
+        return;
+    }
+
+    foreach (var issue in issuesEl.EnumerateArray())
+    {
+        string sku = issue.TryGetProperty("sku", out var skuEl) ? skuEl.GetString() : "";
+        string sev = issue.TryGetProperty("severity", out var sevEl) ? sevEl.GetString() : "";
+        string msg = issue.TryGetProperty("message", out var msgEl) ? msgEl.GetString() : "";
+
+        Console.WriteLine($"[{sev}] sku={sku} msg={msg}");
+    }
+}
 
 
 
