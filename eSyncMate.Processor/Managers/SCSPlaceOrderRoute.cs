@@ -461,7 +461,15 @@ namespace eSyncMate.Processor.Managers
 
                 connection.Execute(command);
 
-                string errorContent = sourceResponse.Content ?? "No Response from SPARS, please verify this order in SPARS before reprocessing.";
+                var fallback = new
+                {
+                    message = "No Response from SPARS, please reprocess the order."
+                };
+
+                string messageContent = JsonConvert.SerializeObject(fallback);
+
+                string errorContent = sourceResponse.Content ?? messageContent;
+                
                 string orderNumber = PublicFunctions.ConvertNullAsString(l_Row["OrderNumber"], string.Empty);
 
                 l_OrderData.UseConnection(sourceConnector.ConnectionString);

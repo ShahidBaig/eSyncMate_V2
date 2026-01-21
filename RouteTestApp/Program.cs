@@ -27,6 +27,8 @@ using Mysqlx.Prepare;
 using static eSyncMate.Processor.Models.LowesGetOrderResponseModel;
 using System.Text.Json;
 using System.IO.Compression;
+using ClosedXML.Excel;
+using DocumentFormat.OpenXml.Bibliography;
 
 static void Main()
 {
@@ -44,10 +46,17 @@ static void Main()
     IConfiguration config = new MyConfigurationImplementation();
     RouteEngine routeEngine = new RouteEngine(config);
     ////1, 4, 10,7 GECKO
-    int routeId = 109;
+    int routeId = 99;
     routeEngine.Execute(routeId);
 
-    //ReadFeedIssuesAsync("https://tortuga-prod-na.s3-external-1.amazonaws.com/9b15da00-673d-4634-8e14-55604adfb0f3.amzn1.tortuga.4.na.T1TUXS217N9PDC?response-content-encoding=identity&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20260107T073048Z&X-Amz-SignedHeaders=host&X-Amz-Expires=300&X-Amz-Credential=AKIA5U6MO6RAFWDBC36B%2F20260107%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Signature=62f34f854524fe82d4f9b7d29ecf48c1d3a0c21b810a9d56c40b5ab64449e6bc").GetAwaiter().GetResult();
+
+    //IConfiguration config = new MyConfigurationImplementation();
+    //AlertEngine routeEngine = new AlertEngine(config);
+    //////1, 4, 10,7 GECKO
+    //int routeId = 3;
+    //routeEngine.Execute(routeId);
+
+    //ReadFeedIssuesAsync("https://tortuga-prod-na.s3-external-1.amazonaws.com/5fa875c4-f059-4835-a42d-3282f303ce76.amzn1.tortuga.4.na.TLTKCV24Q6QPJ?response-content-encoding=identity&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20260114T104620Z&X-Amz-SignedHeaders=host&X-Amz-Expires=300&X-Amz-Credential=AKIA5U6MO6RAFWDBC36B%2F20260114%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Signature=3a773f516b8baaedcd9a080e120cbd4d94f001212fb2b933f416b6c626be8345").GetAwaiter().GetResult();
 
     //MissingOrdersProcessed().GetAwaiter().GetResult();
 
@@ -1702,28 +1711,83 @@ Console.WriteLine("Hello, World!");
 
  static async Task ReadFeedIssuesAsync(string url)
 {
-    var text = await DownloadAndGunzipAsync(url);
+    //var text = await DownloadAndGunzipAsync(url);
 
-    using var doc = JsonDocument.Parse(text);
-    var root = doc.RootElement;
+    var exeFolder = AppContext.BaseDirectory;
+    var fileName = $"FBM_Items_Report_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+    var outputPath = Path.Combine(exeFolder, fileName);
 
-    // Try common keys
-    if (!root.TryGetProperty("issues", out var issuesEl) &&
-        !root.TryGetProperty("errors", out issuesEl))
+    await SaveAmazonReportToExcelAsync(url, outputPath);
+    Console.WriteLine("Saved at: " + outputPath);
+
+    //using var doc = JsonDocument.Parse(text);
+    //var root = doc.RootElement;
+
+    //// Try common keys
+    //if (!root.TryGetProperty("issues", out var issuesEl) &&
+    //    !root.TryGetProperty("errors", out issuesEl))
+    //{
+    //    Console.WriteLine("No 'issues'/'errors' found. First 500 chars:");
+    //    Console.WriteLine(text.Substring(0, Math.Min(500, text.Length)));
+    //    return;
+    //}
+
+    //foreach (var issue in issuesEl.EnumerateArray())
+    //{
+    //    string sku = issue.TryGetProperty("sku", out var skuEl) ? skuEl.GetString() : "";
+    //    string sev = issue.TryGetProperty("severity", out var sevEl) ? sevEl.GetString() : "";
+    //    string msg = issue.TryGetProperty("message", out var msgEl) ? msgEl.GetString() : "";
+
+    //    Console.WriteLine($"[{sev}] sku={sku} msg={msg}");
+    //}
+}
+
+
+static async Task SaveAmazonReportToExcelAsync(string reportUrl, string outputPath)
+{
+    var text = await DownloadAndGunzipAsync(reportUrl);
+
+    if (string.IsNullOrWhiteSpace(text))
+        throw new Exception("Empty report content");
+
+    // Split lines
+    var lines = text
+        .Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries)
+        .ToList();
+
+    if (lines.Count == 0)
+        throw new Exception("No data in report");
+
+    char delimiter = lines[0].Contains('\t') ? '\t' : ',';
+
+    using var workbook = new XLWorkbook();
+    var sheet = workbook.Worksheets.Add("Amazon_Report");
+
+    // Header
+    var headers = lines[0].Split(delimiter);
+    for (int c = 0; c < headers.Length; c++)
     {
-        Console.WriteLine("No 'issues'/'errors' found. First 500 chars:");
-        Console.WriteLine(text.Substring(0, Math.Min(500, text.Length)));
-        return;
+        sheet.Cell(1, c + 1).Value = headers[c];
+        sheet.Cell(1, c + 1).Style.Font.Bold = true;
     }
 
-    foreach (var issue in issuesEl.EnumerateArray())
+    // Rows
+    for (int r = 1; r < lines.Count; r++)
     {
-        string sku = issue.TryGetProperty("sku", out var skuEl) ? skuEl.GetString() : "";
-        string sev = issue.TryGetProperty("severity", out var sevEl) ? sevEl.GetString() : "";
-        string msg = issue.TryGetProperty("message", out var msgEl) ? msgEl.GetString() : "";
+        var cols = lines[r].Split(delimiter);
 
-        Console.WriteLine($"[{sev}] sku={sku} msg={msg}");
+        for (int c = 0; c < headers.Length && c < cols.Length; c++)
+        {
+            sheet.Cell(r + 1, c + 1).Value = cols[c];
+        }
     }
+
+    sheet.Columns().AdjustToContents();
+
+    // Save Excel
+    workbook.SaveAs(outputPath);
+
+    Console.WriteLine($"✅ Excel file saved: {outputPath}");
 }
 
 

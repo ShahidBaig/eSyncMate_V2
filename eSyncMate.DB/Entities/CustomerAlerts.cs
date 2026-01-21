@@ -447,6 +447,48 @@ namespace eSyncMate.DB.Entities
             return l_Result;
         }
 
+        public Result UpdateAlertJobID(int Id, string JobID)
+        {
+            Result l_Result = Result.GetFailureResult();
+            bool l_Trans = false;
+            bool l_Process = false;
+
+            try
+            {
+                l_Trans = this.Connection.BeginTransaction();
+
+                l_Process = this.Connection.Execute($@"UPDATE CustomerAlerts SET JobID = '{JobID}'
+                                           WHERE Id = {Id} ");
+
+                if (l_Trans)
+                {
+                    if (l_Process)
+                    {
+                        this.Connection.CommitTransaction();
+                        l_Result = Result.GetSuccessResult();
+                    }
+                    else
+                    {
+                        this.Connection.RollbackTransaction();
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                if (l_Trans)
+                {
+                    this.Connection.RollbackTransaction();
+                }
+
+                throw;
+            }
+            finally
+            {
+            }
+
+            return l_Result;
+        }
+
         #region IDisposable Support
         private bool disposedValue; // To detect redundant calls
 

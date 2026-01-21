@@ -103,6 +103,8 @@ namespace eSyncMate.Processor.Managers
 
                             if (!string.IsNullOrEmpty(l_AmazonInventoryStatusResponseModel.resultFeedDocumentId))
                             {
+                                Thread.Sleep(TimeSpan.FromSeconds(30)); 
+
                                 l_DestinationConnector.Url = l_DestinationConnector.BaseUrl + $"/feeds/2021-06-30/documents/{l_AmazonInventoryStatusResponseModel.resultFeedDocumentId}";
 
                                 route.SaveData("JSON-SNT", 0, l_DestinationConnector.Url, userNo);
@@ -119,6 +121,8 @@ namespace eSyncMate.Processor.Managers
 
                                     if (!string.IsNullOrEmpty(l_AmazonInventoryFeedDocumentResponseModel.url))
                                     {
+                                        Thread.Sleep(TimeSpan.FromSeconds(30));
+
                                         l_Content = ReadFeedIssuesAsync(l_AmazonInventoryFeedDocumentResponseModel.url).GetAwaiter().GetResult();
 
                                         l_AmazonInventoryFeedReportDownloadResponseModel = JsonConvert.DeserializeObject<AmazonInventoryFeedReportDownloadResponseModel>(l_Content);

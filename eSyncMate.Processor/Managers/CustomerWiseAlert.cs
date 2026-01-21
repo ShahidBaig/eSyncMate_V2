@@ -118,9 +118,9 @@ namespace eSyncMate.Processor.Managers
         }
 
         private static async Task<(bool Success, string MessageId, string Error)> SendEmailSmtpAsync(
-    string to,
-    string subject,
-    string body)
+      string to,
+      string subject,
+      string body)
         {
             try
             {
@@ -132,21 +132,26 @@ namespace eSyncMate.Processor.Managers
 
                 emailMessage.Body = new TextPart(MimeKit.Text.TextFormat.Html)
                 {
-                    Text = body
+                    Text = body ?? ""
                 };
 
-                using var smtp = new MailKit.Net.Smtp.SmtpClient
-                {
-                    Timeout = 30000,
-                    CheckCertificateRevocation = false
-                };
+                using var smtp = new MailKit.Net.Smtp.SmtpClient();
 
-                // ✅ IMPORTANT: choose correct TLS option based on port
-                var socketOption = CommonUtils.SMTPPort == 465
-                    ? SecureSocketOptions.SslOnConnect   // 465 = implicit SSL
-                    : SecureSocketOptions.StartTls;      // 587 = STARTTLS
+                smtp.Timeout = 30000;
+                smtp.CheckCertificateRevocation = false;
 
-                await smtp.ConnectAsync(CommonUtils.SMTPHost, CommonUtils.SMTPPort, socketOption);
+                // Optional: log protocol for debugging (remove in prod)
+                // smtp.ProtocolLogger = new ProtocolLogger("smtp-log.txt");
+
+                // ✅ Office 365: 587 = STARTTLS
+                var host = CommonUtils.SMTPHost;            // smtp.office365.com
+                var port = CommonUtils.SMTPPort;            // 587
+                var options = port == 465 ? SecureSocketOptions.SslOnConnect : SecureSocketOptions.StartTls;
+
+                await smtp.ConnectAsync(host, port, options);
+
+                // ✅ sometimes recommended with O365 when using username/password
+                smtp.AuthenticationMechanisms.Remove("XOAUTH2");
 
                 await smtp.AuthenticateAsync(CommonUtils.FromEmailAccount, CommonUtils.FromEmailPWD);
 
@@ -155,9 +160,14 @@ namespace eSyncMate.Processor.Managers
 
                 return (true, emailMessage.MessageId ?? "", "");
             }
+            catch (MailKit.Security.AuthenticationException ex)
+            {
+                // ✅ This is your 535 / 5.7.139 case
+                return (false, "", "Authentication failed (SMTP AUTH blocked / MFA / Conditional Access / Security Defaults). Details: " + ex.Message);
+            }
             catch (SmtpCommandException ex)
             {
-                return (false, "", $"SMTP Command Error: {ex.Message} (StatusCode: {ex.StatusCode})");
+                return (false, "", $"SMTP Command Error: {ex.Message} | StatusCode: {ex.StatusCode} ");
             }
             catch (SmtpProtocolException ex)
             {
@@ -165,10 +175,10 @@ namespace eSyncMate.Processor.Managers
             }
             catch (Exception ex)
             {
-                // keep full details (inner exception etc.)
                 return (false, "", ex.ToString());
             }
         }
+
 
 
     }

@@ -24,6 +24,8 @@ using System.Net.Http.Headers;
 using OfficeOpenXml.FormulaParsing.LexicalAnalysis;
 using static eSyncMate.Processor.Models.AmazonInventoryRequestModel;
 using System.IO.Compression;
+using static eSyncMate.Processor.Models.AmazonInventoryFeedPatchWiseModel;
+using DocumentFormat.OpenXml.EMMA;
 
 namespace eSyncMate.Processor.Managers
 {
@@ -95,7 +97,7 @@ namespace eSyncMate.Processor.Managers
 
                     l_InventoryBatchWise.StartDate = Convert.ToDateTime(DateTime.Now);
                     l_InventoryBatchWise.Status = "Processing";
-                    l_InventoryBatchWise.RouteType = RouteTypesEnum.AmazonWHSWInventoryUpload.ToString();
+                    l_InventoryBatchWise.RouteType = RouteTypesEnum.AmazonInventoryUpload.ToString();
                     l_InventoryBatchWise.CustomerID = l_SourceConnector.CustomerID;
 
                     l_SCSInventoryFeed.InsertInventoryBatchWise(l_InventoryBatchWise);
@@ -112,7 +114,18 @@ namespace eSyncMate.Processor.Managers
 
                         int i = 0;
                         int totalThread = CommonUtils.UploadInventoryTotalThread;
-                        int chunkSize = l_data.Rows.Count / totalThread;
+                        int chunkSize = 0;
+
+                        if (l_data.Rows.Count >= 20000)
+                        {
+                            chunkSize = l_data.Rows.Count / totalThread;
+                        }
+                        else
+                        {
+                            chunkSize = l_data.Rows.Count;
+                        }
+
+
                         List<Task> tasks = new List<Task>();
 
                         var tables = l_data.AsEnumerable().ToChunks(chunkSize)
@@ -258,7 +271,11 @@ namespace eSyncMate.Processor.Managers
             AmazonCreateDocumentResponseModel l_AmazonCreateDocumentResponseModel = new AmazonCreateDocumentResponseModel();
             RestResponse sourceResponse = new RestResponse();
             string l_Guid = Guid.NewGuid().ToString();
-
+            JObject createDocumentResponse;
+            string documentCreateResponse = string.Empty;
+            string feedDocumentId = string.Empty;
+            string feedUrl = string.Empty;
+            string jsonrequest = string.Empty;
             try
             {
 
@@ -267,18 +284,30 @@ namespace eSyncMate.Processor.Managers
                 this.route.UseConnection(this.sourceConnector.ConnectionString);
                 this.feed.UseConnection(this.sourceConnector.ConnectionString);
 
-                this.route.SaveData("JSON-SNT", 0, $@"{{ ""RequestURL"": ""{this.destinationConnector.BaseUrl}"" }}", userNo);
+                try
+                {
+                    this.route.SaveData("JSON-SNT", 0, $@"{{ ""RequestURL"": ""{this.destinationConnector.BaseUrl}"" }}", userNo);
 
-                JObject createDocumentResponse = CreateDocument(token, this.destinationConnector.BaseUrl).GetAwaiter().GetResult();
+                    createDocumentResponse = CreateDocument(token, this.destinationConnector.BaseUrl).GetAwaiter().GetResult();
 
-                string documentCreateResponse = createDocumentResponse.ToString(Newtonsoft.Json.Formatting.Indented);
+                    documentCreateResponse = createDocumentResponse.ToString(Newtonsoft.Json.Formatting.Indented);
 
-                this.route.SaveData("JSON-RVD", 0, documentCreateResponse, userNo);
+                    this.route.SaveData("JSON-RVD", 0, documentCreateResponse, userNo);
 
-                string feedDocumentId = createDocumentResponse["feedDocumentId"].ToString();
-                string feedUrl = createDocumentResponse["url"].ToString();
+                    feedDocumentId = createDocumentResponse["feedDocumentId"].ToString();
+                    feedUrl = createDocumentResponse["url"].ToString();
+                    jsonrequest = string.Empty;
 
-                string jsonrequest = GenerateInventoryFeedXml(this.data, this.feed, this.sourceConnector.ConnectionString, this.bacthID,this.ShipNodeData, l_Guid);
+                    jsonrequest = GenerateInventoryFeedXml(this.data, this.feed, this.sourceConnector.ConnectionString, this.bacthID, this.ShipNodeData, l_Guid);
+                    //jsonrequest = GenerateInventoryFeedXmlPathWise(this.data, this.feed, this.sourceConnector.ConnectionString, this.bacthID, this.ShipNodeData, l_Guid);
+
+                }
+                catch (Exception ex)
+                {
+
+                    this.route.SaveLog(LogTypeEnum.Error, ex.Message, documentCreateResponse, userNo);
+                }
+                
 
                 if (!string.IsNullOrWhiteSpace(jsonrequest))
                 {
@@ -291,11 +320,21 @@ namespace eSyncMate.Processor.Managers
                     this.route.SaveData("JSON-SNT", 0, jsonrequest, userNo);
 
                     //Thread.Sleep(1000);
+                    string submitFeedResponse = string.Empty;
+                    string feedId = string.Empty;
 
-                    JObject l_responseSubmitFeed = await SubmitFeed(feedDocumentId, token, this.destinationConnector.BaseUrl);
-                    string submitFeedResponse = l_responseSubmitFeed.ToString(Newtonsoft.Json.Formatting.Indented);
+                    try
+                    {
+                        JObject l_responseSubmitFeed = await SubmitFeed(feedDocumentId, token, this.destinationConnector.BaseUrl);
+                        submitFeedResponse = l_responseSubmitFeed.ToString(Newtonsoft.Json.Formatting.Indented);
 
-                    string feedId = l_responseSubmitFeed["feedId"].ToString();
+                        feedId = l_responseSubmitFeed["feedId"].ToString();
+                    }
+                    catch (Exception ex)
+                    {
+
+                        this.route.SaveLog(LogTypeEnum.Error, ex.Message, submitFeedResponse, userNo);
+                    }
 
                     this.route.SaveData("JSON-RVD", 0, submitFeedResponse, this.userNo);
 
@@ -412,10 +451,11 @@ namespace eSyncMate.Processor.Managers
 
                     foreach (DataRow item in shipNodeData.Rows)
                     {
+
                         var l_Fulfillment_Availability = new Fulfillment_Availability
                         {
                             fulfillment_channel_code = item["ShipNode"].ToString(),
-                            quantity = Convert.ToInt32(row[$"ATS_{item["WHSID"]}"]),
+                            quantity = item["ShipNode"]?.ToString() == "DEFAULT" ? (row["Total_ATS"] == DBNull.Value ? 0 : Convert.ToInt32(row["Total_ATS"])): (row[$"ATS_{item["WHSID"]}"] == DBNull.Value ? 0 : Convert.ToInt32(row[$"ATS_{item["WHSID"]}"])),
                             lead_time_to_ship_max_days = 1
                         };
 
@@ -483,37 +523,172 @@ namespace eSyncMate.Processor.Managers
             
         }
 
+        private static string GenerateInventoryFeedXmlPathWise(DataTable inventoryData, SCSInventoryFeed feed, string ConnectionString, string batchID, DataTable shipNodeData, string p_Guid)
+        {
+            StringBuilder xml = new StringBuilder();
+            feed.UseConnection(ConnectionString);
+
+            try
+            {
+                DataTable bulkInsertTable = CreateBulkInsertDataTable();
+                DataTable bulkSCSAmazonFeedData = CreateBulkInsertSCSAmazonFeedData();
+
+                AmazonInventoryFeedPatchWiseModel l_AmazonInventoryRequestModel = new AmazonInventoryFeedPatchWiseModel();
+
+                l_AmazonInventoryRequestModel.header.sellerId = "A3NX96R6O9JSG4";
+                l_AmazonInventoryRequestModel.header.version = "2.0";
+                l_AmazonInventoryRequestModel.header.issueLocale = "en_US";
+                int messageId = 1;
+
+                foreach (DataRow row in inventoryData.Rows)
+                {
+                    var sku = row["CustomerItemCode"]?.ToString() ?? "";
+
+                    // ✅ Build a single PATCH for /fulfillmentAvailability
+                    var patch = new AmazonInventoryFeedPatchWiseModel.Patch
+                    {
+                        op = "replace",
+                        path = "/attributes/fulfillment_availability"
+                    };
+
+                    // ✅ Add fulfillmentAvailability values (channel-wise)
+                    foreach (DataRow item in shipNodeData.Rows)
+                    {
+                        string shipNode = item["ShipNode"]?.ToString() ?? "DEFAULT";
+                        string whsId = item["WHSID"]?.ToString() ?? "";
+
+                        string colName = $"ATS_{whsId}";
+                        long qty = 0;
+
+                        if (inventoryData.Columns.Contains(colName) && row[colName] != DBNull.Value)
+                            qty = Convert.ToInt64(row[colName]);
+
+                        patch.value.Add(new AmazonInventoryFeedPatchWiseModel.PatchValue
+                        {
+                            fulfillment_channel_code = shipNode,
+                            quantity = qty,
+                            lead_time_to_ship_max_days = 1
+                        });
+                    }
+
+                    // ✅ Message
+                    var msg = new AmazonInventoryFeedPatchWiseModel.PatchMessage
+                    {
+                        messageId = messageId,
+                        sku = sku,
+                        operationType = "PATCH",
+                        productType = "PRODUCT"
+                    };
+
+                    msg.patches.Add(patch);
+
+                    // Add to full feed
+                    l_AmazonInventoryRequestModel.messages.Add(msg);
+
+                    // ✅ Per-item payload (only this message) for DB logging
+                    var perItemPayload = new AmazonInventoryFeedPatchWiseModel
+                    {
+                        header = l_AmazonInventoryRequestModel.header,
+                        messages = new List<AmazonInventoryFeedPatchWiseModel.PatchMessage> { msg }
+                    };
+
+                    string perItemJson = JsonConvert.SerializeObject(perItemPayload, Formatting.None);
+
+                    DataRow bulkRow = bulkInsertTable.NewRow();
+                    bulkRow["CustomerId"] = row["CustomerId"];
+                    bulkRow["ItemId"] = row["ItemId"];
+                    bulkRow["Type"] = "JSON-SNT";
+                    bulkRow["Data"] = perItemJson;
+                    bulkRow["CreatedDate"] = DateTime.Now;
+                    bulkRow["CreatedBy"] = 1;
+                    bulkRow["BatchID"] = batchID;
+
+                    bulkInsertTable.Rows.Add(bulkRow);
+
+
+                    DataRow bulkSCSAmazonFeedDataRow = bulkSCSAmazonFeedData.NewRow();
+                    bulkSCSAmazonFeedDataRow["BatchID"] = batchID;
+                    bulkSCSAmazonFeedDataRow["ItemId"] = row["ItemId"];
+                    bulkSCSAmazonFeedDataRow["CustomerId"] = row["CustomerId"];
+                    bulkSCSAmazonFeedDataRow["MessageID"] = messageId;
+                    bulkSCSAmazonFeedDataRow["FeedDocumentID"] = p_Guid;
+                    bulkSCSAmazonFeedDataRow["Data"] = perItemJson;
+
+                    bulkSCSAmazonFeedData.Rows.Add(bulkSCSAmazonFeedDataRow);
+
+
+                    messageId++;
+                }
+
+
+                string fullFeedJson = JsonConvert.SerializeObject(
+                        l_AmazonInventoryRequestModel,
+                        Formatting.None
+                    );
+
+                feed.BulkNewInsertData(ConnectionString, "SCSInventoryFeedData", bulkInsertTable);
+                feed.BulkAmazonFeedData(ConnectionString, "SCSAmazonFeedData", bulkSCSAmazonFeedData);
+
+                return fullFeedJson;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+                throw;
+            }
+
+
+
+        }
+
         public static DataTable CreateBulkInsertDataTable()
         {
-            // Create a new DataTable to hold the necessary columns
-            DataTable bulkInsertTable = new DataTable();
+            try
+            {
+                DataTable bulkInsertTable = new DataTable();
 
-            // Add the required columns
-            bulkInsertTable.Columns.Add("CustomerId", typeof(string));
-            bulkInsertTable.Columns.Add("ItemId", typeof(string));
-            bulkInsertTable.Columns.Add("Type", typeof(string));
-            bulkInsertTable.Columns.Add("Data", typeof(string));
-            bulkInsertTable.Columns.Add("CreatedDate", typeof(DateTime));
-            bulkInsertTable.Columns.Add("CreatedBy", typeof(int));
-            bulkInsertTable.Columns.Add("BatchID", typeof(string));
+                // Add the required columns
+                bulkInsertTable.Columns.Add("CustomerId", typeof(string));
+                bulkInsertTable.Columns.Add("ItemId", typeof(string));
+                bulkInsertTable.Columns.Add("Type", typeof(string));
+                bulkInsertTable.Columns.Add("Data", typeof(string));
+                bulkInsertTable.Columns.Add("CreatedDate", typeof(DateTime));
+                bulkInsertTable.Columns.Add("CreatedBy", typeof(int));
+                bulkInsertTable.Columns.Add("BatchID", typeof(string));
 
-            return bulkInsertTable;
+                return bulkInsertTable;
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+           
         }
 
         public static DataTable CreateBulkInsertSCSAmazonFeedData()
         {
-            // Create a new DataTable to hold the necessary columns
-            DataTable bulkInsertTable = new DataTable();
+            try
+            {
+                DataTable bulkInsertTable = new DataTable();
 
-            // Add the required columns
-            bulkInsertTable.Columns.Add("BatchID", typeof(string));
-            bulkInsertTable.Columns.Add("ItemId", typeof(string));
-            bulkInsertTable.Columns.Add("CustomerId", typeof(string));
-            bulkInsertTable.Columns.Add("MessageID", typeof(Int64));
-            bulkInsertTable.Columns.Add("FeedDocumentID", typeof(string));
-            bulkInsertTable.Columns.Add("Data", typeof(string));
-            
-            return bulkInsertTable;
+                // Add the required columns
+                bulkInsertTable.Columns.Add("BatchID", typeof(string));
+                bulkInsertTable.Columns.Add("ItemId", typeof(string));
+                bulkInsertTable.Columns.Add("CustomerId", typeof(string));
+                bulkInsertTable.Columns.Add("MessageID", typeof(Int64));
+                bulkInsertTable.Columns.Add("FeedDocumentID", typeof(string));
+                bulkInsertTable.Columns.Add("Data", typeof(string));
+
+                return bulkInsertTable;
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+            // Create a new DataTable to hold the necessary columns
+           
         }
 
         async static Task<string> GetToken(string l_applicationID,string l_client_id,string l_client_secret,string l_refresh_token)
@@ -630,13 +805,21 @@ namespace eSyncMate.Processor.Managers
         //}
         async static Task<HttpStatusCode> UploadDocument(string url, string json)
         {
-            using var client = new HttpClient();
-            using var content = new StringContent(json, Encoding.UTF8);
-            content.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse("application/json; charset=UTF-8");
+            try
+            {
+                using var client = new HttpClient();
+                using var content = new StringContent(json, Encoding.UTF8);
+                content.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse("application/json; charset=UTF-8");
 
-            using var req = new HttpRequestMessage(HttpMethod.Put, url) { Content = content };
-            using var res = await client.SendAsync(req, HttpCompletionOption.ResponseHeadersRead);
-            return (HttpStatusCode)res.StatusCode;
+                using var req = new HttpRequestMessage(HttpMethod.Put, url) { Content = content };
+                using var res = await client.SendAsync(req, HttpCompletionOption.ResponseHeadersRead);
+                return (HttpStatusCode)res.StatusCode;
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
         }
 
         //async static Task<HttpStatusCode> UploadDocumentGzipAsync(string url, string jsonPayload)

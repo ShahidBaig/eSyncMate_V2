@@ -116,12 +116,16 @@ namespace eSyncMate.Processor.Models
         //public static string ConnectionString { get; set; } = "Server=rxo.geckotech.com.mx;Database=EDIProcessor;UID=sa;PWD=Gecko8079;";
        // public static string ConnectionString { get; set; } = "Server=192.168.0.44,7100;Database=ESYNCMATE;UID=esyncmate;PWD=eSyncMate786$$$;";
         //public static string ConnectionString { get; set; } = "Server=209.74.79.232;Database=SURGIMAC;UID=sa;PWD=Surgimac8079;";
-        public static string ConnectionString { get; set; } = "Server=110.93.227.0,1433;Database=ESYNCMATE_TEST;UID=sa;PWD=eSoft#123456;";
+        public static string ConnectionString { get; set; } = "Server=192.168.0.44,7100;Database=ESYNCMATE;UID=esyncmate;PWD=eSyncMate786$$$;";
         public static string MySqlConnectionString { get; set; } = "Server=162.241.63.30;Database=geckote1_edi;User=geckote1_esyncmate;Password=Gecko8079;";
-        public static string SMTPHost { get; set; } = "smtpout.secureserver.net";
+        //public static string SMTPHost { get; set; } = "smtpout.secureserver.net";
+        //public static int SMTPPort { get; set; } = 587;
+        //public static string FromEmailAccount { get; set; } = "Tanveer@esoftage.com";
+        //public static string FromEmailPWD { get; set; } = "Tanveer#1122";
+        public static string SMTPHost { get; set; } = "smtp.office365.com";
         public static int SMTPPort { get; set; } = 587;
-        public static string FromEmailAccount { get; set; } = "Tanveer@esoftage.com";
-        public static string FromEmailPWD { get; set; } = "Tanveer#1122";
+        public static string FromEmailAccount { get; set; } = "alerts@SAFAVIEH.COM";
+        public static string FromEmailPWD { get; set; } = "J&510502696059ob";
 
         public static string Company = "eSyncMate";
 

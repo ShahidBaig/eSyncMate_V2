@@ -402,9 +402,6 @@ namespace eSyncMate.Processor.Controllers
 
                 PublicFunctions.CopyTo(model, l_CustomerAlerts);
 
-                l_JobID = this.SetupAlertJob(l_CustomerAlerts);
-                l_CustomerAlerts.JobID = l_JobID;
-
                 if (model.Id == 0)
                 {
                     // Insert
@@ -422,6 +419,11 @@ namespace eSyncMate.Processor.Controllers
 
                 if (l_Result.IsSuccess)
                 {
+                    l_JobID = this.SetupAlertJob(l_CustomerAlerts);
+                    l_CustomerAlerts.JobID = l_JobID;
+
+                    l_CustomerAlerts.UpdateAlertJobID(l_CustomerAlerts.Id, l_CustomerAlerts.JobID);
+
                     l_Response.Code = l_Result.Code;
                     l_Response.Message = l_Result.Description;
                     l_Response.Description = "Customer alert saved successfully.";

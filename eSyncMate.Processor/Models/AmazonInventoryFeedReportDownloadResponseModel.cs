@@ -30,7 +30,7 @@ namespace eSyncMate.Processor.Models
             public string severity { get; set; }
             public string code { get; set; }
             public string message { get; set; }
-            public string attributeName { get; set; }
+            public string sku { get; set; }
         }
     }
 }
