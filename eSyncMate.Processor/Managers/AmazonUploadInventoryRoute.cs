@@ -652,7 +652,7 @@ namespace eSyncMate.Processor.Managers
 
     }
 
-    internal static class DataTableChunker
+    public static class DataTableChunker
     {
         public const int ChunkSize = 25_000;
 

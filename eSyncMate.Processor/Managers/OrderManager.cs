@@ -28,7 +28,7 @@ using DocumentFormat.OpenXml.Spreadsheet;
 
 namespace eSyncMate.Processor.Managers
 {
-    internal class OrderManager
+    public class OrderManager
     {
         public static OrderTransformationResponseModel ParseOrder(Customers p_Customer, EdiTrans p_OrderTrans, string p_TransformationMap, string p_DBFieldsMap)
         {

@@ -2,6 +2,7 @@
 using eSyncMate.DB.Entities;
 using eSyncMate.Processor.Models;
 using Hangfire;
+using System.Diagnostics;
 
 namespace eSyncMate.Processor.Managers
 {
@@ -12,14 +13,154 @@ namespace eSyncMate.Processor.Managers
 
         private static Dictionary<int, Routes> currentRoutes = new Dictionary<int, Routes>();
 
+        // Configuration flag to switch between in-process and external process execution
+        private bool UseExternalProcess => _config?.GetValue<bool>("RouteEngine:UseExternalProcess") ?? false;
+        private string ExternalProcessPath
+        {
+            get
+            {
+                var configPath = _config?.GetValue<string>("RouteEngine:ExternalProcessPath") ?? "RouteWorker\\eSyncMate.RouteWorker.exe";
+
+                // If it's a relative path, resolve it relative to the application directory
+                if (!Path.IsPathRooted(configPath))
+                {
+                    var appDirectory = AppDomain.CurrentDomain.BaseDirectory;
+                    return Path.Combine(appDirectory, configPath);
+                }
+
+                return configPath;
+            }
+        }
+
         public RouteEngine(IConfiguration config)
         {
             _config = config;
             //_logger = logger;
         }
 
+        /// <summary>
+        /// Execute route using external console app process
+        /// This provides process isolation and better resource management
+        /// </summary>
+        public void ExecuteExternal(int routeId)
+        {
+            Routes route = new Routes();
+
+            try
+            {
+                route.UseConnection(CommonUtils.ConnectionString);
+                route.Id = routeId;
+
+                if (!route.GetObject().IsSuccess)
+                {
+                    this._logger?.LogError($"Invalid Route! [{routeId}]");
+                    return;
+                }
+
+                //if (route.Status.ToUpper() == "IN-ACTIVE")
+                //{
+                //    this.RemoveRouteJob(route);
+                //    return;
+                //}
+
+                // Check if route is already running
+                if (currentRoutes.ContainsKey(routeId))
+                {
+                    route.SaveLog(Declarations.LogTypeEnum.Info, "This route is already in execution.", "", 1);
+                    return;
+                }
+
+                currentRoutes[routeId] = route;
+
+                // Debug: Log paths
+                var exePath = ExternalProcessPath;
+                var workingDir = Path.GetDirectoryName(exePath) ?? Directory.GetCurrentDirectory();
+
+                Console.WriteLine($"[DEBUG] ExecuteExternal - Route ID: {routeId}");
+                Console.WriteLine($"[DEBUG] ExecuteExternal - ExternalProcessPath: {exePath}");
+                Console.WriteLine($"[DEBUG] ExecuteExternal - File Exists: {File.Exists(exePath)}");
+                Console.WriteLine($"[DEBUG] ExecuteExternal - WorkingDirectory: {workingDir}");
+                Console.WriteLine($"[DEBUG] ExecuteExternal - AppDomain.BaseDirectory: {AppDomain.CurrentDomain.BaseDirectory}");
+
+                route.SaveLog(Declarations.LogTypeEnum.Info, $"Starting external process for route [{routeId}]. Path: {exePath}", "", 1);
+
+                if (!File.Exists(exePath))
+                {
+                    var errorMsg = $"RouteWorker exe not found at: {exePath}";
+                    Console.WriteLine($"[ERROR] {errorMsg}");
+                    route.SaveLog(Declarations.LogTypeEnum.Error, errorMsg, "", 1);
+                    return;
+                }
+
+                // Spawn external process
+                var processInfo = new ProcessStartInfo
+                {
+                    FileName = exePath,
+                    Arguments = $"--routeId {routeId}",
+                    UseShellExecute = false,
+                    CreateNoWindow = false,  // Show window for debugging
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    WorkingDirectory = workingDir
+                };
+
+                Console.WriteLine($"[DEBUG] ExecuteExternal - Starting process...");
+
+                using var process = Process.Start(processInfo);
+
+                if (process != null)
+                {
+                    Console.WriteLine($"[DEBUG] ExecuteExternal - Process started, PID: {process.Id}");
+
+                    // Read output asynchronously
+                    string output = process.StandardOutput.ReadToEnd();
+                    string error = process.StandardError.ReadToEnd();
+
+                    process.WaitForExit();
+
+                    Console.WriteLine($"[DEBUG] ExecuteExternal - Process exited, ExitCode: {process.ExitCode}");
+                    Console.WriteLine($"[DEBUG] ExecuteExternal - Output: {output}");
+                    if (!string.IsNullOrEmpty(error))
+                        Console.WriteLine($"[DEBUG] ExecuteExternal - Error: {error}");
+
+                    if (process.ExitCode != 0)
+                    {
+                        route.SaveLog(Declarations.LogTypeEnum.Error, $"External process failed for route [{routeId}]", $"Output: {output}\nError: {error}", 1);
+                        this._logger?.LogError($"Route {routeId} external process failed: {error}");
+                    }
+                    else
+                    {
+                        route.SaveLog(Declarations.LogTypeEnum.Info, $"External process completed for route [{routeId}]", output, 1);
+                    }
+                }
+                else
+                {
+                    Console.WriteLine($"[ERROR] ExecuteExternal - Failed to start process!");
+                    route.SaveLog(Declarations.LogTypeEnum.Error, $"Failed to start external process for route [{routeId}]", "", 1);
+                }
+            }
+            catch (Exception ex)
+            {
+                this._logger?.LogCritical(ex, ex.Message);
+                route.SaveLog(Declarations.LogTypeEnum.Exception, $"Error spawning external process for route [{routeId}]", ex.ToString(), 1);
+            }
+            finally
+            {
+                if (currentRoutes.ContainsKey(routeId))
+                    currentRoutes.Remove(routeId);
+            }
+        }
+
         public void Execute(int routeId)
         {
+            // Check if external process execution is enabled
+            if (UseExternalProcess)
+            {
+                ExecuteExternal(routeId);
+                return;
+            }
+
+            // Original in-process execution
             Routes route = new Routes();
 
             try

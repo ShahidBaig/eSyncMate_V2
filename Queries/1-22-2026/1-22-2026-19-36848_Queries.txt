@@ -1,0 +1,10 @@
+/*1/22/2026 7:32:27 PM: */ SELECT * FROM [VW_Routes] WHERE [Id] = 97
+/*1/22/2026 7:32:28 PM: */ SELECT * FROM [VW_Customers] WHERE [Id] = 1
+/*1/22/2026 7:32:28 PM: */ SELECT * FROM [VW_Customers] WHERE [Id] = 3
+/*1/22/2026 7:32:28 PM: */ SELECT * FROM [VW_Connectors] WHERE [Id] = 143
+/*1/22/2026 7:32:28 PM: */ SELECT * FROM [VW_Connectors] WHERE [Id] = 145
+/*1/22/2026 7:32:28 PM: */ /****************************************Begin Transaction********************************/
+/*1/22/2026 7:32:28 PM: */ INSERT INTO [RouteLog] ([RouteId],[Type],[Message],[Details],[Status],[ModifiedDate],[ModifiedBy],[CreatedDate],[CreatedBy]) VALUES (97,1,'Started executing route [97]','',NULL,'1/1/1900 12:00:00 AM',0,'1/22/2026 7:32:28 PM',1)
+/*1/22/2026 7:32:28 PM: */ /****************************************Commit Transaction********************************/
+/*1/22/2026 7:32:28 PM: */ INSERT INTO InventoryBatchWise (BatchID, StartDate, FinishDate, Status, RouteType,CustomerID) VALUES (@BatchID, GETDATE(), NULL, @Status, @RouteType,@CustomerID)
+/*1/22/2026 7:32:28 PM: */ SELECT * FROM [VW_TempSCSInventoryFeed] WHERE CustomerID = 'MIC1300MP' ORDER BY CurrentPage DESC

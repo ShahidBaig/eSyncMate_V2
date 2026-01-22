@@ -8,8 +8,33 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="8.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="8.0.2" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\eSyncMate.DB\eSyncMate.DB.csproj" />
     <ProjectReference Include="..\eSyncMate.Processor\eSyncMate.Processor.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <None Update="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <!-- Define RouteWorker project path relative to this project -->
+  <PropertyGroup>
+    <RouteWorkerProjectDir>$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)\..\eSyncMate.RouteWorker'))</RouteWorkerProjectDir>
+  </PropertyGroup>
+
+  <!-- Post-build: Copy RouteWorker to RouteTestApp output directory -->
+  <Target Name="CopyRouteWorker" AfterTargets="Build">
+    <ItemGroup>
+      <RouteWorkerFiles Include="$(RouteWorkerProjectDir)\bin\$(Configuration)\net8.0\**\*.*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(RouteWorkerFiles)" DestinationFolder="$(OutputPath)RouteWorker\%(RecursiveDir)" SkipUnchangedFiles="true" />
+  </Target>
 
 </Project>

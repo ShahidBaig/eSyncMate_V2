@@ -139,7 +139,7 @@ namespace eSyncMate.Processor.Managers
                     else
                     {
                         int i = 0;
-                        int totalThread = 300;
+                        int totalThread = 50;
                         int chunkSize = l_data.Rows.Count / totalThread;
                         List<Thread> threads = new List<Thread>();
 

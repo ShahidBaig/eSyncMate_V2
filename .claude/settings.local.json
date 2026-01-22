@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dotnet build:*)",
+      "Bash(dir:*)",
+      "Bash(echo \"D:\\\\eSoftage_Projects\\\\eSyncMate_V2\\\\eSyncMate.Processor\\\\bin\\\\Release\\\\net8.0\"\" && echo \"\" && echo \"=== RouteWorker SUBFOLDER ===\" && dir \"D:eSoftage_ProjectseSyncMate_V2eSyncMate.ProcessorbinReleasenet8.0RouteWorkereSyncMate.RouteWorker.exe \")",
+      "Bash(powershell:*)"
+    ]
+  }
+}
