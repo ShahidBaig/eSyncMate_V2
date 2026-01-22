@@ -10,6 +10,7 @@ namespace eSyncMate.RouteWorker
 {
     class Program
     {
+        private readonly ILogger _logger;
         static async Task<int> Main(string[] args)
         {
             // Define command line options
@@ -31,87 +32,47 @@ namespace eSyncMate.RouteWorker
 
         static async Task ExecuteRoute(int routeId)
         {
-            Console.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] ========================================");
-            Console.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] Starting Route Worker for Route ID: {routeId}");
-            Console.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] ========================================");
-
-            // Debug: Show paths for testing
-            Console.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] DEBUG - Current Directory: {Directory.GetCurrentDirectory()}");
-            Console.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] DEBUG - Exe Directory: {AppDomain.CurrentDomain.BaseDirectory}");
-            Console.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] DEBUG - Exe Location: {System.Reflection.Assembly.GetExecutingAssembly().Location}");
-
             try
             {
                 // Build configuration - use executable directory, not current directory
                 var exeDirectory = AppDomain.CurrentDomain.BaseDirectory;
-                Console.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] DEBUG - Config Path: {Path.Combine(exeDirectory, "appsettings.json")}");
-                Console.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] DEBUG - Config Exists: {File.Exists(Path.Combine(exeDirectory, "appsettings.json"))}");
 
                 var configuration = new ConfigurationBuilder()
                     .SetBasePath(exeDirectory)
                     .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
                     .Build();
 
-                // Set connection string
                 CommonUtils.ConnectionString = configuration.GetConnectionString("DefaultConnection");
-
-                Console.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] Connection string loaded");
-                Console.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] DEBUG - Connection: {CommonUtils.ConnectionString?.Substring(0, Math.Min(50, CommonUtils.ConnectionString?.Length ?? 0))}...");
-
-                // Create logger factory
-                using var loggerFactory = LoggerFactory.Create(builder =>
-                {
-                    builder.AddConsole();
-                    builder.SetMinimumLevel(LogLevel.Information);
-                });
-
-                var logger = loggerFactory.CreateLogger<Program>();
-
-                // Get route details
+               
                 Routes route = new Routes();
                 route.UseConnection(CommonUtils.ConnectionString);
                 route.Id = routeId;
 
                 if (!route.GetObject().IsSuccess)
                 {
-                    Console.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] ERROR: Invalid Route ID: {routeId}");
                     Environment.ExitCode = 1;
                     return;
                 }
 
-                Console.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] Route Name: {route.Name}");
-                Console.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] Route Type: {route.TypeId}");
-                Console.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] Route Status: {route.Status}");
+                
+                if (route.Status.ToUpper() == "IN-ACTIVE")
+                {
+                    Environment.ExitCode = 0;
+                    return;
+                }
 
-                //if (route.Status.ToUpper() == "IN-ACTIVE")
-                //{
-                //    Console.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] WARNING: Route is inactive, skipping execution");
-                //    Environment.ExitCode = 0;
-                //    return;
-                //}
+              
+                ExecuteRouteByType(configuration, route);
 
-                // Execute the route based on type
-                Console.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] Starting route execution...");
-
-                ExecuteRouteByType(configuration, logger, route);
-
-                Console.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] ========================================");
-                Console.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] Route {routeId} completed successfully");
-                Console.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] ========================================");
                 Environment.ExitCode = 0;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] ========================================");
-                Console.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] ERROR executing Route {routeId}");
-                Console.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {ex.Message}");
-                Console.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] ========================================");
-                Console.WriteLine(ex.ToString());
                 Environment.ExitCode = 1;
             }
         }
 
-        static void ExecuteRouteByType(IConfiguration config, ILogger logger, Routes route)
+        static void ExecuteRouteByType(IConfiguration config, Routes route)
         {
             int userNo = 1; // System user
 
@@ -119,332 +80,330 @@ namespace eSyncMate.RouteWorker
 
             try
             {
-                // Execute based on route type - same logic as RouteEngine
                 if (route.TypeId == Convert.ToInt32(RouteTypesEnum.InventoryFeed))
                 {
-                    InventoryFeedRoute.Execute(config, logger, route);
+                    InventoryFeedRoute.Execute(config, route);
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.GetOrders))
                 {
-                    GetOrdersRoute.Execute(config, logger, route);
+                    GetOrdersRoute.Execute(config, route);
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.CreateOrder))
                 {
-                    CreateOrderRoute.Execute(config, logger, route);
+                    CreateOrderRoute.Execute(config, route);
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.GetOrderStatus))
                 {
-                    GetOrderStatusRoute.Execute(config, logger, route);
+                    GetOrderStatusRoute.Execute(config, route);
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.ASN))
                 {
-                    ASNRoute.Execute(config, logger, route);
+                    ASNRoute.Execute(config, route);
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.CreateInvoice))
                 {
-                    CreateInvoiceRoute.Execute(config, logger, route);
+                    CreateInvoiceRoute.Execute(config, route);
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.SCSFullInventoryFeed) || route.TypeId == Convert.ToInt32(RouteTypesEnum.SCSDifferentialInventoryFeed))
                 {
-                    SCSFullInventoryFeedRoute.Execute(config, logger, route);
+                    SCSFullInventoryFeedRoute.Execute(config, route);
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.SCSPlaceOrder))
                 {
-                    SCSPlaceOrderRoute.Execute(config, logger, route);
+                    SCSPlaceOrderRoute.Execute(config, route);
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.SCSOrderStatus))
                 {
-                    SCSOrderStatusRoute.Execute(config, logger, route);
+                    SCSOrderStatusRoute.Execute(config, route);
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.SCSASN))
                 {
-                    SCSASNRoute.Execute(config, logger, route);
+                    SCSASNRoute.Execute(config, route);
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.SCSInvoice))
                 {
-                    SCSInvoiceRoute.Execute(config, logger, route);
+                    SCSInvoiceRoute.Execute(config, route);
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.SCSGetOrders))
                 {
-                    SCSGetOrders.Execute(config, logger, route);
+                    SCSGetOrders.Execute(config, route);
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.SCSItemPrices))
                 {
-                    SCSItemPrices.Execute(config, logger, route);
+                    SCSItemPrices.Execute(config, route);
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.SCSUpdateInventory))
                 {
-                    SCSUpdateInventory.Execute(config, logger, route);
+                    SCSUpdateInventory.Execute(config, route);
                 }
                 // Amazon Routes
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.AmazonInventoryUpload))
                 {
-                    AmazonUploadInventoryRoute.Execute(config, logger, route);
+                    AmazonUploadInventoryRoute.Execute(config, route);
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.AmazonGetOrders))
                 {
-                    AmazonGetOrdersRoute.Execute(config, logger, route);
+                    AmazonGetOrdersRoute.Execute(config, route);
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.AmazonInventoryStatus))
                 {
-                    AmazonInventoryStatusRoute.Execute(config, logger, route);
+                    AmazonInventoryStatusRoute.Execute(config, route);
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.AmazonASNShipmentNotification))
                 {
-                    AmazonASNShipmentNotificationRoute.Execute(config, logger, route);
+                    AmazonASNShipmentNotificationRoute.Execute(config, route);
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.AmazonWHSWInventoryUpload))
                 {
-                    AmazonUploadWarehouseWiseInventoryRoute.Execute(config, logger, route);
+                    AmazonUploadWarehouseWiseInventoryRoute.Execute(config, route);
                 }
                 // Walmart Routes
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.WalmartUploadInventory))
                 {
-                    WalmartUploadInventoryRoute.Execute(config, logger, route);
+                    WalmartUploadInventoryRoute.Execute(config, route);
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.WalmartGetOrders))
                 {
-                    WalmartGetOrdersRoute.Execute(config, logger, route);
+                    WalmartGetOrdersRoute.Execute(config, route);
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.WalmartASNShipmentNotification))
                 {
-                    WalmartASNShipmentNotificationRoute.Execute(config, logger, route);
+                    WalmartASNShipmentNotificationRoute.Execute(config, route);
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.WalmartCancellationLines))
                 {
-                    WalmartCancellationLinesRoute.Execute(config, logger, route);
+                    WalmartCancellationLinesRoute.Execute(config, route);
                 }
                 // Knot Routes
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.KnotInventoryUpload))
                 {
-                    KnotUpdateInventory.Execute(config, logger, route);
+                    KnotUpdateInventory.Execute(config, route);
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.KnotBulkItemPrices))
                 {
-                    KnotBulkItemPricesRoute.Execute(config, logger, route);
+                    KnotBulkItemPricesRoute.Execute(config, route);
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.KnotGetOrders))
                 {
-                    KnotGetOrderRoute.Execute(config, logger, route);
+                    KnotGetOrderRoute.Execute(config, route);
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.KnotASNShipmentNotification))
                 {
-                    KnotASNShipmentNotificationRoute.Execute(config, logger, route);
+                    KnotASNShipmentNotificationRoute.Execute(config, route);
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.KnotCancellationLines))
                 {
-                    KnotCancellationRoute.Execute(config, logger, route);
+                    KnotCancellationRoute.Execute(config, route);
                 }
                 // Macys Routes
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.MacysInventoryUpload))
                 {
-                    MacysUpdateInventory.Execute(config, logger, route);
+                    MacysUpdateInventory.Execute(config, route);
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.MacysBulkItemPrices))
                 {
-                    MacysBulkItemPricesRoute.Execute(config, logger, route);
+                    MacysBulkItemPricesRoute.Execute(config, route);
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.MacysGetOrders))
                 {
-                    MacysGetOrderRoute.Execute(config, logger, route);
+                    MacysGetOrderRoute.Execute(config, route);
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.MacysASNShipmentNotification))
                 {
-                    MacysASNShipmentNotificationRoute.Execute(config, logger, route);
+                    MacysASNShipmentNotificationRoute.Execute(config, route);
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.MacysCancellationLines))
                 {
-                    MacysCancellationRoute.Execute(config, logger, route);
+                    MacysCancellationRoute.Execute(config, route);
                 }
                 // Lowes Routes
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.LowesInventoryUpload))
                 {
-                    LowesUpdateInventory.Execute(config, logger, route);
+                    LowesUpdateInventory.Execute(config, route);
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.LowesBulkItemPrices))
                 {
-                    LowesBulkItemPricesRoute.Execute(config, logger, route);
+                    LowesBulkItemPricesRoute.Execute(config, route);
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.LowesGetOrders))
                 {
-                    LowesGetOrderRoute.Execute(config, logger, route);
+                    LowesGetOrderRoute.Execute(config, route);
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.LowesASNShipmentNotification))
                 {
-                    LowesASNShipmentNotificationRoute.Execute(config, logger, route);
+                    LowesASNShipmentNotificationRoute.Execute(config, route);
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.LowesCancellationLines))
                 {
-                    LowesCancellationRoute.Execute(config, logger, route);
+                    LowesCancellationRoute.Execute(config, route);
                 }
                 // Micheal Routes
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.MichealInventoryUpload))
                 {
-                    MichealUpdateInventory.Execute(config, logger, route);
+                    MichealUpdateInventory.Execute(config, route);
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.MichealBulkItemPrices))
                 {
-                    MichealUpdatePrice.Execute(config, logger, route);
+                    MichealUpdatePrice.Execute(config, route);
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.MichealGetOrders))
                 {
-                    MichealGetOrderRoute.Execute(config, logger, route);
+                    MichealGetOrderRoute.Execute(config, route);
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.MichealASNShipmentNotification))
                 {
-                    MichealASNShipmentNotificationRoute.Execute(config, logger, route);
+                    MichealASNShipmentNotificationRoute.Execute(config, route);
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.MichealCancellationLines))
                 {
-                    MichealCancellationRoute.Execute(config, logger, route);
+                    MichealCancellationRoute.Execute(config, route);
                 }
                 // Carrier Routes
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.CarrierLoadTender))
                 {
-                    CarrierLoadTenderRoute.Execute(config, logger, route);
+                    CarrierLoadTenderRoute.Execute(config, route);
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.CarrierLoadTender990))
                 {
-                    CarrierLoadTenderAcknowledgmentRoute.Execute(config, logger, route);
+                    CarrierLoadTenderAcknowledgmentRoute.Execute(config, route);
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.CarrierLoadTender214))
                 {
-                    CarrierLoadTenderResponseRoute.Execute(config, logger, route);
+                    CarrierLoadTenderResponseRoute.Execute(config, route);
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.CarrierLoadTender214X6))
                 {
-                    CarrierLoadTender214X6Route.Execute(config, logger, route);
+                    CarrierLoadTender214X6Route.Execute(config, route);
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.CLTAddressUpdate))
                 {
-                    CLTAddressUpdateRoute.Execute(config, logger, route);
+                    CLTAddressUpdateRoute.Execute(config, route);
                 }
                 // Repaint Routes
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.RepaintGetOrders))
                 {
-                    RepaintGetOrderRoute.Execute(config, logger, route);
+                    RepaintGetOrderRoute.Execute(config, route);
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.RepaintCreateOrder))
                 {
-                    RepaintCreateOrderRoute.Execute(config, logger, route);
+                    RepaintCreateOrderRoute.Execute(config, route);
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.RepaintGenerate855))
                 {
-                    RepaintGenerate855Route.Execute(config, logger, route);
+                    RepaintGenerate855Route.Execute(config, route);
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.Download856FromShipStation))
                 {
-                    Download856FromShipStationRoute.Execute(config, logger, route);
+                    Download856FromShipStationRoute.Execute(config, route);
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.GenerateEDI856ForRepaintRoute))
                 {
-                    GenerateEDI856ForRepaintRoute.Execute(config, logger, route);
+                    GenerateEDI856ForRepaintRoute.Execute(config, route);
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.GenerateEDI810ForRepaintRoute))
                 {
-                    GenerateEDI810ForRepaintRoute.Execute(config, logger, route);
+                    GenerateEDI810ForRepaintRoute.Execute(config, route);
                 }
                 // Other Routes
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.ItemTypesReportRequest))
                 {
-                    ItemTypesReportRequest.Execute(config, logger, route);
+                    ItemTypesReportRequest.Execute(config, route);
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.ItemTypesProcessing))
                 {
-                    ItemTypesProcessing.Execute(config, logger, route);
+                    ItemTypesProcessing.Execute(config, route);
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.ProductTypeAttributes))
                 {
-                    ProductTypeAttributes.Execute(config, logger, route);
+                    ProductTypeAttributes.Execute(config, route);
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.ProductCatalog))
                 {
-                    ProductCatalog.Execute(config, logger, route);
+                    ProductCatalog.Execute(config, route);
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.ProductCatalogStatus))
                 {
-                    ProductCatalogStatus.Execute(config, logger, route);
+                    ProductCatalogStatus.Execute(config, route);
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.BulkUploadPrices))
                 {
-                    BulkUploadPricesRoute.Execute(config, logger, route);
+                    BulkUploadPricesRoute.Execute(config, route);
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.BulkUploadOldPrices))
                 {
-                    BulkUploadOldPricesRoute.Execute(config, logger, route);
+                    BulkUploadOldPricesRoute.Execute(config, route);
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.ASNShipmentNotification))
                 {
-                    ASNShipmentNotificationRoute.Execute(config, logger, route);
+                    ASNShipmentNotificationRoute.Execute(config, route);
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.SCSCancelOrder))
                 {
-                    SCSCancelOrderRoute.Execute(config, logger, route);
+                    SCSCancelOrderRoute.Execute(config, route);
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.CancellationLines))
                 {
-                    CancellationLinesRoute.Execute(config, logger, route);
+                    CancellationLinesRoute.Execute(config, route);
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.DeleteCustomerProductCatalog))
                 {
-                    DeleteCustomerProductCatalogRoute.Execute(config, logger, route);
+                    DeleteCustomerProductCatalogRoute.Execute(config, route);
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.DownloadItemsData))
                 {
-                    DownloadTargetItemsRoute.Execute(config, logger, route);
+                    DownloadTargetItemsRoute.Execute(config, route);
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.SCSBulkItemPrices))
                 {
-                    SCSBulkItemPricesRoute.Execute(config, logger, route);
+                    SCSBulkItemPricesRoute.Execute(config, route);
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.GetPurchaseOrder850))
                 {
-                    GetPurchaseOrder850Route.Execute(config, logger, route);
+                    GetPurchaseOrder850Route.Execute(config, route);
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.Download855FromFTP))
                 {
-                    Download855FromFTPRoute.Execute(config, logger, route);
+                    Download855FromFTPRoute.Execute(config, route);
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.Download846FromFTP))
                 {
-                    Download846FromFTPRoute.Execute(config, logger, route);
+                    Download846FromFTPRoute.Execute(config, route);
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.Download856FromFTP))
                 {
-                    Download856FromFTPRoute.Execute(config, logger, route);
+                    Download856FromFTPRoute.Execute(config, route);
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.Download810FromFTP))
                 {
-                    Download810FromFTPRoute.Execute(config, logger, route);
+                    Download810FromFTPRoute.Execute(config, route);
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.VeeqoUpdateProductsQTY))
                 {
-                    Task task = VeeqoUpdatedProductsQTYRoute.Execute(config, logger, route);
+                    Task task = VeeqoUpdatedProductsQTYRoute.Execute(config, route);
                     task.Wait();
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.VeeqoGetSO))
                 {
-                    Task task = VeeqoGetSORoute.Execute(config, logger, route);
+                    Task task = VeeqoGetSORoute.Execute(config, route);
                     task.Wait();
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.VeeqoCreateNewProducts))
                 {
-                    Task task = VeeqoCreateNewProductsRoute.Execute(config, logger, route);
+                    Task task = VeeqoCreateNewProductsRoute.Execute(config, route);
                     task.Wait();
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.ShipStationUpdateSKUStocklevels))
                 {
-                    Task task = ShipStationUpdateSKUStocklevelsRoute.Execute(config, logger, route);
+                    Task task = ShipStationUpdateSKUStocklevelsRoute.Execute(config, route);
                     task.Wait();
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.TargetPlusInventoryFeedWHSWise))
                 {
-                    TargetPlusInventoryFeedWHSWiseRoute.Execute(config, logger, route);
+                    TargetPlusInventoryFeedWHSWiseRoute.Execute(config, route);
                 }
                 else
                 {
                     string errorMsg = $"Unknown route type: {route.TypeId}";
-                    Console.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] WARNING: {errorMsg}");
                     route.SaveLog(Declarations.LogTypeEnum.Error, errorMsg, string.Empty, userNo);
                     throw new Exception(errorMsg);
                 }
@@ -457,5 +416,7 @@ namespace eSyncMate.RouteWorker
                 throw;
             }
         }
+
+
     }
 }

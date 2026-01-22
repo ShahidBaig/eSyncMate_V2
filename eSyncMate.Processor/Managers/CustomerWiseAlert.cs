@@ -26,7 +26,7 @@ namespace eSyncMate.Processor.Managers
 {
     public class CustomerWiseAlert
     {
-        public static async Task Execute(IConfiguration config, ILogger logger, CustomerAlerts customerAlerts)
+        public static async Task Execute(IConfiguration config, CustomerAlerts customerAlerts)
         {
             int userNo = 1;
             string destinationData = string.Empty;

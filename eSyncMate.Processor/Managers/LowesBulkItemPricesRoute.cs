@@ -26,7 +26,7 @@ namespace eSyncMate.Processor.Managers
 {
     public class LowesBulkItemPricesRoute
     {
-        public static void Execute(IConfiguration config, ILogger logger, Routes route)
+        public static void Execute(IConfiguration config, Routes route)
         {
             int userNo = 1;
             string destinationData = string.Empty;
@@ -48,14 +48,14 @@ namespace eSyncMate.Processor.Managers
 
                 if (l_SourceConnector == null)
                 {
-                    logger.LogError("Source Connector is not setup properly");
+                    
                     route.SaveLog(LogTypeEnum.Error, "Source Connector is not setup properly", string.Empty, userNo);
                     return;
                 }
 
                 if (l_DestinationConnector == null)
                 {
-                    logger.LogError("Destination Connector is not setup properly");
+                    
                     route.SaveLog(LogTypeEnum.Error, "Destination Connector is not setup properly", string.Empty, userNo);
                     return;
                 }

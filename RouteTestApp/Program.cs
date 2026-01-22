@@ -224,7 +224,7 @@ static void Main()
 
 }
 
-static void MacysOrderProcess(IConfiguration config, ILogger logger, Routes route)
+static void MacysOrderProcess(IConfiguration config, Routes route)
 {
     int userNo = 1;
     DataTable l_data = new DataTable();
@@ -247,14 +247,14 @@ static void MacysOrderProcess(IConfiguration config, ILogger logger, Routes rout
 
         if (l_SourceConnector == null)
         {
-            logger.LogError("Source Connector is not setup properly");
+            
             route.SaveLog(LogTypeEnum.Error, "Source Connector is not setup properly", string.Empty, userNo);
             return;
         }
 
         if (l_DestinationConnector == null)
         {
-            logger.LogError("Destination Connector is not setup properly");
+            
             route.SaveLog(LogTypeEnum.Error, "Destination Connector is not setup properly", string.Empty, userNo);
             return;
         }

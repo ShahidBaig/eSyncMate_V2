@@ -37,7 +37,7 @@ namespace eSyncMate.Processor.Managers
     public class Download856FromFTPRoute
     {
 
-        public static void Execute(IConfiguration config, ILogger logger, Routes route)
+        public static void Execute(IConfiguration config, Routes route)
         {
             const int userNo = 1;
 
@@ -53,7 +53,6 @@ namespace eSyncMate.Processor.Managers
 
                 if (sourceConnector.AuthType != ConnectorTypesEnum.FTP.ToString())
                 {
-                    logger.LogError("Unsupported connector type. Expected FTP.");
                     return;
                 }
 

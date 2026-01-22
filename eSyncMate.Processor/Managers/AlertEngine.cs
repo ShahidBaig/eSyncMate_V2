@@ -43,7 +43,7 @@ namespace eSyncMate.Processor.Managers
 
                 if (customerAlerts.AlertsConfiguration.AlertType.ToUpper() == "CUSTOMER")
                 {
-                    CustomerWiseAlert.Execute(_config, _logger, customerAlerts);
+                    CustomerWiseAlert.Execute(_config, customerAlerts);
                 }
 
             }

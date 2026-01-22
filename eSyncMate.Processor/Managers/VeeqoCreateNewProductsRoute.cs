@@ -39,7 +39,7 @@ namespace eSyncMate.Processor.Managers
 {
     public class VeeqoCreateNewProductsRoute
     {
-        public static async Task Execute(IConfiguration config, ILogger logger, Routes route)
+        public static async Task Execute(IConfiguration config, Routes route)
         {
             int userNo = 1;
             HttpClient httpClient = new HttpClient();
@@ -56,11 +56,11 @@ namespace eSyncMate.Processor.Managers
 
             if (l_Data.Rows.Count == 0)
             {
-                logger.LogError("No items found in ShipmentDetailFromNDC");
+                route.SaveLog(LogTypeEnum.Error, "No items found in ShipmentDetailFromNDC", string.Empty, userNo);
                 return;
             }
 
-            HashSet<string> apiSkuCodes = await LoadApiSkuCodesAsync(httpClient, baseUrl, logger);
+            HashSet<string> apiSkuCodes = await LoadApiSkuCodesAsync(httpClient, baseUrl, route);
 
             List<string> unmatchedItemIDs = new List<string>();
             foreach (DataRow row in l_Data.Rows)
@@ -72,18 +72,18 @@ namespace eSyncMate.Processor.Managers
                 }
             }
 
-            int batchSize = 5; 
+            int batchSize = 5;
             foreach (var batch in unmatchedItemIDs.Batch(batchSize))
             {
-                var tasks = batch.Select(itemID => CreateProductAsync(itemID, httpClient, baseUrl, logger));
+                var tasks = batch.Select(itemID => CreateProductAsync(itemID, httpClient, baseUrl, route));
                 await Task.WhenAll(tasks);
-                await Task.Delay(1000); 
+                await Task.Delay(1000);
             }
 
             route.SaveLog(LogTypeEnum.Info, $"Completed execution of route [{route.Id}]", string.Empty, userNo);
         }
 
-        private static async Task<HashSet<string>> LoadApiSkuCodesAsync(HttpClient httpClient, string baseUrl, ILogger logger)
+        private static async Task<HashSet<string>> LoadApiSkuCodesAsync(HttpClient httpClient, string baseUrl, Routes route)
         {
             int pageSize = 2000;
             int currentPage = 1;
@@ -96,7 +96,7 @@ namespace eSyncMate.Processor.Managers
 
                 if (!response.IsSuccessStatusCode)
                 {
-                    logger.LogError($"Failed to fetch products, Status Code: {response.StatusCode}");
+                    route.SaveLog(LogTypeEnum.Error, $"Failed to fetch products, Status Code: {response.StatusCode}", string.Empty, 1);
                     break;
                 }
 
@@ -120,14 +120,14 @@ namespace eSyncMate.Processor.Managers
                     }
                 }
 
-                currentPage++; 
+                currentPage++;
             }
 
             return apiSkuCodes;
         }
 
 
-        private static async Task CreateProductAsync(string itemID, HttpClient httpClient, string baseUrl, ILogger logger)
+        private static async Task CreateProductAsync(string itemID, HttpClient httpClient, string baseUrl, Routes route)
         {
             var productData = new
             {

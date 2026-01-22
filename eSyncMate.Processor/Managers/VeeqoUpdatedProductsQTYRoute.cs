@@ -39,7 +39,7 @@ namespace eSyncMate.Processor.Managers
 {
     public class VeeqoUpdatedProductsQTYRoute
     {
-        public static async Task Execute(IConfiguration config, ILogger logger, Routes route)
+        public static async Task Execute(IConfiguration config, Routes route)
         {
             int userNo = 1;
             HttpClient httpClient = new HttpClient();
@@ -56,11 +56,11 @@ namespace eSyncMate.Processor.Managers
 
             if (l_Data.Rows.Count == 0)
             {
-                logger.LogError("No items found in ShipmentDetailFromNDC");
+                route.SaveLog(LogTypeEnum.Error, "No items found in ShipmentDetailFromNDC", string.Empty, userNo);
                 return;
             }
 
-            Dictionary<string, int> warehouseIdMap = await FetchWarehouses(httpClient, baseUrl, logger);
+            Dictionary<string, int> warehouseIdMap = await FetchWarehouses(httpClient, baseUrl, route);
 
             foreach (DataRow row in l_Data.Rows)
             {
@@ -77,7 +77,7 @@ namespace eSyncMate.Processor.Managers
 
                     if (!response.IsSuccessStatusCode)
                     {
-                        logger.LogError($"Failed to fetch product for ItemID: {itemID}, Status Code: {response.StatusCode}");
+                        route.SaveLog(LogTypeEnum.Error, $"Failed to fetch product for ItemID: {itemID}, Status Code: {response.StatusCode}", string.Empty, userNo);
                         continue;
                     }
 
@@ -91,21 +91,21 @@ namespace eSyncMate.Processor.Managers
                             if (sellable["sku_code"]?.ToString().Equals(itemID, StringComparison.OrdinalIgnoreCase) == true)
                             {
                                 int sellableId = sellable.Value<int>("id");
-                                await UpdateVeeqoProductQuantity(sellableId, warehouseId, warehouseName, newQuantity, httpClient, baseUrl, route, logger);
+                                await UpdateVeeqoProductQuantity(sellableId, warehouseId, warehouseName, newQuantity, httpClient, baseUrl, route);
                             }
                         }
                     }
                 }
                 else
                 {
-                    logger.LogError($"Warehouse name '{warehouseName}' not found in Veeqo.");
+                    route.SaveLog(LogTypeEnum.Error, $"Warehouse name '{warehouseName}' not found in Veeqo.", string.Empty, userNo);
                 }
             }
 
             route.SaveLog(LogTypeEnum.Info, $"Completed execution of route [{route.Id}]", string.Empty, userNo);
         }
 
-        private static async Task<Dictionary<string, int>> FetchWarehouses(HttpClient httpClient, string baseUrl, ILogger logger)
+        private static async Task<Dictionary<string, int>> FetchWarehouses(HttpClient httpClient, string baseUrl, Routes route)
         {
             //string warehouseApiUrl = "https://api.veeqo.com/warehouses?page_size=25&page=1";
             string warehouseApiUrl = $"{baseUrl}/warehouses?page_size=25&page=1";
@@ -113,7 +113,7 @@ namespace eSyncMate.Processor.Managers
 
             if (!response.IsSuccessStatusCode)
             {
-                logger.LogError($"Failed to fetch warehouse data, Status Code: {response.StatusCode}");
+                route.SaveLog(LogTypeEnum.Error, $"Failed to fetch warehouse data, Status Code: {response.StatusCode}", string.Empty, 1);
                 return new Dictionary<string, int>();
             }
 
@@ -126,7 +126,7 @@ namespace eSyncMate.Processor.Managers
             );
         }
 
-        private static async Task UpdateVeeqoProductQuantity(int sellableId, int warehouseId, string warehouseName, int quantity, HttpClient httpClient, string baseUrl, Routes route, ILogger logger)
+        private static async Task UpdateVeeqoProductQuantity(int sellableId, int warehouseId, string warehouseName, int quantity, HttpClient httpClient, string baseUrl, Routes route)
         {
             string apiUrl = $"{baseUrl}/sellables/{sellableId}/warehouses/{warehouseId}/stock_entry";
 

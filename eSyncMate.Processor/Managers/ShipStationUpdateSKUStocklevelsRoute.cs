@@ -42,7 +42,7 @@ namespace eSyncMate.Processor.Managers
 
     public class ShipStationUpdateSKUStocklevelsRoute
     {
-        public static async Task Execute(IConfiguration config, ILogger logger, Routes route)
+        public static async Task Execute(IConfiguration config, Routes route)
         {
             int userNo = 1;
             HttpClient httpClient = new HttpClient();
