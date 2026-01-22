@@ -456,52 +456,56 @@ namespace eSyncMate.DB.Entities
 
         public Result SaveData(string type, int OrderId, string Data, int userNo)
         {
-            Result l_Result = Result.GetFailureResult();
+            Result l_Result = Result.GetSuccessResult();
 
-            try
-            {
-                RouteData routeData = new RouteData();
+            //try
+            //{
+            //    RouteData routeData = new RouteData();
 
-                routeData.UseConnection(string.Empty, this.Connection);
+            //    routeData.UseConnection(string.Empty, this.Connection);
 
-                routeData.CreatedBy = userNo;
-                routeData.CreatedDate = DateTime.Now;
-                routeData.Data = Data;
-                routeData.OrderId = OrderId;
-                routeData.Type = type;
-                routeData.RouteId = this.Id;
+            //    routeData.CreatedBy = userNo;
+            //    routeData.CreatedDate = DateTime.Now;
+            //    routeData.Data = Data;
+            //    routeData.OrderId = OrderId;
+            //    routeData.Type = type;
+            //    routeData.RouteId = this.Id;
 
-                l_Result = routeData.SaveNew();
-            }
-            catch (Exception)
-            {
-                throw;
-            }
-            finally
-            {
-            }
+            //    l_Result = routeData.SaveNew();
+            //}
+            //catch (Exception)
+            //{
+            //    throw;
+            //}
+            //finally
+            //{
+            //}
 
             return l_Result;
         }
 
         public Result SaveLog(LogTypeEnum type, string Message, string Details, int userNo)
         {
-            Result l_Result = Result.GetFailureResult();
+            Result l_Result = Result.GetSuccessResult();
 
             try
             {
-                RouteLog routeLog = new RouteLog();
+                // Only insert logs for Error, Exception, and Info types
+                if (type == LogTypeEnum.Error || type == LogTypeEnum.Exception || type == LogTypeEnum.Info)
+                {
+                    RouteLog routeLog = new RouteLog();
 
-                routeLog.UseConnection(string.Empty, this.Connection);
+                    routeLog.UseConnection(string.Empty, this.Connection);
 
-                routeLog.CreatedBy = userNo;
-                routeLog.CreatedDate = DateTime.Now;
-                routeLog.Message = Message;
-                routeLog.Details = Details;
-                routeLog.Type = Convert.ToInt32(type);
-                routeLog.RouteId = this.Id;
+                    routeLog.CreatedBy = userNo;
+                    routeLog.CreatedDate = DateTime.Now;
+                    routeLog.Message = Message;
+                    routeLog.Details = Details;
+                    routeLog.Type = Convert.ToInt32(type);
+                    routeLog.RouteId = this.Id;
 
-                l_Result = routeLog.SaveNew();
+                    l_Result = routeLog.SaveNew();
+                }
             }
             catch (Exception)
             {
