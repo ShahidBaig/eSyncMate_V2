@@ -81,7 +81,7 @@ namespace eSyncMate.Processor.Managers
                     l_SCSInventoryFeed.InsertInventoryBatchWise(l_InventoryBatchWise);
 
                     // Process in chunks of 15,000 with 1-minute delay between chunks
-                    int chunkSize = 15000;
+                    int chunkSize = 10000;
 
                     if (l_data.Rows.Count <= chunkSize)
                     {
