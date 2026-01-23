@@ -434,6 +434,46 @@ namespace eSyncMate.DB.Entities
             return this.Connection.Execute(DeleteQuery);
         }
 
+        /// <summary>
+        /// Bulk update item status for multiple items in a single database call
+        /// </summary>
+        public void BulkUpdateItemStatus(string connectionString, DataTable items)
+        {
+            if (items == null || items.Rows.Count == 0)
+                return;
+
+            using (SqlConnection connection = new SqlConnection(connectionString))
+            {
+                connection.Open();
+
+                // Build comma-separated list of ItemId and CustomerId pairs
+                StringBuilder whereClause = new StringBuilder();
+                bool first = true;
+
+                foreach (DataRow row in items.Rows)
+                {
+                    string itemId = row["ItemId"]?.ToString()?.Replace("'", "''") ?? "";
+                    string customerId = row["CustomerId"]?.ToString()?.Replace("'", "''") ?? "";
+
+                    if (!first)
+                        whereClause.Append(" OR ");
+
+                    whereClause.Append($"(ItemID = '{itemId}' AND CustomerID = '{customerId}')");
+                    first = false;
+                }
+
+                string updateQuery = $@"UPDATE {SCSInventoryFeed.TableName}
+                                        SET Status = 'SYNCED', ModifiedDate = GETDATE()
+                                        WHERE {whereClause}";
+
+                using (SqlCommand cmd = new SqlCommand(updateQuery, connection))
+                {
+                    cmd.CommandTimeout = 600;
+                    cmd.ExecuteNonQuery();
+                }
+            }
+        }
+
 
         public bool InsertInventoryBatchWise(InventoryBatchWise p_InventoryBatchWise)
         {
