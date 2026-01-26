@@ -36,8 +36,14 @@ namespace eSyncMate.Processor.Connections
                 var tokenInfo = JsonConvert.DeserializeAnonymousType(response.Content, tokenInfoDefinition);
                 SCSConnector.Token = tokenInfo.Token;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                Console.WriteLine("========== SCSConnector.GetApiToken ==========");
+                Console.WriteLine($"Request URL: {client.BuildUri(request)}");
+                Console.WriteLine($"HTTP Method: {request.Method}");
+                Console.WriteLine($"StatusCode : {(int)response.StatusCode} ({response.StatusCode})");
+                Console.WriteLine($"IsSuccessful: {response.IsSuccessful}");
+                Console.WriteLine($"ErrorMessage: {response.ErrorMessage}");
                 throw;
             }
         }
