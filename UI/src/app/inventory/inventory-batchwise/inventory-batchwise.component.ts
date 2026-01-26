@@ -57,7 +57,7 @@ import { InventorypopupComponent } from '../inventory-popup/inventory-popup.comp
 export class InventoryBatchwiseComponent {
 
   mydate = environment.date;
-  displayedColumns: string[] = ['CustomerID', 'ItemID', 'Status', 'CustomerItemCode', 'ETADate', 'ETAQty', 'TotalATS', 'ATSL10', 'ATSL21', 'ATSL28', 'ATSL29', 'ATSL30', 'ATSL34', 'ATSL35', 'ATSL36', 'ATSL37', 'ATSL40', 'ATSL41', 'ATSL55', 'ATSL60', 'ATSL65', 'ATSL70', 'ATSL91','File',]; // Add the actual column names from your data
+  displayedColumns: string[] = ['CustomerID', 'ItemID', 'Status', 'CustomerItemCode', 'ETADate', 'ETAQty', 'TotalATS', 'ATSL10', 'ATSL21', 'ATSL28', 'ATSL29', 'ATSL30', 'ATSL34', 'ATSL35', 'ATSL36', 'ATSL37', 'ATSL40', 'ATSL41', 'ATSL55', 'ATSL60', 'ATSL65', 'ATSL70', 'ATSL91', 'ATSL56','ATSL57','File',]; // Add the actual column names from your data
   //'ATSL10', 'ATSL21', 'ATSL28', 'ATSL30', 'ATSL34', 'ATSL35', 'ATSL36', 'ATSL37', 'ATSL40', 'ATSL41', 'ATSL55', 'ATSL60', 'ATSL70', 'ATSL91'
   dataSource = this.data.listofInventoryFiles || [];
   batchID?: string;
