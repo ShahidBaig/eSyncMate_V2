@@ -54,11 +54,11 @@ namespace eSyncMate.Processor.Managers
                     return;
                 }
 
-                //if (route.Status.ToUpper() == "IN-ACTIVE")
-                //{
-                //    this.RemoveRouteJob(route);
-                //    return;
-                //}
+                if (route.Status.ToUpper() == "IN-ACTIVE")
+                {
+                    this.RemoveRouteJob(route);
+                    return;
+                }
 
                 // Check if route is already running
                 if (currentRoutes.ContainsKey(routeId))
@@ -139,14 +139,12 @@ namespace eSyncMate.Processor.Managers
 
         public void Execute(int routeId)
         {
-            // Check if external process execution is enabled
             if (UseExternalProcess)
             {
                 ExecuteExternal(routeId);
                 return;
             }
 
-            // Original in-process execution
             Routes route = new Routes();
 
             try

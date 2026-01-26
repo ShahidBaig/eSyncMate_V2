@@ -458,28 +458,28 @@ namespace eSyncMate.DB.Entities
         {
             Result l_Result = Result.GetSuccessResult();
 
-            try
-            {
-                RouteData routeData = new RouteData();
+            //try
+            //{
+            //    RouteData routeData = new RouteData();
 
-                routeData.UseConnection(string.Empty, this.Connection);
+            //    routeData.UseConnection(string.Empty, this.Connection);
 
-                routeData.CreatedBy = userNo;
-                routeData.CreatedDate = DateTime.Now;
-                routeData.Data = Data;
-                routeData.OrderId = OrderId;
-                routeData.Type = type;
-                routeData.RouteId = this.Id;
+            //    routeData.CreatedBy = userNo;
+            //    routeData.CreatedDate = DateTime.Now;
+            //    routeData.Data = Data;
+            //    routeData.OrderId = OrderId;
+            //    routeData.Type = type;
+            //    routeData.RouteId = this.Id;
 
-                l_Result = routeData.SaveNew();
-            }
-            catch (Exception)
-            {
-                throw;
-            }
-            finally
-            {
-            }
+            //    l_Result = routeData.SaveNew();
+            //}
+            //catch (Exception)
+            //{
+            //    throw;
+            //}
+            //finally
+            //{
+            //}
 
             return l_Result;
         }
