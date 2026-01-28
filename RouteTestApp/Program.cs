@@ -29,9 +29,16 @@ using System.Text.Json;
 using System.IO.Compression;
 using ClosedXML.Excel;
 using DocumentFormat.OpenXml.Bibliography;
+using Azure.Identity;
+using Microsoft.Graph;
+using Microsoft.Graph.Models;
+using Microsoft.Graph.Users.Item.SendMail;
 
 static void Main()
 {
+    // Test Microsoft Graph Email
+    TestGraphEmailAsync().GetAwaiter().GetResult();
+
     //string l_data = "{\"results\":[{\"external_id\":\"ADR109\",\"status\":200,\"product\":{\"id\":\"60cd006234e3910cbd9ed821\",\"external_id\":\"ADR109\",\"relationship_type\":\"VAP\",\"seller_id\":\"5d949496fcd4b70097dfad5e\",\"fields\":[{\"name\":\"brands.name\",\"value\":\"Safavieh\"},{\"name\":\"107703\",\"value\":\"Rug Pad Recommended\"},{\"name\":\"107703\",\"value\":\"Vacuum Without Beater Bar\"},{\"name\":\"304048\",\"value\":\"Machine Made\"},{\"name\":\"descriptions.long_description\",\"value\":\"Transform your living space with our exquisite 10' X 10' round area rug, a harmonious blend of grey and blue hues brought to life in a timeless round shape. Crafted in Turkey using a precision power-loomed technique, this rug boasts a comfortable 3/8\\\" pile height and a durable composition of 55% Polypropylene, 40% Jute, and 5% Polyester, ensuring both softness and longevity. The intricate pattern, inspired by classic designs, adds a touch of elegance and sophistication to any room. OEKO-TEX certification guarantees that the rug is free from harmful substances, making it a safe choice for your home. Elevate your decor with this stylish, high-quality piece that seamlessly combines tradition with modernity.\"},{\"name\":\"compliance.import_designation\",\"value\":\"Imported\"},{\"name\":\"178051\",\"value\":\"Indoor\"},{\"name\":\"109632\",\"value\":\"Jute\"},{\"name\":\"107888\",\"value\":\"Medallion\"},{\"name\":\"112550\",\"value\":\"Botanical\"},{\"name\":\"304047\",\"value\":\"Cut\"},{\"name\":\"compliance.is_proposition_65\",\"value\":\"No\"},{\"name\":\"108166\",\"value\":\"Non-Toxic\"},{\"name\":\"109641\",\"value\":\"Polypropylene\"},{\"name\":\"109644\",\"value\":\"55\"},{\"name\":\"304527\",\"value\":\"Low Pile (Less Than 0.5\\\")\"},{\"name\":\"109568\",\"value\":\"Area Rugs\"},{\"name\":\"107886\",\"value\":\"All Ages\"},{\"name\":\"compliance.tax_category.tax_code\",\"value\":\"General\"},{\"name\":\"109655\",\"value\":\"Loomed\"},{\"name\":\"descriptions.bullets[1]\",\"value\":\"Area Rug Crafted with Polypropylene, Jute, Polyester\"},{\"name\":\"descriptions.bullets[10]\",\"value\":\"Sizes may vary slightly\"},{\"name\":\"descriptions.bullets[2]\",\"value\":\"Construction Method: Power Loomed\"},{\"name\":\"descriptions.bullets[3]\",\"value\":\"Pile Thickness: 3/8\\\"\"},{\"name\":\"descriptions.bullets[4]\",\"value\":\"Made in Turkey\"},{\"name\":\"descriptions.bullets[5]\",\"value\":\"For Indoor Use Only\"},{\"name\":\"descriptions.bullets[6]\",\"value\":\"Rug pad recommended; purchase separately\"},{\"name\":\"descriptions.bullets[7]\",\"value\":\"Rug Features: Pet Friendly\"},{\"name\":\"descriptions.bullets[8]\",\"value\":\"Suggested Setting: Bedroom, Guest Room, Home Office, Living Room, Study Room\"},{\"name\":\"descriptions.bullets[9]\",\"value\":\"Routine vacuuming is the most important step in maintaining the life and beauty of your rug. It is recommended that you have area rugs professionally cleaned every 1-2 years to remove deep set dirt in high traffic areas. Otherwise, attentive vacuuming will significantly extend the life of area rugs. Vacuum thoroughly at least once a week with a canister vacuum. Do not engage beater bars. Rugs placed in high traffic areas of the home, office or rugs exposed to household pets should be vacuumed more frequently. Avoid vacuuming the fringes of your rug, especially those on hand-knotted rugs. Use a broom to clean fringes.\"},{\"name\":\"108459\",\"value\":\"Traditional\"},{\"name\":\"109612\",\"value\":\"Pet Friendly\"},{\"name\":\"109612\",\"value\":\"Rug Pad Recommended\"},{\"name\":\"109635\",\"value\":\"100\"},{\"name\":\"1173243791\",\"value\":\"1511051\"},{\"name\":\"673629455\",\"value\":\"Centexbel\"},{\"name\":\"descriptions.parent_title\",\"value\":\"Adirondack ADR109 Machine Made Indoor Rug - Safavieh\"},{\"name\":\"seller_return_policy\",\"value\":\"AAA\"},{\"name\":\"1611034609\",\"value\":\"Bedroom\"},{\"name\":\"1611034609\",\"value\":\"Guest Room\"},{\"name\":\"1611034609\",\"value\":\"Home Office\"},{\"name\":\"1611034609\",\"value\":\"Living Room\"},{\"name\":\"1611034609\",\"value\":\"Study Room\"},{\"name\":\"109642\",\"value\":\"Jute\"},{\"name\":\"109645\",\"value\":\"40\"},{\"name\":\"109643\",\"value\":\"Polyester\"},{\"name\":\"109646\",\"value\":\"55\"},{\"name\":\"shipping_exclusion\",\"value\":\"Yes\"},{\"name\":\"703650169\",\"value\":\"Moderate Traffic Areas\"},{\"name\":\"variation.theme\",\"value\":\"Size & Color\"},{\"name\":\"107946\",\"value\":\"30 Day Limited Warranty\"},{\"name\":\"product_classification.item_type\",\"value\":\"Rugs\"}],\"quantities\":[{\"quantity\":0,\"distribution_center_id\":\"mikpz1\",\"last_modified\":\"2021-06-21T14:31:09.543Z\",\"last_modified_by\":\"d28df639fa131ecf446e66ce808067693ee8794f7cffd22daf1e8b228c4cf906\"}],\"tcin\":\"83789105\",\"item_type_id\":\"247928\",\"created\":\"2021-06-18T20:21:54.179Z\",\"created_by\":\"d28df639fa131ecf446e66ce808067693ee8794f7cffd22daf1e8b228c4cf906\",\"last_modified\":\"2024-12-17T09:01:55.455Z\",\"last_modified_by\":\"SYSTEM\",\"previously_approved\":true,\"product_statuses\":[{\"id\":\"0oc66x\",\"version\":26,\"current\":true,\"latest\":true,\"listing_status\":\"APPROVED\",\"errors\":[],\"validation_status\":\"VALIDATED\",\"is_changed\":true,\"created\":\"2024-12-17T09:00:22.713Z\",\"created_by\":\"6e039aadf66b143a5d8c70cd5e96eeca114d1aac2e3804d1c051c5208f6af6a1\",\"last_modified\":\"2024-12-17T09:01:55.455Z\",\"last_modified_by\":\"SYSTEM\"},{\"id\":\"c74lmv\",\"version\":25,\"current\":false,\"latest\":false,\"listing_status\":\"APPROVED\",\"errors\":[],\"validation_status\":\"VALIDATED\",\"is_changed\":true,\"created\":\"2024-12-11T21:00:17.344Z\",\"created_by\":\"6e039aadf66b143a5d8c70cd5e96eeca114d1aac2e3804d1c051c5208f6af6a1\",\"last_modified\":\"2024-12-11T21:01:52.826Z\",\"last_modified_by\":\"SYSTEM\"},{\"id\":\"cd5ekr\",\"version\":24,\"current\":false,\"latest\":false,\"listing_status\":\"APPROVED\",\"errors\":[],\"validation_status\":\"VALIDATED\",\"is_changed\":true,\"created\":\"2024-12-10T21:07:40.858Z\",\"created_by\":\"6e039aadf66b143a5d8c70cd5e96eeca114d1aac2e3804d1c051c5208f6af6a1\",\"last_modified\":\"2024-12-10T21:09:16.319Z\",\"last_modified_by\":\"SYSTEM\"},{\"id\":\"kzu2hd\",\"version\":23,\"current\":false,\"latest\":false,\"listing_status\":\"APPROVED\",\"errors\":[],\"validation_status\":\"VALIDATED\",\"is_changed\":false,\"created\":\"2024-05-09T19:29:07.643Z\",\"created_by\":\"d28df639fa131ecf446e66ce808067693ee8794f7cffd22daf1e8b228c4cf906\",\"last_modified\":\"2024-05-09T19:30:29.853Z\",\"last_modified_by\":\"SYSTEM\"},{\"id\":\"p0fw8l\",\"version\":22,\"current\":false,\"latest\":false,\"listing_status\":\"APPROVED\",\"errors\":[],\"validation_status\":\"VALIDATED\",\"is_changed\":true,\"created\":\"2024-02-06T14:34:48.449Z\",\"created_by\":\"d28df639fa131ecf446e66ce808067693ee8794f7cffd22daf1e8b228c4cf906\",\"last_modified\":\"2024-02-06T14:35:30.552Z\",\"last_modified_by\":\"SYSTEM\"},{\"id\":\"i2kzym\",\"version\":21,\"current\":false,\"latest\":false,\"listing_status\":\"APPROVED\",\"errors\":[],\"validation_status\":\"VALIDATED\",\"is_changed\":true,\"created\":\"2024-02-03T15:41:08.043Z\",\"created_by\":\"d28df639fa131ecf446e66ce808067693ee8794f7cffd22daf1e8b228c4cf906\",\"last_modified\":\"2024-02-03T15:42:22.380Z\",\"last_modified_by\":\"SYSTEM\"},{\"id\":\"62zss9\",\"version\":19,\"current\":false,\"latest\":false,\"listing_status\":\"REJECTED\",\"errors\":[{\"category\":\"PROCESS_EXCEPTION\",\"reason\":\"A new version of this product was submitted before approval.\",\"type\":\"ITEM\",\"error_code\":768}],\"validation_status\":\"ERROR\",\"is_changed\":false,\"created\":\"2024-02-02T21:37:26.504Z\",\"created_by\":\"d28df639fa131ecf446e66ce808067693ee8794f7cffd22daf1e8b228c4cf906\",\"last_modified\":\"2024-02-02T21:38:16.164Z\",\"last_modified_by\":\"SYSTEM\"},{\"id\":\"9rm8w7\",\"version\":18,\"current\":false,\"latest\":false,\"listing_status\":\"APPROVED\",\"errors\":[],\"validation_status\":\"VALIDATED\",\"is_changed\":true,\"created\":\"2024-02-02T20:31:55.852Z\",\"created_by\":\"d28df639fa131ecf446e66ce808067693ee8794f7cffd22daf1e8b228c4cf906\",\"last_modified\":\"2024-02-02T20:32:51.689Z\",\"last_modified_by\":\"SYSTEM\"},{\"id\":\"6njznz\",\"version\":17,\"current\":false,\"latest\":false,\"listing_status\":\"APPROVED\",\"errors\":[],\"validation_status\":\"VALIDATED\",\"is_changed\":true,\"created\":\"2024-01-25T14:59:14.900Z\",\"created_by\":\"d28df639fa131ecf446e66ce808067693ee8794f7cffd22daf1e8b228c4cf906\",\"last_modified\":\"2024-01-25T14:59:49.973Z\",\"last_modified_by\":\"SYSTEM\"},{\"id\":\"3rfpsl\",\"version\":16,\"current\":false,\"latest\":false,\"listing_status\":\"APPROVED\",\"errors\":[],\"validation_status\":\"VALIDATED\",\"is_changed\":true,\"created\":\"2023-12-15T15:41:22.322Z\",\"created_by\":\"d28df639fa131ecf446e66ce808067693ee8794f7cffd22daf1e8b228c4cf906\",\"last_modified\":\"2023-12-15T15:42:41.524Z\",\"last_modified_by\":\"SYSTEM\"}]}},{\"external_id\":\"ADR109K-3SQ\",\"status\":403,\"reason\":\"Exceeded limit of 300 variation children per family. This is the maximum number of published + newly pending VCs allowed in a variation\"}]}";
     //SCSProductsResponse l_SCSProductsResponse = JsonConvert.DeserializeObject<SCSProductsResponse>(l_data);
 
@@ -43,11 +50,11 @@ static void Main()
 
 
     //Instantiate IConfiguration and ILogger(you need to provide your own implementations)
-    IConfiguration config = new MyConfigurationImplementation();
-    RouteEngine routeEngine = new RouteEngine(config);
-    ////1, 4, 10,7 GECKO
-    int routeId = 97;
-    routeEngine.Execute(routeId);
+    //IConfiguration config = new MyConfigurationImplementation();
+    //RouteEngine routeEngine = new RouteEngine(config);
+    //////1, 4, 10,7 GECKO
+    //int routeId = 97;
+    //routeEngine.Execute(routeId);
 
 
     //IConfiguration config = new MyConfigurationImplementation();
@@ -2290,3 +2297,120 @@ static async Task SaveAmazonReportToExcelAsync(string reportUrl, string outputPa
 //        }
 //    }
 //}
+
+/// <summary>
+/// Sends an email using Microsoft Graph API with GraphServiceClient
+/// </summary>
+/// <param name="tenantId">Azure AD Tenant ID</param>
+/// <param name="clientId">Azure AD Application (Client) ID</param>
+/// <param name="clientSecret">Azure AD Client Secret</param>
+/// <param name="senderEmail">The email address of the sender (must have send permissions)</param>
+/// <param name="recipientEmail">The email address of the recipient</param>
+/// <param name="subject">Email subject</param>
+/// <param name="body">Email body content (HTML supported)</param>
+/// <returns>True if email sent successfully, False otherwise</returns>
+static async Task<(bool Success, string Message)> SendEmailUsingGraphAsync(
+    string tenantId,
+    string clientId,
+    string clientSecret,
+    string senderEmail,
+    string recipientEmail,
+    string subject,
+    string body)
+{
+    try
+    {
+        // Create the credential using ClientSecretCredential for app-only authentication
+        var credential = new ClientSecretCredential(tenantId, clientId, clientSecret);
+
+        // Create GraphServiceClient with the credential
+        var graphClient = new GraphServiceClient(credential, new[] { "https://graph.microsoft.com/.default" });
+
+        // Create the email message
+        var message = new Microsoft.Graph.Models.Message
+        {
+            Subject = subject,
+            Body = new ItemBody
+            {
+                ContentType = Microsoft.Graph.Models.BodyType.Html,
+                Content = body
+            },
+            ToRecipients = new List<Recipient>
+            {
+                new Recipient
+                {
+                    EmailAddress = new EmailAddress
+                    {
+                        Address = recipientEmail
+                    }
+                }
+            }
+        };
+
+        // Create the SendMailPostRequestBody
+        var sendMailBody = new SendMailPostRequestBody
+        {
+            Message = message,
+            SaveToSentItems = true
+        };
+
+        // Send the email
+        await graphClient.Users[senderEmail].SendMail.PostAsync(sendMailBody);
+
+        Console.WriteLine($"Email sent successfully to {recipientEmail}");
+        return (true, "Email sent successfully");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Failed to send email: {ex.Message}");
+        return (false, ex.Message);
+    }
+}
+
+/// <summary>
+/// Test function to verify email sending via Microsoft Graph API
+/// </summary>
+static async Task TestGraphEmailAsync()
+{
+    Console.WriteLine("Testing Microsoft Graph Email...");
+    Console.WriteLine("================================");
+
+    // Azure AD Configuration - Replace these with your actual values
+    string tenantId = "01ff3166-d567-4225-b42c-b48e3a5624ce";           // e.g., "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+    string clientId = "e69096e5-ecee-4d9f-8283-88fa62f8d84b";           // e.g., "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+    string clientSecret = "YOUR_CLIENT_SECRET_HERE";   // e.g., "your-client-secret-value"
+
+    // Email Configuration
+    string senderEmail = "alerts@SAFAVIEH.COM";   // Must be a valid user/shared mailbox in your tenant
+    string recipientEmail = "bilal.mughal1431@gmail.com";   // Replace with the actual recipient email
+    string subject = "Test Email from eSyncMate via Microsoft Graph";
+    string body = @"
+        <html>
+        <body>
+            <h2>Test Email</h2>
+            <p>This is a test email sent using Microsoft Graph API via GraphServiceClient.</p>
+            <p>Sent from: eSyncMate RouteTestApp</p>
+            <p>Time: " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + @"</p>
+        </body>
+        </html>";
+
+    var result = await SendEmailUsingGraphAsync(
+        tenantId,
+        clientId,
+        clientSecret,
+        senderEmail,
+        recipientEmail,
+        subject,
+        body);
+
+    if (result.Success)
+    {
+        Console.WriteLine("SUCCESS: Email was sent successfully!");
+    }
+    else
+    {
+        Console.WriteLine($"FAILED: {result.Message}");
+    }
+
+    Console.WriteLine("================================");
+}

@@ -78,7 +78,6 @@ namespace eSyncMate.Processor.Managers
                 if (!File.Exists(exePath))
                 {
                     var errorMsg = $"RouteWorker exe not found at: {exePath}";
-                    Console.WriteLine($"[ERROR] {errorMsg}");
                     route.SaveLog(Declarations.LogTypeEnum.Error, errorMsg, "", 1);
                     return;
                 }
@@ -95,13 +94,11 @@ namespace eSyncMate.Processor.Managers
                     WorkingDirectory = workingDir
                 };
 
-                Console.WriteLine($"[DEBUG] ExecuteExternal - Starting process...");
 
                 using var process = Process.Start(processInfo);
 
                 if (process != null)
                 {
-                    Console.WriteLine($"[DEBUG] ExecuteExternal - Process started, PID: {process.Id}");
 
                     // Read output asynchronously
                     string output = process.StandardOutput.ReadToEnd();
