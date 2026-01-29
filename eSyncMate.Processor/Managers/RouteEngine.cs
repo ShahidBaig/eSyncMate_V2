@@ -2,6 +2,7 @@
 using eSyncMate.DB.Entities;
 using eSyncMate.Processor.Models;
 using Hangfire;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 
 namespace eSyncMate.Processor.Managers
@@ -10,7 +11,7 @@ namespace eSyncMate.Processor.Managers
     {
         private readonly IConfiguration _config;
 
-        private static Dictionary<int, Routes> currentRoutes = new Dictionary<int, Routes>();
+        private static ConcurrentDictionary<int, Routes> currentRoutes = new ConcurrentDictionary<int, Routes>();
 
         // Configuration flag to switch between in-process and external process execution
         private bool UseExternalProcess => _config?.GetValue<bool>("RouteEngine:UseExternalProcess") ?? false;
@@ -60,14 +61,12 @@ namespace eSyncMate.Processor.Managers
                     return;
                 }
 
-                // Check if route is already running
-                if (currentRoutes.ContainsKey(routeId))
+                // Check if route is already running (TryAdd is atomic - returns false if key exists)
+                if (!currentRoutes.TryAdd(routeId, route))
                 {
                     route.SaveLog(Declarations.LogTypeEnum.Info, "This route is already in execution.", "", 1);
                     return;
                 }
-
-                currentRoutes[routeId] = route;
 
                 // Debug: Log paths
                 var exePath = ExternalProcessPath;
@@ -129,8 +128,7 @@ namespace eSyncMate.Processor.Managers
             }
             finally
             {
-                if (currentRoutes.ContainsKey(routeId))
-                    currentRoutes.Remove(routeId);
+                currentRoutes.TryRemove(routeId, out _);
             }
         }
 
@@ -159,13 +157,12 @@ namespace eSyncMate.Processor.Managers
                     return;
                 }
 
-                if (currentRoutes.ContainsKey(routeId))
+                // Check if route is already running (TryAdd is atomic - returns false if key exists)
+                if (!currentRoutes.TryAdd(routeId, route))
                 {
                     route.SaveLog(Declarations.LogTypeEnum.Info, "This route is already in execution.", "", 1);
                     return;
                 }
-
-                currentRoutes[routeId] = route;
 
                 if (route.TypeId == Convert.ToInt32(RouteTypesEnum.InventoryFeed))
                 {
@@ -484,8 +481,7 @@ namespace eSyncMate.Processor.Managers
             }
             finally
             {
-                if (currentRoutes.ContainsKey(routeId))
-                    currentRoutes.Remove(routeId);
+                currentRoutes.TryRemove(routeId, out _);
             }
         }
 

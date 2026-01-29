@@ -15,7 +15,7 @@ namespace eSyncMate.DB.Entities
 {
     public class SCSInventoryFeedData : DBEntity, IDBEntity, IDisposable, IEqualityComparer
     {
-        public int Id { get; set; }
+        public Int64 Id { get; set; }
         public string CustomerId { get; set; }
         public string ItemId { get; set; }
         public string Type { get; set; }
@@ -443,7 +443,7 @@ namespace eSyncMate.DB.Entities
 
         public new int GetHashCode(object obj)
         {
-            return this.Id;
+            return (int)this.Id;
         }
         #endregion
     }

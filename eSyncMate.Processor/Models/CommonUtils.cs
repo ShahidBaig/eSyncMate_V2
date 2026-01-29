@@ -87,14 +87,13 @@ namespace eSyncMate.Processor.Models
         MichealASNShipmentNotification = 60,
         MichealCancellationLines = 61,
         AmazonWHSWInventoryUpload = 62,
+        WalmartInventoryStatus = 63,
         RepaintGetOrders = 500,
         RepaintCreateOrder = 501,
         RepaintGenerate855 = 502,
         Download856FromShipStation = 503,
         GenerateEDI856ForRepaintRoute = 504,
-        GenerateEDI810ForRepaintRoute = 505,
-       
-
+        GenerateEDI810ForRepaintRoute = 505
     }
 
     public enum AlertTypesEnum
