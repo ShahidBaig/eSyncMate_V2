@@ -1,4 +1,4 @@
-﻿using eSyncMate.DB;
+using eSyncMate.DB;
 using eSyncMate.DB.Entities;
 using eSyncMate.Processor.Connections;
 using eSyncMate.Processor.Models;
@@ -39,16 +39,22 @@ namespace eSyncMate.Processor.Managers
 {
     public class VeeqoUpdatedProductsQTYRoute
     {
+        // Use centralized HttpClient to avoid socket exhaustion across 100+ routes
+        private static HttpClient HttpClient => SharedHttpClientFactory.Veeqo;
+
         public static async Task Execute(IConfiguration config, Routes route)
         {
             int userNo = 1;
-            HttpClient httpClient = new HttpClient();
             ShipmentDetailFromNDC shipmentData = new ShipmentDetailFromNDC();
             DataTable l_Data = new DataTable();
             ConnectorDataModel? l_SourceConnector = JsonConvert.DeserializeObject<ConnectorDataModel>(route.SourceConnectorObject.Data);
             ConnectorDataModel? l_DestinationConnector = JsonConvert.DeserializeObject<ConnectorDataModel>(route.DestinationConnectorObject.Data);
             string baseUrl = l_SourceConnector.BaseUrl.TrimEnd('/');
-            httpClient.DefaultRequestHeaders.Add(l_SourceConnector.Headers[0].Name, l_SourceConnector.Headers[0].Value);
+
+            // Store header info for per-request headers (shared HttpClient can't use DefaultRequestHeaders)
+            string headerName = l_SourceConnector.Headers[0].Name;
+            string headerValue = l_SourceConnector.Headers[0].Value;
+
             route.SaveLog(LogTypeEnum.Info, $"Started executing route [{route.Id}]", string.Empty, userNo);
 
             shipmentData.UseConnection(l_DestinationConnector.ConnectionString);
@@ -60,7 +66,7 @@ namespace eSyncMate.Processor.Managers
                 return;
             }
 
-            Dictionary<string, int> warehouseIdMap = await FetchWarehouses(httpClient, baseUrl, route);
+            Dictionary<string, int> warehouseIdMap = await FetchWarehouses(baseUrl, headerName, headerValue, route);
 
             foreach (DataRow row in l_Data.Rows)
             {
@@ -73,7 +79,9 @@ namespace eSyncMate.Processor.Managers
                     //string productApiUrl = $"{baseUrl}/products?warehouse_id={warehouseId}&page_size=25&page=1&query={itemID}";
                     string productApiUrl = $"{baseUrl}/products?page_size=25&page=1&query={itemID}";
 
-                    HttpResponseMessage response = await httpClient.GetAsync(productApiUrl);
+                    using var request = new HttpRequestMessage(HttpMethod.Get, productApiUrl);
+                    request.Headers.Add(headerName, headerValue);
+                    HttpResponseMessage response = await HttpClient.SendAsync(request);
 
                     if (!response.IsSuccessStatusCode)
                     {
@@ -91,7 +99,7 @@ namespace eSyncMate.Processor.Managers
                             if (sellable["sku_code"]?.ToString().Equals(itemID, StringComparison.OrdinalIgnoreCase) == true)
                             {
                                 int sellableId = sellable.Value<int>("id");
-                                await UpdateVeeqoProductQuantity(sellableId, warehouseId, warehouseName, newQuantity, httpClient, baseUrl, route);
+                                await UpdateVeeqoProductQuantity(sellableId, warehouseId, warehouseName, newQuantity, baseUrl, headerName, headerValue, route);
                             }
                         }
                     }
@@ -105,11 +113,14 @@ namespace eSyncMate.Processor.Managers
             route.SaveLog(LogTypeEnum.Info, $"Completed execution of route [{route.Id}]", string.Empty, userNo);
         }
 
-        private static async Task<Dictionary<string, int>> FetchWarehouses(HttpClient httpClient, string baseUrl, Routes route)
+        private static async Task<Dictionary<string, int>> FetchWarehouses(string baseUrl, string headerName, string headerValue, Routes route)
         {
             //string warehouseApiUrl = "https://api.veeqo.com/warehouses?page_size=25&page=1";
             string warehouseApiUrl = $"{baseUrl}/warehouses?page_size=25&page=1";
-            HttpResponseMessage response = await httpClient.GetAsync(warehouseApiUrl);
+
+            using var request = new HttpRequestMessage(HttpMethod.Get, warehouseApiUrl);
+            request.Headers.Add(headerName, headerValue);
+            HttpResponseMessage response = await HttpClient.SendAsync(request);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -126,7 +137,7 @@ namespace eSyncMate.Processor.Managers
             );
         }
 
-        private static async Task UpdateVeeqoProductQuantity(int sellableId, int warehouseId, string warehouseName, int quantity, HttpClient httpClient, string baseUrl, Routes route)
+        private static async Task UpdateVeeqoProductQuantity(int sellableId, int warehouseId, string warehouseName, int quantity, string baseUrl, string headerName, string headerValue, Routes route)
         {
             string apiUrl = $"{baseUrl}/sellables/{sellableId}/warehouses/{warehouseId}/stock_entry";
 
@@ -140,8 +151,10 @@ namespace eSyncMate.Processor.Managers
                 }
             };
 
-            StringContent content = new StringContent(JsonConvert.SerializeObject(payload), Encoding.UTF8, "application/json");
-            HttpResponseMessage response = await httpClient.PutAsync(apiUrl, content);
+            using var request = new HttpRequestMessage(HttpMethod.Put, apiUrl);
+            request.Headers.Add(headerName, headerValue);
+            request.Content = new StringContent(JsonConvert.SerializeObject(payload), Encoding.UTF8, "application/json");
+            HttpResponseMessage response = await HttpClient.SendAsync(request);
 
             if (!response.IsSuccessStatusCode)
             {

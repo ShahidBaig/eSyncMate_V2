@@ -84,13 +84,15 @@ namespace eSyncMate.Processor.Managers
                     route.SaveLog(LogTypeEnum.Debug, $"Source connector processing completed.", string.Empty, userNo);
                 }
 
+                // Set connection before the if block so it's available for UpdateInventoryBatchWise
+                l_SCSInventoryFeed.UseConnection(l_SourceConnector.ConnectionString);
+
                 if (l_DestinationConnector.ConnectivityType == ConnectorTypesEnum.Rest.ToString() && l_data.Rows.Count > 0)
                 {
                     route.SaveLog(LogTypeEnum.Debug, $"Destination connector processing start...", string.Empty, userNo);
 
                     SCSInventoryFeed feed = new SCSInventoryFeed();
                     feed.UseConnection(l_SourceConnector.ConnectionString);
-                    l_SCSInventoryFeed.UseConnection(l_SourceConnector.ConnectionString);
 
 
                     feed.TargetPlusShipNode(l_SourceConnector.CustomerID, ref ShipNodedataTable);
@@ -102,15 +104,15 @@ namespace eSyncMate.Processor.Managers
 
                     l_SCSInventoryFeed.InsertInventoryBatchWise(l_InventoryBatchWise);
 
-                    if (l_data.Rows.Count <= 100)
-                    {
-                        AmazonProcessItemsWarehousewiseThread itemsThread = new AmazonProcessItemsWarehousewiseThread(l_data, route, feed, l_DestinationConnector, l_SourceConnector, userNo, l_InventoryBatchWise.BatchID, ShipNodedataTable);
+                    //if (l_data.Rows.Count <= 100)
+                    //{
+                    //    AmazonProcessItemsWarehousewiseThread itemsThread = new AmazonProcessItemsWarehousewiseThread(l_data, route, feed, l_DestinationConnector, l_SourceConnector, userNo, l_InventoryBatchWise.BatchID, ShipNodedataTable);
 
-                        // Run ProcessItems async
-                        Task.Run(() => itemsThread.ProcessItems());
-                    }
-                    else
-                    {
+                    //    // Run ProcessItems async
+                    //    Task.Run(() => itemsThread.ProcessItems());
+                    //}
+                    //else
+                    //{
 
                         int i = 0;
                         int totalThread = CommonUtils.UploadInventoryTotalThread;
@@ -142,7 +144,7 @@ namespace eSyncMate.Processor.Managers
 
                             Thread.Sleep(TimeSpan.FromMinutes(1));
                         }
-                    }
+                    
 
 
                     //if (l_data.Rows.Count <= 100)
@@ -241,6 +243,9 @@ namespace eSyncMate.Processor.Managers
 
     public class AmazonProcessItemsWarehousewiseThread
     {
+        // Use centralized HttpClient to avoid socket exhaustion across 100+ routes
+        private static HttpClient HttpClient => SharedHttpClientFactory.Amazon;
+
         // State information used in the task.
         private DataTable data;
         private Routes route;
@@ -693,8 +698,7 @@ namespace eSyncMate.Processor.Managers
 
         async static Task<string> GetToken(string l_applicationID,string l_client_id,string l_client_secret,string l_refresh_token)
         {
-            var client = new HttpClient();
-            var request = new HttpRequestMessage(HttpMethod.Post, $"https://api.amazon.com/auth/o2/token?application_id={l_applicationID}&client_id={l_client_id}&client_secret={l_client_secret}&refresh_token={l_refresh_token}&grant_type=refresh_token");
+            using var request = new HttpRequestMessage(HttpMethod.Post, $"https://api.amazon.com/auth/o2/token?application_id={l_applicationID}&client_id={l_client_id}&client_secret={l_client_secret}&refresh_token={l_refresh_token}&grant_type=refresh_token");
 
             try
             {
@@ -702,7 +706,7 @@ namespace eSyncMate.Processor.Managers
                 var content = new StringContent(string.Empty);
                 content.Headers.ContentType = new MediaTypeHeaderValue("application/x-www-form-urlencoded");
                 request.Content = content;
-                var response = await client.SendAsync(request);
+                var response = await HttpClient.SendAsync(request);
                 response.EnsureSuccessStatusCode();
 
                 string responseContent = await response.Content.ReadAsStringAsync();
@@ -750,14 +754,13 @@ namespace eSyncMate.Processor.Managers
 
         async static Task<JObject> CreateDocument(string token, string baseUrl)
         {
-            using var client = new HttpClient();
-            var req = new HttpRequestMessage(HttpMethod.Post, $"{baseUrl}/feeds/2021-06-30/documents");
+            using var req = new HttpRequestMessage(HttpMethod.Post, $"{baseUrl}/feeds/2021-06-30/documents");
             req.Headers.Add("x-amz-access-token", token);
 
             var body = new JObject { ["contentType"] = "application/json; charset=UTF-8" };
             req.Content = new StringContent(body.ToString(), Encoding.UTF8, "application/json");
 
-            var res = await client.SendAsync(req);
+            var res = await HttpClient.SendAsync(req);
             res.EnsureSuccessStatusCode();
             return JObject.Parse(await res.Content.ReadAsStringAsync());
         }
@@ -807,12 +810,11 @@ namespace eSyncMate.Processor.Managers
         {
             try
             {
-                using var client = new HttpClient();
                 using var content = new StringContent(json, Encoding.UTF8);
                 content.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse("application/json; charset=UTF-8");
 
                 using var req = new HttpRequestMessage(HttpMethod.Put, url) { Content = content };
-                using var res = await client.SendAsync(req, HttpCompletionOption.ResponseHeadersRead);
+                using var res = await HttpClient.SendAsync(req, HttpCompletionOption.ResponseHeadersRead);
                 return (HttpStatusCode)res.StatusCode;
             }
             catch (Exception)
@@ -843,9 +845,8 @@ namespace eSyncMate.Processor.Managers
 
         private static async Task<JObject> SubmitFeed(string feedDocumentId, string token,string l_baseurl)
         {
-            var client = new HttpClient();
             // Set the destination URL for the Submit Feed API endpoint
-            var request = new HttpRequestMessage(HttpMethod.Post, $"{l_baseurl}/feeds/2021-06-30/feeds");
+            using var request = new HttpRequestMessage(HttpMethod.Post, $"{l_baseurl}/feeds/2021-06-30/feeds");
 
             try
             {
@@ -854,18 +855,18 @@ namespace eSyncMate.Processor.Managers
 
                 var requestBody = new
                 {
-                    feedType = "JSON_LISTINGS_FEED",  
-                    inputFeedDocumentId = feedDocumentId,  
+                    feedType = "JSON_LISTINGS_FEED",
+                    inputFeedDocumentId = feedDocumentId,
                     marketplaceIds = new[] { "ATVPDKIKX0DER" },
-                    feedOptions = new { } 
+                    feedOptions = new { }
                 };
 
                 string requestBodyString = JsonConvert.SerializeObject(requestBody);
                 var content = new StringContent(requestBodyString, Encoding.UTF8, "application/json");
-                
+
                 request.Content = content;
 
-                var response = await client.SendAsync(request);
+                var response = await HttpClient.SendAsync(request);
 
                 response.EnsureSuccessStatusCode();
 

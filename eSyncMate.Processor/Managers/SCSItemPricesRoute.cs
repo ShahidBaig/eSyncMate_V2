@@ -174,7 +174,7 @@ namespace eSyncMate.Processor.Managers
                 this.route.UseConnection(this.sourceConnector.ConnectionString);
 
                 string Body = JsonConvert.SerializeObject(data);
-                route.SaveData("JSON-SNT", 0, Body, userNo);
+                route.RouteSaveData("JSON-SNT", 0, Body, userNo);
 
                 this.destinationConnector.Url = this.destinationConnector.BaseUrl + row["id"];
                 RestResponse sourceResponse = RestConnector.Execute(this.destinationConnector, Body).GetAwaiter().GetResult();
@@ -196,7 +196,7 @@ namespace eSyncMate.Processor.Managers
                     route.SaveLog(LogTypeEnum.Error, $"Unable to update ItemPrices for item [{row["id"]}].", string.Empty, userNo);
                 }
 
-                route.SaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
+                route.RouteSaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
             }
             catch (Exception ex)
             {

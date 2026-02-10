@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Data;
 using System.Data.SqlClient;
 using System.Net.Http;
@@ -16,15 +16,21 @@ namespace eSyncMate.Processor.Managers
 {
     public class VeeqoGetSORoute
     {
+        // Use centralized HttpClient to avoid socket exhaustion across 100+ routes
+        private static HttpClient HttpClient => SharedHttpClientFactory.Veeqo;
+
         public static async Task Execute(IConfiguration config, Routes route)
         {
             int userNo = 1;
-            HttpClient httpClient = new HttpClient();
             DataTable dataTable = new DataTable();
             ConnectorDataModel? l_SourceConnector = JsonConvert.DeserializeObject<ConnectorDataModel>(route.SourceConnectorObject.Data);
             ConnectorDataModel? l_DestinationConnector = JsonConvert.DeserializeObject<ConnectorDataModel>(route.DestinationConnectorObject.Data);
             string baseUrl = l_SourceConnector.BaseUrl.TrimEnd('/');
-            httpClient.DefaultRequestHeaders.Add(l_SourceConnector.Headers[0].Name, l_SourceConnector.Headers[0].Value);
+
+            // Store header info for per-request headers (shared HttpClient can't use DefaultRequestHeaders)
+            string headerName = l_SourceConnector.Headers[0].Name;
+            string headerValue = l_SourceConnector.Headers[0].Value;
+
             DateTime currentDateTime = DateTime.UtcNow;
             DateTime minDateTime = currentDateTime.AddHours(-24);
             string formattedMinDateTime = minDateTime.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
@@ -41,7 +47,11 @@ namespace eSyncMate.Processor.Managers
             dataTable.Columns.Add("Margin", typeof(decimal));
 
             string OrdersApiUrl = $"{baseUrl}/orders?created_at_min={Uri.EscapeDataString(formattedMinDateTime)}&status=shipped";
-            HttpResponseMessage response = await httpClient.GetAsync(OrdersApiUrl);
+
+            using var request = new HttpRequestMessage(HttpMethod.Get, OrdersApiUrl);
+            request.Headers.Add(headerName, headerValue);
+            HttpResponseMessage response = await HttpClient.SendAsync(request);
+
             string responseData = await response.Content.ReadAsStringAsync();
             JArray productData = JArray.Parse(responseData);
 
@@ -56,7 +66,7 @@ namespace eSyncMate.Processor.Managers
 
                     if (order["allocations"] != null && order["allocations"].Count() > 0)
                     {
-                        var allocation = order["allocations"][0]; 
+                        var allocation = order["allocations"][0];
                         warehouseId = (string)allocation["warehouse"]["id"];
                         warehouseName = (string)allocation["warehouse"]["name"];
                     }
@@ -97,7 +107,7 @@ namespace eSyncMate.Processor.Managers
 
                     SqlParameter tableParam = new SqlParameter("@OrderDetails", SqlDbType.Structured)
                     {
-                        TypeName = "dbo.VeeqoOrderDetailsType", 
+                        TypeName = "dbo.VeeqoOrderDetailsType",
                         Value = dataTable
                     };
                     command.Parameters.Add(tableParam);

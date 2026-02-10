@@ -1,4 +1,4 @@
-﻿using eSyncMate.DB;
+using eSyncMate.DB;
 using eSyncMate.DB.Entities;
 using eSyncMate.Processor.Connections;
 using eSyncMate.Processor.Models;
@@ -39,16 +39,22 @@ namespace eSyncMate.Processor.Managers
 {
     public class VeeqoCreateNewProductsRoute
     {
+        // Use centralized HttpClient to avoid socket exhaustion across 100+ routes
+        private static HttpClient HttpClient => SharedHttpClientFactory.Veeqo;
+
         public static async Task Execute(IConfiguration config, Routes route)
         {
             int userNo = 1;
-            HttpClient httpClient = new HttpClient();
             ShipmentDetailFromNDC shipmentData = new ShipmentDetailFromNDC();
             DataTable l_Data = new DataTable();
             ConnectorDataModel? l_SourceConnector = JsonConvert.DeserializeObject<ConnectorDataModel>(route.SourceConnectorObject.Data);
             ConnectorDataModel? l_DestinationConnector = JsonConvert.DeserializeObject<ConnectorDataModel>(route.DestinationConnectorObject.Data);
             string baseUrl = l_SourceConnector.BaseUrl.TrimEnd('/');
-            httpClient.DefaultRequestHeaders.Add(l_SourceConnector.Headers[0].Name, l_SourceConnector.Headers[0].Value);
+
+            // Store header info for per-request headers (shared HttpClient can't use DefaultRequestHeaders)
+            string headerName = l_SourceConnector.Headers[0].Name;
+            string headerValue = l_SourceConnector.Headers[0].Value;
+
             route.SaveLog(LogTypeEnum.Info, $"Started executing route [{route.Id}]", string.Empty, userNo);
 
             shipmentData.UseConnection(l_DestinationConnector.ConnectionString);
@@ -60,7 +66,7 @@ namespace eSyncMate.Processor.Managers
                 return;
             }
 
-            HashSet<string> apiSkuCodes = await LoadApiSkuCodesAsync(httpClient, baseUrl, route);
+            HashSet<string> apiSkuCodes = await LoadApiSkuCodesAsync(baseUrl, headerName, headerValue, route);
 
             List<string> unmatchedItemIDs = new List<string>();
             foreach (DataRow row in l_Data.Rows)
@@ -75,7 +81,7 @@ namespace eSyncMate.Processor.Managers
             int batchSize = 5;
             foreach (var batch in unmatchedItemIDs.Batch(batchSize))
             {
-                var tasks = batch.Select(itemID => CreateProductAsync(itemID, httpClient, baseUrl, route));
+                var tasks = batch.Select(itemID => CreateProductAsync(itemID, baseUrl, headerName, headerValue, route));
                 await Task.WhenAll(tasks);
                 await Task.Delay(1000);
             }
@@ -83,7 +89,7 @@ namespace eSyncMate.Processor.Managers
             route.SaveLog(LogTypeEnum.Info, $"Completed execution of route [{route.Id}]", string.Empty, userNo);
         }
 
-        private static async Task<HashSet<string>> LoadApiSkuCodesAsync(HttpClient httpClient, string baseUrl, Routes route)
+        private static async Task<HashSet<string>> LoadApiSkuCodesAsync(string baseUrl, string headerName, string headerValue, Routes route)
         {
             int pageSize = 2000;
             int currentPage = 1;
@@ -92,7 +98,10 @@ namespace eSyncMate.Processor.Managers
             while (true)
             {
                 string apiUrl = $"{baseUrl}/products?page_size={pageSize}&page={currentPage}";
-                HttpResponseMessage response = await httpClient.GetAsync(apiUrl);
+
+                using var request = new HttpRequestMessage(HttpMethod.Get, apiUrl);
+                request.Headers.Add(headerName, headerValue);
+                HttpResponseMessage response = await HttpClient.SendAsync(request);
 
                 if (!response.IsSuccessStatusCode)
                 {
@@ -127,7 +136,7 @@ namespace eSyncMate.Processor.Managers
         }
 
 
-        private static async Task CreateProductAsync(string itemID, HttpClient httpClient, string baseUrl, Routes route)
+        private static async Task CreateProductAsync(string itemID, string baseUrl, string headerName, string headerValue, Routes route)
         {
             var productData = new
             {
@@ -159,9 +168,12 @@ namespace eSyncMate.Processor.Managers
             };
 
             string jsonPayload = JsonConvert.SerializeObject(productData);
-            var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
 
-            HttpResponseMessage response = await httpClient.PostAsync($"{baseUrl}/products", content);
+            using var request = new HttpRequestMessage(HttpMethod.Post, $"{baseUrl}/products");
+            request.Headers.Add(headerName, headerValue);
+            request.Content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+
+            HttpResponseMessage response = await HttpClient.SendAsync(request);
 
             if (response.IsSuccessStatusCode)
             {

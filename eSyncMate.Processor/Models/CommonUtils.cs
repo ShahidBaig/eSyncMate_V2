@@ -1,10 +1,90 @@
-﻿using System.Data;
+﻿using System.Collections.Concurrent;
+using System.Data;
+using System.Net;
+using System.Net.Http;
 using System.Reflection.PortableExecutable;
 using static Hangfire.Storage.JobStorageFeatures;
 using System.Xml.Linq;
 
 namespace eSyncMate.Processor.Models
 {
+    /// <summary>
+    /// Shared HttpClient factory to prevent socket exhaustion across 100+ concurrent routes.
+    /// HttpClient instances are expensive to create and should be reused.
+    /// </summary>
+    public static class SharedHttpClientFactory
+    {
+        // Thread-safe dictionary to store HttpClients per service/host
+        private static readonly ConcurrentDictionary<string, HttpClient> _clients = new();
+
+        // Default handler configuration for all clients
+        private static SocketsHttpHandler CreateHandler() => new SocketsHttpHandler
+        {
+            PooledConnectionLifetime = TimeSpan.FromMinutes(10),
+            PooledConnectionIdleTimeout = TimeSpan.FromMinutes(5),
+            MaxConnectionsPerServer = 50,
+            EnableMultipleHttp2Connections = true,
+            ConnectTimeout = TimeSpan.FromSeconds(30),
+            ResponseDrainTimeout = TimeSpan.FromSeconds(30)
+        };
+
+        /// <summary>
+        /// Gets or creates a shared HttpClient for general use
+        /// </summary>
+        public static HttpClient Default => GetOrCreateClient("default");
+
+        /// <summary>
+        /// Gets or creates a shared HttpClient for Amazon API calls
+        /// </summary>
+        public static HttpClient Amazon => GetOrCreateClient("amazon");
+
+        /// <summary>
+        /// Gets or creates a shared HttpClient for Walmart API calls
+        /// </summary>
+        public static HttpClient Walmart => GetOrCreateClient("walmart");
+
+        /// <summary>
+        /// Gets or creates a shared HttpClient for Veeqo API calls
+        /// </summary>
+        public static HttpClient Veeqo => GetOrCreateClient("veeqo");
+
+        /// <summary>
+        /// Gets or creates a shared HttpClient for ShipStation API calls
+        /// </summary>
+        public static HttpClient ShipStation => GetOrCreateClient("shipstation");
+
+        /// <summary>
+        /// Gets or creates a shared HttpClient for a specific service key
+        /// </summary>
+        public static HttpClient GetOrCreateClient(string serviceKey)
+        {
+            return _clients.GetOrAdd(serviceKey, key =>
+            {
+                var client = new HttpClient(CreateHandler(), disposeHandler: false)
+                {
+                    Timeout = TimeSpan.FromMinutes(5)
+                };
+                return client;
+            });
+        }
+
+        /// <summary>
+        /// Gets or creates a shared HttpClient with a specific base address
+        /// </summary>
+        public static HttpClient GetOrCreateClient(string serviceKey, string baseAddress)
+        {
+            return _clients.GetOrAdd($"{serviceKey}_{baseAddress}", key =>
+            {
+                var client = new HttpClient(CreateHandler(), disposeHandler: false)
+                {
+                    Timeout = TimeSpan.FromMinutes(5),
+                    BaseAddress = new Uri(baseAddress)
+                };
+                return client;
+            });
+        }
+    }
+
     internal enum ResponseCodes
     {
         Success = 200,
@@ -115,7 +195,7 @@ namespace eSyncMate.Processor.Models
         //public static string ConnectionString { get; set; } = "Server=rxo.geckotech.com.mx;Database=EDIProcessor;UID=sa;PWD=Gecko8079;";
        // public static string ConnectionString { get; set; } = "Server=192.168.0.44,7100;Database=ESYNCMATE;UID=esyncmate;PWD=eSyncMate786$$$;";
         //public static string ConnectionString { get; set; } = "Server=209.74.79.232;Database=SURGIMAC;UID=sa;PWD=Surgimac8079;";
-        public static string ConnectionString { get; set; } = "Server=192.168.0.44,7100;Database=ESYNCMATE;UID=esyncmate;PWD=eSyncMate786$$$;";
+        public static string ConnectionString { get; set; } = "Server=110.93.227.0,1433;Database=ESYNCMATE_TEST;UID=sa;PWD=eSoft#123456;";
         public static string MySqlConnectionString { get; set; } = "Server=162.241.63.30;Database=geckote1_edi;User=geckote1_esyncmate;Password=Gecko8079;";
         //public static string SMTPHost { get; set; } = "smtpout.secureserver.net";
         //public static int SMTPPort { get; set; } = 587;

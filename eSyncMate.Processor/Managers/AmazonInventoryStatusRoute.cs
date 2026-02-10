@@ -173,8 +173,7 @@ namespace eSyncMate.Processor.Managers
         {
             try
             {
-                using var http = new HttpClient();
-                var bytes = await http.GetByteArrayAsync(url);
+                var bytes = await SharedHttpClientFactory.Amazon.GetByteArrayAsync(url);
 
                 using var input = new MemoryStream(bytes);
                 using var gzip = new GZipStream(input, CompressionMode.Decompress);

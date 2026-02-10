@@ -64,6 +64,9 @@ namespace eSyncMate.Processor.Managers
                     route.SaveLog(LogTypeEnum.Debug, $"Source connector processing completed. Total items: {l_data.Rows.Count}", string.Empty, userNo);
                 }
 
+                // Set connection before the if block so it's available for UpdateInventoryBatchWise in catch block
+                l_SCSInventoryFeed.UseConnection(l_SourceConnector.ConnectionString);
+
                 // Step 2: Process bulk feed
                 if (l_DestinationConnector.ConnectivityType == ConnectorTypesEnum.Rest.ToString() && l_data.Rows.Count > 0)
                 {
@@ -71,7 +74,6 @@ namespace eSyncMate.Processor.Managers
 
                     SCSInventoryFeed feed = new SCSInventoryFeed();
                     feed.UseConnection(l_SourceConnector.ConnectionString);
-                    l_SCSInventoryFeed.UseConnection(l_SourceConnector.ConnectionString);
 
                     // Insert batch tracking record
                     l_InventoryBatchWise.StartDate = DateTime.Now;
@@ -205,9 +207,9 @@ namespace eSyncMate.Processor.Managers
                             int quantity = 0;
 
                             // Get quantity for this warehouse
-                            if (this.data.Columns.Contains($"ATS_{whsId}"))
+                            if (this.data.Columns.Contains($"ATS_{whsId}") && row[$"ATS_{whsId}"] != DBNull.Value)
                             {
-                                quantity = Convert.ToInt32(row[$"ATS_{whsId}"] ?? 0);
+                                quantity = Convert.ToInt32(row[$"ATS_{whsId}"]);
                             }
 
                             var inventoryItem = new WalmartInventoryItem
@@ -228,9 +230,9 @@ namespace eSyncMate.Processor.Managers
                     {
                         // Single node - use Total_ATS
                         int totalQuantity = 0;
-                        if (this.data.Columns.Contains("Total_ATS"))
+                        if (this.data.Columns.Contains("Total_ATS") && row["Total_ATS"] != DBNull.Value)
                         {
-                            totalQuantity = Convert.ToInt32(row["Total_ATS"] ?? 0);
+                            totalQuantity = Convert.ToInt32(row["Total_ATS"]);
                         }
 
                         var inventoryItem = new WalmartInventoryItem
@@ -247,11 +249,14 @@ namespace eSyncMate.Processor.Managers
                         requestModel.Inventory.Add(inventoryItem);
                     }
 
-                    // Build per-item JSON for logging
+                    // Build per-item JSON for logging - only items added for this row
+                    int itemsAddedThisRow = shipNodeDataTable.Rows.Count > 0 ? shipNodeDataTable.Rows.Count : 1;
                     var perItemModel = new WalmartBulkInventoryFeed
                     {
                         InventoryHeader = new WalmartInventoryHeader { version = "1.4" },
-                        Inventory = requestModel.Inventory.Where(i => i.sku == itemId).ToList()
+                        Inventory = requestModel.Inventory
+                            .Skip(requestModel.Inventory.Count - itemsAddedThisRow)
+                            .ToList()
                     };
                     string perItemJson = JsonConvert.SerializeObject(perItemModel, Formatting.None, new JsonSerializerSettings
                     {
@@ -279,7 +284,7 @@ namespace eSyncMate.Processor.Managers
                 });
 
                 // Submit to Walmart Feed API
-                string feedUrl = this.destinationConnector.BaseUrl.TrimEnd('/') + "/feeds?feedType=inventory";
+                string feedUrl = this.destinationConnector.BaseUrl.TrimEnd('/') + "/feeds?feedType=MP_INVENTORY";
 
                 this.route.SaveLog(LogTypeEnum.Debug, $"Submitting feed to: {feedUrl}", string.Empty, this.userNo);
                 this.route.SaveData("JSON-SNT", 0, body, this.userNo);
@@ -295,7 +300,10 @@ namespace eSyncMate.Processor.Managers
                     {
                         feedResponse = JsonConvert.DeserializeObject<WalmartFeedResponse>(sourceResponse.Content);
                     }
-                    catch { }
+                    catch (Exception ex)
+                    {
+                        this.route.SaveLog(LogTypeEnum.Error, $"Failed to parse Walmart feed response: {sourceResponse.Content}", ex.ToString(), this.userNo);
+                    }
 
                     string feedId = feedResponse?.feedId ?? "UNKNOWN";
 
@@ -324,7 +332,7 @@ namespace eSyncMate.Processor.Managers
                     this.feed.BulkUpdateItemStatus(this.sourceConnector.ConnectionString, this.data);
 
                     // Save feed detail for tracking
-                    this.feed.InsertInventoryBatchWiseFeedDetail(this.batchID, "NEW", feedId, this.destinationConnector.CustomerID);
+                    this.feed.InsertInventoryBatchWiseFeedDetail(this.batchID, "NEW", feedId, this.sourceConnector.CustomerID);
 
                     this.route.SaveLog(LogTypeEnum.Debug, $"WalmartBulkUploadInventory updated for {this.data.Rows.Count} items.", string.Empty, this.userNo);
                 }
@@ -340,6 +348,7 @@ namespace eSyncMate.Processor.Managers
             }
             finally
             {
+                bulkInsertTable.Dispose();
                 shipNodeDataTable.Dispose();
             }
         }
@@ -362,7 +371,7 @@ namespace eSyncMate.Processor.Managers
                 string accessToken = WalmartConnector.Token;
 
                 // Walmart Feed API requires multipart/form-data with file attachment
-                var client = new RestClient();
+                using var client = new RestClient();
                 var request = new RestRequest(feedUrl, Method.Post);
 
                 // Add Walmart authentication headers (same as RestConnector for WALMARTGetToken)
@@ -370,6 +379,15 @@ namespace eSyncMate.Processor.Managers
                 request.AddHeader("WM_QOS.CORRELATION_ID", Guid.NewGuid().ToString());
                 request.AddHeader("WM_SVC.NAME", "WalmartAPI");
                 request.AddHeader("Accept", "application/json");
+
+                // Add any custom headers from destination connector
+                if (this.destinationConnector.Headers != null)
+                {
+                    foreach (var header in this.destinationConnector.Headers)
+                    {
+                        request.AddHeader(header.Name, header.Value);
+                    }
+                }
 
                 // Add the JSON content as a file attachment (required for Feed API)
                 byte[] fileBytes = Encoding.UTF8.GetBytes(jsonPayload);

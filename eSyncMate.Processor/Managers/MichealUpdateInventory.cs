@@ -64,6 +64,9 @@ namespace eSyncMate.Processor.Managers
                     route.SaveLog(LogTypeEnum.Debug, $"Source connector processing completed.", string.Empty, userNo);
                 }
 
+                // Set connection before the if block so it's available for UpdateInventoryBatchWise
+                l_SCSInventoryFeed.UseConnection(l_SourceConnector.ConnectionString);
+
                 if (l_DestinationConnector.ConnectivityType == ConnectorTypesEnum.Rest.ToString() && l_data.Rows.Count > 0)
                 {
                     route.SaveLog(LogTypeEnum.Debug, $"Destination connector processing start...", string.Empty, userNo);
@@ -71,7 +74,6 @@ namespace eSyncMate.Processor.Managers
                     SCSInventoryFeed feed = new SCSInventoryFeed();
 
                     feed.UseConnection(l_SourceConnector.ConnectionString);
-                    l_SCSInventoryFeed.UseConnection(l_SourceConnector.ConnectionString);
 
                     l_InventoryBatchWise.StartDate = Convert.ToDateTime(DateTime.Now);
                     l_InventoryBatchWise.Status = "Processing";

@@ -81,10 +81,10 @@ namespace eSyncMate.Processor.Managers
                         l_DestinationConnector.Method = "PUT";
                         l_DestinationConnector.Url = l_DestinationConnector.BaseUrl + l_Row["ProductID"];
 
-                        route.SaveData("JSON-SNT", 0, Body, userNo);
+                        route.RouteSaveData("JSON-SNT", 0, Body, userNo);
                         sourceResponse = RestConnector.Execute(l_DestinationConnector, Body).GetAwaiter().GetResult();
 
-                        route.SaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
+                        route.RouteSaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
 
                         if (sourceResponse.StatusCode == System.Net.HttpStatusCode.OK)
                         {

@@ -286,7 +286,7 @@ namespace eSyncMate.Processor.Managers
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.WalmartUploadInventory))
                 {
-                    WalmartUploadInventoryRoute.Execute(_config, route);
+                    WalmartBulkUploadInventoryRoute.Execute(_config, route);
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.WalmartGetOrders))
                 {

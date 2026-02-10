@@ -1,4 +1,4 @@
-﻿using eSyncMate.DB;
+using eSyncMate.DB;
 using eSyncMate.DB.Entities;
 using eSyncMate.Processor.Connections;
 using eSyncMate.Processor.Models;
@@ -42,18 +42,21 @@ namespace eSyncMate.Processor.Managers
 
     public class ShipStationUpdateSKUStocklevelsRoute
     {
+        // Use centralized HttpClient to avoid socket exhaustion across 100+ routes
+        private static HttpClient HttpClient => SharedHttpClientFactory.ShipStation;
+
         public static async Task Execute(IConfiguration config, Routes route)
         {
             int userNo = 1;
-            HttpClient httpClient = new HttpClient();
             ShipmentDetailFromNDC shipmentData = new ShipmentDetailFromNDC();
             DataTable l_Data = new DataTable();
 
             ConnectorDataModel? l_SourceConnector = JsonConvert.DeserializeObject<ConnectorDataModel>(route.SourceConnectorObject.Data);
             ConnectorDataModel? l_DestinationConnector = JsonConvert.DeserializeObject<ConnectorDataModel>(route.DestinationConnectorObject.Data);
             string baseUrl = l_SourceConnector.BaseUrl.TrimEnd('/');
-            httpClient.DefaultRequestHeaders.Clear();
-            httpClient.DefaultRequestHeaders.Add("api-key", l_SourceConnector.ConsumerKey);
+
+            // Store API key for per-request headers (shared HttpClient can't use DefaultRequestHeaders)
+            string apiKey = l_SourceConnector.ConsumerKey;
 
             route.SaveLog(LogTypeEnum.Info, $"Started executing route [{route.Id}]", string.Empty, userNo);
 
@@ -69,18 +72,18 @@ namespace eSyncMate.Processor.Managers
             foreach (DataRow row in l_Data.Rows)
             {
                 string sku = row["ItemID"].ToString();
-                string warehouseId = "se-1508413"; 
+                string warehouseId = "se-1508413";
                 int quantity = Convert.ToInt32(row["QTY"]);
                 string lot = row["LotNumber"].ToString();
                 string expDate = row["ExpirationDate"].ToString();
 
-                await UpdateShipStationInventoryQuantity(sku, warehouseId, quantity, lot, expDate, httpClient, baseUrl, route, l_DestinationConnector.ConnectionString);
+                await UpdateShipStationInventoryQuantity(sku, warehouseId, quantity, lot, expDate, baseUrl, apiKey, route, l_DestinationConnector.ConnectionString);
             }
 
             route.SaveLog(LogTypeEnum.Info, $"Completed execution of route [{route.Id}]", string.Empty, userNo);
         }
 
-        private static async Task UpdateShipStationInventoryQuantity(string sku, string warehouseId, int quantity, string lotNumber, string expDate, HttpClient httpClient, string baseUrl, Routes route, string connectionString)
+        private static async Task UpdateShipStationInventoryQuantity(string sku, string warehouseId, int quantity, string lotNumber, string expDate, string baseUrl, string apiKey, Routes route, string connectionString)
         {
             var payload = new
             {
@@ -101,8 +104,11 @@ namespace eSyncMate.Processor.Managers
                 notes = "Updated Lot and Exp Date"
             };
 
-            var content = new StringContent(JsonConvert.SerializeObject(payload), Encoding.UTF8, "application/json");
-            var response = await httpClient.PostAsync(baseUrl, content);
+            using var request = new HttpRequestMessage(HttpMethod.Post, baseUrl);
+            request.Headers.Add("api-key", apiKey);
+            request.Content = new StringContent(JsonConvert.SerializeObject(payload), Encoding.UTF8, "application/json");
+
+            var response = await HttpClient.SendAsync(request);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -129,8 +135,8 @@ namespace eSyncMate.Processor.Managers
                     cmd.CommandText = @"
                 UPDATE ShipmentDetailFromNDC
                 SET ShipStationStatus = 'SYNCED'
-                WHERE ItemID = @sku 
-                  AND WarehouseName = @warehouseName 
+                WHERE ItemID = @sku
+                  AND WarehouseName = @warehouseName
                   AND ShipStationStatus = 'NEW'";
 
                     cmd.Parameters.AddWithValue("@sku", sku);
