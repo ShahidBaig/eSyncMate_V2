@@ -74,7 +74,7 @@ namespace eSyncMate.Processor.Managers
 
                     Body = JsonConvert.SerializeObject(data);
 
-                    route.SaveData("JSON-SNT", 0, Body, userNo);
+                    route.RouteSaveData("JSON-SNT", 0, Body, userNo);
 
                     sourceResponse = RestConnector.Execute(l_SourceConnector, Body).GetAwaiter().GetResult();
 
@@ -82,7 +82,7 @@ namespace eSyncMate.Processor.Managers
                     {
                         l_ItemTypesReportRequestOutputModel = JsonConvert.DeserializeObject<ItemTypesReportRequestOutputModel>(sourceResponse.Content);
 
-                        route.SaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
+                        route.RouteSaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
                         route.SaveLog(LogTypeEnum.Debug, "Items Types response received.", sourceResponse.Content, userNo);
 
                         if (l_DestinationConnector.ConnectivityType == ConnectorTypesEnum.SqlServer.ToString())

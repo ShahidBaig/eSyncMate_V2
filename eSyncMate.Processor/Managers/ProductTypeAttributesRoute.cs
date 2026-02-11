@@ -83,7 +83,7 @@ namespace eSyncMate.Processor.Managers
                             if (sourceResponse.StatusCode == System.Net.HttpStatusCode.OK)
                             {
                                 route.SaveLog(LogTypeEnum.Debug, $"Received Item Type [{itemTypeId}] attributes.", sourceResponse.Content, userNo);
-                                route.SaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
+                                route.RouteSaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
 
                                 var productAttributes = JsonConvert.DeserializeObject<SCS_ProductTypeAttributeReponseModel[]>(sourceResponse.Content);
 
@@ -114,6 +114,9 @@ namespace eSyncMate.Processor.Managers
                         if (l_DestinationConnector.ConnectivityType == ConnectorTypesEnum.SqlServer.ToString())
                         {
                             route.SaveLog(LogTypeEnum.Debug, $"Destination connector processing start for {itemTypeId}.", string.Empty, userNo);
+
+                            DBConnector cleanupConn = new DBConnector(l_DestinationConnector.ConnectionString);
+                            cleanupConn.Execute($"DELETE FROM Temp_SCS_ItemTypeAttribute WHERE CustomerID = '{l_DestinationConnector.CustomerID}' AND Item_Type_Id = '{itemTypeId}'");
 
                             PublicFunctions.BulkInsert(l_DestinationConnector.ConnectionString, "Temp_SCS_ItemTypeAttribute", l_Attributedt);
 

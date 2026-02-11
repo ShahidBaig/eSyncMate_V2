@@ -5,7 +5,20 @@
       "Bash(dir:*)",
       "Bash(echo \"D:\\\\eSoftage_Projects\\\\eSyncMate_V2\\\\eSyncMate.Processor\\\\bin\\\\Release\\\\net8.0\"\" && echo \"\" && echo \"=== RouteWorker SUBFOLDER ===\" && dir \"D:eSoftage_ProjectseSyncMate_V2eSyncMate.ProcessorbinReleasenet8.0RouteWorkereSyncMate.RouteWorker.exe \")",
       "Bash(powershell:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "WebFetch(domain:plus.target.com)",
+      "WebFetch(domain:api.target.com)",
+      "WebSearch",
+      "WebFetch(domain:goflow.com)",
+      "Bash(python -c:*)",
+      "Bash(cmd /c \"set /p line=<\"\"D:\\\\eSoftage_Projects\\\\VendorReturnScreenShot\\\\ProductCatalogData.txt\"\" & echo %line:~0,5000%\")",
+      "Bash(powershell.exe -NoProfile -Command \"[System.IO.StreamReader]::new\\(''D:\\\\eSoftage_Projects\\\\VendorReturnScreenShot\\\\ProductCatalogData.txt''\\).ReadBlock\\([char[]]::new\\(5000\\),0,5000\\) | Out-Null; $sr = [System.IO.StreamReader]::new\\(''D:\\\\eSoftage_Projects\\\\VendorReturnScreenShot\\\\ProductCatalogData.txt''\\); $buf = New-Object char[] 5000; $sr.ReadBlock\\($buf, 0, 5000\\) | Out-Null; $sr.Close\\(\\); Write-Host \\([string]::new\\($buf\\)\\)\")",
+      "Bash(powershell.exe -NoProfile -File - <<'PS1'\n$sr = New-Object System.IO.StreamReader\\(\"D:\\\\eSoftage_Projects\\\\VendorReturnScreenShot\\\\ProductCatalogData.txt\"\\)\n$buf = New-Object char[] 5000\n$sr.ReadBlock\\($buf, 0, 5000\\) | Out-Null\n$sr.Close\\(\\)\nWrite-Host \\([string]::new\\($buf\\)\\)\nPS1)",
+      "Bash(powershell.exe -NoProfile -File - <<'PS1'\n$text = [System.IO.File]::ReadAllText\\(\"D:\\\\eSoftage_Projects\\\\VendorReturnScreenShot\\\\ProductCatalogData.txt\"\\)\n$matches = [regex]::Matches\\($text, '\"item_type_id\":\"\\(\\\\d+\\)\"'\\)\n$ids = @{}\nforeach \\($m in $matches\\) {\n    $val = $m.Groups[1].Value\n    if \\(-not $ids.ContainsKey\\($val\\)\\) { $ids[$val] = 0 }\n    $ids[$val]++\n}\nforeach \\($kv in $ids.GetEnumerator\\(\\)\\) {\n    Write-Host \"$\\($kv.Key\\): $\\($kv.Value\\) items\"\n}\nPS1)",
+      "Bash(powershell.exe -NoProfile -File -:*)",
+      "Bash(powershell.exe -NoProfile -Command \"& { $text = [System.IO.File]::ReadAllText\\(''D:\\\\eSoftage_Projects\\\\VendorReturnScreenShot\\\\ProductCatalogData.txt''\\); $m = [regex]::Matches\\($text, ''\"\"item_type_id\"\":\"\"\\([^\"\"]+\\)\"\"''\\); Write-Host \\(''Total: '' + $m.Count\\); $d = @{}; foreach\\($x in $m\\) { $v=$x.Groups[1].Value; if\\($d[$v]\\){$d[$v]++}else{$d[$v]=1} }; foreach\\($k in $d.Keys\\){Write-Host \\(''ID='' + $k + '' Count='' + $d[$k]\\)} }\")",
+      "Bash(powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"D:\\\\eSoftage_Projects\\\\eSyncMate_V2\\\\analyze.ps1\")",
+      "Bash(powershell.exe -NoProfile -ExecutionPolicy Bypass -Command \"Remove-Item ''D:\\\\eSoftage_Projects\\\\eSyncMate_V2\\\\analyze.ps1''\")"
     ]
   }
 }
