@@ -18,7 +18,7 @@ namespace eSyncMate.Processor.Managers
 {
     public class ItemTypesReportRequest
     {
-        public static void Execute(IConfiguration config, ILogger logger, Routes route)
+        public static void Execute(IConfiguration config, Routes route)
         {
             int userNo = 1;
             string destinationData = string.Empty;
@@ -37,14 +37,14 @@ namespace eSyncMate.Processor.Managers
 
                 if (l_SourceConnector == null)
                 {
-                    logger.LogError("Source Connector is not setup properly");
+                    
                     route.SaveLog(LogTypeEnum.Error, "Source Connector is not setup properly", string.Empty, userNo);
                     return;
                 }
 
                 if (l_DestinationConnector == null)
                 {
-                    logger.LogError("Destination Connector is not setup properly");
+                    
                     route.SaveLog(LogTypeEnum.Error, "Destination Connector is not setup properly", string.Empty, userNo);
                     return;
                 }
@@ -74,7 +74,7 @@ namespace eSyncMate.Processor.Managers
 
                     Body = JsonConvert.SerializeObject(data);
 
-                    route.SaveData("JSON-SNT", 0, Body, userNo);
+                    route.RouteSaveData("JSON-SNT", 0, Body, userNo);
 
                     sourceResponse = RestConnector.Execute(l_SourceConnector, Body).GetAwaiter().GetResult();
 
@@ -82,7 +82,7 @@ namespace eSyncMate.Processor.Managers
                     {
                         l_ItemTypesReportRequestOutputModel = JsonConvert.DeserializeObject<ItemTypesReportRequestOutputModel>(sourceResponse.Content);
 
-                        route.SaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
+                        route.RouteSaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
                         route.SaveLog(LogTypeEnum.Debug, "Items Types response received.", sourceResponse.Content, userNo);
 
                         if (l_DestinationConnector.ConnectivityType == ConnectorTypesEnum.SqlServer.ToString())

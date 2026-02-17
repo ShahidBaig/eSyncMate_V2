@@ -12,7 +12,7 @@ namespace eSyncMate.Processor.Managers
 {
     public class LowesUpdateInventory
     {
-        public static void Execute(IConfiguration config, ILogger logger, Routes route)
+        public static void Execute(IConfiguration config, Routes route)
         {
             int userNo = 1;
             string destinationData = string.Empty;
@@ -34,14 +34,14 @@ namespace eSyncMate.Processor.Managers
 
                 if (l_SourceConnector == null)
                 {
-                    logger.LogError("Source Connector is not setup properly");
+                    
                     route.SaveLog(LogTypeEnum.Error, "Source Connector is not setup properly", string.Empty, userNo);
                     return;
                 }
 
                 if (l_DestinationConnector == null)
                 {
-                    logger.LogError("Destination Connector is not setup properly");
+                    
                     route.SaveLog(LogTypeEnum.Error, "Destination Connector is not setup properly", string.Empty, userNo);
                     return;
                 }
@@ -64,6 +64,9 @@ namespace eSyncMate.Processor.Managers
                     route.SaveLog(LogTypeEnum.Debug, $"Source connector processing completed.", string.Empty, userNo);
                 }
 
+                // Set connection before the if block so it's available for UpdateInventoryBatchWise in catch block
+                l_SCSInventoryFeed.UseConnection(l_SourceConnector.ConnectionString);
+
                 if (l_DestinationConnector.ConnectivityType == ConnectorTypesEnum.Rest.ToString() && l_data.Rows.Count > 0)
                 {
                     route.SaveLog(LogTypeEnum.Debug, $"Destination connector processing start...", string.Empty, userNo);
@@ -71,7 +74,6 @@ namespace eSyncMate.Processor.Managers
                     SCSInventoryFeed feed = new SCSInventoryFeed();
 
                     feed.UseConnection(l_SourceConnector.ConnectionString);
-                    l_SCSInventoryFeed.UseConnection(l_SourceConnector.ConnectionString);
 
                     l_InventoryBatchWise.StartDate = Convert.ToDateTime(DateTime.Now);
                     l_InventoryBatchWise.Status = "Processing";
@@ -252,7 +254,7 @@ namespace eSyncMate.Processor.Managers
                 }
                 else
                 {
-                    this.route.SaveLog(LogTypeEnum.Error, $"Unable to update LowesUpdateInventory for chunk.", sourceResponse.Content, this.userNo);
+                    this.route.SaveLog(LogTypeEnum.Error, $"Unable to update LowesUpdateInventory for chunk. HTTP {(int)sourceResponse.StatusCode} {sourceResponse.StatusCode}.", sourceResponse.Content ?? sourceResponse.ErrorMessage, this.userNo);
                 }
             }
             catch (Exception ex)

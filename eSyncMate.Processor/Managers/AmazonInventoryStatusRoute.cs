@@ -31,7 +31,7 @@ namespace eSyncMate.Processor.Managers
     public class AmazonInventoryStatusRoute
     {
 
-        public static void Execute(IConfiguration config, ILogger logger, Routes route)
+        public static void Execute(IConfiguration config, Routes route)
         {
             int userNo = 1;
             string destinationData = string.Empty;
@@ -53,14 +53,14 @@ namespace eSyncMate.Processor.Managers
 
                 if (l_SourceConnector == null)
                 {
-                    logger.LogError("Source Connector is not setup properly");
+                    
                     route.SaveLog(LogTypeEnum.Error, "Source Connector is not setup properly", string.Empty, userNo);
                     return;
                 }
 
                 if (l_DestinationConnector == null)
                 {
-                    logger.LogError("Destination Connector is not setup properly");
+                    
                     route.SaveLog(LogTypeEnum.Error, "Destination Connector is not setup properly", string.Empty, userNo);
                     return;
                 }
@@ -147,7 +147,7 @@ namespace eSyncMate.Processor.Managers
                         }
                         else
                         {
-                            route.SaveLog(LogTypeEnum.Error, $"Unable to Amazon Inventory Status for FeedDocumentID.", string.Empty, userNo);
+                            route.SaveLog(LogTypeEnum.Error, $"Unable to get Amazon Inventory Status for FeedDocumentID [{Convert.ToString(item["FeedDocumentID"])}]. HTTP {(int)sourceResponse.StatusCode} {sourceResponse.StatusCode}.", sourceResponse.Content ?? sourceResponse.ErrorMessage, userNo);
                         }
 
                         route.SaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
@@ -173,8 +173,7 @@ namespace eSyncMate.Processor.Managers
         {
             try
             {
-                using var http = new HttpClient();
-                var bytes = await http.GetByteArrayAsync(url);
+                var bytes = await SharedHttpClientFactory.Amazon.GetByteArrayAsync(url);
 
                 using var input = new MemoryStream(bytes);
                 using var gzip = new GZipStream(input, CompressionMode.Decompress);

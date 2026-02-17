@@ -484,14 +484,44 @@ namespace eSyncMate.DB.Entities
             return l_Result;
         }
 
+        public Result RouteSaveData(string type, int OrderId, string Data, int userNo)
+        {
+            Result l_Result = Result.GetSuccessResult();
+
+            try
+            {
+                RouteData routeData = new RouteData();
+
+                routeData.UseConnection(string.Empty, this.Connection);
+
+                routeData.CreatedBy = userNo;
+                routeData.CreatedDate = DateTime.Now;
+                routeData.Data = Data;
+                routeData.OrderId = OrderId;
+                routeData.Type = type;
+                routeData.RouteId = this.Id;
+
+                l_Result = routeData.SaveNew();
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+            finally
+            {
+            }
+
+            return l_Result;
+        }
+
         public Result SaveLog(LogTypeEnum type, string Message, string Details, int userNo)
         {
             Result l_Result = Result.GetSuccessResult();
 
             try
             {
-                // Only insert logs for Error, Exception, and Info types
-                if (type == LogTypeEnum.Error || type == LogTypeEnum.Exception || type == LogTypeEnum.Info)
+                // Only insert logs for Error and Exception types (Info/Debug/Warning excluded to reduce RouteLog table bloat)
+                if (type == LogTypeEnum.Error || type == LogTypeEnum.Exception)
                 {
                     RouteLog routeLog = new RouteLog();
 

@@ -23,7 +23,7 @@ namespace eSyncMate.Processor.Managers
 {
     public class WalmartUploadInventoryRoute
     {
-        public static void Execute(IConfiguration config, ILogger logger, Routes route)
+        public static void Execute(IConfiguration config, Routes route)
         {
             int userNo = 1;
             string destinationData = string.Empty;
@@ -45,14 +45,14 @@ namespace eSyncMate.Processor.Managers
 
                 if (l_SourceConnector == null)
                 {
-                    logger.LogError("Source Connector is not setup properly");
+                    
                     route.SaveLog(LogTypeEnum.Error, "Source Connector is not setup properly", string.Empty, userNo);
                     return;
                 }
 
                 if (l_DestinationConnector == null)
                 {
-                    logger.LogError("Destination Connector is not setup properly");
+                    
                     route.SaveLog(LogTypeEnum.Error, "Destination Connector is not setup properly", string.Empty, userNo);
                     return;
                 }
@@ -75,6 +75,9 @@ namespace eSyncMate.Processor.Managers
                     route.SaveLog(LogTypeEnum.Debug, $"Source connector processing completed.", string.Empty, userNo);
                 }
 
+                // Set connection before the if block so it's available for UpdateInventoryBatchWise
+                l_SCSInventoryFeed.UseConnection(l_SourceConnector.ConnectionString);
+
                 if (l_DestinationConnector.ConnectivityType == ConnectorTypesEnum.Rest.ToString() && l_data.Rows.Count > 0)
                 {
                     route.SaveLog(LogTypeEnum.Debug, $"Destination connector processing start...", string.Empty, userNo);
@@ -82,7 +85,6 @@ namespace eSyncMate.Processor.Managers
                     SCSInventoryFeed feed = new SCSInventoryFeed();
 
                     feed.UseConnection(l_SourceConnector.ConnectionString);
-                    l_SCSInventoryFeed.UseConnection(l_SourceConnector.ConnectionString);
 
                     l_InventoryBatchWise.StartDate = Convert.ToDateTime(DateTime.Now);
                     l_InventoryBatchWise.Status = "Processing";
@@ -234,27 +236,31 @@ namespace eSyncMate.Processor.Managers
                 this.destinationConnector.Url = this.destinationConnector.BaseUrl + "inventories/"+ row["ItemId"].ToString();
                 sourceResponse = RestConnector.Execute(this.destinationConnector, Body).GetAwaiter().GetResult();
 
-                WalmartInventoryOutPutModel response = new WalmartInventoryOutPutModel();
-
-                try
+                if (!sourceResponse.IsSuccessful)
                 {
-                    response = JsonConvert.DeserializeObject<WalmartInventoryOutPutModel>(sourceResponse.Content);
-                }
-                catch (Exception)
-                {
-
-                }
-
-                bool hasErrors = response.nodes.Any(node => node.errors.Any());
-
-                if (hasErrors)
-                {
-                    this.route.SaveLog(LogTypeEnum.Error, $"Unable to update WalmartUploadInventory for item [{row["ProductId"]}].", string.Empty, this.userNo);
+                    this.route.SaveLog(LogTypeEnum.Error, $"API call failed for WalmartUploadInventory item [{row["ProductId"]}]. HTTP {(int)sourceResponse.StatusCode} {sourceResponse.StatusCode}.", sourceResponse.Content ?? sourceResponse.ErrorMessage, this.userNo);
                 }
                 else
                 {
-                    this.feed.UpdateItemStatus(itemId, customerId);
-                    this.route.SaveLog(LogTypeEnum.Debug, $"WalmartUploadInventory updated for item [{row["ProductId"]}].", string.Empty, this.userNo);
+                    WalmartInventoryOutPutModel response = null;
+                    try
+                    {
+                        response = JsonConvert.DeserializeObject<WalmartInventoryOutPutModel>(sourceResponse.Content);
+                    }
+                    catch (Exception ex)
+                    {
+                        this.route.SaveLog(LogTypeEnum.Error, $"Failed to parse API response for WalmartUploadInventory item [{row["ProductId"]}].", ex.Message, this.userNo);
+                    }
+
+                    if (response != null && response.nodes.Any(node => node.errors.Any()))
+                    {
+                        this.route.SaveLog(LogTypeEnum.Error, $"WalmartUploadInventory has node errors for item [{row["ProductId"]}].", sourceResponse.Content, this.userNo);
+                    }
+                    else if (response != null)
+                    {
+                        this.feed.UpdateItemStatus(itemId, customerId);
+                        this.route.SaveLog(LogTypeEnum.Debug, $"WalmartUploadInventory updated for item [{row["ProductId"]}].", sourceResponse.Content, this.userNo);
+                    }
                 }
 
                 this.route.SaveData("JSON-RVD", 0, sourceResponse.Content, this.userNo);

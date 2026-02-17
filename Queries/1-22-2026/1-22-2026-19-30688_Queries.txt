@@ -1,0 +1,8 @@
+/*1/22/2026 7:34:25 PM: */ SELECT * FROM [VW_Routes] WHERE [Id] = 97
+/*1/22/2026 7:34:25 PM: */ SELECT * FROM [VW_Customers] WHERE [Id] = 1
+/*1/22/2026 7:34:25 PM: */ SELECT * FROM [VW_Customers] WHERE [Id] = 3
+/*1/22/2026 7:34:25 PM: */ SELECT * FROM [VW_Connectors] WHERE [Id] = 143
+/*1/22/2026 7:34:25 PM: */ SELECT * FROM [VW_Connectors] WHERE [Id] = 145
+/*1/22/2026 7:34:25 PM: */ /****************************************Begin Transaction********************************/
+/*1/22/2026 7:34:25 PM: */ INSERT INTO [RouteLog] ([RouteId],[Type],[Message],[Details],[Status],[ModifiedDate],[ModifiedBy],[CreatedDate],[CreatedBy]) VALUES (97,1,'Starting external process for route [97]. Path: D:\eSoftage_Projects\eSyncMate_V2\RouteTestApp\bin\Release\net8.0\RouteWorker\eSyncMate.RouteWorker.exe','',NULL,'1/1/1900 12:00:00 AM',0,'1/22/2026 7:34:25 PM',1)
+/*1/22/2026 7:34:25 PM: */ /****************************************Commit Transaction********************************/

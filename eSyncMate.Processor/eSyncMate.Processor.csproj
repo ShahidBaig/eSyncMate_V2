@@ -47,4 +47,40 @@
     <ProjectReference Include="..\JUST.net\JUST.net.csproj" />
   </ItemGroup>
 
+  <!-- Define RouteWorker project path relative to this project -->
+  <PropertyGroup>
+    <RouteWorkerProjectDir>$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)\..\eSyncMate.RouteWorker'))</RouteWorkerProjectDir>
+  </PropertyGroup>
+
+  <!-- Pre-build: Build RouteWorker separately to avoid circular dependency -->
+  <!-- Skip if SkipRouteWorkerBuild is set (to prevent infinite recursion) -->
+  <Target Name="BuildRouteWorker" BeforeTargets="Build" Condition="'$(SkipRouteWorkerBuild)' != 'true'">
+    <Message Text="Building RouteWorker..." Importance="high" />
+    <Exec Command="dotnet build &quot;$(RouteWorkerProjectDir)\eSyncMate.RouteWorker.csproj&quot; --configuration $(Configuration) /p:SkipRouteWorkerBuild=true" ContinueOnError="false" />
+  </Target>
+
+  <!-- Post-build: Copy RouteWorker to Processor output directory -->
+  <Target Name="CopyRouteWorker" AfterTargets="Build" Condition="'$(SkipRouteWorkerBuild)' != 'true'">
+    <ItemGroup>
+      <RouteWorkerFiles Include="$(RouteWorkerProjectDir)\bin\$(Configuration)\net8.0\**\*.*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(RouteWorkerFiles)" DestinationFolder="$(OutputPath)RouteWorker\%(RecursiveDir)" SkipUnchangedFiles="true" />
+  </Target>
+
+  <!-- Pre-publish: Build RouteWorker separately -->
+  <Target Name="BuildRouteWorkerOnPublish" BeforeTargets="Publish" Condition="'$(SkipRouteWorkerBuild)' != 'true'">
+    <Message Text="Building RouteWorker for publish..." Importance="high" />
+    <Exec Command="dotnet publish &quot;$(RouteWorkerProjectDir)\eSyncMate.RouteWorker.csproj&quot; --configuration $(Configuration) /p:SkipRouteWorkerBuild=true" ContinueOnError="false" />
+  </Target>
+
+  <!-- Post-publish: Copy RouteWorker to Processor publish directory -->
+  <Target Name="CopyRouteWorkerOnPublish" AfterTargets="Publish" Condition="'$(SkipRouteWorkerBuild)' != 'true'">
+    <ItemGroup>
+      <RouteWorkerPublishFiles Include="$(RouteWorkerProjectDir)\bin\$(Configuration)\net8.0\publish\**\*.*" />
+      <RouteWorkerBuildFiles Include="$(RouteWorkerProjectDir)\bin\$(Configuration)\net8.0\**\*.*" Condition="!Exists('$(RouteWorkerProjectDir)\bin\$(Configuration)\net8.0\publish\')" />
+    </ItemGroup>
+    <Copy SourceFiles="@(RouteWorkerPublishFiles)" DestinationFolder="$(PublishDir)RouteWorker\%(RecursiveDir)" SkipUnchangedFiles="true" Condition="'@(RouteWorkerPublishFiles)' != ''" />
+    <Copy SourceFiles="@(RouteWorkerBuildFiles)" DestinationFolder="$(PublishDir)RouteWorker\%(RecursiveDir)" SkipUnchangedFiles="true" Condition="'@(RouteWorkerPublishFiles)' == ''" />
+  </Target>
+
 </Project>

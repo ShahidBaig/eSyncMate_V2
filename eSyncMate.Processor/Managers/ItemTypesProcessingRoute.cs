@@ -19,7 +19,7 @@ namespace eSyncMate.Processor.Managers
 {
     public class ItemTypesProcessing
     {
-        public static void Execute(IConfiguration config, ILogger logger, Routes route)
+        public static void Execute(IConfiguration config, Routes route)
         {
             int userNo = 1;
             string destinationData = string.Empty;
@@ -42,14 +42,14 @@ namespace eSyncMate.Processor.Managers
 
                 if (l_SourceConnector == null)
                 {
-                    logger.LogError("Source Connector is not setup properly");
+                    
                     route.SaveLog(LogTypeEnum.Error, "Source Connector is not setup properly", string.Empty, userNo);
                     return;
                 }
 
                 if (l_DestinationConnector == null)
                 {
-                    logger.LogError("Destination Connector is not setup properly");
+                    
                     route.SaveLog(LogTypeEnum.Error, "Destination Connector is not setup properly", string.Empty, userNo);
                     return;
                 }
@@ -73,7 +73,7 @@ namespace eSyncMate.Processor.Managers
                         };
 
                         Body = JsonConvert.SerializeObject(data);
-                        route.SaveData("JSON-SNT", 0, Body, userNo);
+                        route.RouteSaveData("JSON-SNT", 0, Body, userNo);
 
                         l_SourceConnector.Url = l_SourceConnector.Url + l_ItemTypesReport.ReportID;
 
@@ -82,7 +82,7 @@ namespace eSyncMate.Processor.Managers
                         if (sourceResponse.StatusCode == System.Net.HttpStatusCode.OK)
                         {
                             route.SaveLog(LogTypeEnum.Debug, "Received response from source.", sourceResponse.Content, userNo);
-                            route.SaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
+                            route.RouteSaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
 
                             l_ItemTypesReportRequestOutputModel = JsonConvert.DeserializeObject<ItemTypesReportRequestOutputModel>(sourceResponse.Content);
 
@@ -94,7 +94,7 @@ namespace eSyncMate.Processor.Managers
                                 if (sourceResponse.StatusCode == System.Net.HttpStatusCode.OK)
                                 {
                                     route.SaveLog(LogTypeEnum.Debug, "Item Types downloaded successfully.", sourceResponse.Content, userNo);
-                                    route.SaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
+                                    route.RouteSaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
 
                                     l_SCS_ItemTypesReponseModel = JsonConvert.DeserializeObject<SCS_ItemTypesReponseModel>(sourceResponse.Content);
 
@@ -116,6 +116,9 @@ namespace eSyncMate.Processor.Managers
                                     }
 
                                     route.SaveLog(LogTypeEnum.Debug, "Item types processing start bulk insert.", string.Empty, userNo);
+
+                                    DBConnector cleanupConn = new DBConnector(l_DestinationConnector.ConnectionString);
+                                    cleanupConn.Execute($"DELETE FROM Temp_SCS_ItemsType WHERE CustomerID = '{l_SourceConnector.CustomerID}'");
 
                                     PublicFunctions.BulkInsert(l_DestinationConnector.ConnectionString, "Temp_SCS_ItemsType", l_ItemTypedt);
 

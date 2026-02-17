@@ -26,7 +26,7 @@ namespace eSyncMate.Processor.Managers
 {
     public class LowesBulkItemPricesRoute
     {
-        public static void Execute(IConfiguration config, ILogger logger, Routes route)
+        public static void Execute(IConfiguration config, Routes route)
         {
             int userNo = 1;
             string destinationData = string.Empty;
@@ -48,14 +48,14 @@ namespace eSyncMate.Processor.Managers
 
                 if (l_SourceConnector == null)
                 {
-                    logger.LogError("Source Connector is not setup properly");
+                    
                     route.SaveLog(LogTypeEnum.Error, "Source Connector is not setup properly", string.Empty, userNo);
                     return;
                 }
 
                 if (l_DestinationConnector == null)
                 {
-                    logger.LogError("Destination Connector is not setup properly");
+                    
                     route.SaveLog(LogTypeEnum.Error, "Destination Connector is not setup properly", string.Empty, userNo);
                     return;
                 }
@@ -123,7 +123,7 @@ namespace eSyncMate.Processor.Managers
                     }
                     else
                     {
-                        route.SaveLog(LogTypeEnum.Error, $"Unable to update Macys Bulk ItemPrices for items.", string.Empty, userNo);
+                        route.SaveLog(LogTypeEnum.Error, $"Unable to update Lowes Bulk ItemPrices for items. HTTP {(int)sourceResponse.StatusCode} {sourceResponse.StatusCode}.", sourceResponse.Content ?? sourceResponse.ErrorMessage, userNo);
                     }
 
                     route.SaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
@@ -213,7 +213,7 @@ namespace eSyncMate.Processor.Managers
                 }
                 else
                 {
-                    route.SaveLog(LogTypeEnum.Error, $"Unable to update Macys Bulk ItemPrices for item [{row["id"]}].", string.Empty, userNo);
+                    route.SaveLog(LogTypeEnum.Error, $"Unable to update Lowes Bulk ItemPrices for item [{row["id"]}]. HTTP {(int)sourceResponse.StatusCode} {sourceResponse.StatusCode}.", sourceResponse.Content ?? sourceResponse.ErrorMessage, userNo);
                 }
 
                 route.SaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
@@ -221,7 +221,7 @@ namespace eSyncMate.Processor.Managers
             catch (Exception ex)
             {
 
-                route.SaveLog(LogTypeEnum.Error, $"{ex.Message} - Unable to update Bulk ItemPrices for item [{row["id"]}].", string.Empty, userNo);
+                route.SaveLog(LogTypeEnum.Error, $"{ex.Message} - Unable to update Lowes Bulk ItemPrices for item [{row["id"]}].", ex.ToString(), userNo);
             }
 
         }

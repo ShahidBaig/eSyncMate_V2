@@ -367,3 +367,5 @@ FodyWeavers.xsd
 
 UI/yarn.lock
 UI/package-lock.json
+/nul
+/.gitignore

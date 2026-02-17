@@ -24,7 +24,7 @@ namespace eSyncMate.Processor.Managers
 {
     public class SCSItemPrices
     {
-        public static void Execute(IConfiguration config, ILogger logger, Routes route)
+        public static void Execute(IConfiguration config, Routes route)
         {
             int userNo = 1;
             string destinationData = string.Empty;
@@ -45,14 +45,14 @@ namespace eSyncMate.Processor.Managers
 
                 if (l_SourceConnector == null)
                 {
-                    logger.LogError("Source Connector is not setup properly");
+                    
                     route.SaveLog(LogTypeEnum.Error, "Source Connector is not setup properly", string.Empty, userNo);
                     return;
                 }
 
                 if (l_DestinationConnector == null)
                 {
-                    logger.LogError("Destination Connector is not setup properly");
+                    
                     route.SaveLog(LogTypeEnum.Error, "Destination Connector is not setup properly", string.Empty, userNo);
                     return;
                 }
@@ -174,7 +174,7 @@ namespace eSyncMate.Processor.Managers
                 this.route.UseConnection(this.sourceConnector.ConnectionString);
 
                 string Body = JsonConvert.SerializeObject(data);
-                route.SaveData("JSON-SNT", 0, Body, userNo);
+                route.RouteSaveData("JSON-SNT", 0, Body, userNo);
 
                 this.destinationConnector.Url = this.destinationConnector.BaseUrl + row["id"];
                 RestResponse sourceResponse = RestConnector.Execute(this.destinationConnector, Body).GetAwaiter().GetResult();
@@ -193,10 +193,10 @@ namespace eSyncMate.Processor.Managers
                 }
                 else
                 {
-                    route.SaveLog(LogTypeEnum.Error, $"Unable to update ItemPrices for item [{row["id"]}].", string.Empty, userNo);
+                    route.SaveLog(LogTypeEnum.Error, $"Unable to update ItemPrices for item [{row["id"]}]. HTTP {(int)sourceResponse.StatusCode} {sourceResponse.StatusCode}.", sourceResponse.Content ?? sourceResponse.ErrorMessage, userNo);
                 }
 
-                route.SaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
+                route.RouteSaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
             }
             catch (Exception ex)
             {

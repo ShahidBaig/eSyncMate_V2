@@ -35,7 +35,7 @@ namespace eSyncMate.Processor.Managers
 {
     public class DownloadTargetItemsRoute
     {
-        public static void Execute(IConfiguration config, ILogger logger, Routes route)
+        public static void Execute(IConfiguration config, Routes route)
         {
             int userNo = 1;
             string destinationData = string.Empty;
@@ -64,14 +64,14 @@ namespace eSyncMate.Processor.Managers
 
                 if (l_SourceConnector == null)
                 {
-                    logger.LogError("Source Connector is not setup properly");
+                    
                     route.SaveLog(LogTypeEnum.Error, "Source Connector is not setup properly", string.Empty, userNo);
                     return;
                 }
 
                 if (l_DestinationConnector == null)
                 {
-                    logger.LogError("Destination Connector is not setup properly");
+                    
                     route.SaveLog(LogTypeEnum.Error, "Destination Connector is not setup properly", string.Empty, userNo);
                     return;
                 }
@@ -96,6 +96,13 @@ namespace eSyncMate.Processor.Managers
 
                     GetAlItems("", route.Id,  ref dataTable,ref l_CustomerProductCatalogPricesDT, l_SourceConnector.CustomerID);
 
+                    if (dataTable.Rows.Count > 0)
+                    {
+                        //route.SaveLog(LogTypeEnum.Debug, $"Total items fetched from API: {dataTable.Rows.Count}. Inserting into SCS_TargetItemsData...", string.Empty, userNo);
+                        BulkInsertTargetItems(dataTable, l_SourceConnector.ConnectionString, l_SourceConnector.CustomerID);
+                        //route.SaveLog(LogTypeEnum.Debug, $"Bulk insert completed for customer [{l_SourceConnector.CustomerID}].", string.Empty, userNo);
+                    }
+
                     foreach (DataRow row in l_data.Rows)
                     {
 
@@ -108,7 +115,7 @@ namespace eSyncMate.Processor.Managers
                                 l_PrepareData.Dispose();
                             }
 
-                            dataTable.DefaultView.RowFilter = "ItemTypeName = " + row["ItemTypeID"].ToString();
+                            dataTable.DefaultView.RowFilter = "ItemTypeName = '" + row["ItemTypeID"].ToString() + "'";
                             l_PrepareData = dataTable.DefaultView.ToTable();
 
                             l_SCS_ItemsType.UseConnection(l_SourceConnector.ConnectionString);
@@ -224,12 +231,15 @@ namespace eSyncMate.Processor.Managers
                                 l_SCS_ItemTypeAttributeDataTable.Dispose();
                                 l_SCS_ItemTypeAttributeDataTable = null;
                                 l_PrepareData.Dispose();
+                                sortedDataTable.Dispose(); 
+                                l_File.Dispose();
                                 l_PrepareData = null;
                             }
                         }
 
-                        dataTable.Dispose();
                     }
+
+                    dataTable.Dispose();
 
                     route.SaveLog(LogTypeEnum.Debug, $"Destination connector processing completed.", string.Empty, userNo);
                 }
@@ -327,17 +337,18 @@ namespace eSyncMate.Processor.Managers
                 request.AddHeader("x-seller-token", "0902d4a0688a4cdeaaee926fc1f70155");
                 request.AddHeader("x-seller-id", "5d949496fcd4b70097dfad5e");
             }
-
-            if (string.IsNullOrEmpty(after_id))
-                request = new RestRequest($"sellers/6802accd146a9b60e3850f70/products_catalog?per_page=1000&expand=fields", Method.Get);
-
             else
-                request = new RestRequest($"sellers/6802accd146a9b60e3850f70/products_catalog?per_page=1000&expand=fields&after_id={after_id}", Method.Get);
+            {
+                if (string.IsNullOrEmpty(after_id))
+                    request = new RestRequest($"sellers/6802accd146a9b60e3850f70/products_catalog?per_page=1000&expand=fields", Method.Get);
 
+                else
+                    request = new RestRequest($"sellers/6802accd146a9b60e3850f70/products_catalog?per_page=1000&expand=fields&after_id={after_id}", Method.Get);
 
-            request.AddHeader("x-api-key", "80951e9d352afdd7725961817c62a51baf637658");
-            request.AddHeader("x-seller-token", "d061a03b9bbc48c48c63b93559bd48a8");
-            request.AddHeader("x-seller-id", "6802accd146a9b60e3850f70");
+                request.AddHeader("x-api-key", "80951e9d352afdd7725961817c62a51baf637658");
+                request.AddHeader("x-seller-token", "d061a03b9bbc48c48c63b93559bd48a8");
+                request.AddHeader("x-seller-id", "6802accd146a9b60e3850f70");
+            }
 
             response = client.Execute(request);
 
@@ -466,6 +477,61 @@ namespace eSyncMate.Processor.Managers
                     bulkCopy.WriteToServer(table);
                 }
                 connection.Close();
+            }
+        }
+
+        static void BulkInsertTargetItems(DataTable dataTable, string connectionString, string customerID)
+        {
+            using (SqlConnection connection = new SqlConnection(connectionString))
+            {
+                connection.Open();
+
+                using (SqlCommand cmd = new SqlCommand("DELETE FROM SCS_TargetItemsData WHERE CustomerID = @CustomerID", connection))
+                {
+                    cmd.Parameters.AddWithValue("@CustomerID", customerID);
+                    cmd.ExecuteNonQuery();
+                }
+
+                DataTable bulkTable = dataTable.Copy();
+
+                if (!bulkTable.Columns.Contains("CustomerID"))
+                {
+                    bulkTable.Columns.Add("CustomerID", typeof(string));
+                }
+
+                foreach (DataRow row in bulkTable.Rows)
+                {
+                    row["CustomerID"] = customerID;
+                }
+
+                using (SqlBulkCopy bulkCopy = new SqlBulkCopy(connection))
+                {
+                    bulkCopy.DestinationTableName = "SCS_TargetItemsData";
+                    bulkCopy.BulkCopyTimeout = 600;
+
+                    bulkCopy.ColumnMappings.Add("CustomerID", "CustomerID");
+                    bulkCopy.ColumnMappings.Add("Brand", "Brand");
+                    bulkCopy.ColumnMappings.Add("ItemID", "ItemID");
+                    bulkCopy.ColumnMappings.Add("UPC", "UPC");
+                    bulkCopy.ColumnMappings.Add("ItemTypeName", "ItemTypeName");
+                    bulkCopy.ColumnMappings.Add("ProductRelation", "ProductRelation");
+                    bulkCopy.ColumnMappings.Add("ParentID", "ParentID");
+                    bulkCopy.ColumnMappings.Add("ListPrice", "ListPrice");
+                    bulkCopy.ColumnMappings.Add("MapPrice", "MapPrice");
+                    bulkCopy.ColumnMappings.Add("OffPrice", "OffPrice");
+                    bulkCopy.ColumnMappings.Add("Type", "Type");
+                    bulkCopy.ColumnMappings.Add("VariationType", "VariationType");
+                    bulkCopy.ColumnMappings.Add("UnListed", "UnListed");
+                    bulkCopy.ColumnMappings.Add("is_add_on", "is_add_on");
+                    bulkCopy.ColumnMappings.Add("two_day_shipping_eligible", "two_day_shipping_eligible");
+                    bulkCopy.ColumnMappings.Add("shipping_exclusion", "shipping_exclusion");
+                    bulkCopy.ColumnMappings.Add("seller_return_policy", "seller_return_policy");
+                    bulkCopy.ColumnMappings.Add("JsonFields", "JsonFields");
+
+                    bulkCopy.WriteToServer(bulkTable);
+                }
+
+                bulkTable.Dispose();
             }
         }
 
