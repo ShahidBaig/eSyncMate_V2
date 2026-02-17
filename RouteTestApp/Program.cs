@@ -48,11 +48,6 @@ static void Main()
 
     //string l_ChildResponse = JsonConvert.SerializeObject(filteredResults);
 
-
-
-  
-
-
     //Instantiate IConfiguration and ILogger(you need to provide your own implementations)
     IConfiguration config = new MyConfigurationImplementation();
     RouteEngine routeEngine = new RouteEngine(config);
