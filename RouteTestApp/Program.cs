@@ -49,6 +49,10 @@ static void Main()
     //string l_ChildResponse = JsonConvert.SerializeObject(filteredResults);
 
 
+
+  
+
+
     //Instantiate IConfiguration and ILogger(you need to provide your own implementations)
     IConfiguration config = new MyConfigurationImplementation();
     RouteEngine routeEngine = new RouteEngine(config);
@@ -565,8 +569,42 @@ static async Task MissingOrdersProcessed()
     }
 }
 
+ static async Task SendMailAsync(
+    string tenantId,
+    string clientId,
+    string clientSecret,
+    string senderUpnOrId,
+    string toEmail,
+    string subject,
+    string bodyHtml)
+{
+    var credential = new ClientSecretCredential(tenantId, clientId, clientSecret);
+    var graphClient = new GraphServiceClient(credential, new[] { "https://graph.microsoft.com/.default" });
 
+    var message = new Microsoft.Graph.Models.Message
+    {
+        Subject = subject,
+        Body = new ItemBody
+        {
+            ContentType = Microsoft.Graph.Models.BodyType.Html,
+            Content = bodyHtml
+        },
+        ToRecipients = new List<Recipient>
+        {
+            new Recipient
+            {
+                EmailAddress = new EmailAddress { Address = toEmail }
+            }
+        }
+    };
 
+    await graphClient.Users[senderUpnOrId].SendMail.PostAsync(
+        new SendMailPostRequestBody
+        {
+            Message = message,
+            SaveToSentItems = true
+        });
+}
 static void ProcessOrdersByStatus(string OrderNumber, Routes route, ConnectorDataModel sourceConnector, ConnectorDataModel destinationConnector, int userNo)
 {
     Customers l_Customer = new Customers();

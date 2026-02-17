@@ -130,7 +130,7 @@ namespace eSyncMate.Processor.Managers
                     }
                     else
                     {
-                        route.SaveLog(LogTypeEnum.Error, $"Unable to update MacysUpdateInventory for items.", sourceResponse.Content, userNo);
+                        route.SaveLog(LogTypeEnum.Error, $"Unable to update MacysUpdateInventory for items. HTTP {(int)sourceResponse.StatusCode} {sourceResponse.StatusCode}.", sourceResponse.Content ?? sourceResponse.ErrorMessage, userNo);
                     }
 
                     route.SaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
@@ -286,7 +286,7 @@ namespace eSyncMate.Processor.Managers
                 }
                 else 
                 {
-                    this.route.SaveLog(LogTypeEnum.Error, $"Unable to update MacysUpdateInventory for item [{row["ProductId"]}].", sourceResponse.Content, this.userNo);
+                    this.route.SaveLog(LogTypeEnum.Error, $"Unable to update MacysUpdateInventory for item [{row["ProductId"]}]. HTTP {(int)sourceResponse.StatusCode} {sourceResponse.StatusCode}.", sourceResponse.Content ?? sourceResponse.ErrorMessage, this.userNo);
 
                 }
 

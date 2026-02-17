@@ -520,8 +520,8 @@ namespace eSyncMate.DB.Entities
 
             try
             {
-                // Only insert logs for Error, Exception, and Info types
-                if (type == LogTypeEnum.Error || type == LogTypeEnum.Exception || type == LogTypeEnum.Info)
+                // Only insert logs for Error and Exception types (Info/Debug/Warning excluded to reduce RouteLog table bloat)
+                if (type == LogTypeEnum.Error || type == LogTypeEnum.Exception)
                 {
                     RouteLog routeLog = new RouteLog();
 

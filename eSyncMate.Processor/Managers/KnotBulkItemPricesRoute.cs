@@ -124,7 +124,7 @@ namespace eSyncMate.Processor.Managers
                     }
                     else
                     {
-                        route.SaveLog(LogTypeEnum.Error, $"Unable to update Knot Bulk ItemPrices for items.", string.Empty, userNo);
+                        route.SaveLog(LogTypeEnum.Error, $"Unable to update Knot Bulk ItemPrices for items. HTTP {(int)sourceResponse.StatusCode} {sourceResponse.StatusCode}.", sourceResponse.Content ?? sourceResponse.ErrorMessage, userNo);
                     }
 
                     route.SaveData("JSON-RVD", 0, sourceResponse.Content, userNo);

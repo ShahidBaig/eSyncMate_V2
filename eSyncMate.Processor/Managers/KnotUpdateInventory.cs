@@ -129,7 +129,7 @@ namespace eSyncMate.Processor.Managers
                     }
                     else
                     {
-                        route.SaveLog(LogTypeEnum.Error, $"Unable to update KnotUpdateInventory for items.", sourceResponse.Content, userNo);
+                        route.SaveLog(LogTypeEnum.Error, $"Unable to update KnotUpdateInventory for items. HTTP {(int)sourceResponse.StatusCode} {sourceResponse.StatusCode}.", sourceResponse.Content ?? sourceResponse.ErrorMessage, userNo);
                     }
 
                     route.SaveData("JSON-RVD", 0, sourceResponse.Content, userNo);

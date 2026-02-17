@@ -18,7 +18,9 @@
       "Bash(powershell.exe -NoProfile -File -:*)",
       "Bash(powershell.exe -NoProfile -Command \"& { $text = [System.IO.File]::ReadAllText\\(''D:\\\\eSoftage_Projects\\\\VendorReturnScreenShot\\\\ProductCatalogData.txt''\\); $m = [regex]::Matches\\($text, ''\"\"item_type_id\"\":\"\"\\([^\"\"]+\\)\"\"''\\); Write-Host \\(''Total: '' + $m.Count\\); $d = @{}; foreach\\($x in $m\\) { $v=$x.Groups[1].Value; if\\($d[$v]\\){$d[$v]++}else{$d[$v]=1} }; foreach\\($k in $d.Keys\\){Write-Host \\(''ID='' + $k + '' Count='' + $d[$k]\\)} }\")",
       "Bash(powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"D:\\\\eSoftage_Projects\\\\eSyncMate_V2\\\\analyze.ps1\")",
-      "Bash(powershell.exe -NoProfile -ExecutionPolicy Bypass -Command \"Remove-Item ''D:\\\\eSoftage_Projects\\\\eSyncMate_V2\\\\analyze.ps1''\")"
+      "Bash(powershell.exe -NoProfile -ExecutionPolicy Bypass -Command \"Remove-Item ''D:\\\\eSoftage_Projects\\\\eSyncMate_V2\\\\analyze.ps1''\")",
+      "Bash(findstr:*)",
+      "Bash(Select-String -Pattern \"error CS|Build succeeded|Build FAILED\")"
     ]
   }
 }

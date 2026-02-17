@@ -258,25 +258,32 @@ namespace eSyncMate.Processor.Managers
 
                 sourceResponse = RestConnector.Execute(this.destinationConnector, Body).GetAwaiter().GetResult();
 
-                InventoryUpdateResponseModel reponse = new InventoryUpdateResponseModel();
-
-                try
+                if (!sourceResponse.IsSuccessful)
                 {
-                    reponse = JsonConvert.DeserializeObject<InventoryUpdateResponseModel>(sourceResponse.Content);
-                }
-                catch (Exception)
-                {
-
-                }
-
-                if (reponse?.quantity == Convert.ToInt32(row["Total_ATS"].ToString()))
-                {
-                    this.feed.UpdateItemStatus(itemId, customerId);
-                    this.route.SaveLog(LogTypeEnum.Debug, $"TargetPlusInventoryFeedWHSWiseRoute updated for item [{row["ProductId"]}].", sourceResponse.Content, this.userNo);
+                    this.route.SaveLog(LogTypeEnum.Error, $"API call failed for item [{row["ProductId"]}]. HTTP {(int)sourceResponse.StatusCode} {sourceResponse.StatusCode}.", sourceResponse.Content ?? sourceResponse.ErrorMessage, this.userNo);
                 }
                 else
                 {
-                    this.route.SaveLog(LogTypeEnum.Error, $"Unable to update TargetPlusInventoryFeedWHSWiseRoute for item [{row["ProductId"]}].", sourceResponse.Content, this.userNo);
+                    InventoryUpdateResponseModel reponse = null;
+
+                    try
+                    {
+                        reponse = JsonConvert.DeserializeObject<InventoryUpdateResponseModel>(sourceResponse.Content);
+                    }
+                    catch (Exception ex)
+                    {
+                        this.route.SaveLog(LogTypeEnum.Error, $"Failed to parse API response for item [{row["ProductId"]}].", sourceResponse.Content, this.userNo);
+                    }
+
+                    if (reponse != null && reponse.quantity == Convert.ToInt32(row["Total_ATS"].ToString()))
+                    {
+                        this.feed.UpdateItemStatus(itemId, customerId);
+                        this.route.SaveLog(LogTypeEnum.Debug, $"TargetPlusInventoryFeedWHSWiseRoute updated for item [{row["ProductId"]}].", sourceResponse.Content, this.userNo);
+                    }
+                    else if (reponse != null)
+                    {
+                        this.route.SaveLog(LogTypeEnum.Error, $"Unable to update item [{row["ProductId"]}]. Sent: {row["Total_ATS"]}, Received: {reponse.quantity}.", sourceResponse.Content, this.userNo);
+                    }
                 }
 
                 this.route.SaveData("JSON-RVD", 0, sourceResponse.Content, this.userNo);

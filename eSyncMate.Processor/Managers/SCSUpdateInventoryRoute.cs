@@ -212,25 +212,31 @@ namespace eSyncMate.Processor.Managers
                 this.destinationConnector.Url = this.destinationConnector.BaseUrl + row["ProductId"] + "/quantities/" + this.destinationConnector.Realm;
                 sourceResponse = RestConnector.Execute(this.destinationConnector, Body).GetAwaiter().GetResult();
 
-                InventoryUpdateResponseModel reponse = new InventoryUpdateResponseModel();
-
-                try
+                if (!sourceResponse.IsSuccessful)
                 {
-                    reponse = JsonConvert.DeserializeObject<InventoryUpdateResponseModel>(sourceResponse.Content);
-                }
-                catch (Exception)
-                {
-
-                }
-
-                if (reponse?.quantity == Convert.ToInt32(row["Total_ATS"].ToString()))
-                {
-                    this.feed.UpdateItemStatus(itemId, customerId);
-                    this.route.SaveLog(LogTypeEnum.Debug, $"SCSUpdateInventory updated for item [{row["ProductId"]}].", sourceResponse.Content, this.userNo);
+                    this.route.SaveLog(LogTypeEnum.Error, $"API call failed for SCSUpdateInventory item [{row["ProductId"]}]. HTTP {(int)sourceResponse.StatusCode} {sourceResponse.StatusCode}.", sourceResponse.Content ?? sourceResponse.ErrorMessage, this.userNo);
                 }
                 else
                 {
-                    this.route.SaveLog(LogTypeEnum.Error, $"Unable to update SCSUpdateInventory for item [{row["ProductId"]}].", sourceResponse.Content, this.userNo);
+                    InventoryUpdateResponseModel reponse = null;
+                    try
+                    {
+                        reponse = JsonConvert.DeserializeObject<InventoryUpdateResponseModel>(sourceResponse.Content);
+                    }
+                    catch (Exception ex)
+                    {
+                        this.route.SaveLog(LogTypeEnum.Error, $"Failed to parse API response for SCSUpdateInventory item [{row["ProductId"]}].", ex.Message, this.userNo);
+                    }
+
+                    if (reponse?.quantity == Convert.ToInt32(row["Total_ATS"].ToString()))
+                    {
+                        this.feed.UpdateItemStatus(itemId, customerId);
+                        this.route.SaveLog(LogTypeEnum.Debug, $"SCSUpdateInventory updated for item [{row["ProductId"]}].", sourceResponse.Content, this.userNo);
+                    }
+                    else
+                    {
+                        this.route.SaveLog(LogTypeEnum.Error, $"Unable to update SCSUpdateInventory for item [{row["ProductId"]}]. Expected {row["Total_ATS"]}, got {reponse?.quantity}.", sourceResponse.Content, this.userNo);
+                    }
                 }
 
                 this.route.SaveData("JSON-RVD", 0, sourceResponse.Content, this.userNo);

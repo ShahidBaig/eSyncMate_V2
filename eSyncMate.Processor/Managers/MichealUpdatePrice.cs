@@ -275,7 +275,7 @@ namespace eSyncMate.Processor.Managers
                 }
                 else
                 {
-                    this.route.SaveLog(LogTypeEnum.Error, $"Unable to update MichealUpdatePrice for item [{row["ProductId"]}].", sourceResponse.Content, this.userNo);
+                    this.route.SaveLog(LogTypeEnum.Error, $"Unable to update MichealUpdatePrice for item [{row["ProductId"]}]. HTTP {(int)sourceResponse.StatusCode} {sourceResponse.StatusCode}.", sourceResponse.Content ?? sourceResponse.ErrorMessage, this.userNo);
 
                 }
 

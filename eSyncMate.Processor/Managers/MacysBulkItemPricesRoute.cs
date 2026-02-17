@@ -124,7 +124,7 @@ namespace eSyncMate.Processor.Managers
                     }
                     else
                     {
-                        route.SaveLog(LogTypeEnum.Error, $"Unable to update Macys Bulk ItemPrices for items.", string.Empty, userNo);
+                        route.SaveLog(LogTypeEnum.Error, $"Unable to update Macys Bulk ItemPrices for items. HTTP {(int)sourceResponse.StatusCode} {sourceResponse.StatusCode}.", sourceResponse.Content ?? sourceResponse.ErrorMessage, userNo);
                     }
 
                     route.SaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
@@ -214,7 +214,7 @@ namespace eSyncMate.Processor.Managers
                 }
                 else
                 {
-                    route.SaveLog(LogTypeEnum.Error, $"Unable to update Macys Bulk ItemPrices for item [{row["id"]}].", string.Empty, userNo);
+                    route.SaveLog(LogTypeEnum.Error, $"Unable to update Macys Bulk ItemPrices for item [{row["id"]}]. HTTP {(int)sourceResponse.StatusCode} {sourceResponse.StatusCode}.", sourceResponse.Content ?? sourceResponse.ErrorMessage, userNo);
                 }
 
                 route.SaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
@@ -222,7 +222,7 @@ namespace eSyncMate.Processor.Managers
             catch (Exception ex)
             {
 
-                route.SaveLog(LogTypeEnum.Error, $"{ex.Message} - Unable to update Bulk ItemPrices for item [{row["id"]}].", string.Empty, userNo);
+                route.SaveLog(LogTypeEnum.Error, $"{ex.Message} - Unable to update Macys Bulk ItemPrices for item [{row["id"]}].", ex.ToString(), userNo);
             }
 
         }

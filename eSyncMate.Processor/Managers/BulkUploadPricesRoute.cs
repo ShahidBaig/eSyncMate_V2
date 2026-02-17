@@ -126,7 +126,7 @@ namespace eSyncMate.Processor.Managers
                         }
                         else
                         {
-                            route.SaveLog(LogTypeEnum.Error, $"UploadPrices failed for [{l_Row["ProductID"]}].", string.Empty, userNo);
+                            route.SaveLog(LogTypeEnum.Error, $"UploadPrices failed for [{l_Row["ProductID"]}]. HTTP {(int)sourceResponse.StatusCode} {sourceResponse.StatusCode}.", sourceResponse.Content ?? sourceResponse.ErrorMessage, userNo);
                         }
                     }
 

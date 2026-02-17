@@ -193,7 +193,7 @@ namespace eSyncMate.Processor.Managers
                 }
                 else
                 {
-                    route.SaveLog(LogTypeEnum.Error, $"Unable to update ItemPrices for item [{row["id"]}].", string.Empty, userNo);
+                    route.SaveLog(LogTypeEnum.Error, $"Unable to update ItemPrices for item [{row["id"]}]. HTTP {(int)sourceResponse.StatusCode} {sourceResponse.StatusCode}.", sourceResponse.Content ?? sourceResponse.ErrorMessage, userNo);
                 }
 
                 route.RouteSaveData("JSON-RVD", 0, sourceResponse.Content, userNo);

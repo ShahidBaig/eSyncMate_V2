@@ -254,7 +254,7 @@ namespace eSyncMate.Processor.Managers
                 }
                 else
                 {
-                    this.route.SaveLog(LogTypeEnum.Error, $"Unable to update LowesUpdateInventory for chunk.", sourceResponse.Content, this.userNo);
+                    this.route.SaveLog(LogTypeEnum.Error, $"Unable to update LowesUpdateInventory for chunk. HTTP {(int)sourceResponse.StatusCode} {sourceResponse.StatusCode}.", sourceResponse.Content ?? sourceResponse.ErrorMessage, this.userNo);
                 }
             }
             catch (Exception ex)

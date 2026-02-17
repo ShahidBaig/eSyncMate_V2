@@ -147,7 +147,7 @@ namespace eSyncMate.Processor.Managers
                         }
                         else
                         {
-                            route.SaveLog(LogTypeEnum.Error, $"Unable to Amazon Inventory Status for FeedDocumentID.", string.Empty, userNo);
+                            route.SaveLog(LogTypeEnum.Error, $"Unable to get Amazon Inventory Status for FeedDocumentID [{Convert.ToString(item["FeedDocumentID"])}]. HTTP {(int)sourceResponse.StatusCode} {sourceResponse.StatusCode}.", sourceResponse.Content ?? sourceResponse.ErrorMessage, userNo);
                         }
 
                         route.SaveData("JSON-RVD", 0, sourceResponse.Content, userNo);

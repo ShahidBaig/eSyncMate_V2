@@ -236,27 +236,31 @@ namespace eSyncMate.Processor.Managers
                 this.destinationConnector.Url = this.destinationConnector.BaseUrl + "inventories/"+ row["ItemId"].ToString();
                 sourceResponse = RestConnector.Execute(this.destinationConnector, Body).GetAwaiter().GetResult();
 
-                WalmartInventoryOutPutModel response = new WalmartInventoryOutPutModel();
-
-                try
+                if (!sourceResponse.IsSuccessful)
                 {
-                    response = JsonConvert.DeserializeObject<WalmartInventoryOutPutModel>(sourceResponse.Content);
-                }
-                catch (Exception)
-                {
-
-                }
-
-                bool hasErrors = response.nodes.Any(node => node.errors.Any());
-
-                if (hasErrors)
-                {
-                    this.route.SaveLog(LogTypeEnum.Error, $"Unable to update WalmartUploadInventory for item [{row["ProductId"]}].", string.Empty, this.userNo);
+                    this.route.SaveLog(LogTypeEnum.Error, $"API call failed for WalmartUploadInventory item [{row["ProductId"]}]. HTTP {(int)sourceResponse.StatusCode} {sourceResponse.StatusCode}.", sourceResponse.Content ?? sourceResponse.ErrorMessage, this.userNo);
                 }
                 else
                 {
-                    this.feed.UpdateItemStatus(itemId, customerId);
-                    this.route.SaveLog(LogTypeEnum.Debug, $"WalmartUploadInventory updated for item [{row["ProductId"]}].", string.Empty, this.userNo);
+                    WalmartInventoryOutPutModel response = null;
+                    try
+                    {
+                        response = JsonConvert.DeserializeObject<WalmartInventoryOutPutModel>(sourceResponse.Content);
+                    }
+                    catch (Exception ex)
+                    {
+                        this.route.SaveLog(LogTypeEnum.Error, $"Failed to parse API response for WalmartUploadInventory item [{row["ProductId"]}].", ex.Message, this.userNo);
+                    }
+
+                    if (response != null && response.nodes.Any(node => node.errors.Any()))
+                    {
+                        this.route.SaveLog(LogTypeEnum.Error, $"WalmartUploadInventory has node errors for item [{row["ProductId"]}].", sourceResponse.Content, this.userNo);
+                    }
+                    else if (response != null)
+                    {
+                        this.feed.UpdateItemStatus(itemId, customerId);
+                        this.route.SaveLog(LogTypeEnum.Debug, $"WalmartUploadInventory updated for item [{row["ProductId"]}].", sourceResponse.Content, this.userNo);
+                    }
                 }
 
                 this.route.SaveData("JSON-RVD", 0, sourceResponse.Content, this.userNo);
