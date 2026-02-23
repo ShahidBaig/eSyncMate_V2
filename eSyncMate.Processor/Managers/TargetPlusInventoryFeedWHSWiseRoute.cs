@@ -19,6 +19,7 @@ using Microsoft.AspNetCore.Mvc;
 using static eSyncMate.Processor.Models.SCS_VAPProductCatalogModel;
 using static eSyncMate.Processor.Models.SCS_ProductCatalogStatusResponseModel;
 using System.Net.Http.Json;
+using static eSyncMate.Processor.Models.TargetPlusInventoryFeedWHSWiseRequestModel;
 
 namespace eSyncMate.Processor.Managers
 {
@@ -228,25 +229,56 @@ namespace eSyncMate.Processor.Managers
 
         public void ProcessItems()
         {
-            foreach (DataRow row in this.data.Rows)
-            {
-                this.ProcessItem(row);
-            }
-        }
-
-        public void ProcessItem(DataRow row)
-        {
-            RestResponse sourceResponse = new RestResponse();
-            string customerId = row["CustomerId"].ToString();
-            string itemId = row["ItemId"].ToString();
-            var data = new
-            {
-                quantity = row["Total_ATS"],
-            };
-
+            DataTable ShipNodedataTable = new DataTable();
             try
             {
-                string Body = JsonConvert.SerializeObject(data);
+                this.feed.UseConnection(this.sourceConnector.ConnectionString);
+                this.feed.TargetPlusShipNode(this.sourceConnector.CustomerID, ref ShipNodedataTable);
+
+                foreach (DataRow row in this.data.Rows)
+                {
+                    this.ProcessItem(row, ShipNodedataTable);
+                }
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+            finally
+            {
+                ShipNodedataTable.Dispose();
+            }
+
+        }
+
+        public void ProcessItem(DataRow row, DataTable ShipNodedataTable)
+        {
+            RestResponse sourceResponse = new RestResponse();
+
+            TargetPlusInventoryFeedWHSWiseRequestModel l_TargetPlusInventoryFeedWHSWiseRequestModel = new TargetPlusInventoryFeedWHSWiseRequestModel();
+            try
+            {
+                string customerId = row["CustomerId"].ToString();
+                string itemId = row["ItemId"].ToString();
+                //var data = new
+                //{
+                //    quantity = row["Total_ATS"],
+                //};
+
+
+                foreach (DataRow l_Row in ShipNodedataTable.Rows)
+                {
+                    TargetPlusQuantity l_TargetPlusQuantity = new TargetPlusQuantity();
+
+                    l_TargetPlusQuantity.quantity = Convert.ToInt32(row[$"ATS_{l_Row["WHSID"]}"]);
+                    l_TargetPlusQuantity.distribution_center_id = l_Row["ShipNode"].ToString();
+
+                    l_TargetPlusInventoryFeedWHSWiseRequestModel.quantities.Add(l_TargetPlusQuantity);
+                }
+
+
+                string Body = JsonConvert.SerializeObject(l_TargetPlusInventoryFeedWHSWiseRequestModel);
 
                 this.route.UseConnection(this.sourceConnector.ConnectionString);
                 this.feed.UseConnection(this.sourceConnector.ConnectionString);
@@ -254,7 +286,8 @@ namespace eSyncMate.Processor.Managers
                 this.route.SaveData("JSON-SNT", 0, Body, userNo);
                 this.feed.SaveData("JSON-SNT", customerId, itemId, Body, this.userNo, this.bacthID);
 
-                this.destinationConnector.Url = this.destinationConnector.BaseUrl + row["ProductId"] + "/quantities/" + row["ShipNode"].ToString();
+                //this.destinationConnector.Url = this.destinationConnector.BaseUrl + row["ProductId"] + "/quantities/" + row["ShipNode"].ToString();
+                this.destinationConnector.Url = this.destinationConnector.BaseUrl + row["ProductId"] + "/quantities/bulk";
 
                 sourceResponse = RestConnector.Execute(this.destinationConnector, Body).GetAwaiter().GetResult();
 
@@ -275,14 +308,14 @@ namespace eSyncMate.Processor.Managers
                         this.route.SaveLog(LogTypeEnum.Error, $"Failed to parse API response for item [{row["ProductId"]}].", sourceResponse.Content, this.userNo);
                     }
 
-                    if (reponse != null && reponse.quantity == Convert.ToInt32(row["Total_ATS"].ToString()))
+                    if (reponse != null)
                     {
                         this.feed.UpdateItemStatus(itemId, customerId);
                         this.route.SaveLog(LogTypeEnum.Debug, $"TargetPlusInventoryFeedWHSWiseRoute updated for item [{row["ProductId"]}].", sourceResponse.Content, this.userNo);
                     }
                     else if (reponse != null)
                     {
-                        this.route.SaveLog(LogTypeEnum.Error, $"Unable to update item [{row["ProductId"]}]. Sent: {row["Total_ATS"]}, Received: {reponse.quantity}.", sourceResponse.Content, this.userNo);
+                        this.route.SaveLog(LogTypeEnum.Error, $"Unable to update item [{row["ProductId"]}], Received: {reponse.quantity}.", sourceResponse.Content, this.userNo);
                     }
                 }
 

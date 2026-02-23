@@ -45,7 +45,7 @@ BEGIN
 		END
 		ELSE IF  @l_RouteTypeID = 'SCSUpdateInventory'
 		BEGIN
-			SELECT  INV.CustomerID,INV.ItemId,INV.CustomerItemCode,INV.Total_ATS,INV.ATS_L10,INV.ATS_L21,INV.ATS_L28,INV.ATS_L30,INV.ATS_L34,INV.ATS_L35,INV.ATS_L36,INV.ATS_L37,INV.ATS_L40,
+			SELECT  INV.CustomerID,INV.ItemId,INV.CustomerItemCode,0 Total_ATS,INV.ATS_L10,INV.ATS_L21,INV.ATS_L28,INV.ATS_L30,INV.ATS_L34,INV.ATS_L35,INV.ATS_L36,INV.ATS_L37,INV.ATS_L40,
 				   INV.ATS_L41,INV.ATS_L55,INV.ATS_L60,INV.ATS_L70,INV.ATS_L91,PR.Status SyncStatus,PR.id,PR.ProductId
 			FROM SCSInventoryFeed INV WITH (NOLOCK)
 				INNER JOIN CustomerProductCatalogPrices PR WITH (NOLOCK) ON INV.CustomerID = PR.CustomerID AND INV.ItemId = PR.ItemId
@@ -64,7 +64,7 @@ BEGIN
 		BEGIN
 			SELECT INV.CustomerID,INV.ItemId,INV.CustomerItemCode,INV.Total_ATS,PR.id,PR.ProductId,REPLACE(PP.ListPrice, '$', '') AS ListPrice
 			FROM SCSInventoryFeed INV WITH (NOLOCK)
-				INNER JOIN CustomerProductCatalogPrices PR WITH (NOLOCK) ON INV.CustomerID = PR.CustomerID AND INV.ItemId = PR.ItemId
+				LEFT OUTER JOIN CustomerProductCatalogPrices PR WITH (NOLOCK) ON INV.CustomerID = PR.CustomerID AND INV.ItemId = PR.ItemId
 				INNER JOIN SCS_ProductPrices PP WITH (NOLOCK) ON INV.CustomerID = PP.CustomerID AND INV.ItemId = PP.ItemId
 			WHERE  INV.CustomerID  = @l_CustomerID AND INV.[Status] IN ('UPDATED','NEW')
 		END
@@ -78,27 +78,25 @@ BEGIN
 		END
 		ELSE IF  @l_RouteTypeID = 'TargetPlusInventoryFeedWHSWise'
 		BEGIN
-			SELECT  INV.CustomerID,INV.ItemId,INV.CustomerItemCode,PR.Status SyncStatus,PR.id,PR.ProductId,TPS.WHSID,
-			CASE WHEN TPS.WHSID = 'L10' THEN INV.ATS_L10
-				 WHEN TPS.WHSID = 'L21' THEN INV.ATS_L21
-				 WHEN TPS.WHSID = 'L28' THEN INV.ATS_L28
-				 WHEN TPS.WHSID = 'L35' THEN INV.ATS_L35
-				 WHEN TPS.WHSID = 'L36' THEN INV.ATS_L36
-				 WHEN TPS.WHSID = 'L37' THEN INV.ATS_L37
-				 WHEN TPS.WHSID = 'L40' THEN INV.ATS_L40
-				 WHEN TPS.WHSID = 'L41' THEN INV.ATS_L41
-				 WHEN TPS.WHSID = 'L55' THEN INV.ATS_L55
-				 WHEN TPS.WHSID = 'L60' THEN INV.ATS_L60
-				 WHEN TPS.WHSID = 'L70' THEN INV.ATS_L70
-				 WHEN TPS.WHSID = 'L29' THEN ISNULL(INV.ATS_L29,0)
-				 WHEN TPS.WHSID = 'L65' THEN ISNULL(INV.ATS_L65,0)
-				 WHEN TPS.WHSID = 'L56' THEN ISNULL(INV.ATS_L56,0)
-				 WHEN TPS.WHSID = 'L57' THEN ISNULL(INV.ATS_L57,0)
-
-				 END Total_ATS,TPS.ShipNode
+			SELECT  INV.CustomerID,INV.ItemId,INV.CustomerItemCode,PR.Status SyncStatus,PR.id,PR.ProductId,
+			 INV.ATS_L10,
+			 INV.ATS_L21,
+			 INV.ATS_L28,
+			 INV.ATS_L35,
+			 INV.ATS_L36,
+			 INV.ATS_L37,
+			 INV.ATS_L40,
+			 INV.ATS_L41,
+			 INV.ATS_L55,
+			 INV.ATS_L60,
+			 INV.ATS_L70,
+			 ISNULL(INV.ATS_L29,0) ATS_L29,
+			 ISNULL(INV.ATS_L65,0) ATS_L65,
+			 ISNULL(INV.ATS_L56,0) ATS_L56,
+			 ISNULL(INV.ATS_L57,0) ATS_L57
 			FROM SCSInventoryFeed INV WITH (NOLOCK)
 				INNER JOIN CustomerProductCatalogPrices PR WITH (NOLOCK) ON INV.CustomerID = PR.CustomerID AND INV.ItemId = PR.ItemId
-				INNER JOIN TargetPlusShipNodes TPS WITH (NOLOCK) ON INV.CustomerID = TPS.CustomerID
+				--INNER JOIN TargetPlusShipNodes TPS WITH (NOLOCK) ON INV.CustomerID = TPS.CustomerID
 			WHERE INV.CustomerID  = @l_CustomerID AND PR.Status IN ('APPROVED','APPROVED_PR') AND INV.[Status] IN ('UPDATED','NEW')
 
 		END
@@ -106,7 +104,7 @@ BEGIN
 		BEGIN
 			SELECT INV.CustomerID,INV.ItemId,INV.CustomerItemCode,INV.Total_ATS,PR.id,PR.ProductId,REPLACE(PP.ListPrice, '$', '') AS ListPrice
 			FROM SCSInventoryFeed INV WITH (NOLOCK)
-				INNER JOIN CustomerProductCatalogPrices PR WITH (NOLOCK) ON INV.CustomerID = PR.CustomerID AND INV.ItemId = PR.ItemId
+				LEFT OUTER JOIN CustomerProductCatalogPrices PR WITH (NOLOCK) ON INV.CustomerID = PR.CustomerID AND INV.ItemId = PR.ItemId
 				INNER JOIN SCS_ProductPrices PP WITH (NOLOCK) ON INV.CustomerID = PP.CustomerID AND INV.ItemId = PP.ItemId
 			WHERE  INV.CustomerID  = @l_CustomerID AND INV.[Status] IN ('UPDATED','NEW')
 		END
@@ -164,7 +162,7 @@ BEGIN
 			,INV.Total_ATS,INV.ATS_L10,INV.ATS_L21,INV.ATS_L28,INV.ATS_L30,INV.ATS_L34,INV.ATS_L35,INV.ATS_L36,INV.ATS_L37,INV.ATS_L40,
 				   INV.ATS_L41,INV.ATS_L55,INV.ATS_L60,INV.ATS_L70,INV.ATS_L91,INV.ATS_L56,INV.ATS_L57,INV.ATS_L65,INV.ATS_L29	
 			FROM SCSInventoryFeed INV WITH (NOLOCK)
-				INNER JOIN CustomerProductCatalogPrices PR WITH (NOLOCK) ON INV.CustomerID = PR.CustomerID AND INV.ItemId = PR.ItemId
+				LEFT OUTER JOIN CustomerProductCatalogPrices PR WITH (NOLOCK) ON INV.CustomerID = PR.CustomerID AND INV.ItemId = PR.ItemId
 				--INNER JOIN SCS_ProductPrices PP WITH (NOLOCK) ON INV.CustomerID = PP.CustomerID AND INV.ItemId = PP.ItemId
 			WHERE  INV.CustomerID  = @l_CustomerID AND INV.[Status] IN ('UPDATED','NEW') --AND INV.CustomerItemCode IN ('B0BMB7WJDV FLU4095A','B07JJYN64G BER219G-8','B082PJZ6R2 EVK256E-8','B01M0FB151 ASG741A-8','B0CGBQV2RG TSN102B-7SQ')
 		END
