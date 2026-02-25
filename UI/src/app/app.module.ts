@@ -81,7 +81,7 @@ import { AlertConfigurationComponent } from './alert-configuration/alert-configu
 import { AddAlertConfigurationDialogComponent } from './alert-configuration/add-alert-configuration-dialog/add-alert-configuration-dialog.component';
 
 @NgModule({
-  declarations: [AppComponent  ],
+  declarations: [AppComponent],
   imports: [
     BrowserModule,
     AppRoutingModule,

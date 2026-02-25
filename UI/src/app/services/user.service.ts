@@ -10,8 +10,8 @@ export class UserService {
   apiUrl = environment.apiUrl;
   constructor(private http: HttpClient) { }
 
-   updateUser(connectorModel: any): Observable<any> {
-     return this.http.post<any>(this.apiUrl + 'api/User/updateUser', connectorModel);
+  updateUser(connectorModel: any): Observable<any> {
+    return this.http.post<any>(this.apiUrl + 'api/User/updateUser', connectorModel);
   }
 
 
@@ -30,4 +30,5 @@ export class UserService {
   getERPCustomers(): Observable<any> {
     return this.http.get(`${this.apiUrl}api/ProductUploadPrices/getERPCustomers`);
   }
+
 }

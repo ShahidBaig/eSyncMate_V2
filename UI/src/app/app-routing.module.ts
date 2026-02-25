@@ -30,7 +30,7 @@ import { SipmentFromNdcComponent } from './sipment-from-ndc/sipment-from-ndc.com
 import { SalesInvoiceNdcComponent } from './sales-invoice-ndc/sales-invoice-ndc.component';
 import { PurchaseOrdersTrackingComponent } from './purchase-orders-tracking/purchase-orders-tracking.component';
 import { AlertConfigurationComponent } from './alert-configuration/alert-configuration.component';
-
+import { FlowsComponent } from './flows/flows.component';
 
 const routes: Routes = [
   {
@@ -82,14 +82,14 @@ const routes: Routes = [
     canActivate: [AuthorizationGuard],
   },
   {
-     path: 'users/list',
-     component: UsersListComponent,
-     canActivate: [AuthorizationGuard],
+    path: 'users/list',
+    component: UsersListComponent,
+    canActivate: [AuthorizationGuard],
   },
   {
-     path: 'users/profile',
-     component: ProfileComponent,
-     canActivate: [AuthenticationGuard],
+    path: 'users/profile',
+    component: ProfileComponent,
+    canActivate: [AuthenticationGuard],
   },
   {
     path: 'edi/partnergroups',
@@ -172,13 +172,18 @@ const routes: Routes = [
     canActivate: [AuthenticationGuard],
   },
   {
+    path: 'edi/flows',
+    component: FlowsComponent,
+    canActivate: [AuthorizationGuard],
+  },
+  {
     path: "**",
     component: LoginComponent,
   }
-];
 
+];
 @NgModule({
   imports: [RouterModule.forRoot(routes)],
   exports: [RouterModule],
 })
-export class AppRoutingModule {}
+export class AppRoutingModule { }

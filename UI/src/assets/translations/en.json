@@ -261,7 +261,6 @@
   "etaQty": "ETA Qty",
   "alertName": "Alert Name",
   "alertID": "Alert ID",
-
   "nav": {
     "carrierLoadTender": "Carrier Load Tender",
     "orders": "Orders",
@@ -284,7 +283,8 @@
     "sipmentFromNdc": "Shipment From NDC",
     "salesInvoiceNdc": "Sales Invoice NDC",
     "purchaseOrdersTracking": "Purchase Orders Tracking",
-    "alertConfiguration": "Alert Configuration"
+    "alertConfiguration": "Alert Configuration",
+    "flows": "Flows"
   },
   "orderReceived": "Order Received",
   "orderLogs": "Order [Customer PO] Logs",
@@ -350,6 +350,15 @@
   "country": "Country",
   "shipViaCode": "ShipViaCode",
   "shippingAddress": "Shipping Address",
-  "details": "Details"
-
+  "details": "Details",
+  "flowID": "Flow ID",
+  "flowGroup": "Flow Group",
+  "addFlow": "Add Flow",
+  "flowTitle": "Title",
+  "addNewFlow": "Add New Flow",
+  "editFlow": "Edit Flow",
+  "frequencyType": "Frequency Type",
+  "repeatCount": "Repeat Count",
+  "executionTime": "Execution Time",
+  "onDay": "On Day"
 }

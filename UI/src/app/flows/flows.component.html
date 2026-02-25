@@ -1,0 +1,93 @@
+<div class="mat-table-container">
+
+    <mat-card>
+        <mat-card-content>
+            <mat-form-field appearance="fill" color="accent">
+                <mat-label>{{ 'customerName' | translate }}</mat-label>
+                <mat-select [(ngModel)]="selectedCustomer">
+                    <mat-option [value]="'EMPTY'" selected>
+                        Select Customer
+                    </mat-option>
+                    <mat-option *ngFor="let customer of customerOptions" [value]="customer.erpCustomerID">
+                        {{ customer.name }}
+                    </mat-option>
+                </mat-select>
+            </mat-form-field>
+
+            &nbsp;
+            <button mat-flat-button color="accent" (click)="getFlows()">
+                <span *ngIf="!showSpinnerforSearch">{{ 'search' | translate }}</span>
+                <mat-spinner *ngIf="showSpinnerforSearch" diameter="20"></mat-spinner>
+            </button>
+
+            &nbsp;
+
+            <button mat-flat-button color="accent" (click)="openAddFlowDialog()" *ngIf="isAdminUser">
+                <span>{{ 'addFlow' | translate }}</span>
+            </button>
+        </mat-card-content>
+    </mat-card>
+
+
+    &nbsp;
+    <mat-card>
+        <mat-card-content>
+            <table mat-table [dataSource]="dataSource">
+
+                <ng-container matColumnDef="id">
+                    <th mat-header-cell *matHeaderCellDef>{{ 'flowID' | translate }}</th>
+                    <td mat-cell *matCellDef="let element"> {{element.id}} </td>
+                </ng-container>
+
+                <ng-container matColumnDef="CustomerID">
+                    <th mat-header-cell *matHeaderCellDef>{{ 'customerID' | translate }}</th>
+                    <td mat-cell *matCellDef="let element"> {{element.customerID}} </td>
+                </ng-container>
+
+                <ng-container matColumnDef="Title">
+                    <th mat-header-cell *matHeaderCellDef>{{ 'flowTitle' | translate }}</th>
+                    <td mat-cell *matCellDef="let element"> {{element.title}} </td>
+                </ng-container>
+
+                <ng-container matColumnDef="Description">
+                    <th mat-header-cell *matHeaderCellDef>{{ 'description' | translate }}</th>
+                    <td mat-cell *matCellDef="let element"> {{element.description}} </td>
+                </ng-container>
+
+                <ng-container matColumnDef="Status">
+                    <th mat-header-cell *matHeaderCellDef>{{ 'status' | translate }}</th>
+                    <td mat-cell *matCellDef="let element"> {{element.status}} </td>
+                </ng-container>
+
+                <ng-container matColumnDef="CreatedDate">
+                    <th mat-header-cell *matHeaderCellDef>{{ 'createdDate' | translate }}</th>
+                    <td mat-cell *matCellDef="let element"> {{element.createdDate | date:'MMM-dd-yyyy HH:mm:ss'}} </td>
+                </ng-container>
+
+                <ng-container *ngIf="isAdminUser">
+                    <ng-container matColumnDef="Edit">
+                        <th mat-header-cell *matHeaderCellDef> {{ 'actions' | translate }}</th>
+                        <td mat-cell *matCellDef="let element" style="display: flex">
+                            <button mat-icon-button aria-label="normal button" (click)="openEditDialog(element)"
+                                color="accent" matTooltip="Edit Flow" matTooltipPosition="above">
+                                <mat-icon>edit</mat-icon>
+                            </button>
+                        </td>
+                    </ng-container>
+                </ng-container>
+
+                <tr mat-header-row *matHeaderRowDef="columns"></tr>
+                <tr mat-row *matRowDef="let row; columns: columns"></tr>
+
+            </table>
+
+            <mat-paginator [pageSize]="10" [pageSizeOptions]="[5, 10, 25, 100]" showFirstLastButtons>
+            </mat-paginator>
+
+        </mat-card-content>
+    </mat-card>
+</div>
+
+<div *ngIf="showSpinner" class="spinner-overlay">
+    <mat-spinner></mat-spinner>
+</div>
