@@ -48,11 +48,112 @@
         public int ModifiedBy { get; set; }
 
     }
-
+    public class FlowSearchModel
+    {
+        public string SearchOption { get; set; }
+        public string SearchValue { get; set; }
+    }
     public class CustomerSearchModel
     {
         public string SearchOption { get; set; }
         public string SearchValue { get; set; }
+    }
+
+    
+
+    public class FlowsResponseModel
+    {
+        public int Code { get; set; }
+        public string Message { get; set; }
+        public string Description { get; set; }
+        public List<FlowResponseModel> Flows { get; set; } = new List<FlowResponseModel>();
+        public string SearchOption { get; set; }
+        public string SearchValue { get; set; }
+    }
+    
+    public class FlowDataModel
+    {
+        public long Id { get; set; }
+        public string CustomerID { get; set; }
+        public string Title { get; set; }
+        public string Description { get; set; }
+        public string Status { get; set; }
+        public DateTime? CreatedDate { get; set; }
+        public int? CreatedBy { get; set; }
+        public DateTime? ModifiedDate { get; set; }
+        public int? ModifiedBy { get; set; }
+    }
+
+    public class SaveFlowDataModel
+    {
+        /* public long Id { get; set; }*/
+        public string CustomerID { get; set; }
+        public string Title { get; set; }
+        public string Description { get; set; }
+        public string Status { get; set; }
+        public DateTime? CreatedDate { get; set; }
+        public int? CreatedBy { get; set; }
+       /* public List<FlowResponseModel> Flows { get; set; } = new List<FlowResponseModel>();*/
+        public List<SaveFlowDetailsDataModel> FlowDetails { get; set; } = new();
+    }
+
+    public class SaveFlowDetailsDataModel
+    {
+        public int? RouteId { get; set; }
+        public string? Status { get; set; }
+        public string? In_Out { get; set; }
+        public string? FrequencyType { get; set; }
+        public DateTime StartDate { get; set; }
+        public DateTime EndDate { get; set; }
+        public int RepeatCount { get; set; }
+        public string? WeekDays { get; set; }
+        public string? OnDay { get; set; }
+        public string? ExecutionTime { get; set; }
+    }
+    public class FlowResponseModel
+    {
+        public long Id { get; set; }
+        public string CustomerID { get; set; } = string.Empty;
+        public string Title { get; set; } = string.Empty;
+        public string? Description { get; set; }
+        public string? Status { get; set; }
+        public DateTime? CreatedDate { get; set; }
+        public int? CreatedBy { get; set; }
+        public DateTime? ModifiedDate { get; set; }
+        public int? ModifiedBy { get; set; }
+        public List<FlowsDetailsearchModel> FlowDetails { get; set; } = new();
+    }
+    public class EditFlowDataModel
+    {
+        public long Id { get; set; }
+        public string CustomerID { get; set; }
+        public string Title { get; set; }
+        public string Description { get; set; }
+        public string Status { get; set; }
+        public DateTime? ModifiedDate { get; set; }
+        public int? ModifiedBy { get; set; }
+        public List<SaveFlowDetailsDataModel> FlowDetails { get; set; } = new();
+    }
+
+    public class FlowsDetailsearchModel
+    {
+        public long Id { get; set; }
+        public long FlowId { get; set; }
+        public int? RouteId { get; set; }
+        public string? Status { get; set; }
+        public string? In_Out { get; set; }
+        public string? FrequencyType { get; set; }
+        public DateTime? StartDate { get; set; }
+        public DateTime? EndDate { get; set; }
+        public int? RepeatCount { get; set; }
+        public string? WeekDays { get; set; }
+        public string? OnDay { get; set; }
+        public string? ExecutionTime { get; set; }
+        public DateTime? CreatedDate { get; set; }
+        public int? CreatedBy { get; set; }
+        public DateTime? ModifiedDate { get; set; }
+        public int? ModifiedBy { get; set; }
+        public string? RouteName { get; set; }
     }
 
     public class CustomersListModel

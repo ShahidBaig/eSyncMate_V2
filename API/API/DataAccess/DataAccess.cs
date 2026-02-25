@@ -125,5 +125,49 @@ namespace API.DataAccess
             using var connection = new SqlConnection(DbConnection);
             connection.Execute("update Users set Active=0 where Id=@Id", new { Id = userId });
         }
+
+        public IList<Flow> GetFlows(string customerId)
+        {
+            using var connection = new SqlConnection(DbConnection);
+            var sql = "SELECT * FROM Flows WHERE CustomerID = @customerId";
+            return connection.Query<Flow>(sql, new { customerId }).ToList();
+        }
+
+        public Flow? GetFlowById(long id)
+        {
+            using var connection = new SqlConnection(DbConnection);
+            var sql = @"
+                SELECT f.*, fd.*, r.Name as RouteName
+                FROM Flows f
+                LEFT JOIN FlowDetails fd ON f.Id = fd.FlowId
+                LEFT JOIN Routes r ON fd.RouteId = r.Id
+                WHERE f.Id = @id";
+
+            var flowDictionary = new Dictionary<long, Flow>();
+
+            var result = connection.Query<Flow, FlowDetail, Flow>(
+                sql,
+                (flow, detail) =>
+                {
+                    if (!flowDictionary.TryGetValue(flow.Id, out var flowEntry))
+                    {
+                        flowEntry = flow;
+                        flowEntry.FlowDetails = new List<FlowDetail>();
+                        flowDictionary.Add(flowEntry.Id, flowEntry);
+                    }
+
+                    if (detail != null)
+                    {
+                        flowEntry.FlowDetails.Add(detail);
+                    }
+
+                    return flowEntry;
+                },
+                new { id },
+                splitOn: "Id"
+            ).FirstOrDefault();
+
+            return result;
+        }
     }
 }
