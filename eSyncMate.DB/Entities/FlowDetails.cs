@@ -83,6 +83,18 @@ namespace eSyncMate.DB.Entities
             }
         }
 
+        public void UseConnection(string p_ConnectionString, DBConnector p_Connection = null)
+        {
+            if (string.IsNullOrEmpty(p_ConnectionString))
+            {
+                Connection = p_Connection;
+            }
+            else
+            {
+                Connection = new DBConnector(p_ConnectionString);
+            }
+        }
+
         public bool GetList(string p_Criteria, string p_Fields, ref DataTable p_Data, string p_OrderBy = "")
         {
             string l_Query = string.Empty;

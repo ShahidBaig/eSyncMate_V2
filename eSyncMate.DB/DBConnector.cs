@@ -730,6 +730,48 @@ namespace eSyncMate.DB
             return l_Process;
         }
 
+        public bool CopyDataTableTrans(string p_TableName, DataTable p_Table)
+        {
+            bool l_Process = false;
+            try
+            {
+                if (Transaction is null)
+                {
+                    OpenConnection();
+                }
+
+                using (var bulkCopy = new SqlBulkCopy(Connection, SqlBulkCopyOptions.Default, Transaction))
+                {
+                    bulkCopy.DestinationTableName = p_TableName;
+                    foreach (DataColumn column in p_Table.Columns)
+                    {
+                        bulkCopy.ColumnMappings.Add(column.ColumnName, column.ColumnName);
+                    }
+                    bulkCopy.WriteToServer(p_Table);
+                }
+
+                if (Declarations.g_WriteQueries)
+                {
+                    QueryLogger.WriteToQueryLog("/********************************SQL Bulk Copy Transactional [" + p_TableName + "]********************************/");
+                }
+
+                l_Process = true;
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+            finally
+            {
+                if (Transaction is null)
+                {
+                    CloseConnection();
+                }
+            }
+
+            return l_Process;
+        }
+
         public bool BulkInsert(string p_CommendName, string p_ParamName, DataTable p_DataTable)
         {
             bool l_Process = false;

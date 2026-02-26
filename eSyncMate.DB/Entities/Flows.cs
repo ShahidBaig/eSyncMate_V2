@@ -198,7 +198,6 @@ namespace eSyncMate.DB.Entities
         {
             Result l_Result = Result.GetFailureResult();
             bool l_Trans = false;
-            bool l_Process = false;
             string l_Query = string.Empty;
 
             try
@@ -206,11 +205,10 @@ namespace eSyncMate.DB.Entities
                 l_Trans = this.Connection.BeginTransaction();
 
                 l_Query = this.PrepareInsertQuery(this, Flows.InsertQueryStart, Flows.EndingPropertyName, Flows.DBProperties, "Id");
-
-                l_Process = this.Connection.Execute(l_Query);
-
-                if (l_Process)
+                object l_Id = this.Connection.ExecuteScalar(l_Query + "; SELECT SCOPE_IDENTITY();");
+                if (l_Id != null && l_Id != DBNull.Value)
                 {
+                    this.Id = Convert.ToInt64(l_Id);
                     l_Result = Result.GetSuccessResult();
                     if (l_Trans)
                     {
