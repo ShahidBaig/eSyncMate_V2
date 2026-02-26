@@ -199,6 +199,7 @@
     <Build Include="Views\VW_GetEDIFilesCount.sql" />
     <Build Include="Tables\SCSInventoryFeedData_AlterTable.sql" />
     <Build Include="Procedures\Sp_GetItemTypeAttributeName.sql" />
+    <Build Include="Procedures\Sp_GetAutofillByRouteId.sql" />
     <Build Include="Views\VW_Inventory_ItemWise.sql" />
     <Build Include="Procedures\Sp_ProductPromotionFileHeaderColumn.sql" />
     <Build Include="Views\VW_OrderDetail.sql" />
