@@ -24,4 +24,11 @@ export class FlowsService {
     updateFlow(flowModel: any): Observable<any> {
         return this.http.put<any>(this.apiUrl + 'api/Flows/updateFlow', flowModel);
     }
+
+    getAutofillByRouteId(customerId: string, routeId: number): Observable<any> {
+        const params = new HttpParams()
+            .set('customerId', customerId)
+            .set('routeId', routeId.toString());
+        return this.http.get<any>(`${this.apiUrl}api/Flows/GetByRouteId`, { params });
+    }
 }
