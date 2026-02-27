@@ -59,7 +59,7 @@
         public string SearchValue { get; set; }
     }
 
-    
+
 
     public class FlowsResponseModel
     {
@@ -70,7 +70,7 @@
         public string SearchOption { get; set; }
         public string SearchValue { get; set; }
     }
-    
+
     public class FlowDataModel
     {
         public long Id { get; set; }

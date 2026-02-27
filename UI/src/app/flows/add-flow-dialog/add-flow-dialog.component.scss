@@ -114,3 +114,16 @@ input[matInput] {
     color: #999;
     font-style: italic;
 }
+
+.autofill-loading-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 4px 0 8px;
+}
+
+.autofill-loading-text {
+    font-size: 12px;
+    color: #1976d2;
+    font-style: italic;
+}

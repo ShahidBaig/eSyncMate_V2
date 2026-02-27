@@ -34,6 +34,14 @@ interface RouteOption {
     id: number;
     name: string;
     customerName?: string;
+    status?: string;
+    frequencyType?: string;
+    startDate?: string;
+    endDate?: string;
+    repeatCount?: number;
+    weekDays?: string;
+    onDay?: string;
+    executionTime?: string;
 }
 
 @Component({
@@ -78,6 +86,10 @@ export class AddFlowDialogComponent implements OnInit {
     detailOnDayLists: { name: string }[][] = [];
     detailExecutionTimeLists: { name: string }[][] = [];
 
+    // Chip lists for the input form (autofilled from API)
+    inputOnDayList: { name: string }[] = [];
+    inputExecutionTimeList: { name: string }[] = [];
+
     // Input form for adding new details
     detailInputForm: FormGroup;
 
@@ -108,7 +120,7 @@ export class AddFlowDialogComponent implements OnInit {
         this.detailInputForm = this.fb.group({
             routeId: [null],
             status: ['Active'],
-            in_Out: [''],
+            in_Out: [{ value: '', disabled: true }],
             frequencyType: [''],
             startDate: [''],
             endDate: [''],
@@ -127,9 +139,20 @@ export class AddFlowDialogComponent implements OnInit {
         this.getCustomersData();
         this.getRoutes();
 
-        // Listen for customer changes to re-filter routes
+        // Listen for customer changes to re-filter routes and reset route selection
         this.newFlowForm.get('customerID')?.valueChanges.subscribe(() => {
             this.filterRoutesByCustomer();
+            // Reset the route input form since the old route may not belong to the new customer
+            this.detailInputForm.patchValue({ routeId: null });
+            this.inputOnDayList = [];
+            this.inputExecutionTimeList = [];
+        });
+
+        // Listen for route selection to autofill default data
+        this.detailInputForm.get('routeId')?.valueChanges.subscribe((routeId) => {
+            if (routeId) {
+                this.onRouteSelected(routeId);
+            }
         });
     }
 
@@ -145,7 +168,20 @@ export class AddFlowDialogComponent implements OnInit {
     getRoutes() {
         this.routeApi.getRouteName().subscribe({
             next: (res: any) => {
-                this.allRouteOptions = res.routes ?? res;
+                const raw: any[] = res.routes ?? res;
+                this.allRouteOptions = raw.map((r: any) => ({
+                    id: r.id,
+                    name: r.name,
+                    customerName: r.customerName,
+                    status: r.status,
+                    frequencyType: r.frequencyType,
+                    startDate: r.startDate,
+                    endDate: r.endDate,
+                    repeatCount: r.repeatCount,
+                    weekDays: r.weekDays,
+                    onDay: r.onDay,
+                    executionTime: r.executionTime,
+                }));
                 this.filterRoutesByCustomer();
             },
         });
@@ -154,19 +190,89 @@ export class AddFlowDialogComponent implements OnInit {
     filterRoutesByCustomer() {
         const selectedCustomerID = this.newFlowForm.get('customerID')?.value;
         if (!selectedCustomerID || !this.customerOptions || !this.allRouteOptions) {
-            this.filteredRouteOptions = this.allRouteOptions || [];
+            this.filteredRouteOptions = [];
             return;
         }
 
         const selectedCustomer = this.customerOptions.find(c => c.erpCustomerID === selectedCustomerID);
         if (!selectedCustomer) {
-            this.filteredRouteOptions = this.allRouteOptions;
+            this.filteredRouteOptions = [];
             return;
         }
 
         this.filteredRouteOptions = this.allRouteOptions.filter(
             route => route.customerName && route.customerName.toLowerCase() === selectedCustomer.name.toLowerCase()
         );
+    }
+
+    onRouteSelected(routeId: number) {
+        // Step 1: Instantly fill from cached route data (real-time, no API call needed)
+        const route = this.allRouteOptions.find(r => r.id === routeId);
+        if (route) {
+            this.detailInputForm.patchValue({
+                frequencyType: route.frequencyType || '',
+                startDate: route.startDate ? new Date(route.startDate) : '',
+                endDate: route.endDate ? new Date(route.endDate) : '',
+                repeatCount: route.repeatCount ?? 0,
+            });
+
+            // Set weekday checkboxes from route
+            const weekDaysArr = route.weekDays ? route.weekDays.split(',').map((s: string) => s.trim()) : [];
+            const weekdayFormArray = this.detailInputForm.get('selectedWeekday') as FormArray;
+            this.daysOfWeek.forEach((day, i) => {
+                weekdayFormArray.at(i).setValue(weekDaysArr.includes(day));
+            });
+
+            // Set OnDay chip list from route
+            this.inputOnDayList = route.onDay && route.onDay !== ''
+                ? route.onDay.split(',').map((n: string) => ({ name: n.trim() }))
+                : [];
+
+            // Set ExecutionTime chip list from route
+            this.inputExecutionTimeList = route.executionTime && route.executionTime !== ''
+                ? route.executionTime.split(',').map((n: string) => ({ name: n.trim() }))
+                : [];
+        }
+
+        // Step 2: Also call API for any existing-flow overrides (non-blocking)
+        const customerId = this.newFlowForm.get('customerID')?.value || '';
+        if (customerId) {
+            this.flowsApi.getAutofillByRouteId(customerId, routeId).subscribe({
+                next: (res: any) => {
+                    if (res.data) {
+                        const d = res.data;
+                        // Only override fields where the API returns actual non-empty values
+                        const patch: any = {};
+                        if (d.frequencyType) patch.frequencyType = d.frequencyType;
+                        if (d.startDate) patch.startDate = new Date(d.startDate);
+                        if (d.endDate) patch.endDate = new Date(d.endDate);
+                        if (d.repeatCount) patch.repeatCount = parseInt(d.repeatCount, 10);
+                        if (Object.keys(patch).length > 0) {
+                            this.detailInputForm.patchValue(patch);
+                        }
+
+                        // Override weekday checkboxes if API provides them
+                        if (d.weekDays) {
+                            const weekDaysArr = d.weekDays.split(',').map((s: string) => s.trim());
+                            const weekdayFormArray = this.detailInputForm.get('selectedWeekday') as FormArray;
+                            this.daysOfWeek.forEach((day, i) => {
+                                weekdayFormArray.at(i).setValue(weekDaysArr.includes(day));
+                            });
+                        }
+
+                        // Override OnDay chip list if API provides it
+                        if (d.onDay && d.onDay !== '') {
+                            this.inputOnDayList = d.onDay.split(',').map((n: string) => ({ name: n.trim() }));
+                        }
+
+                        // Override ExecTime chip list if API provides it
+                        if (d.executionTime && d.executionTime !== '') {
+                            this.inputExecutionTimeList = d.executionTime.split(',').map((n: string) => ({ name: n.trim() }));
+                        }
+                    }
+                }
+            });
+        }
     }
 
     addDetailFromForm() {
@@ -202,10 +308,13 @@ export class AddFlowDialogComponent implements OnInit {
             executionTime: [''],
         });
         this.flowDetails.push(group);
-        this.detailOnDayLists.push([]);
-        this.detailExecutionTimeLists.push([]);
+        // Transfer autofilled chip lists to the detail row
+        this.detailOnDayLists.push([...this.inputOnDayList]);
+        this.detailExecutionTimeLists.push([...this.inputExecutionTimeList]);
 
-        // Reset the input form
+        // Reset the input form and chip lists
+        this.inputOnDayList = [];
+        this.inputExecutionTimeList = [];
         this.detailInputForm.reset({
             routeId: null,
             status: 'Active',
