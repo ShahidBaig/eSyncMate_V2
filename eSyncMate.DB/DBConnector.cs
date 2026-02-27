@@ -456,6 +456,7 @@ namespace eSyncMate.DB
                 Command.CommandText = l_Query;
                 Command.CommandType = CommandType.Text;
                 Command.Connection = Connection;
+                Command.Transaction = Transaction;
                 Command.CommandTimeout = CommandTimeout;
                 Command.Parameters.Clear();
                 if (!Information.IsNothing(p_SQLParams))
@@ -517,6 +518,7 @@ namespace eSyncMate.DB
                 Command.CommandText = l_Query;
                 Command.CommandType = CommandType.Text;
                 Command.Connection = Connection;
+                Command.Transaction = Transaction;
                 Command.CommandTimeout = CommandTimeout;
                 if (p_Timeout > 0)
                 {
@@ -568,6 +570,7 @@ namespace eSyncMate.DB
                 Command.CommandText = Query;
                 Command.CommandType = CommandType.StoredProcedure;
                 Command.Connection = Connection;
+                Command.Transaction = Transaction;
                 if (Declarations.g_WriteQueries)
                 {
                     QueryLogger.WriteToQueryLog(Query);

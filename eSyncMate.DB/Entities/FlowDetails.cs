@@ -327,6 +327,58 @@ namespace eSyncMate.DB.Entities
             return l_Result;
         }
 
+        public Result UpdateWithRoute(int userId, string oldJobId, string newJobId)
+        {
+            Result l_Result = this.Modify();
+
+            if (l_Result.IsSuccess && this.RouteId != null)
+            {
+                string l_SPQuery = BuildRouteUpdateSPQuery(this.FlowId, this.Id, this.RouteId.Value, userId, oldJobId, newJobId);
+                if (!Connection.Execute(l_SPQuery))
+                {
+                    l_Result = Result.GetFailureResult();
+                    l_Result.Description = "Failed to update Route and Log History via SP.";
+                }
+            }
+            return l_Result;
+        }
+
+        public Result SaveWithRoute(int userId, string oldJobId, string newJobId)
+        {
+            Result l_Result = this.SaveNew();
+
+            if (l_Result.IsSuccess && this.RouteId != null)
+            {
+                string l_SPQuery = BuildRouteUpdateSPQuery(this.FlowId, this.Id, this.RouteId.Value, userId, oldJobId, newJobId);
+                if (!Connection.Execute(l_SPQuery))
+                {
+                    l_Result = Result.GetFailureResult();
+                    l_Result.Description = "Failed to update Route and Log History via SP.";
+                }
+            }
+            return l_Result;
+        }
+
+        private string BuildRouteUpdateSPQuery(long flowId, long detailId, int routeId, int userId, string oldJobId, string newJobId)
+        {
+            string l_SPQuery = "EXEC Sp_LogAndUpdateRoute ";
+            l_SPQuery += PublicFunctions.FieldToParam(flowId, Declarations.FieldTypes.Number) + ", ";
+            l_SPQuery += PublicFunctions.FieldToParam(detailId, Declarations.FieldTypes.Number) + ", ";
+            l_SPQuery += PublicFunctions.FieldToParam(routeId, Declarations.FieldTypes.Number) + ", ";
+            l_SPQuery += PublicFunctions.FieldToParam(userId, Declarations.FieldTypes.Number) + ", ";
+            l_SPQuery += PublicFunctions.FieldToParam(this.Status, Declarations.FieldTypes.String) + ", ";
+            l_SPQuery += PublicFunctions.FieldToParam(oldJobId, Declarations.FieldTypes.String) + ", ";
+            l_SPQuery += PublicFunctions.FieldToParam(newJobId, Declarations.FieldTypes.String) + ", ";
+            l_SPQuery += PublicFunctions.FieldToParam(this.FrequencyType, Declarations.FieldTypes.String) + ", ";
+            l_SPQuery += PublicFunctions.FieldToParam(this.StartDate, Declarations.FieldTypes.Date) + ", ";
+            l_SPQuery += PublicFunctions.FieldToParam(this.EndDate, Declarations.FieldTypes.Date) + ", ";
+            l_SPQuery += PublicFunctions.FieldToParam(this.RepeatCount, Declarations.FieldTypes.Number) + ", ";
+            l_SPQuery += PublicFunctions.FieldToParam(this.WeekDays, Declarations.FieldTypes.String) + ", ";
+            l_SPQuery += PublicFunctions.FieldToParam(this.OnDay, Declarations.FieldTypes.String) + ", ";
+            l_SPQuery += PublicFunctions.FieldToParam(this.ExecutionTime, Declarations.FieldTypes.String);
+            return l_SPQuery;
+        }
+
         #region IDisposable Support
         private bool disposedValue;
         protected virtual void Dispose(bool disposing)
