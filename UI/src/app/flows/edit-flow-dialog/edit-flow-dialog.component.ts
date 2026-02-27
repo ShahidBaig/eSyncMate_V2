@@ -90,6 +90,9 @@ export class EditFlowDialogComponent implements OnInit {
     inputOnDayList: { name: string }[] = [];
     inputExecutionTimeList: { name: string }[] = [];
 
+    // Track whether we are editing an existing detail row
+    editingDetailIndex: number | null = null;
+
     // Input form for adding new details
     detailInputForm: FormGroup;
 
@@ -154,7 +157,18 @@ export class EditFlowDialogComponent implements OnInit {
         // Listen for route selection to autofill default data
         this.detailInputForm.get('routeId')?.valueChanges.subscribe((routeId) => {
             if (routeId) {
-                this.onRouteSelected(routeId);
+                // Check if this route already exists in the details table
+                const existingIndex = this.flowDetails.controls.findIndex(
+                    ctrl => (ctrl as FormGroup).get('routeId')?.value === routeId
+                );
+                if (existingIndex >= 0) {
+                    // Load existing detail into the form for editing
+                    this.loadDetailIntoForm(existingIndex);
+                } else {
+                    // New route — autofill from route data / API
+                    this.editingDetailIndex = null;
+                    this.onRouteSelected(routeId);
+                }
             }
         });
     }
@@ -321,7 +335,35 @@ export class EditFlowDialogComponent implements OnInit {
             return;
         }
 
-        // Check for duplicate route
+        // UPDATE MODE: If editing an existing detail, update it in-place
+        if (this.editingDetailIndex !== null) {
+            const existingGroup = this.flowDetails.at(this.editingDetailIndex) as FormGroup;
+            existingGroup.patchValue({
+                status: formVal.status || 'Active',
+                in_Out: formVal.in_Out || '',
+                frequencyType: formVal.frequencyType || '',
+                startDate: formVal.startDate || '',
+                endDate: formVal.endDate || '',
+                repeatCount: formVal.repeatCount || 0,
+            });
+
+            // Update weekday checkboxes
+            const weekDaysArr = formVal.selectedWeekday || [];
+            const existingWeekdayArray = existingGroup.get('selectedWeekday') as FormArray;
+            this.daysOfWeek.forEach((_: string, i: number) => {
+                existingWeekdayArray.at(i).setValue(weekDaysArr[i] || false);
+            });
+
+            // Update chip lists for the detail row
+            this.detailOnDayLists[this.editingDetailIndex] = [...this.inputOnDayList];
+            this.detailExecutionTimeLists[this.editingDetailIndex] = [...this.inputExecutionTimeList];
+
+            this.toast.success({ detail: "SUCCESS", summary: "Detail updated!", duration: 3000, position: 'topRight' });
+            this.resetInputForm();
+            return;
+        }
+
+        // ADD MODE: Check for duplicate route
         const isDuplicate = this.flowDetails.controls.some(
             ctrl => (ctrl as FormGroup).get('routeId')?.value === formVal.routeId
         );
@@ -350,7 +392,45 @@ export class EditFlowDialogComponent implements OnInit {
         this.detailOnDayLists.push([...this.inputOnDayList]);
         this.detailExecutionTimeLists.push([...this.inputExecutionTimeList]);
 
-        // Reset the input form and chip lists
+        this.resetInputForm();
+    }
+
+    loadDetailIntoForm(index: number) {
+        this.editingDetailIndex = index;
+        const detail = this.flowDetails.at(index) as FormGroup;
+
+        this.detailInputForm.patchValue({
+            routeId: detail.get('routeId')?.value,
+            status: detail.get('status')?.value,
+            in_Out: detail.get('in_Out')?.value,
+            frequencyType: detail.get('frequencyType')?.value,
+            startDate: detail.get('startDate')?.value,
+            endDate: detail.get('endDate')?.value,
+            repeatCount: detail.get('repeatCount')?.value,
+        }, { emitEvent: false });
+
+        // Load weekday checkboxes
+        const detailWeekdays = detail.get('selectedWeekday') as FormArray;
+        const inputWeekdays = this.detailInputForm.get('selectedWeekday') as FormArray;
+        this.daysOfWeek.forEach((_, i) => {
+            inputWeekdays.at(i).setValue(detailWeekdays.at(i).value);
+        });
+
+        // Load chip lists
+        this.inputOnDayList = [...this.detailOnDayLists[index]];
+        this.inputExecutionTimeList = [...this.detailExecutionTimeLists[index]];
+    }
+
+    editDetail(index: number) {
+        this.loadDetailIntoForm(index);
+    }
+
+    cancelEdit() {
+        this.resetInputForm();
+    }
+
+    private resetInputForm() {
+        this.editingDetailIndex = null;
         this.inputOnDayList = [];
         this.inputExecutionTimeList = [];
         this.detailInputForm.reset({

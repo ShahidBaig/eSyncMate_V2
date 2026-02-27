@@ -105,7 +105,12 @@
                 <!-- Add Detail Button -->
                 <div class="add-detail-btn-row">
                     <button mat-stroked-button color="accent" type="button" (click)="addDetailFromForm()">
-                        <mat-icon>add</mat-icon> Add Detail
+                        <mat-icon>{{ editingDetailIndex !== null ? 'save' : 'add' }}</mat-icon>
+                        {{ editingDetailIndex !== null ? 'Update Detail' : 'Add Detail' }}
+                    </button>
+                    <button *ngIf="editingDetailIndex !== null" mat-stroked-button type="button" (click)="cancelEdit()"
+                        style="margin-left: 8px;">
+                        <mat-icon>close</mat-icon> Cancel Edit
                     </button>
                 </div>
 
@@ -152,6 +157,10 @@
                         <ng-container matColumnDef="actions">
                             <th mat-header-cell *matHeaderCellDef>{{ 'actions' | translate }}</th>
                             <td mat-cell *matCellDef="let detail; let i = index">
+                                <button mat-icon-button color="primary" type="button" (click)="editDetail(i)"
+                                    matTooltip="Edit">
+                                    <mat-icon>edit</mat-icon>
+                                </button>
                                 <button mat-icon-button color="warn" type="button" (click)="removeFlowDetail(i)"
                                     matTooltip="Remove">
                                     <mat-icon>delete</mat-icon>
