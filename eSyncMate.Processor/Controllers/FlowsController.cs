@@ -17,9 +17,11 @@ namespace eSyncMate.Processor.Controllers
     public class FlowsController : ControllerBase
     {
         private readonly ILogger<FlowsController> _logger;
-        public FlowsController(ILogger<FlowsController> logger)
+        private readonly IConfiguration _config;
+        public FlowsController(ILogger<FlowsController> logger, IConfiguration config)
         {
             _logger = logger;
+            _config = config;
         }
 
         [HttpGet("GetByRouteId")]
@@ -313,81 +315,37 @@ namespace eSyncMate.Processor.Controllers
                 l_Flow.UseConnection(string.Empty, l_Connection);
                 l_Trans = l_Connection.BeginTransaction();
 
-                if (flowModel.Id <= 0)
-                {
-                    if (!string.IsNullOrEmpty(flowModel.Title))
-                    {
-                        DataTable l_FlowDT = new();
-                        l_Flow.GetList($"Title = '{flowModel.Title.Replace("'", "''")}'", "Id", ref l_FlowDT);
-                        if (l_FlowDT.Rows.Count > 0)
-                        {
-                            flowModel.Id = Convert.ToInt64(l_FlowDT.Rows[0]["Id"]);
-                            l_Flow.Id = flowModel.Id;
-                        }
-                    }
-                }
-                if (flowModel.Id <= 0)
+                int l_UserIdVal = FlowsManager.GetUserId(User.Identity as ClaimsIdentity);
+
+                if (!l_Flow.ResolveIdByTitle(flowModel.Title))
                 {
                     l_Result = Result.GetFailureResult();
-                    l_Result.Description = "A valid Flow ID or Title is required for updating.";
+                    l_Result.Description = $"Flow with Title '{flowModel.Title}' not found. A valid Flow ID or Title is required for updating.";
                 }
                 else
                 {
+                    flowModel.Id = l_Flow.Id;
                     PublicFunctions.CopyTo(flowModel, l_Flow);
                     l_Flow.ModifiedBy = flowModel.ModifiedBy ?? 0;
                     l_Flow.ModifiedDate = DateTime.Now;
                     l_Result = l_Flow.Modify();
                 }
 
-                if (l_Result.IsSuccess)
+                if (l_Result.IsSuccess && flowModel.FlowDetails != null)
                 {
-                    if (flowModel.FlowDetails != null)
+                    eSyncMate.DB.Entities.FlowDetails l_DetailEntity = new();
+                    l_DetailEntity.UseConnection(string.Empty, l_Connection);
+                    DataTable l_ExistingDT = new();
+                    l_DetailEntity.GetList($"FlowId = {flowModel.Id}", "*", ref l_ExistingDT);
+
+                    var l_ExistingRows = l_ExistingDT.AsEnumerable()
+                        .Where(r => r["RouteId"] != DBNull.Value)
+                        .ToDictionary(r => Convert.ToInt32(r["RouteId"]), r => r);
+
+                    foreach (var detailModel in flowModel.FlowDetails)
                     {
-                        eSyncMate.DB.Entities.FlowDetails l_DetailEntity = new();
-                        l_DetailEntity.UseConnection(string.Empty, l_Connection);
-                        DataTable l_ExistingDT = new();
-                        l_DetailEntity.GetList($"FlowId = {flowModel.Id}", "*", ref l_ExistingDT);
-
-                        var l_ExistingRows = l_ExistingDT.AsEnumerable()
-                            .Where(r => r["RouteId"] != DBNull.Value)
-                            .ToDictionary(r => Convert.ToInt32(r["RouteId"]), r => r);
-
-                        var l_InputRouteIds = new HashSet<int>();
-
-                        foreach (var detailModel in flowModel.FlowDetails)
-                        {
-                            if (detailModel.RouteId == null) continue;
-                            int l_RouteId = detailModel.RouteId.Value;
-                            l_InputRouteIds.Add(l_RouteId);
-                            eSyncMate.DB.Entities.FlowDetails l_Row = new();
-                            l_Row.UseConnection(string.Empty, l_Connection);
-
-                            if (l_ExistingRows.ContainsKey(l_RouteId))
-                            {
-                                DataRow l_ExistingRow = l_ExistingRows[l_RouteId];
-                                l_Row.Id = Convert.ToInt64(l_ExistingRow["Id"]);
-                                PublicFunctions.CopyTo(detailModel, l_Row);
-                                l_Row.FlowId = flowModel.Id;
-                                l_Row.ModifiedDate = DateTime.Now;
-                                l_Row.ModifiedBy = flowModel.ModifiedBy ?? 0;
-                                l_Row.CreatedDate = Convert.ToDateTime(l_ExistingRow["CreatedDate"]);
-                                l_Row.CreatedBy = Convert.ToInt32(l_ExistingRow["CreatedBy"]);
-
-                                l_Result = l_Row.Modify();
-                            }
-                            else
-                            {
-                                PublicFunctions.CopyTo(detailModel, l_Row);
-                                l_Row.FlowId = flowModel.Id;
-                                l_Row.CreatedDate = DateTime.Now;
-                                l_Row.CreatedBy = flowModel.ModifiedBy ?? 0;
-                                l_Row.ModifiedDate = DateTime.Now;
-                                l_Row.ModifiedBy = flowModel.ModifiedBy ?? 0;
-                                l_Result = l_Row.SaveNew();
-                            }
-
-                            if (!l_Result.IsSuccess) break;
-                        }
+                        l_Result = FlowsManager.ProcessUpdateDetail(flowModel, detailModel, l_ExistingRows, l_Connection, l_UserIdVal, this._config);
+                        if (!l_Result.IsSuccess) break;
                     }
                 }
 

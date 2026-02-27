@@ -318,6 +318,20 @@ namespace eSyncMate.DB.Entities
             return l_Result;
         }
 
+        public bool ResolveIdByTitle(string title)
+        {
+            if (this.Id <= 0 && !string.IsNullOrEmpty(title))
+            {
+                DataTable l_FlowDT = new();
+                this.GetList($"Title = '{title.Replace("'", "''")}'", "Id", ref l_FlowDT);
+                if (l_FlowDT.Rows.Count > 0)
+                {
+                    this.Id = Convert.ToInt64(l_FlowDT.Rows[0]["Id"]);
+                }
+            }
+            return this.Id > 0;
+        }
+
         #region IDisposable Support
         private bool disposedValue;
         protected virtual void Dispose(bool disposing)

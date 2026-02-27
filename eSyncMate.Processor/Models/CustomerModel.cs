@@ -143,8 +143,8 @@
         public string? Status { get; set; }
         public string? In_Out { get; set; }
         public string? FrequencyType { get; set; }
-        public DateTime? StartDate { get; set; }
-        public DateTime? EndDate { get; set; }
+        public DateTime StartDate { get; set; }
+        public DateTime EndDate { get; set; }
         public int? RepeatCount { get; set; }
         public string? WeekDays { get; set; }
         public string? OnDay { get; set; }
