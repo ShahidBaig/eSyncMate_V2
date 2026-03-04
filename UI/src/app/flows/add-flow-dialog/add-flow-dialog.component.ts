@@ -4,25 +4,24 @@ import { MatTable, MatTableModule } from '@angular/material/table';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatCheckboxModule } from '@angular/material/checkbox';
-import { FormGroup, FormControl, FormBuilder, ReactiveFormsModule, FormsModule, FormArray } from '@angular/forms';
+import { FormGroup, FormControl, FormBuilder, ReactiveFormsModule, FormsModule, FormArray, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { NgToastService } from 'ng-angular-popup';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatIconModule } from '@angular/material/icon';
-import { MatDialogRef } from '@angular/material/dialog';
+import { MatDialogRef, MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTabsModule } from '@angular/material/tabs';
-import { MatChipInputEvent, MatChipsModule } from '@angular/material/chips';
-import { COMMA, ENTER } from '@angular/cdk/keycodes';
-import { LiveAnnouncer } from '@angular/cdk/a11y';
+import { MatChipsModule } from '@angular/material/chips';
 import { LanguageService } from '../../services/language.service';
 import { TranslateModule } from '@ngx-translate/core';
 import { FlowsService } from '../../services/flows.service';
 import { RoutesService } from '../../services/routes.service';
 import { CustomerProductCatalogService } from '../../services/customerProductCatalogDialog.service';
+import { AddFlowDetailDialogComponent } from '../add-flow-detail-dialog/add-flow-detail-dialog.component';
 
 interface Customers {
     erpCustomerID: string;
@@ -69,7 +68,8 @@ interface RouteOption {
         MatTabsModule,
         MatCheckboxModule,
         MatChipsModule,
-        TranslateModule
+        TranslateModule,
+        MatDialogModule
     ],
 })
 export class AddFlowDialogComponent implements OnInit {
@@ -79,19 +79,9 @@ export class AddFlowDialogComponent implements OnInit {
     filteredRouteOptions: RouteOption[] = [];
     frequencyTypeOptions = ['Minutely', 'Hourly', 'Daily', 'Weekly', 'Monthly'];
     daysOfWeek: string[] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-    addOnBlur = true;
-    readonly separatorKeysCodes = [ENTER, COMMA] as const;
-    announcer = inject(LiveAnnouncer);
 
     detailOnDayLists: { name: string }[][] = [];
     detailExecutionTimeLists: { name: string }[][] = [];
-
-    // Chip lists for the input form (autofilled from API)
-    inputOnDayList: { name: string }[] = [];
-    inputExecutionTimeList: { name: string }[] = [];
-
-    // Input form for adding new details
-    detailInputForm: FormGroup;
 
     // Table columns for the details table
     detailTableColumns: string[] = ['index', 'routeName', 'status', 'inOut', 'startDate', 'endDate', 'actions'];
@@ -106,28 +96,15 @@ export class AddFlowDialogComponent implements OnInit {
         private ERPApi: CustomerProductCatalogService,
         private toast: NgToastService,
         private datePipe: DatePipe,
-        public languageService: LanguageService
+        public languageService: LanguageService,
+        private dialog: MatDialog
     ) {
         this.newFlowForm = this.fb.group({
-            customerID: [''],
-            title: [''],
+            customerID: ['', Validators.required],
+            title: ['', Validators.required],
             description: [''],
             status: ['Active'],
             flowDetails: this.fb.array([])
-        });
-
-        // Initialize the standalone input form for adding new details
-        this.detailInputForm = this.fb.group({
-            routeId: [null],
-            status: ['Active'],
-            in_Out: [{ value: '', disabled: true }],
-            frequencyType: [''],
-            startDate: [''],
-            endDate: [''],
-            repeatCount: [0],
-            selectedWeekday: this.fb.array(this.daysOfWeek.map(() => this.fb.control(false))),
-            onDay: [''],
-            executionTime: [''],
         });
     }
 
@@ -139,20 +116,9 @@ export class AddFlowDialogComponent implements OnInit {
         this.getCustomersData();
         this.getRoutes();
 
-        // Listen for customer changes to re-filter routes and reset route selection
+        // Listen for customer changes to re-filter routes
         this.newFlowForm.get('customerID')?.valueChanges.subscribe(() => {
             this.filterRoutesByCustomer();
-            // Reset the route input form since the old route may not belong to the new customer
-            this.detailInputForm.patchValue({ routeId: null });
-            this.inputOnDayList = [];
-            this.inputExecutionTimeList = [];
-        });
-
-        // Listen for route selection to autofill default data
-        this.detailInputForm.get('routeId')?.valueChanges.subscribe((routeId) => {
-            if (routeId) {
-                this.onRouteSelected(routeId);
-            }
         });
     }
 
@@ -205,132 +171,57 @@ export class AddFlowDialogComponent implements OnInit {
         );
     }
 
-    onRouteSelected(routeId: number) {
-        // Step 1: Instantly fill from cached route data (real-time, no API call needed)
-        const route = this.allRouteOptions.find(r => r.id === routeId);
-        if (route) {
-            this.detailInputForm.patchValue({
-                frequencyType: route.frequencyType || '',
-                startDate: route.startDate ? new Date(route.startDate) : '',
-                endDate: route.endDate ? new Date(route.endDate) : '',
-                repeatCount: route.repeatCount ?? 0,
-            });
-
-            // Set weekday checkboxes from route
-            const weekDaysArr = route.weekDays ? route.weekDays.split(',').map((s: string) => s.trim()) : [];
-            const weekdayFormArray = this.detailInputForm.get('selectedWeekday') as FormArray;
-            this.daysOfWeek.forEach((day, i) => {
-                weekdayFormArray.at(i).setValue(weekDaysArr.includes(day));
-            });
-
-            // Set OnDay chip list from route
-            this.inputOnDayList = route.onDay && route.onDay !== ''
-                ? route.onDay.split(',').map((n: string) => ({ name: n.trim() }))
-                : [];
-
-            // Set ExecutionTime chip list from route
-            this.inputExecutionTimeList = route.executionTime && route.executionTime !== ''
-                ? route.executionTime.split(',').map((n: string) => ({ name: n.trim() }))
-                : [];
+    addDetail() {
+        const customerID = this.newFlowForm.get('customerID')?.value;
+        if (!customerID) {
+            this.toast.warning({ detail: "WARNING", summary: "Please explicitly select a Partner ID first!", duration: 3000, position: 'topRight' });
+            return;
         }
 
-        // Step 2: Also call API for any existing-flow overrides (non-blocking)
-        const customerId = this.newFlowForm.get('customerID')?.value || '';
-        if (customerId) {
-            this.flowsApi.getAutofillByRouteId(customerId, routeId).subscribe({
-                next: (res: any) => {
-                    if (res.data) {
-                        const d = res.data;
-                        // Only override fields where the API returns actual non-empty values
-                        const patch: any = {};
-                        if (d.frequencyType) patch.frequencyType = d.frequencyType;
-                        if (d.startDate) patch.startDate = new Date(d.startDate);
-                        if (d.endDate) patch.endDate = new Date(d.endDate);
-                        if (d.repeatCount) patch.repeatCount = parseInt(d.repeatCount, 10);
-                        if (Object.keys(patch).length > 0) {
-                            this.detailInputForm.patchValue(patch);
-                        }
+        const dialogRef = this.dialog.open(AddFlowDetailDialogComponent, {
+            width: '800px',
+            disableClose: true,
+            data: {
+                isEdit: false,
+                customerID: customerID,
+                frequencyTypeOptions: this.frequencyTypeOptions,
+                filteredRouteOptions: this.filteredRouteOptions,
+                allRouteOptions: this.allRouteOptions,
+            }
+        });
 
-                        // Override weekday checkboxes if API provides them
-                        if (d.weekDays) {
-                            const weekDaysArr = d.weekDays.split(',').map((s: string) => s.trim());
-                            const weekdayFormArray = this.detailInputForm.get('selectedWeekday') as FormArray;
-                            this.daysOfWeek.forEach((day, i) => {
-                                weekdayFormArray.at(i).setValue(weekDaysArr.includes(day));
-                            });
-                        }
-
-                        // Override OnDay chip list if API provides it
-                        if (d.onDay && d.onDay !== '') {
-                            this.inputOnDayList = d.onDay.split(',').map((n: string) => ({ name: n.trim() }));
-                        }
-
-                        // Override ExecTime chip list if API provides it
-                        if (d.executionTime && d.executionTime !== '') {
-                            this.inputExecutionTimeList = d.executionTime.split(',').map((n: string) => ({ name: n.trim() }));
-                        }
-                    }
+        dialogRef.afterClosed().subscribe((result) => {
+            if (result) {
+                // Check duplicate
+                const isDuplicate = this.flowDetails.controls.some(
+                    ctrl => (ctrl as FormGroup).get('routeId')?.value === result.routeId
+                );
+                if (isDuplicate) {
+                    this.toast.warning({ detail: "WARNING", summary: "This route is already added!", duration: 3000, position: 'topRight' });
+                    return;
                 }
-            });
-        }
-    }
 
-    addDetailFromForm() {
-        const formVal = this.detailInputForm.value;
+                const weekdayControls = this.daysOfWeek.map((_: string, i: number) => this.fb.control(result.weekDays[i] || false));
 
-        if (!formVal.routeId) {
-            this.toast.warning({ detail: "WARNING", summary: "Please select a Route Name", duration: 3000, position: 'topRight' });
-            return;
-        }
+                const group = this.fb.group({
+                    routeId: [result.routeId],
+                    status: [result.status],
+                    in_Out: [result.in_Out || ''],
+                    frequencyType: [result.frequencyType || ''],
+                    startDate: [result.startDate || ''],
+                    endDate: [result.endDate || ''],
+                    repeatCount: [result.repeatCount || 0],
+                    selectedWeekday: this.fb.array(weekdayControls),
+                });
+                this.flowDetails.push(group);
+                this.detailOnDayLists.push([...result.onDayList]);
+                this.detailExecutionTimeLists.push([...result.executionTimeList]);
 
-        // Check for duplicate route
-        const isDuplicate = this.flowDetails.controls.some(
-            ctrl => (ctrl as FormGroup).get('routeId')?.value === formVal.routeId
-        );
-        if (isDuplicate) {
-            this.toast.warning({ detail: "WARNING", summary: "This route is already added!", duration: 3000, position: 'topRight' });
-            return;
-        }
-
-        const weekDaysArr = formVal.selectedWeekday || [];
-        const weekdayControls = this.daysOfWeek.map((_: string, i: number) => this.fb.control(weekDaysArr[i] || false));
-
-        const group = this.fb.group({
-            routeId: [formVal.routeId],
-            status: [formVal.status || 'Active'],
-            in_Out: [formVal.in_Out || ''],
-            frequencyType: [formVal.frequencyType || ''],
-            startDate: [formVal.startDate || ''],
-            endDate: [formVal.endDate || ''],
-            repeatCount: [formVal.repeatCount || 0],
-            selectedWeekday: this.fb.array(weekdayControls),
-            onDay: [''],
-            executionTime: [''],
+                if (this.detailsTable) {
+                    this.detailsTable.renderRows();
+                }
+            }
         });
-        this.flowDetails.push(group);
-        // Transfer autofilled chip lists to the detail row
-        this.detailOnDayLists.push([...this.inputOnDayList]);
-        this.detailExecutionTimeLists.push([...this.inputExecutionTimeList]);
-
-        // Reset the input form and chip lists
-        this.inputOnDayList = [];
-        this.inputExecutionTimeList = [];
-        this.detailInputForm.reset({
-            routeId: null,
-            status: 'Active',
-            in_Out: '',
-            frequencyType: '',
-            startDate: '',
-            endDate: '',
-            repeatCount: 0,
-        });
-        const weekdayArray = this.detailInputForm.get('selectedWeekday') as FormArray;
-        weekdayArray.controls.forEach(ctrl => ctrl.setValue(false));
-
-        // Re-render the table
-        if (this.detailsTable) {
-            this.detailsTable.renderRows();
-        }
     }
 
     removeFlowDetail(index: number) {
@@ -348,73 +239,10 @@ export class AddFlowDialogComponent implements OnInit {
         return arr ? arr.at(wi) as FormControl : null;
     }
 
-    getInputWeekdayCtrl(wi: number): FormControl | null {
-        const arr = this.detailInputForm.get('selectedWeekday') as FormArray;
-        return arr ? arr.at(wi) as FormControl : null;
-    }
-
-    showDaysOfWeek(i: number): boolean {
-        return (this.flowDetails.at(i) as FormGroup).get('frequencyType')?.value === 'Weekly';
-    }
-
-    showExecutionTime(i: number): boolean {
-        const v = (this.flowDetails.at(i) as FormGroup).get('frequencyType')?.value;
-        return v === 'Daily' || v === 'Weekly';
-    }
-
-    showRepeatCount(i: number): boolean {
-        const v = (this.flowDetails.at(i) as FormGroup).get('frequencyType')?.value;
-        return v === 'Minutely' || v === 'Hourly';
-    }
-
-    showOnDayInput(i: number): boolean {
-        return (this.flowDetails.at(i) as FormGroup).get('frequencyType')?.value === 'Monthly';
-    }
-
-    showInputDaysOfWeek(): boolean {
-        return this.detailInputForm.get('frequencyType')?.value === 'Weekly';
-    }
-
-    showInputExecutionTime(): boolean {
-        const v = this.detailInputForm.get('frequencyType')?.value;
-        return v === 'Daily' || v === 'Weekly';
-    }
-
-    showInputRepeatCount(): boolean {
-        const v = this.detailInputForm.get('frequencyType')?.value;
-        return v === 'Minutely' || v === 'Hourly';
-    }
-
-    showInputOnDayInput(): boolean {
-        return this.detailInputForm.get('frequencyType')?.value === 'Monthly';
-    }
-
     getRouteNameById(routeId: number): string {
         if (!this.allRouteOptions) return routeId?.toString() || '';
         const route = this.allRouteOptions.find(r => r.id === routeId);
         return route ? route.name : (routeId?.toString() || '');
-    }
-
-    addOnDay(event: MatChipInputEvent, i: number): void {
-        const value = (event.value || '').trim();
-        if (value) { this.detailOnDayLists[i].push({ name: value }); }
-        event.chipInput!.clear();
-    }
-
-    removeOnDay(item: { name: string }, i: number): void {
-        const idx = this.detailOnDayLists[i].indexOf(item);
-        if (idx >= 0) { this.detailOnDayLists[i].splice(idx, 1); }
-    }
-
-    addExecutionTime(event: MatChipInputEvent, i: number): void {
-        const value = (event.value || '').trim();
-        if (value) { this.detailExecutionTimeLists[i].push({ name: value }); }
-        event.chipInput!.clear();
-    }
-
-    removeExecutionTime(item: { name: string }, i: number): void {
-        const idx = this.detailExecutionTimeLists[i].indexOf(item);
-        if (idx >= 0) { this.detailExecutionTimeLists[i].splice(idx, 1); }
     }
 
     onCancel(): void {
@@ -422,6 +250,20 @@ export class AddFlowDialogComponent implements OnInit {
     }
 
     onSave(): void {
+        const customerID = this.newFlowForm.get('customerID')?.value;
+        const title = this.newFlowForm.get('title')?.value;
+
+        if (!customerID || customerID.toString().trim() === '') {
+            this.newFlowForm.markAllAsTouched();
+            this.toast.warning({ detail: "WARNING", summary: "Partner ID is required", duration: 3000, position: 'topRight' });
+            return;
+        }
+        if (title.trim() === '') {
+            this.newFlowForm.markAllAsTouched();
+            this.toast.warning({ detail: "WARNING", summary: "Flow Name is required", duration: 3000, position: 'topRight' });
+            return;
+        }
+
         const details = this.flowDetails.controls.map((ctrl, i) => {
             const d = ctrl as FormGroup;
             const weekDays = this.daysOfWeek.filter((_, wi) => this.getWeekdayCtrl(i, wi)?.value).join(',');
@@ -445,10 +287,11 @@ export class AddFlowDialogComponent implements OnInit {
             customerID: this.newFlowForm.get('customerID')?.value,
             title: this.newFlowForm.get('title')?.value,
             description: this.newFlowForm.get('description')?.value,
-            status: this.newFlowForm.get('status')?.value,
+            status: details.some(d => d.status === 'Active') ? 'Active' : (details.length > 0 ? 'In-Active' : 'Active'),
             flowDetails: details
         };
 
+        console.log('[DEBUG] Saving flow with payload:', JSON.stringify(flowModel, null, 2));
         this.flowsApi.createFlow(flowModel).subscribe({
             next: (res) => {
                 if (res.code === 100) {
@@ -464,3 +307,4 @@ export class AddFlowDialogComponent implements OnInit {
         });
     }
 }
+

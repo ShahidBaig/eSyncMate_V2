@@ -132,6 +132,15 @@ namespace eSyncMate.Processor.Controllers
                     l_Criteria = $" CustomerID IN ({userData?.Flows})";
                 }
 
+                if (string.IsNullOrEmpty(l_Criteria))
+                {
+                    l_Criteria = " ISNULL(Status, '') != 'DELETED'";
+                }
+                else
+                {
+                    l_Criteria += " AND ISNULL(Status, '') != 'DELETED'";
+                }
+
                 this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Search criteria ready ({l_Criteria}).");
                 this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Starting Flow search.");
                 l_Flow.GetList(l_Criteria, string.Empty, ref l_Data, "Id DESC");
@@ -282,7 +291,8 @@ namespace eSyncMate.Processor.Controllers
                     l_Connection.CommitTransaction();
                     l_Response.Code = l_Result.Code;
                     l_Response.Message = l_Result.Description;
-                    l_Response.Description = $"Flow {flowModel.Title} has been created successfully!";
+                    int detailCount = flowModel.FlowDetails?.Count ?? 0;
+                    l_Response.Description = $"Flow {flowModel.Title} created! ({detailCount} detail(s) saved)";
                 }
                 else
                 {
@@ -294,6 +304,41 @@ namespace eSyncMate.Processor.Controllers
             catch (Exception ex)
             {
                 if (l_Trans) l_Connection.RollbackTransaction();
+                l_Response.Code = (int)ResponseCodes.Exception;
+                l_Response.Message = ex.Message;
+                l_Response.Description = ex.StackTrace;
+            }
+            return Task.FromResult(l_Response);
+        }
+
+        [HttpDelete]
+        [Route("deleteFlow/{id}")]
+        public Task<FlowsResponseModel> DeleteFlow(long id)
+        {
+            FlowsResponseModel l_Response = new();
+            DBConnector l_Connection = new DBConnector(CommonUtils.ConnectionString);
+            try
+            {
+                // Soft-delete the parent Flow record
+                bool l_FlowDeleted = l_Connection.Execute($"UPDATE Flows SET Status = 'DELETED' WHERE Id = {id}");
+
+                if (l_FlowDeleted)
+                {
+                    // Soft-delete all child FlowDetails records for this Flow
+                    l_Connection.Execute($"UPDATE FlowDetails SET Status = 'DELETED' WHERE FlowId = {id}");
+
+                    l_Response.Code = 200;
+                    l_Response.Message = "Flow and its details have been deleted successfully.";
+                    l_Response.Description = $"Flow {id} deleted successfully!";
+                }
+                else
+                {
+                    l_Response.Code = (int)ResponseCodes.Error;
+                    l_Response.Message = "Delete failed. The Flow ID may not exist or was already deleted.";
+                }
+            }
+            catch (Exception ex)
+            {
                 l_Response.Code = (int)ResponseCodes.Exception;
                 l_Response.Message = ex.Message;
                 l_Response.Description = ex.StackTrace;

@@ -22,7 +22,7 @@ namespace eSyncMate.Processor.Managers
                 string[] valuesArray = customerNameClaim.Split(',').Select(id => $"'{id.Trim()}'").ToArray();
                 userData.Flows = string.Join(",", valuesArray);
             }
-            
+
             userData.UserType = claimsIdentity.FindFirst("userType")?.Value;
 
             return userData;
@@ -71,6 +71,15 @@ namespace eSyncMate.Processor.Managers
                 l_Row.CreatedBy = flowModel.ModifiedBy ?? 0;
                 l_Row.ModifiedDate = DateTime.Now;
                 l_Row.ModifiedBy = flowModel.ModifiedBy ?? 0;
+                // Ensure no null fields that DB rejects
+                l_Row.Status = l_Row.Status ?? "Active";
+                l_Row.In_Out = l_Row.In_Out ?? "";
+                l_Row.FrequencyType = l_Row.FrequencyType ?? "";
+                l_Row.WeekDays = l_Row.WeekDays ?? "";
+                l_Row.OnDay = l_Row.OnDay ?? "";
+                l_Row.ExecutionTime = l_Row.ExecutionTime ?? "";
+                if (l_Row.StartDate == default(DateTime)) l_Row.StartDate = new DateTime(1900, 1, 1);
+                if (l_Row.EndDate == default(DateTime)) l_Row.EndDate = new DateTime(1900, 1, 1);
             }
 
             eSyncMate.DB.Entities.Routes l_RoutesEntity = new();
@@ -89,13 +98,15 @@ namespace eSyncMate.Processor.Managers
                 l_NewJobID = l_OldJobId;
 
                 RouteEngine l_Engine = new RouteEngine(config);
+                string l_DetailStatus = (detailModel.Status ?? "active").ToLower();
 
-                if (detailModel.Status.ToLower() == "active")
+                if (l_DetailStatus == "active")
                 {
                     if (!string.IsNullOrEmpty(l_OldJobId)) BackgroundJob.Delete(l_OldJobId);
-                    l_NewJobID = l_Engine.ScheduleWaitJob(new Routes { Id = l_RouteId, StartDate = detailModel.StartDate });
+                    var l_StartDate = detailModel.StartDate == default(DateTime) ? DateTime.Now : detailModel.StartDate;
+                    l_NewJobID = l_Engine.ScheduleWaitJob(new Routes { Id = l_RouteId, StartDate = l_StartDate });
                 }
-                else if (l_OldStatus.Equals("active", StringComparison.CurrentCultureIgnoreCase) && detailModel.Status.ToLower() != "active")
+                else if ((l_OldStatus ?? "").Equals("active", StringComparison.CurrentCultureIgnoreCase) && l_DetailStatus != "active")
                 {
                     if (!string.IsNullOrEmpty(l_OldJobId)) BackgroundJob.Delete(l_OldJobId);
                     l_NewJobID = null;
