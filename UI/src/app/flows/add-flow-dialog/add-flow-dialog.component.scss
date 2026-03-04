@@ -1,5 +1,9 @@
 .dialog-content {
     padding: 24px;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    box-sizing: border-box;
 }
 
 .dialog-title {
@@ -12,6 +16,18 @@
     display: flex;
     flex-direction: column;
     gap: 20px;
+    flex: 1;
+    overflow: hidden;
+}
+
+::ng-deep .mat-tab-body-wrapper {
+    flex: 1;
+}
+
+::ng-deep .mat-tab-body-content {
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
 }
 
 .form-row {
@@ -85,7 +101,7 @@ input[matInput] {
     border: 1px solid #e0e0e0;
     border-radius: 8px;
     overflow: hidden;
-    max-height: 220px;
+    max-height: 450px;
     overflow-y: auto;
 }
 

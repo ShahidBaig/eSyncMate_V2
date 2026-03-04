@@ -1,5 +1,5 @@
 <div mat-dialog-content class="dialog-content">
-    <h1 class="dialog-title">{{ 'editFlow' | translate }}</h1>
+    <h1 class="dialog-title">Edit Partner Flow</h1>
     <form [formGroup]="editFlowForm" class="flow-form">
         <mat-tab-group>
 
@@ -7,8 +7,8 @@
                 <br />
                 <div class="form-row">
                     <mat-form-field class="form-field">
-                        <mat-label>{{ 'customerID' | translate }}</mat-label>
-                        <mat-select formControlName="customerID">
+                        <mat-label>Partner ID</mat-label>
+                        <mat-select formControlName="customerID" required>
                             <mat-option *ngFor="let customer of customerOptions" [value]="customer.erpCustomerID">
                                 {{ customer.name }}
                             </mat-option>
@@ -16,8 +16,8 @@
                     </mat-form-field>
 
                     <mat-form-field class="form-field">
-                        <mat-label>{{ 'flowTitle' | translate }}</mat-label>
-                        <input type="text" formControlName="title" matInput placeholder="Title">
+                        <mat-label>Flow Name</mat-label>
+                        <input type="text" formControlName="title" matInput placeholder="Title" required>
                     </mat-form-field>
                 </div>
 
@@ -32,89 +32,12 @@
             <mat-tab label="Flow Details">
                 <br />
 
-                <!-- Detail Input Form -->
-                <div class="detail-input-card" [formGroup]="detailInputForm">
-                    <strong class="input-card-title"></strong>
-
-                    <div class="form-row">
-                        <mat-form-field class="form-field">
-                            <mat-label>{{ 'routeName' | translate }}</mat-label>
-                            <mat-select formControlName="routeId">
-                                <mat-option *ngFor="let route of filteredRouteOptions" [value]="route.id">
-                                    {{ route.name }}
-                                </mat-option>
-                            </mat-select>
-                        </mat-form-field>
-
-                        <mat-form-field class="form-field">
-                            <mat-label>{{ 'status' | translate }}</mat-label>
-                            <mat-select formControlName="status">
-                                <mat-option value="Active">Active</mat-option>
-                                <mat-option value="In-Active">In-Active</mat-option>
-                            </mat-select>
-                        </mat-form-field>
-
-                        <mat-form-field class="form-field">
-                            <mat-label>In/Out</mat-label>
-                            <mat-select formControlName="in_Out">
-                                <mat-option value="In">In</mat-option>
-                                <mat-option value="Out">Out</mat-option>
-                            </mat-select>
-                        </mat-form-field>
-                    </div>
-
-                    <div class="form-row">
-                        <mat-form-field class="form-field">
-                            <mat-label>{{ 'frequencyType' | translate }}</mat-label>
-                            <mat-select formControlName="frequencyType">
-                                <mat-option *ngFor="let ft of frequencyTypeOptions" [value]="ft">{{ ft }}</mat-option>
-                            </mat-select>
-                        </mat-form-field>
-
-                        <mat-form-field class="form-field">
-                            <input formControlName="startDate" matInput [matDatepicker]="spInput"
-                                placeholder="Start Date">
-                            <mat-datepicker-toggle matSuffix [for]="spInput"></mat-datepicker-toggle>
-                            <mat-datepicker #spInput></mat-datepicker>
-                        </mat-form-field>
-
-                        <mat-form-field class="form-field">
-                            <input formControlName="endDate" matInput [matDatepicker]="epInput" placeholder="End Date">
-                            <mat-datepicker-toggle matSuffix [for]="epInput"></mat-datepicker-toggle>
-                            <mat-datepicker #epInput></mat-datepicker>
-                        </mat-form-field>
-                    </div>
-
-                    <div class="form-row" *ngIf="showInputRepeatCount()">
-                        <mat-form-field class="form-field">
-                            <mat-label>{{ 'repeatCount' | translate }}</mat-label>
-                            <input type="number" formControlName="repeatCount" matInput>
-                        </mat-form-field>
-                    </div>
-
-                    <div class="form-row" *ngIf="showInputDaysOfWeek()" style="overflow:hidden;">
-                        <div class="form-field checkbox-container">
-                            <div *ngFor="let day of daysOfWeek; let d = index" class="checkbox-label">
-                                <mat-checkbox [formControl]="getInputWeekdayCtrl(d)!" [value]="day">{{ day
-                                    }}</mat-checkbox>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Add Detail Button -->
-                <div class="add-detail-btn-row">
-                    <button mat-stroked-button color="accent" type="button" (click)="addDetailFromForm()">
-                        <mat-icon>{{ editingDetailIndex !== null ? 'save' : 'add' }}</mat-icon>
-                        {{ editingDetailIndex !== null ? 'Update Detail' : 'Add Detail' }}
-                    </button>
-                    <button *ngIf="editingDetailIndex !== null" mat-stroked-button type="button" (click)="cancelEdit()"
-                        style="margin-left: 8px;">
-                        <mat-icon>close</mat-icon> Cancel Edit
+                <div style="display: flex; justify-content: flex-end; margin-bottom: 16px; margin-right: 16px;">
+                    <button mat-flat-button color="primary" type="button" (click)="addDetail()">
+                        <mat-icon>add</mat-icon> Add Flow
                     </button>
                 </div>
 
-                <!-- Details Table -->
                 <div class="details-table-container">
                     <table mat-table #detailsTable [dataSource]="flowDetails.controls" class="details-table">
 
@@ -185,5 +108,5 @@
 
 <div mat-dialog-actions class="dialog-actions">
     <button mat-button class="cancel-button" (click)="onCancel()">{{ 'Cancel' | translate }}</button>
-    <button mat-raised-button color="primary" (click)="onSave()">{{ 'update' | translate }}</button>
+    <button mat-raised-button color="primary" (click)="onSave()">{{ 'save' | translate }}</button>
 </div>

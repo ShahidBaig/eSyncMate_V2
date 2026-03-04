@@ -69,7 +69,7 @@ namespace eSyncMate.DB.Entities
 
             if (string.IsNullOrEmpty(FlowDetails.EndingPropertyName))
             {
-                FlowDetails.EndingPropertyName = "CreatedBy";
+                FlowDetails.EndingPropertyName = "ModifiedBy";
             }
 
             if (FlowDetails.DBProperties == null)

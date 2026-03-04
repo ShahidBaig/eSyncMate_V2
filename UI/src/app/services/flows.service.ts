@@ -25,6 +25,10 @@ export class FlowsService {
         return this.http.put<any>(this.apiUrl + 'api/Flows/updateFlow', flowModel);
     }
 
+    deleteFlow(id: number): Observable<any> {
+        return this.http.delete<any>(`${this.apiUrl}api/Flows/deleteFlow/${id}`);
+    }
+
     getAutofillByRouteId(customerId: string, routeId: number): Observable<any> {
         const params = new HttpParams()
             .set('customerId', customerId)

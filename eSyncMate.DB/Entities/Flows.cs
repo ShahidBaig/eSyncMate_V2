@@ -62,7 +62,8 @@ namespace eSyncMate.DB.Entities
 
             if (string.IsNullOrEmpty(Flows.EndingPropertyName))
             {
-                Flows.EndingPropertyName = "CreatedBy";
+                Flows.EndingPropertyName = "ModifiedBy";
+                Flows.InsertQueryStart = null; // force regeneration with new ending property
             }
 
             if (Flows.DBProperties == null)
