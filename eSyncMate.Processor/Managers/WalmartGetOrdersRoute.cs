@@ -195,7 +195,7 @@ namespace eSyncMate.Processor.Managers
 
                 l_Orders.Status = "New";
                 l_Orders.CustomerId = customer.Id;
-                l_Orders.OrderDate = DateTimeOffset.FromUnixTimeMilliseconds(order.orderDate).DateTime;
+                l_Orders.OrderDate = order.orderDate.HasValue ? DateTimeOffset.FromUnixTimeMilliseconds(order.orderDate.Value).DateTime : DateTime.MinValue;
                 l_Orders.OrderNumber = order.purchaseOrderId;
                 l_Orders.ShipToName = order.shippingInfo.postalAddress.name;
                 l_Orders.ShipToAddress1 = order.shippingInfo.postalAddress.address1;

@@ -24,6 +24,11 @@ namespace eSyncMate.Processor.Managers
 {
     public class SCSBulkItemPricesRoute
     {
+        // Max concurrent threads for price updates to avoid socket exhaustion
+        private const int MaxPriceThreads = 5;
+        // Delay in ms between each API call per thread
+        internal const int DelayBetweenCallsMs = 500;
+
         public static void Execute(IConfiguration config, Routes route)
         {
             int userNo = 1;
@@ -45,14 +50,14 @@ namespace eSyncMate.Processor.Managers
 
                 if (l_SourceConnector == null)
                 {
-                    
+
                     route.SaveLog(LogTypeEnum.Error, "Source Connector is not setup properly", string.Empty, userNo);
                     return;
                 }
 
                 if (l_DestinationConnector == null)
                 {
-                    
+
                     route.SaveLog(LogTypeEnum.Error, "Destination Connector is not setup properly", string.Empty, userNo);
                     return;
                 }
@@ -77,7 +82,7 @@ namespace eSyncMate.Processor.Managers
 
                 if (l_DestinationConnector.ConnectivityType == ConnectorTypesEnum.Rest.ToString() && l_data.Rows.Count > 0)
                 {
-                    route.SaveLog(LogTypeEnum.Debug, $"Destination connector processing start...", string.Empty, userNo);
+                    route.SaveLog(LogTypeEnum.Debug, $"Destination connector processing start... Total items: {l_data.Rows.Count}", string.Empty, userNo);
 
                     if (l_data.Rows.Count <= 100)
                     {
@@ -88,16 +93,20 @@ namespace eSyncMate.Processor.Managers
                     else
                     {
                         int i = 0;
-                        int totalThread = CommonUtils.UploadInventoryTotalThread;
+                        int totalThread = Math.Min(MaxPriceThreads, CommonUtils.UploadInventoryTotalThread);
                         int chunkSize = l_data.Rows.Count / totalThread;
                         List<Thread> threads = new List<Thread>();
 
                         var tables = l_data.AsEnumerable().ToChunks(chunkSize)
                           .Select(rows => rows.CopyToDataTable()).ToList<DataTable>();
 
+                        route.SaveLog(LogTypeEnum.Debug, $"Processing with {Math.Min(totalThread, tables.Count)} threads, ~{chunkSize} items per thread, {DelayBetweenCallsMs}ms delay between calls", string.Empty, userNo);
+
                         while (i < tables.Count)
                         {
-                            ProcessBulkItemPricesThread itemsThread = new ProcessBulkItemPricesThread(tables[i], route, l_DestinationConnector, l_SourceConnector, userNo);
+                            // Deep copy connector per thread to avoid race condition on Url property
+                            ConnectorDataModel threadConnector = JsonConvert.DeserializeObject<ConnectorDataModel>(JsonConvert.SerializeObject(l_DestinationConnector));
+                            ProcessBulkItemPricesThread itemsThread = new ProcessBulkItemPricesThread(tables[i], route, threadConnector, l_SourceConnector, userNo);
 
                             Thread t = new Thread(new ThreadStart(itemsThread.ProcessItems));
                             threads.Add(t);
@@ -108,6 +117,8 @@ namespace eSyncMate.Processor.Managers
                         foreach (Thread t in threads)
                         {
                             t.Start();
+                            // Stagger thread starts to avoid initial burst
+                            Thread.Sleep(200);
                         }
                         foreach (Thread t in threads)
                         {
@@ -157,6 +168,9 @@ namespace eSyncMate.Processor.Managers
             foreach (DataRow row in this.data.Rows)
             {
                 this.ProcessItem(row);
+
+                // Delay between API calls to prevent socket exhaustion
+                Thread.Sleep(SCSBulkItemPricesRoute.DelayBetweenCallsMs);
             }
         }
 
@@ -174,9 +188,8 @@ namespace eSyncMate.Processor.Managers
                 this.route.UseConnection(this.sourceConnector.ConnectionString);
 
                 string Body = JsonConvert.SerializeObject(data);
-                route.SaveData("JSON-SNT", 0, Body, userNo);
-
                 this.destinationConnector.Url = this.destinationConnector.BaseUrl + row["id"];
+                route.RouteSaveData("JSON-SNT", 0, $"URL: {this.destinationConnector.Url}\n{Body}", userNo);
                 RestResponse sourceResponse = RestConnector.Execute(this.destinationConnector, Body).GetAwaiter().GetResult();
 
                 if (sourceResponse.StatusCode == System.Net.HttpStatusCode.OK)
@@ -196,14 +209,12 @@ namespace eSyncMate.Processor.Managers
                     route.SaveLog(LogTypeEnum.Error, $"Unable to update Bulk ItemPrices for item [{row["id"]}]. HTTP {(int)sourceResponse.StatusCode} {sourceResponse.StatusCode}.", sourceResponse.Content ?? sourceResponse.ErrorMessage, userNo);
                 }
 
-                route.SaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
+                route.RouteSaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
             }
             catch (Exception ex)
             {
-
                 route.SaveLog(LogTypeEnum.Error, $"{ex.Message} - Unable to update Bulk ItemPrices for item [{row["id"]}].", string.Empty, userNo);
             }
-            
         }
     }
 }
