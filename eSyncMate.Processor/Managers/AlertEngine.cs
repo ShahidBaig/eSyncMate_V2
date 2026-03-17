@@ -11,6 +11,24 @@ namespace eSyncMate.Processor.Managers
         private readonly ILogger _logger;
 
         private static Dictionary<int, CustomerAlerts> currentAlerts = new Dictionary<int, CustomerAlerts>();
+        
+        // Configuration flag to switch between in-process and external process execution
+        private bool UseExternalProcess => _config?.GetValue<bool>("AlertEngine:UseExternalProcess") ?? false;
+        private string ExternalProcessPath
+        {
+            get
+            {
+                var configPath = _config?.GetValue<string>("AlertEngine:ExternalProcessPath") ?? "AlertWorker\\eSyncMate.AlertWorker.exe";
+
+                if (!Path.IsPathRooted(configPath))
+                {
+                    var appDirectory = AppDomain.CurrentDomain.BaseDirectory;
+                    return Path.Combine(appDirectory, configPath);
+                }
+
+                return configPath;
+            }
+        }
 
         public AlertEngine(IConfiguration config)
         {
@@ -19,6 +37,67 @@ namespace eSyncMate.Processor.Managers
         }
 
         public void Execute(int customerAlertID)
+        {
+            if (UseExternalProcess)
+            {
+                ExecuteExternal(customerAlertID);
+                return;
+            }
+
+            ExecuteLocal(customerAlertID).GetAwaiter().GetResult();
+        }
+
+        public void ExecuteExternal(int alertId)
+        {
+            CustomerAlerts alert = new CustomerAlerts();
+            try
+            {
+                alert.UseConnection(CommonUtils.ConnectionString);
+                alert.Id = alertId;
+
+                if (!alert.GetObject().IsSuccess) return;
+
+                // Check if already running locally
+                if (currentAlerts.ContainsKey(alertId)) return;
+
+                var exePath = ExternalProcessPath;
+                var workingDir = Path.GetDirectoryName(exePath) ?? Directory.GetCurrentDirectory();
+
+                if (!File.Exists(exePath))
+                {
+                    Console.WriteLine($"[AlertEngine] AlertWorker exe not found at: {exePath}");
+                    return;
+                }
+
+                var processInfo = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = exePath,
+                    Arguments = $"--alertId {alertId}",
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    WorkingDirectory = workingDir
+                };
+
+                using var process = System.Diagnostics.Process.Start(processInfo);
+                if (process != null)
+                {
+                    string output = process.StandardOutput.ReadToEnd();
+                    string error = process.StandardError.ReadToEnd();
+                    process.WaitForExit();
+
+                    if (process.ExitCode != 0)
+                        Console.WriteLine($"[AlertEngine] External process failed for alert [{alertId}]. Error: {error}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[AlertEngine] Error spawning external process: {ex.Message}");
+            }
+        }
+
+        public async Task ExecuteLocal(int customerAlertID)
         {
             CustomerAlerts customerAlerts = new CustomerAlerts();
 
@@ -35,7 +114,6 @@ namespace eSyncMate.Processor.Managers
 
                 if (currentAlerts.ContainsKey(customerAlertID))
                 {
-                    //customerAlerts.SaveLog(Declarations.LogTypeEnum.Info, "This route is already in execution.", "", 1);
                     return;
                 }
 
@@ -43,7 +121,7 @@ namespace eSyncMate.Processor.Managers
 
                 if (customerAlerts.AlertsConfiguration.AlertType.ToUpper() == "CUSTOMER")
                 {
-                    CustomerWiseAlert.Execute(_config, customerAlerts);
+                    await CustomerWiseAlert.Execute(_config, customerAlerts);
                 }
 
             }
