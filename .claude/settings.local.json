@@ -31,7 +31,8 @@
       "Bash(\"D:/eSoftage_Projects/eSyncMate_V2/eSyncMate.Processor/bin/Debug/net8.0/AlertWorker/eSyncMate.AlertWorker.exe\" --alertId 1 2>&1)",
       "Bash(find:*)",
       "Bash(cd:*)",
-      "Bash(dotnet tool:*)"
+      "Bash(dotnet tool:*)",
+      "Bash(ls:*)"
     ]
   },
   "enableAllProjectMcpServers": true,
