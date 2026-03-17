@@ -32,7 +32,7 @@
             public string purchaseOrderId { get; set; }
             public string customerOrderId { get; set; }
             public string customerEmailId { get; set; }
-            public long orderDate { get; set; }
+            public long? orderDate { get; set; }
             public Shippinginfo shippingInfo { get; set; }
             public Orderlines orderLines { get; set; }
             public Shipnode shipNode { get; set; }
@@ -41,8 +41,8 @@
         public class Shippinginfo
         {
             public string phone { get; set; }
-            public long estimatedDeliveryDate { get; set; }
-            public long estimatedShipDate { get; set; }
+            public long? estimatedDeliveryDate { get; set; }
+            public long? estimatedShipDate { get; set; }
             public string methodCode { get; set; }
             public Postaladdress postalAddress { get; set; }
         }
@@ -75,7 +75,7 @@
             public Item item { get; set; }
             public Charges charges { get; set; }
             public Orderlinequantity orderLineQuantity { get; set; }
-            public long statusDate { get; set; }
+            public long? statusDate { get; set; }
             public Orderlinestatuses orderLineStatuses { get; set; }
             public object refund { get; set; }
             public Fulfillment fulfillment { get; set; }
@@ -161,7 +161,7 @@
             public string fulfillmentOption { get; set; }
             public string shipMethod { get; set; }
             public object storeId { get; set; }
-            public long pickUpDateTime { get; set; }
+            public long? pickUpDateTime { get; set; }
             public object pickUpBy { get; set; }
             public string shippingProgramType { get; set; }
         }

@@ -20,7 +20,22 @@
       "Bash(powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"D:\\\\eSoftage_Projects\\\\eSyncMate_V2\\\\analyze.ps1\")",
       "Bash(powershell.exe -NoProfile -ExecutionPolicy Bypass -Command \"Remove-Item ''D:\\\\eSoftage_Projects\\\\eSyncMate_V2\\\\analyze.ps1''\")",
       "Bash(findstr:*)",
-      "Bash(Select-String -Pattern \"error CS|Build succeeded|Build FAILED\")"
+      "Bash(Select-String -Pattern \"error CS|Build succeeded|Build FAILED\")",
+      "mcp__SqlMCP__list_tables",
+      "Bash(tasklist 2>/dev/null | grep -i \"func\\\\|SqlMCP\\\\|dotnet\" | head -20)",
+      "Bash(powershell.exe -NoProfile -Command \"Test-NetConnection -ComputerName 110.93.227.0 -Port 1433 -WarningAction SilentlyContinue | Select-Object TcpTestSucceeded\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:7071/runtime/webhooks/mcp/sse --max-time 5 2>&1 || echo \"Connection failed\")",
+      "mcp__SqlMCP__read_data",
+      "Bash(powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"D:\\\\eSoftage_Projects\\\\backupeSyncmateCode\\\\convert_to_pdf.ps1\")",
+      "Bash(find /d/eSoftage_Projects/eSyncMate_V2 -type f -name \"*appsettings*\" 2>/dev/null | grep -v node_modules | grep -v bin | grep -v obj)",
+      "Bash(\"D:/eSoftage_Projects/eSyncMate_V2/eSyncMate.Processor/bin/Debug/net8.0/AlertWorker/eSyncMate.AlertWorker.exe\" --alertId 1 2>&1)",
+      "Bash(find:*)",
+      "Bash(cd:*)",
+      "Bash(dotnet tool:*)"
     ]
-  }
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "SqlMCP"
+  ]
 }

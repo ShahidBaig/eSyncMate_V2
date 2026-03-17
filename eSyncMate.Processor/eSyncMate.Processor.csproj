@@ -37,8 +37,13 @@
     <PackageReference Include="RestSharp" Version="110.2.0" />
     <PackageReference Include="SSH.NET" Version="2024.0.0" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.2.3" />
-    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="6.22.0" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="6.35.0" />
     <PackageReference Include="System.Net.Http" Version="4.3.4" />
+    <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="6.35.0" />
+    <PackageReference Include="Microsoft.IdentityModel.Abstractions" Version="6.35.0" />
+  
+	  <PackageReference Include="Azure.Identity" Version="1.10.4" />
+	  <PackageReference Include="Microsoft.Graph" Version="5.21.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -47,9 +52,10 @@
     <ProjectReference Include="..\JUST.net\JUST.net.csproj" />
   </ItemGroup>
 
-  <!-- Define RouteWorker project path relative to this project -->
+  <!-- Define RouteWorker and AlertWorker project paths relative to this project -->
   <PropertyGroup>
     <RouteWorkerProjectDir>$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)\..\eSyncMate.RouteWorker'))</RouteWorkerProjectDir>
+    <AlertWorkerProjectDir>$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)\..\eSyncMate.AlertWorker'))</AlertWorkerProjectDir>
   </PropertyGroup>
 
   <!-- Pre-build: Build RouteWorker separately to avoid circular dependency -->
@@ -81,6 +87,40 @@
     </ItemGroup>
     <Copy SourceFiles="@(RouteWorkerPublishFiles)" DestinationFolder="$(PublishDir)RouteWorker\%(RecursiveDir)" SkipUnchangedFiles="true" Condition="'@(RouteWorkerPublishFiles)' != ''" />
     <Copy SourceFiles="@(RouteWorkerBuildFiles)" DestinationFolder="$(PublishDir)RouteWorker\%(RecursiveDir)" SkipUnchangedFiles="true" Condition="'@(RouteWorkerPublishFiles)' == ''" />
+  </Target>
+
+  <!-- ============================================================ -->
+  <!-- AlertWorker: Auto-build and copy (same pattern as RouteWorker) -->
+  <!-- ============================================================ -->
+
+  <!-- Pre-build: Build AlertWorker separately to avoid circular dependency -->
+  <Target Name="BuildAlertWorker" BeforeTargets="Build" Condition="'$(SkipRouteWorkerBuild)' != 'true'">
+    <Message Text="Building AlertWorker..." Importance="high" />
+    <Exec Command="dotnet build &quot;$(AlertWorkerProjectDir)\eSyncMate.AlertWorker.csproj&quot; --configuration $(Configuration) /p:SkipRouteWorkerBuild=true" ContinueOnError="false" />
+  </Target>
+
+  <!-- Post-build: Copy AlertWorker to Processor output directory -->
+  <Target Name="CopyAlertWorker" AfterTargets="Build" Condition="'$(SkipRouteWorkerBuild)' != 'true'">
+    <ItemGroup>
+      <AlertWorkerFiles Include="$(AlertWorkerProjectDir)\bin\$(Configuration)\net8.0\**\*.*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(AlertWorkerFiles)" DestinationFolder="$(OutputPath)AlertWorker\%(RecursiveDir)" SkipUnchangedFiles="true" />
+  </Target>
+
+  <!-- Pre-publish: Build AlertWorker separately -->
+  <Target Name="BuildAlertWorkerOnPublish" BeforeTargets="Publish" Condition="'$(SkipRouteWorkerBuild)' != 'true'">
+    <Message Text="Building AlertWorker for publish..." Importance="high" />
+    <Exec Command="dotnet publish &quot;$(AlertWorkerProjectDir)\eSyncMate.AlertWorker.csproj&quot; --configuration $(Configuration) /p:SkipRouteWorkerBuild=true" ContinueOnError="false" />
+  </Target>
+
+  <!-- Post-publish: Copy AlertWorker to Processor publish directory -->
+  <Target Name="CopyAlertWorkerOnPublish" AfterTargets="Publish" Condition="'$(SkipRouteWorkerBuild)' != 'true'">
+    <ItemGroup>
+      <AlertWorkerPublishFiles Include="$(AlertWorkerProjectDir)\bin\$(Configuration)\net8.0\publish\**\*.*" />
+      <AlertWorkerBuildFiles Include="$(AlertWorkerProjectDir)\bin\$(Configuration)\net8.0\**\*.*" Condition="!Exists('$(AlertWorkerProjectDir)\bin\$(Configuration)\net8.0\publish\')" />
+    </ItemGroup>
+    <Copy SourceFiles="@(AlertWorkerPublishFiles)" DestinationFolder="$(PublishDir)AlertWorker\%(RecursiveDir)" SkipUnchangedFiles="true" Condition="'@(AlertWorkerPublishFiles)' != ''" />
+    <Copy SourceFiles="@(AlertWorkerBuildFiles)" DestinationFolder="$(PublishDir)AlertWorker\%(RecursiveDir)" SkipUnchangedFiles="true" Condition="'@(AlertWorkerPublishFiles)' == ''" />
   </Target>
 
 </Project>
