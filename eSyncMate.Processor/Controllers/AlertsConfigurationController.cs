@@ -209,6 +209,110 @@ namespace eSyncMate.Processor.Controllers
         }
 
         [HttpGet]
+        [Route("getCustomerAlertsByAlertId")]
+        public async Task<GetCustomerAlertsResponseModel> GetCustomerAlertsByAlertId([FromQuery] int alertId)
+        {
+            MethodBase l_Me = MethodBase.GetCurrentMethod();
+            GetCustomerAlertsResponseModel l_Response = new GetCustomerAlertsResponseModel();
+            DataTable l_Data = new DataTable();
+
+            try
+            {
+                l_Response.Code = (int)ResponseCodes.Error;
+
+                DBConnector connection = new DBConnector(CommonUtils.ConnectionString);
+                string query = $@"SELECT ca.Id, ca.CustomerId, c.Name AS CustomerName, ca.AlertId,
+                                         ac.AlertName, ca.FrequencyType, ca.RepeatCount, ca.ExecutionTime,
+                                         ca.WeekDays, ca.DayOfMonth, ca.Emails, ca.EmailSubject, ca.EmailBody
+                                  FROM CustomerAlerts ca
+                                  LEFT JOIN Customers c ON ca.CustomerId = c.Id
+                                  LEFT JOIN AlertsConfiguration ac ON ca.AlertId = ac.AlertID
+                                  WHERE ca.AlertId = {alertId}
+                                  ORDER BY ca.Id DESC";
+
+                connection.GetData(query, ref l_Data);
+
+                l_Response.Alerts = new List<CustomerAlertConfigModel>();
+                foreach (DataRow row in l_Data.Rows)
+                {
+                    l_Response.Alerts.Add(new CustomerAlertConfigModel
+                    {
+                        Id = Convert.ToInt32(row["Id"]),
+                        CustomerId = Convert.ToInt32(row["CustomerId"]),
+                        CustomerName = Convert.ToString(row["CustomerName"]) ?? string.Empty,
+                        AlertId = Convert.ToInt32(row["AlertId"]),
+                        AlertName = Convert.ToString(row["AlertName"]) ?? string.Empty,
+                        FrequencyType = Convert.ToString(row["FrequencyType"]) ?? string.Empty,
+                        RepeatCount = Convert.ToInt32(row["RepeatCount"]),
+                        ExecutionTime = Convert.ToString(row["ExecutionTime"]) ?? string.Empty,
+                        WeekDays = Convert.ToString(row["WeekDays"]) ?? string.Empty,
+                        DayOfMonth = Convert.ToString(row["DayOfMonth"]) ?? string.Empty,
+                        Emails = Convert.ToString(row["Emails"]) ?? string.Empty,
+                        EmailSubject = Convert.ToString(row["EmailSubject"]) ?? string.Empty,
+                        EmailBody = Convert.ToString(row["EmailBody"]) ?? string.Empty
+                    });
+                }
+
+                l_Response.Code = (int)ResponseCodes.Success;
+                l_Response.Message = "Customer alerts fetched successfully!";
+            }
+            catch (Exception ex)
+            {
+                l_Response.Code = (int)ResponseCodes.Exception;
+                l_Response.Message = ex.Message;
+                this._logger.LogError(ex, $"[{l_Me.ReflectedType?.Name}.{l_Me.Name}] - Error while getting customer alerts by alertId.");
+            }
+            finally
+            {
+                l_Data.Dispose();
+            }
+
+            return l_Response;
+        }
+
+        [HttpGet]
+        [Route("getCustomersDropdown")]
+        public async Task<GetCustomersDropdownResponseModel> GetCustomersDropdown()
+        {
+            MethodBase l_Me = MethodBase.GetCurrentMethod();
+            GetCustomersDropdownResponseModel l_Response = new GetCustomersDropdownResponseModel();
+            DataTable l_Data = new DataTable();
+
+            try
+            {
+                l_Response.Code = (int)ResponseCodes.Error;
+
+                DBConnector connection = new DBConnector(CommonUtils.ConnectionString);
+                connection.GetData("SELECT Id, Name FROM Customers WHERE Name NOT IN ('eSyncMate', 'SPARS') ORDER BY Name", ref l_Data);
+
+                l_Response.Customers = new List<CustomerDropdownModel>();
+                foreach (DataRow row in l_Data.Rows)
+                {
+                    l_Response.Customers.Add(new CustomerDropdownModel
+                    {
+                        Id = Convert.ToInt32(row["Id"]),
+                        Name = Convert.ToString(row["Name"]) ?? string.Empty
+                    });
+                }
+
+                l_Response.Code = (int)ResponseCodes.Success;
+                l_Response.Message = "Customers fetched successfully!";
+            }
+            catch (Exception ex)
+            {
+                l_Response.Code = (int)ResponseCodes.Exception;
+                l_Response.Message = ex.Message;
+                this._logger.LogError(ex, $"[{l_Me.ReflectedType?.Name}.{l_Me.Name}] - Error while getting customers dropdown.");
+            }
+            finally
+            {
+                l_Data.Dispose();
+            }
+
+            return l_Response;
+        }
+
+        [HttpGet]
         [Route("getConnectorTypes")]
         public async Task<GetConnectorTypesResponseModel> GetConnectorTypes()
         {

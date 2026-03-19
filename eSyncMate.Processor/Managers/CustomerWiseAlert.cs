@@ -71,25 +71,23 @@ namespace eSyncMate.Processor.Managers
                     }
 
                     string l_Subject = BindPlaceholders(customerAlerts.EmailSubject, l_data);
-                    
+
+                    // Priority 1: SP returns body content in AlertReason/BodyData/Data columns
                     l_Body = ResolveEmailBodyContent(l_data);
 
+                    // Replace all SP column placeholders in the resolved body
                     if (!string.IsNullOrWhiteSpace(l_Body))
                     {
-                        string lastOrderDate = l_data.Columns.Contains("LastOrderDate") && !l_data.Rows[0].IsNull("LastOrderDate")
-                            ? Convert.ToString(l_data.Rows[0]["LastOrderDate"]) : "N/A";
-                        string hoursSinceLastOrder = l_data.Columns.Contains("HoursSinceLastOrder") && !l_data.Rows[0].IsNull("HoursSinceLastOrder")
-                            ? Convert.ToString(l_data.Rows[0]["HoursSinceLastOrder"]) : "N/A";
-
-                        l_Body = l_Body.Replace("@LastOrderDate", lastOrderDate);
-                        l_Body = l_Body.Replace("@HoursSinceLastOrder", hoursSinceLastOrder);
+                        l_Body = BindPlaceholders(l_Body, l_data);
                     }
 
-                    if (string.IsNullOrWhiteSpace(l_Body))
+                    // Priority 2: Use CustomerAlerts.EmailBody template with SP column placeholders
+                    if (string.IsNullOrWhiteSpace(l_Body) && !string.IsNullOrWhiteSpace(customerAlerts.EmailBody))
                     {
                         l_Body = BindPlaceholders(customerAlerts.EmailBody, l_data);
                     }
 
+                    // Priority 3: Auto-generate HTML table from SP result
                     if (string.IsNullOrWhiteSpace(l_Body))
                     {
                         l_Body = GenerateHtmlTableFromDataTable(l_data);
@@ -248,6 +246,16 @@ namespace eSyncMate.Processor.Managers
         {
             try
             {
+                if (string.IsNullOrWhiteSpace(tenantId) || string.IsNullOrWhiteSpace(clientId) || string.IsNullOrWhiteSpace(clientSecret))
+                {
+                    return (false, "", "MicrosoftGraph credentials not configured. Check TenantId, ClientId, and ClientSecret in appsettings.json");
+                }
+
+                if (string.IsNullOrWhiteSpace(senderEmail))
+                {
+                    return (false, "", "SenderEmail is not configured in MicrosoftGraph settings");
+                }
+
                 var credential = new ClientSecretCredential(tenantId, clientId, clientSecret);
                 var graphClient = new GraphServiceClient(credential, new[] { "https://graph.microsoft.com/.default" });
 
@@ -273,9 +281,37 @@ namespace eSyncMate.Processor.Managers
 
                 return (true, Guid.NewGuid().ToString(), "");
             }
+            catch (Microsoft.Graph.Models.ODataErrors.ODataError odataEx)
+            {
+                var errorCode = odataEx.Error?.Code ?? "Unknown";
+                var errorMessage = odataEx.Error?.Message ?? odataEx.Message;
+                var innerError = odataEx.Error?.InnerError?.AdditionalData != null
+                    ? string.Join(", ", odataEx.Error.InnerError.AdditionalData.Select(kv => $"{kv.Key}={kv.Value}"))
+                    : "";
+
+                var fullError = $"Graph API Error [{errorCode}]: {errorMessage}";
+                if (!string.IsNullOrEmpty(innerError))
+                    fullError += $" | InnerError: {innerError}";
+
+                Console.WriteLine($"[SendEmailGraphAsync] {fullError}");
+                Console.WriteLine($"[SendEmailGraphAsync] TenantId: {tenantId}, ClientId: {clientId}, SenderEmail: {senderEmail}, Recipients: {string.Join(", ", toRecipients)}");
+
+                return (false, "", fullError);
+            }
+            catch (Azure.Identity.AuthenticationFailedException authEx)
+            {
+                var fullError = $"Authentication Failed: {authEx.Message}";
+                Console.WriteLine($"[SendEmailGraphAsync] {fullError}");
+                return (false, "", fullError);
+            }
             catch (Exception ex)
             {
-                return (false, "", ex.Message);
+                var fullError = $"{ex.GetType().Name}: {ex.Message}";
+                if (ex.InnerException != null)
+                    fullError += $" | Inner: {ex.InnerException.Message}";
+
+                Console.WriteLine($"[SendEmailGraphAsync] {fullError}");
+                return (false, "", fullError);
             }
         }
 

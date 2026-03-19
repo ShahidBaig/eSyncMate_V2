@@ -411,7 +411,15 @@ namespace eSyncMate.Processor.Controllers
                 }
                 else
                 {
-                    // Update
+                    // Update — remove old Hangfire jobs before modifying
+                    DB.Entities.CustomerAlerts l_OldAlert = new DB.Entities.CustomerAlerts();
+                    l_OldAlert.UseConnection(CommonUtils.ConnectionString);
+                    l_OldAlert.Id = model.Id;
+                    if (l_OldAlert.GetObject().IsSuccess)
+                    {
+                        this.RemoveAlertJob(l_OldAlert);
+                    }
+
                     l_CustomerAlerts.ModifiedBy = l_CustomerAlerts.CreatedBy;
                     l_CustomerAlerts.ModifiedDate = DateTime.Now;
                     l_Result = l_CustomerAlerts.Modify();

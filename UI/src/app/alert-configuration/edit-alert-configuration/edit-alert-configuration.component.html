@@ -1,56 +1,284 @@
 
 <div mat-dialog-content class="dialog-content">
-  <h1 class="dialog-title">{{ 'addAlertConfiguration' | translate }}</h1>
-  <form [formGroup]="updateAlertForm" class="connector-form">
+  <h1 class="dialog-title">{{ viewMode ? 'View Alert Configuration' : 'Edit Alert Configuration' }}</h1>
 
-    <div class="form-row">
-      <mat-form-field class="form-field full-width">
-        <mat-label>{{ 'alertName' | translate }}</mat-label>
-        <input matInput formControlName="alertName">
-      </mat-form-field>
+  <mat-tab-group>
+    <!-- ==================== General Tab ==================== -->
+    <mat-tab label="General">
+      <div class="tab-content">
+        <form [formGroup]="updateAlertForm" class="connector-form">
 
-    </div>
+          <div class="form-row">
+            <mat-form-field class="form-field full-width">
+              <mat-label>{{ 'alertName' | translate }}</mat-label>
+              <input matInput formControlName="alertName" [readonly]="viewMode">
+            </mat-form-field>
+          </div>
 
-    <div class="form-row">
-      <mat-form-field class="form-field full-width">
-        <mat-label>{{ 'alertType' | translate }}</mat-label>
-        <mat-select formControlName="alertType">
-          <mat-option value="Customer">Customer</mat-option>
-          <mat-option value="System">System</mat-option>
-        </mat-select>
-      </mat-form-field>
+          <div class="form-row">
+            <mat-form-field class="form-field full-width">
+              <mat-label>{{ 'emailSubject' | translate }}</mat-label>
+              <input matInput formControlName="emailSubject" [readonly]="viewMode">
+            </mat-form-field>
+          </div>
 
-    </div>
+          <div class="form-row">
+            <mat-form-field class="form-field full-width">
+              <mat-label>Description</mat-label>
+              <textarea matInput formControlName="description" rows="3" [readonly]="viewMode"></textarea>
+            </mat-form-field>
+          </div>
 
-    <div class="form-row">
-      <mat-form-field class="form-field full-width">
-        <mat-label>{{ 'query' | translate }}</mat-label>
-        <input matInput formControlName="query">
-      </mat-form-field>
+          <div class="form-row">
+            <mat-form-field class="form-field full-width">
+              <mat-label>{{ 'query' | translate }}</mat-label>
+              <textarea matInput formControlName="query" rows="4" [readonly]="viewMode"></textarea>
+            </mat-form-field>
+          </div>
 
-    </div>
-    <div class="form-row">
-      <mat-form-field class="form-field full-width">
-        <mat-label>{{ 'emailSubject' | translate }}</mat-label>
-        <input matInput formControlName="emailSubject">
-      </mat-form-field>
+        </form>
+      </div>
+    </mat-tab>
 
-    </div>
-    <div class="form-row">
+    <!-- ==================== Alert Configuration Tab ==================== -->
+    <mat-tab label="Alert Configuration">
+      <div class="tab-content">
 
-      <ng-container>
-        <mat-form-field class="form-field full-width">
-          <mat-label>Email Body</mat-label>
-          <textarea matInput formControlName="emailBody" rows="6"></textarea>
-        </mat-form-field>
-      </ng-container>
+        <!-- Add button: shown when form is collapsed -->
+        <div *ngIf="!viewMode && !showAlertForm" class="add-alert-btn-row">
+          <button mat-raised-button color="primary" (click)="showAlertForm = true">
+            <mat-icon>add</mat-icon> Add Alert
+          </button>
+        </div>
 
-    </div>
+        <!-- Form: hidden in view mode, collapsible -->
+        <form *ngIf="!viewMode && showAlertForm" [formGroup]="customerAlertForm" class="connector-form">
 
-  </form>
+          <!-- Row 1: Customer + Frequency -->
+          <div class="form-row">
+            <mat-form-field class="form-field">
+              <mat-label>Customer</mat-label>
+              <mat-select formControlName="customerId">
+                <mat-option *ngFor="let c of customerOptions" [value]="c.id">
+                  {{ c.name }}
+                </mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field class="form-field">
+              <mat-label>Frequency Type</mat-label>
+              <mat-select formControlName="frequencyType"
+                          (selectionChange)="onFrequencyTypeChange()">
+                <mat-option *ngFor="let f of frequencyTypes" [value]="f">
+                  {{ f }}
+                </mat-option>
+              </mat-select>
+            </mat-form-field>
+          </div>
+
+          <!-- Frequency-specific controls -->
+          <div class="form-row" [ngSwitch]="frequencyTypeValue">
+
+            <!-- Minutely -->
+            <ng-container *ngSwitchCase="'Minutely'">
+              <mat-form-field class="form-field full-width">
+                <mat-label>Repeat Count (minutes)</mat-label>
+                <input matInput type="number" min="1" formControlName="repeatCount" />
+              </mat-form-field>
+            </ng-container>
+
+            <!-- Hourly -->
+            <ng-container *ngSwitchCase="'Hourly'">
+              <mat-form-field class="form-field full-width">
+                <mat-label>Repeat Count (hours)</mat-label>
+                <input matInput type="number" min="1" formControlName="repeatCount" />
+              </mat-form-field>
+            </ng-container>
+
+            <!-- Daily -->
+            <ng-container *ngSwitchCase="'Daily'">
+              <mat-form-field class="form-field full-width">
+                <mat-label>Execution Time(s)</mat-label>
+                <mat-chip-grid #dailyTimeChipGrid>
+                  <mat-chip-row *ngFor="let t of dailyTimeChips; let i = index"
+                                [removable]="true" (removed)="removeDailyTime(i)">
+                    {{ t }}
+                    <button matChipRemove><mat-icon>cancel</mat-icon></button>
+                  </mat-chip-row>
+                  <input matInput type="time"
+                         [matChipInputFor]="dailyTimeChipGrid"
+                         [matChipInputSeparatorKeyCodes]="separatorKeysCodes"
+                         [matChipInputAddOnBlur]="true"
+                         (matChipInputTokenEnd)="addDailyTime($event)" />
+                </mat-chip-grid>
+                <mat-hint>Multiple times allowed.</mat-hint>
+              </mat-form-field>
+            </ng-container>
+
+            <!-- Weekly -->
+            <ng-container *ngSwitchCase="'Weekly'">
+              <div class="weekdays-container full-width">
+                <mat-label>Weekdays</mat-label>
+                <div class="weekdays-checkboxes">
+                  <mat-checkbox formControlName="monday">Mon</mat-checkbox>
+                  <mat-checkbox formControlName="tuesday">Tue</mat-checkbox>
+                  <mat-checkbox formControlName="wednesday">Wed</mat-checkbox>
+                  <mat-checkbox formControlName="thursday">Thu</mat-checkbox>
+                  <mat-checkbox formControlName="friday">Fri</mat-checkbox>
+                  <mat-checkbox formControlName="saturday">Sat</mat-checkbox>
+                  <mat-checkbox formControlName="sunday">Sun</mat-checkbox>
+                </div>
+              </div>
+
+              <mat-form-field class="form-field full-width">
+                <mat-label>Execution Time(s)</mat-label>
+                <mat-chip-grid #weeklyTimeChipGrid>
+                  <mat-chip-row *ngFor="let t of dailyTimeChips; let i = index"
+                                [removable]="true" (removed)="removeDailyTime(i)">
+                    {{ t }}
+                    <button matChipRemove><mat-icon>cancel</mat-icon></button>
+                  </mat-chip-row>
+                  <input matInput type="time"
+                         [matChipInputFor]="weeklyTimeChipGrid"
+                         [matChipInputSeparatorKeyCodes]="separatorKeysCodes"
+                         [matChipInputAddOnBlur]="true"
+                         (matChipInputTokenEnd)="addDailyTime($event)" />
+                </mat-chip-grid>
+              </mat-form-field>
+            </ng-container>
+
+            <!-- Monthly -->
+            <ng-container *ngSwitchCase="'Monthly'">
+              <mat-form-field class="form-field full-width">
+                <mat-label>On Day(s)</mat-label>
+                <mat-chip-grid #dayChipGrid>
+                  <mat-chip-row *ngFor="let day of dayOfMonthChips; let i = index"
+                                [removable]="true" (removed)="removeDayOfMonth(i)">
+                    {{ day }}
+                    <button matChipRemove><mat-icon>cancel</mat-icon></button>
+                  </mat-chip-row>
+                  <input matInput type="number" min="1" max="31"
+                         placeholder="Add day and press Enter"
+                         [matChipInputFor]="dayChipGrid"
+                         [matChipInputSeparatorKeyCodes]="separatorKeysCodes"
+                         [matChipInputAddOnBlur]="true"
+                         (matChipInputTokenEnd)="addDayOfMonth($event)" />
+                </mat-chip-grid>
+              </mat-form-field>
+            </ng-container>
+          </div>
+
+          <!-- Email Subject -->
+          <div class="form-row">
+            <mat-form-field class="form-field full-width">
+              <mat-label>Email Subject</mat-label>
+              <input matInput formControlName="emailSubject" />
+            </mat-form-field>
+          </div>
+
+          <!-- Emails chips -->
+          <div class="form-row">
+            <mat-form-field class="form-field full-width email-chip-field">
+              <mat-label>Email(s)</mat-label>
+              <mat-chip-grid #emailChipGrid>
+                <mat-chip-row *ngFor="let email of emailChips; let i = index"
+                              [removable]="true" (removed)="removeEmail(i)">
+                  {{ email }}
+                  <button matChipRemove><mat-icon>cancel</mat-icon></button>
+                </mat-chip-row>
+                <input matInput type="email"
+                       placeholder="Add email and press Enter"
+                       [matChipInputFor]="emailChipGrid"
+                       [matChipInputSeparatorKeyCodes]="separatorKeysCodes"
+                       [matChipInputAddOnBlur]="true"
+                       (matChipInputTokenEnd)="addEmail($event)" />
+              </mat-chip-grid>
+              <mat-hint>Multiple emails allowed.</mat-hint>
+            </mat-form-field>
+          </div>
+
+          <!-- Add / Cancel buttons -->
+          <div class="form-row action-row right-align">
+            <button mat-button (click)="cancelAlertForm()">
+              Cancel
+            </button>
+            <button mat-raised-button color="primary" (click)="addCustomerAlert()">
+              {{ isEditingAlert ? 'Update Alert' : 'Add Alert' }}
+            </button>
+          </div>
+
+        </form>
+
+        <!-- Customer Alerts Grid -->
+        <div class="grid-section" [class.no-border]="viewMode">
+          <div *ngIf="loading" class="spinner-container">
+            <mat-spinner diameter="30"></mat-spinner>
+          </div>
+
+          <ng-container *ngIf="!loading">
+            <table mat-table [dataSource]="dataSource" class="alerts-table mat-elevation-z1">
+
+              <ng-container matColumnDef="customerName">
+                <th mat-header-cell *matHeaderCellDef>Customer</th>
+                <td mat-cell *matCellDef="let row" [matTooltip]="row.customerName" matTooltipPosition="above">
+                  {{ row.customerName }}
+                  <span *ngIf="row._status === 'new'" class="badge badge-new">New</span>
+                  <span *ngIf="row._status === 'edited'" class="badge badge-edited">Edited</span>
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="frequencyType">
+                <th mat-header-cell *matHeaderCellDef>Frequency</th>
+                <td mat-cell *matCellDef="let row" [matTooltip]="row.frequencyType + ' ' + getFrequencyDetail(row)" matTooltipPosition="above">
+                  {{ row.frequencyType }}
+                  <span class="freq-detail">{{ getFrequencyDetail(row) }}</span>
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="emails">
+                <th mat-header-cell *matHeaderCellDef>Emails</th>
+                <td mat-cell *matCellDef="let row" [matTooltip]="row.emails" matTooltipPosition="above">
+                  {{ getTruncatedEmails(row.emails) }}
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="actions">
+                <th mat-header-cell *matHeaderCellDef>Actions</th>
+                <td mat-cell *matCellDef="let row">
+                  <button mat-icon-button color="primary" matTooltip="Edit" (click)="editCustomerAlert(row)">
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                  <button mat-icon-button color="warn" matTooltip="Delete" (click)="deleteCustomerAlert(row)">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </td>
+              </ng-container>
+
+              <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+              <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+            </table>
+
+            <mat-paginator [pageSize]="5"
+                           [pageSizeOptions]="[5, 10, 25]"
+                           showFirstLastButtons>
+            </mat-paginator>
+
+            <div *ngIf="!gridRows.length" class="no-data">
+              No customer alerts configured yet.
+            </div>
+          </ng-container>
+        </div>
+      </div>
+    </mat-tab>
+  </mat-tab-group>
 </div>
 
 <div mat-dialog-actions class="dialog-actions">
-  <button mat-button class="cancel-button" (click)="onCancel()">{{ 'cancel' | translate }}</button>
-  <button mat-raised-button color="primary" [disabled]="!updateAlertForm.valid" (click)="updateAlertConfiguration()">{{ 'update' | translate }}</button>
+  <button mat-button class="cancel-button" (click)="onCancel()">{{ viewMode ? 'Close' : 'Cancel' }}</button>
+  <button *ngIf="!viewMode" mat-raised-button color="primary"
+          [disabled]="!updateAlertForm.valid || saving"
+          (click)="updateAlertConfiguration()">
+    <mat-spinner *ngIf="saving" diameter="18" class="btn-spinner"></mat-spinner>
+    <span *ngIf="!saving">Update</span>
+  </button>
 </div>

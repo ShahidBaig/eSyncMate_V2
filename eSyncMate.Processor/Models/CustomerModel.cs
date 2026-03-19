@@ -66,6 +66,7 @@
     {
         public int Id { get; set; }
         public int CustomerId { get; set; }
+        public string CustomerName { get; set; } = string.Empty;
         public int AlertId { get; set; }
         public string AlertName { get; set; } = string.Empty;      // join from AlertConfiguration table
         //public string Status { get; set; } = string.Empty;         // Active / Inactive

@@ -32,7 +32,11 @@
       "Bash(find:*)",
       "Bash(cd:*)",
       "Bash(dotnet tool:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "mcp__SqlMCP__update_data",
+      "Bash(grep -l \"class.*Route\" \"D:\\\\eSoftage_Projects\\\\eSyncMate_V2\\\\eSyncMate.Processor\\\\Managers\"/*.cs)",
+      "Bash(xargs -I {} basename {})",
+      "Bash(npx ng:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

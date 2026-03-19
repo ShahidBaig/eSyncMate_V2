@@ -40,7 +40,7 @@ const typeMap: TypeMap = {
   'ERP-ERROR': { name: 'Order Creation Error in ERP', icon: 'error' },
   'ERP-ERR': { name: 'Order Creation Error in ERP', icon: 'error' },
   'ERPASN-JSON': { name: 'ASN Received from ERP', icon: 'arrow_downward' },
-  'ERPASN-ERR': { name: 'ASN Error Received from ERP', icon: 'arrow_downward' },
+  'ERPASN-ERR': { name: 'Tracking Not Received From ERP', icon: 'arrow_downward' },
   'ASN-SNT': { name: 'ASN Request Sent to Customer', icon: 'arrow_upward' },
   'ASN-RES': { name: 'ASN Created in Customer Portal', icon: 'arrow_upward' },
   'ASN-ERR': { name: 'ASN Creation Error in Customer Portal', icon: 'arrow_upward' },
