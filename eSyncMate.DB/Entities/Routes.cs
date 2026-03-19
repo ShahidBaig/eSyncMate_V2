@@ -381,14 +381,17 @@ namespace eSyncMate.DB.Entities
 
                 l_Process = this.Connection.Execute(l_Query);
 
-                if (l_Trans)
+                if (l_Process)
                 {
-                    if (l_Process)
+                    l_Result = Result.GetSuccessResult();
+                    if (l_Trans)
                     {
                         this.Connection.CommitTransaction();
-                        l_Result = Result.GetSuccessResult();
                     }
-                    else
+                }
+                else
+                {
+                    if (l_Trans)
                     {
                         this.Connection.RollbackTransaction();
                     }
