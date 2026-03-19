@@ -456,6 +456,7 @@ namespace eSyncMate.DB
                 Command.CommandText = l_Query;
                 Command.CommandType = CommandType.Text;
                 Command.Connection = Connection;
+                Command.Transaction = Transaction;
                 Command.CommandTimeout = CommandTimeout;
                 Command.Parameters.Clear();
                 if (!Information.IsNothing(p_SQLParams))
@@ -517,6 +518,7 @@ namespace eSyncMate.DB
                 Command.CommandText = l_Query;
                 Command.CommandType = CommandType.Text;
                 Command.Connection = Connection;
+                Command.Transaction = Transaction;
                 Command.CommandTimeout = CommandTimeout;
                 if (p_Timeout > 0)
                 {
@@ -568,6 +570,7 @@ namespace eSyncMate.DB
                 Command.CommandText = Query;
                 Command.CommandType = CommandType.StoredProcedure;
                 Command.Connection = Connection;
+                Command.Transaction = Transaction;
                 if (Declarations.g_WriteQueries)
                 {
                     QueryLogger.WriteToQueryLog(Query);
@@ -711,6 +714,48 @@ namespace eSyncMate.DB
                 if (Declarations.g_WriteQueries)
                 {
                     QueryLogger.WriteToQueryLog("/********************************SQL Bulk Copy [" + p_TableName + "]********************************/");
+                }
+
+                l_Process = true;
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+            finally
+            {
+                if (Transaction is null)
+                {
+                    CloseConnection();
+                }
+            }
+
+            return l_Process;
+        }
+
+        public bool CopyDataTableTrans(string p_TableName, DataTable p_Table)
+        {
+            bool l_Process = false;
+            try
+            {
+                if (Transaction is null)
+                {
+                    OpenConnection();
+                }
+
+                using (var bulkCopy = new SqlBulkCopy(Connection, SqlBulkCopyOptions.Default, Transaction))
+                {
+                    bulkCopy.DestinationTableName = p_TableName;
+                    foreach (DataColumn column in p_Table.Columns)
+                    {
+                        bulkCopy.ColumnMappings.Add(column.ColumnName, column.ColumnName);
+                    }
+                    bulkCopy.WriteToServer(p_Table);
+                }
+
+                if (Declarations.g_WriteQueries)
+                {
+                    QueryLogger.WriteToQueryLog("/********************************SQL Bulk Copy Transactional [" + p_TableName + "]********************************/");
                 }
 
                 l_Process = true;

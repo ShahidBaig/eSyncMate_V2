@@ -29,7 +29,9 @@
 
       <ng-container matColumnDef="emails">
         <th mat-header-cell *matHeaderCellDef>Emails</th>
-        <td mat-cell *matCellDef="let row">{{ row.emails }}</td>
+        <td mat-cell *matCellDef="let row">
+          <div class="truncate-text" [matTooltip]="row.emails">{{ row.emails }}</div>
+        </td>
       </ng-container>
 
       <!-- Actions column - commented out, now view only -->
@@ -50,9 +52,7 @@
       <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
     </table>
 
-    <mat-paginator [pageSize]="10"
-                   [pageSizeOptions]="[5, 10, 25, 100]"
-                   showFirstLastButtons>
+    <mat-paginator [pageSize]="10" [pageSizeOptions]="[5, 10, 25, 100]" showFirstLastButtons>
     </mat-paginator>
 
     <div *ngIf="!alerts.length" class="no-data">

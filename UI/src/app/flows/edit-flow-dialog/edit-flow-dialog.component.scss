@@ -1,0 +1,132 @@
+.dialog-content {
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    box-sizing: border-box;
+}
+
+.dialog-title {
+    margin-bottom: 20px;
+    font-size: 24px;
+    font-weight: bold;
+}
+
+.flow-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    flex: 1;
+    overflow: hidden;
+}
+
+::ng-deep .mat-tab-body-wrapper {
+    flex: 1;
+}
+
+::ng-deep .mat-tab-body-content {
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.form-row {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.form-field {
+    flex: 1;
+    max-width: 500px;
+}
+
+.form-field.full-width {
+    max-width: 100%;
+}
+
+.dialog-actions {
+    display: flex;
+    justify-content: space-between;
+    padding: 16px 24px 24px;
+    border-top: 1px solid #eee;
+}
+
+.cancel-button {
+    color: #666;
+}
+
+mat-form-field {
+    width: 100%;
+}
+
+input[matInput] {
+    padding: 8px 12px;
+}
+
+.checkbox-container {
+    display: flex;
+}
+
+.checkbox-label {
+    margin-right: 20px;
+}
+
+/* Detail Input Card */
+.detail-input-card {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 12px;
+    background: #fafafa;
+}
+
+.input-card-title {
+    display: block;
+    margin-bottom: 12px;
+    font-size: 15px;
+    color: #333;
+}
+
+/* Add Detail Button Row */
+.add-detail-btn-row {
+    margin-bottom: 16px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+/* Details Table */
+.details-table-container {
+    margin-top: 4px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    overflow: hidden;
+    max-height: 450px;
+    overflow-y: auto;
+}
+
+.details-table {
+    width: 100%;
+}
+
+.details-table th {
+    background-color: #f5f5f5;
+    font-weight: 600;
+    color: #444;
+}
+
+.details-table td,
+.details-table th {
+    padding: 8px 12px;
+}
+
+.details-table tr:hover {
+    background-color: #f9f9f9;
+}
+
+.empty-table-message {
+    text-align: center;
+    padding: 16px;
+    color: #999;
+    font-style: italic;
+}

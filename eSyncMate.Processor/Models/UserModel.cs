@@ -53,5 +53,6 @@ namespace eSyncMate.Processor.Models
     {
         public string UserType { get; set; }
         public string Customers { get; set; }
+        public string Flows { get; set; }
     }
 }

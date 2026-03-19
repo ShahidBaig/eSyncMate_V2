@@ -26,7 +26,7 @@ import { MatExpansionModule } from '@angular/material/expansion'; // Import MatE
   ],
 })
 export class SideNavComponent {
-  constructor(public api: ApiService, private router: Router) {}
+  constructor(public api: ApiService, private router: Router) { }
   apiUrl = environment.apiUrl;
   company = this.api.getTokenUserInfo()?.company;
   isSetupMenu = this.api.getTokenUserInfo()?.isSetupMenu.toLocaleUpperCase() === 'TRUE' || this.api.getTokenUserInfo()?.userType.toLocaleUpperCase() === 'ADMIN';
@@ -40,7 +40,7 @@ export class SideNavComponent {
     {
       title: 'nav.orders',
       link: 'edi/all-orders',
-      visible: this.api.getTokenUserInfo()?.company.toLocaleUpperCase() === 'ESYNCMATE' || this.api.getTokenUserInfo()?.company.toLocaleUpperCase() === 'REPAINTSTUDIOS'  ? true : false
+      visible: this.api.getTokenUserInfo()?.company.toLocaleUpperCase() === 'ESYNCMATE' || this.api.getTokenUserInfo()?.company.toLocaleUpperCase() === 'REPAINTSTUDIOS' ? true : false
     },
     {
       title: 'nav.customers',
@@ -68,6 +68,7 @@ export class SideNavComponent {
       link: 'edi/routes',
       visible: true
     },
+
     {
       title: 'nav.customerProductCatalog',
       link: 'edi/customerProductCatalog',
@@ -143,7 +144,12 @@ export class SideNavComponent {
       title: 'nav.alertConfiguration',
       link: 'edi/alertConfiguration',
       visible: this.api.getTokenUserInfo()?.company.toLocaleUpperCase() === 'ESYNCMATE' ? true : false
-    }
+    },
+    {
+      title: 'nav.flows',
+      link: 'edi/flows',
+      visible: true
+    },
   ];
 
   goToLink(option: SideNavItem) {

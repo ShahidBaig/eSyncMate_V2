@@ -10,7 +10,10 @@ namespace API.DataAccess
         IList<User> GetUsers();
         void BlockUser(int userId);
         void UnblockUser(int userId);
-        void DeactivateUser(int userId);
         void ActivateUser(int userId);
+        void DeactivateUser(int userId);
+
+        IList<Flow> GetFlows(string customerId);
+        Flow? GetFlowById(long id);
     }
 }

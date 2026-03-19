@@ -83,7 +83,7 @@
         <ng-container matColumnDef="Status">
           <th mat-header-cell *matHeaderCellDef>{{ 'status' | translate }}</th>
           <td mat-cell *matCellDef="let element" [ngClass]="getStatusClass(element.status)"
-              [matTooltip]="getTooltipWithTranslation(element)">
+            [matTooltip]="getTooltipWithTranslation(element)">
             {{element.status}}
           </td>
         </ng-container>
@@ -95,8 +95,10 @@
         </ng-container>
 
         <ng-container matColumnDef="ERPCustomerID" [style.display]="showDataColumn ? 'none' : 'none'">
-          <th mat-header-cell *matHeaderCellDef [style.display]="showDataColumn ? 'none' : 'none'">{{ 'ERPCustomerID' | translate }}</th>
-          <td mat-cell *matCellDef="let element" [style.display]="showDataColumn ? 'none' : 'none'"> {{element.erpCustomerID}} </td>
+          <th mat-header-cell *matHeaderCellDef [style.display]="showDataColumn ? 'none' : 'none'">{{ 'ERPCustomerID' |
+            translate }}</th>
+          <td mat-cell *matCellDef="let element" [style.display]="showDataColumn ? 'none' : 'none'">
+            {{element.erpCustomerID}} </td>
         </ng-container>
 
         <ng-container matColumnDef="ERPSoNum">
@@ -126,7 +128,7 @@
           <th mat-header-cell *matHeaderCellDef></th>
           <td mat-cell *matCellDef="let element">
             <button mat-icon-button aria-label="normal button" color="accent" matTooltip="View Order"
-                    matTooltipPosition="right" (click)="editOrder(element)">
+              matTooltipPosition="right" (click)="editOrder(element)">
               <mat-icon>visibility</mat-icon>
             </button>
           </td>
@@ -136,7 +138,9 @@
           <th mat-header-cell *matHeaderCellDef></th>
           <td mat-cell *matCellDef="let element">
             <button mat-icon-button aria-label="normal button" color="accent" matTooltip="Re-Proccess Order"
-                    matTooltipPosition="right" *ngIf="element.status == 'ERROR' || element.status == 'ASNERROR' || element.status == 'ACKERROR'" (click)="ReProccess(element,0)">
+              matTooltipPosition="right"
+              *ngIf="element.status == 'ERROR' || element.status == 'ASNERROR' || element.status == 'ACKERROR'"
+              (click)="ReProccess(element,0)">
               <mat-icon>refresh</mat-icon>
             </button>
           </td>
@@ -156,7 +160,7 @@
           <th mat-header-cell *matHeaderCellDef></th>
           <td mat-cell *matCellDef="let element">
             <button mat-icon-button aria-label="normal button" color="accent" matTooltip="Get Order Files"
-                    matTooltipPosition="right" (click)="getOrderFiles(element)">
+              matTooltipPosition="right" (click)="getOrderFiles(element)">
               <mat-icon>read_more</mat-icon>
             </button>
           </td>
@@ -167,31 +171,33 @@
           <th mat-header-cell *matHeaderCellDef>{{ 'actions' | translate }}</th>
           <td mat-cell *matCellDef="let element">
             <button mat-icon-button aria-label="normal button" matTooltip="Generate ASN" matTooltipPosition="right"
-                    color="accent" (click)="generateASN(element)"
-                    *ngIf="element.status == 'SYNCED' || element.status === 'PROCESSED' || element.status === 'ACKNOWLEDGED' ">
+              color="accent" (click)="generateASN(element)"
+              *ngIf="element.status == 'SYNCED' || element.status === 'PROCESSED' || element.status === 'ACKNOWLEDGED' ">
               <mat-icon>local_shipping</mat-icon>
             </button>
           </td>
         </ng-container>
 
         <!--Generate855EDI-->
-        <ng-container *ngIf="isCompany !== 'esyncmate' && isCompany !== 'RepaintStudios' " matColumnDef="SendOrderStatus">
+        <ng-container *ngIf="isCompany !== 'esyncmate' && isCompany !== 'RepaintStudios' "
+          matColumnDef="SendOrderStatus">
           <th mat-header-cell *matHeaderCellDef></th>
           <td mat-cell *matCellDef="let element">
             <button mat-icon-button aria-label="normal button" color="accent" matTooltip="Send Order ACK"
-                    matTooltipPosition="right" (click)="generate855EDI(element)"
-                    *ngIf="element.status === 'SYNCED' || element.status === 'PROCESSED' ">
+              matTooltipPosition="right" (click)="generate855EDI(element)"
+              *ngIf="element.status === 'SYNCED' || element.status === 'PROCESSED' ">
               <mat-icon>send</mat-icon>
             </button>
           </td>
         </ng-container>
 
         <!--MarkOrderforASN-->
-        <ng-container *ngIf="isCompany !== 'esyncmate' && isCompany !== 'RepaintStudios' " matColumnDef="MarkOrderforASN">
+        <ng-container *ngIf="isCompany !== 'esyncmate' && isCompany !== 'RepaintStudios' "
+          matColumnDef="MarkOrderforASN">
           <th mat-header-cell *matHeaderCellDef></th>
           <td mat-cell *matCellDef="let element">
             <button mat-icon-button aria-label="normal button" color="accent" matTooltip="Mark Order for ASN"
-                    matTooltipPosition="right" (click)="markForASN(element)" *ngIf="element.status === 'ASNGEN'">
+              matTooltipPosition="right" (click)="markForASN(element)" *ngIf="element.status === 'ASNGEN'">
               <mat-icon>file_copy</mat-icon>
             </button>
           </td>
@@ -202,7 +208,7 @@
           <th mat-header-cell *matHeaderCellDef></th>
           <td mat-cell *matCellDef="let element">
             <button mat-icon-button aria-label="normal button" color="accent" matTooltip="Create Invoice"
-                    matTooltipPosition="right" (click)="createInvoice(element)" *ngIf="element.status === 'ASNMARK'">
+              matTooltipPosition="right" (click)="createInvoice(element)" *ngIf="element.status === 'ASNMARK'">
               <mat-icon>ballot</mat-icon>
             </button>
           </td>
@@ -213,7 +219,7 @@
           <th mat-header-cell *matHeaderCellDef></th>
           <td mat-cell *matCellDef="let element">
             <button mat-icon-button aria-label="normal button" color="accent" matTooltip="Create 810"
-                    matTooltipPosition="right" (click)="process810(element)" *ngIf="element.status === 'INVOICED'">
+              matTooltipPosition="right" (click)="process810(element)" *ngIf="element.status === 'INVOICED'">
               <mat-icon>developer_mode</mat-icon>
             </button>
           </td>
@@ -224,8 +230,8 @@
           <th mat-header-cell *matHeaderCellDef></th>
           <td mat-cell *matCellDef="let element">
             <button mat-icon-button aria-label="normal button" color="accent" matTooltip="Sync Order"
-                    matTooltipPosition="right" (click)="syncOrder(element)"
-                    *ngIf="element.status === 'NEW' || element.status === 'SYNCERROR'">
+              matTooltipPosition="right" (click)="syncOrder(element)"
+              *ngIf="element.status === 'NEW' || element.status === 'SYNCERROR'">
               <mat-icon>sync</mat-icon>
             </button>
           </td>
@@ -236,7 +242,7 @@
           <th mat-header-cell *matHeaderCellDef></th>
           <td mat-cell *matCellDef="let element">
             <button mat-icon-button aria-label="normal button" color="accent" matTooltip="Get Store Orders"
-                    matTooltipPosition="right" (click)="getStoresOrder(element)" *ngIf="element.status === 'SPLITED'">
+              matTooltipPosition="right" (click)="getStoresOrder(element)" *ngIf="element.status === 'SPLITED'">
               <mat-icon>business_center</mat-icon>
             </button>
           </td>
@@ -246,12 +252,10 @@
         <tr mat-row *matRowDef="let row; columns: columns"></tr>
 
       </table>
-     
-                    <mat-paginator [length]="listOfOrders.length"
-                [pageSize]="10"
-                [pageSizeOptions]="[5, 10, 25, 100]"
-                showFirstLastButtons>
- </mat-paginator>
+
+      <mat-paginator [length]="listOfOrders.length" [pageSize]="10" [pageSizeOptions]="[5, 10, 25, 100]"
+        showFirstLastButtons>
+      </mat-paginator>
 
     </mat-card-content>
   </mat-card>
