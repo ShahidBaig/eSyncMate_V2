@@ -381,14 +381,17 @@ namespace eSyncMate.DB.Entities
 
                 l_Process = this.Connection.Execute(l_Query);
 
-                if (l_Trans)
+                if (l_Process)
                 {
-                    if (l_Process)
+                    l_Result = Result.GetSuccessResult();
+                    if (l_Trans)
                     {
                         this.Connection.CommitTransaction();
-                        l_Result = Result.GetSuccessResult();
                     }
-                    else
+                }
+                else
+                {
+                    if (l_Trans)
                     {
                         this.Connection.RollbackTransaction();
                     }
@@ -521,7 +524,7 @@ namespace eSyncMate.DB.Entities
             try
             {
                 // Only insert logs for Error and Exception types (Info/Debug/Warning excluded to reduce RouteLog table bloat)
-                if (type == LogTypeEnum.Error || type == LogTypeEnum.Exception)
+                if (type == LogTypeEnum.Error || type == LogTypeEnum.Exception || type == LogTypeEnum.Info)
                 {
                     RouteLog routeLog = new RouteLog();
 

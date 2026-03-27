@@ -65,7 +65,7 @@ export class CustomersComponent implements OnInit {
   code: number = 0;
   showSpinnerforSearch: boolean = false;
   showSpinner: boolean = false;
-  options = ['Select Customer', 'Id', 'Customer Name', 'ERP Customer ID', 'ISA Customer ID', 'ISA 810 Receiver ID', 'Market Place', 'Created Date'];
+  options = ['Select Customer', 'Id', 'Customer Name', 'ERP Customer ID', 'Market Place', 'Created Date'];
   selectedOption: string = 'Select Customer';
   searchValue: string = '';
   startDate: string = '';
@@ -78,9 +78,6 @@ export class CustomersComponent implements OnInit {
     'id',
     'Name',
     'ERPCustomerID',
-    'ISACustomerID',
-    'ISA810ReceiverId',
-    'ISA856ReceiverId',
     'Marketplace',
     'CreatedDate',
     'Edit',

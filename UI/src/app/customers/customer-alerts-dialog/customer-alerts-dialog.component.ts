@@ -50,7 +50,7 @@ export interface CustomerAlertsResponse {
 export class CustomerAlertsDialogComponent implements OnInit, AfterViewInit {
 
   alerts: CustomerAlertRow[] = [];
-  displayedColumns: string[] = ['alertName', 'frequencyType', 'emails', 'actions'];
+  displayedColumns: string[] = ['alertName', 'frequencyType', 'emails'];
 
   loading = false;
   dataSource = new MatTableDataSource<CustomerAlertRow>([]);

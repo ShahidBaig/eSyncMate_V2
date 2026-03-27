@@ -56,3 +56,19 @@
   max-height: 60vh;
   overflow-y: auto;
 }
+
+.scrollable-chips {
+  max-height: 120px;
+  overflow-y: auto;
+  align-content: flex-start;
+  display: block;
+}
+
+.scrollable-chips::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scrollable-chips::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 4px;
+}

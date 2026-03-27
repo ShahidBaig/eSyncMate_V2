@@ -71,25 +71,23 @@ namespace eSyncMate.Processor.Managers
                     }
 
                     string l_Subject = BindPlaceholders(customerAlerts.EmailSubject, l_data);
-                    
+
+                    // Priority 1: SP returns body content in AlertReason/BodyData/Data columns
                     l_Body = ResolveEmailBodyContent(l_data);
 
+                    // Replace all SP column placeholders in the resolved body
                     if (!string.IsNullOrWhiteSpace(l_Body))
                     {
-                        string lastOrderDate = l_data.Columns.Contains("LastOrderDate") && !l_data.Rows[0].IsNull("LastOrderDate")
-                            ? Convert.ToString(l_data.Rows[0]["LastOrderDate"]) : "N/A";
-                        string hoursSinceLastOrder = l_data.Columns.Contains("HoursSinceLastOrder") && !l_data.Rows[0].IsNull("HoursSinceLastOrder")
-                            ? Convert.ToString(l_data.Rows[0]["HoursSinceLastOrder"]) : "N/A";
-
-                        l_Body = l_Body.Replace("@LastOrderDate", lastOrderDate);
-                        l_Body = l_Body.Replace("@HoursSinceLastOrder", hoursSinceLastOrder);
+                        l_Body = BindPlaceholders(l_Body, l_data);
                     }
 
-                    if (string.IsNullOrWhiteSpace(l_Body))
+                    // Priority 2: Use CustomerAlerts.EmailBody template with SP column placeholders
+                    if (string.IsNullOrWhiteSpace(l_Body) && !string.IsNullOrWhiteSpace(customerAlerts.EmailBody))
                     {
                         l_Body = BindPlaceholders(customerAlerts.EmailBody, l_data);
                     }
 
+                    // Priority 3: Auto-generate HTML table from SP result
                     if (string.IsNullOrWhiteSpace(l_Body))
                     {
                         l_Body = GenerateHtmlTableFromDataTable(l_data);
@@ -205,8 +203,13 @@ namespace eSyncMate.Processor.Managers
         {
             if (dt == null || dt.Rows.Count == 0) return string.Empty;
 
+            const string tableStyle = "style=\"width:100%;border-collapse:collapse;margin:20px 0;font-size:14px;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;\"";
+            const string thStyle = "bgcolor='#f1f5f9' style=\"background-color:#f1f5f9;color:#1e293b;font-weight:600;text-align:left;padding:12px;border:1px solid #e2e8f0;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;\"";
+            const string tdStyle = "style=\"padding:12px;border:1px solid #e2e8f0;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;\"";
+            const string trEvenStyle = "bgcolor='#f8fafc' style=\"background-color:#f8fafc;\"";
+
             StringBuilder sb = new StringBuilder();
-            sb.Append("<table><thead><tr>");
+            sb.Append($"<table {tableStyle}><thead><tr>");
 
             string[] excludedColumns = { "AlertStatus" };
 
@@ -216,19 +219,22 @@ namespace eSyncMate.Processor.Managers
                 if (!excludedColumns.Contains(column.ColumnName, StringComparer.OrdinalIgnoreCase))
                 {
                     visibleColumns.Add(column.ColumnName);
-                    sb.Append($"<th>{column.ColumnName}</th>");
+                    sb.Append($"<th {thStyle}>{column.ColumnName}</th>");
                 }
             }
             sb.Append("</tr></thead><tbody>");
 
+            int rowIndex = 0;
             foreach (DataRow row in dt.Rows)
             {
-                sb.Append("<tr>");
+                string rowStyle = (rowIndex % 2 == 1) ? $" {trEvenStyle}" : "";
+                sb.Append($"<tr{rowStyle}>");
                 foreach (string colName in visibleColumns)
                 {
-                    sb.Append($"<td>{Convert.ToString(row[colName])}</td>");
+                    sb.Append($"<td {tdStyle}>{Convert.ToString(row[colName])}</td>");
                 }
                 sb.Append("</tr>");
+                rowIndex++;
             }
 
             sb.Append("</tbody></table>");
@@ -248,6 +254,16 @@ namespace eSyncMate.Processor.Managers
         {
             try
             {
+                if (string.IsNullOrWhiteSpace(tenantId) || string.IsNullOrWhiteSpace(clientId) || string.IsNullOrWhiteSpace(clientSecret))
+                {
+                    return (false, "", "MicrosoftGraph credentials not configured. Check TenantId, ClientId, and ClientSecret in appsettings.json");
+                }
+
+                if (string.IsNullOrWhiteSpace(senderEmail))
+                {
+                    return (false, "", "SenderEmail is not configured in MicrosoftGraph settings");
+                }
+
                 var credential = new ClientSecretCredential(tenantId, clientId, clientSecret);
                 var graphClient = new GraphServiceClient(credential, new[] { "https://graph.microsoft.com/.default" });
 
@@ -273,80 +289,147 @@ namespace eSyncMate.Processor.Managers
 
                 return (true, Guid.NewGuid().ToString(), "");
             }
+            catch (Microsoft.Graph.Models.ODataErrors.ODataError odataEx)
+            {
+                var errorCode = odataEx.Error?.Code ?? "Unknown";
+                var errorMessage = odataEx.Error?.Message ?? odataEx.Message;
+                var innerError = odataEx.Error?.InnerError?.AdditionalData != null
+                    ? string.Join(", ", odataEx.Error.InnerError.AdditionalData.Select(kv => $"{kv.Key}={kv.Value}"))
+                    : "";
+
+                var fullError = $"Graph API Error [{errorCode}]: {errorMessage}";
+                if (!string.IsNullOrEmpty(innerError))
+                    fullError += $" | InnerError: {innerError}";
+
+                Console.WriteLine($"[SendEmailGraphAsync] {fullError}");
+                Console.WriteLine($"[SendEmailGraphAsync] TenantId: {tenantId}, ClientId: {clientId}, SenderEmail: {senderEmail}, Recipients: {string.Join(", ", toRecipients)}");
+
+                return (false, "", fullError);
+            }
+            catch (Azure.Identity.AuthenticationFailedException authEx)
+            {
+                var fullError = $"Authentication Failed: {authEx.Message}";
+                Console.WriteLine($"[SendEmailGraphAsync] {fullError}");
+                return (false, "", fullError);
+            }
             catch (Exception ex)
             {
-                return (false, "", ex.Message);
+                var fullError = $"{ex.GetType().Name}: {ex.Message}";
+                if (ex.InnerException != null)
+                    fullError += $" | Inner: {ex.InnerException.Message}";
+
+                Console.WriteLine($"[SendEmailGraphAsync] {fullError}");
+                return (false, "", fullError);
             }
         }
 
         private static string GetBeautifiedHtmlBody(string subject, string content, string alertName)
         {
-            StringBuilder sb = new StringBuilder();
-            sb.Append("<!DOCTYPE html><html><head>");
-            sb.Append("<style>");
-            sb.Append("body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f4f7f6; }");
-            sb.Append(".container { max-width: 800px; margin: 20px auto; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1); border: 1px solid #e0e0e0; }");
-            sb.Append(".header { background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); color: #fff; padding: 30px; text-align: center; }");
-            sb.Append(".header h1 { margin: 0; font-size: 24px; font-weight: 600; letter-spacing: 0.5px; }");
-            sb.Append(".content { padding: 40px; }");
-            sb.Append(".footer { background: #f8fafc; color: #64748b; padding: 20px; text-align: center; font-size: 12px; border-top: 1px solid #e2e8f0; }");
-            sb.Append("table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }");
-            sb.Append("th { background-color: #f1f5f9; color: #1e293b; font-weight: 600; text-align: left; padding: 12px; border: 1px solid #e2e8f0; }");
-            sb.Append("td { padding: 12px; border: 1px solid #e2e8f0; }");
-            sb.Append("tr:nth-child(even) { background-color: #f8fafc; }");
-            sb.Append("tr:hover { background-color: #f1f5f9; }");
-            sb.Append(".alert-info { border-left: 4px solid #3b82f6; padding: 15px; background: #eff6ff; margin-bottom: 20px; border-radius: 0 4px 4px 0; }");
-            sb.Append("</style></head><body>");
-            sb.Append("<div class='container'>");
-            sb.Append($"<div class='header'><h1>{alertName}</h1></div>");
-            sb.Append("<div class='content'>");
+            // NOTE: Microsoft 365 / Outlook does NOT support:
+            //   - linear-gradient (use background-color only)
+            //   - border-radius (ignored)
+            //   - max-width (use width attribute on table)
+            //   - <style> blocks (must be inline)
 
             string processedContent = content;
             if (!content.Contains("<table") && !content.Contains("<div") && !content.Contains("<p"))
             {
                 processedContent = ProcessTabularData(content);
             }
-            sb.Append(processedContent);
 
-            sb.Append("</div>");
-            sb.Append("<div class='footer'>&copy; " + DateTime.Now.Year + " eSyncMate. All rights reserved.<br/>This is an automated notification, please do not reply.</div>");
-            sb.Append("</div></body></html>");
+            processedContent = ApplyInlineTableStyles(processedContent);
+
+            StringBuilder sb = new StringBuilder();
+            sb.Append("<!DOCTYPE html><html><head><meta charset='UTF-8'></head>");
+            sb.Append("<body style=\"font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;line-height:1.6;color:#333333;margin:0;padding:0;background-color:#f4f7f6;\">");
+
+            // Outer wrapper table
+            sb.Append("<table width='100%' cellpadding='0' cellspacing='0' border='0' style=\"background-color:#f4f7f6;\">");
+            sb.Append("<tr><td align='center' valign='top' style=\"padding:20px 10px;\">");
+
+            // Container table
+            sb.Append("<table width='800' cellpadding='0' cellspacing='0' border='0' style=\"width:800px;background-color:#ffffff;border:1px solid #e0e0e0;\">");
+
+            // Header row — solid color (no gradient)
+            sb.Append("<tr><td bgcolor='#1e3a8a' style=\"background-color:#1e3a8a;color:#ffffff;padding:30px 20px;text-align:center;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;\">");
+            sb.Append($"<h1 style=\"margin:0;font-size:24px;font-weight:600;letter-spacing:0.5px;color:#ffffff;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;\">{alertName}</h1>");
+            sb.Append("</td></tr>");
+
+            // Content row
+            sb.Append("<tr><td style=\"padding:30px 40px;font-size:14px;color:#333333;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;\">");
+            sb.Append(processedContent);
+            sb.Append("</td></tr>");
+
+            // Footer row
+            sb.Append("<tr><td bgcolor='#f8fafc' style=\"background-color:#f8fafc;color:#64748b;padding:20px;text-align:center;font-size:12px;border-top:1px solid #e2e8f0;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;\">");
+            sb.Append("&copy; " + DateTime.Now.Year + " eSyncMate. All rights reserved.<br/>This is an automated notification, please do not reply.");
+            sb.Append("</td></tr>");
+
+            // Close container
+            sb.Append("</table>");
+            sb.Append("</td></tr></table>");
+
+            sb.Append("</body></html>");
 
             return sb.ToString();
+        }
+
+        private static string ApplyInlineTableStyles(string html)
+        {
+            if (string.IsNullOrWhiteSpace(html)) return html;
+
+            html = Regex.Replace(html, @"<table(?![^>]*style)",
+                "<table style=\"width:100%;border-collapse:collapse;margin:20px 0;font-size:14px;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;\"",
+                RegexOptions.IgnoreCase);
+
+            html = Regex.Replace(html, @"<th(?![^>]*style)",
+                "<th bgcolor='#f1f5f9' style=\"background-color:#f1f5f9;color:#1e293b;font-weight:600;text-align:left;padding:12px;border:1px solid #e2e8f0;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;\"",
+                RegexOptions.IgnoreCase);
+
+            html = Regex.Replace(html, @"<td(?![^>]*style)",
+                "<td style=\"padding:12px;border:1px solid #e2e8f0;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;\"",
+                RegexOptions.IgnoreCase);
+
+            return html;
         }
 
         private static string ProcessTabularData(string content)
         {
             if (string.IsNullOrWhiteSpace(content)) return string.Empty;
             string[] lines = content.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.RemoveEmptyEntries);
-            
-            if (lines.Length <= 1) return $"<p>{content.Replace("\n", "<br/>")}</p>";
+
+            if (lines.Length <= 1) return $"<p style=\"margin:0;padding:4px 0;\">{content.Replace("\n", "<br/>")}</p>";
 
             char delimiter = '\0';
             if (lines[0].Contains('\t')) delimiter = '\t';
             else if (lines[0].Contains('|')) delimiter = '|';
             else if (lines[0].Contains(',') && lines[0].Split(',').Length > 2) delimiter = ',';
 
-            if (delimiter == '\0') 
-                return $"<p>{content.Replace("\n", "<br/>")}</p>";
+            if (delimiter == '\0')
+                return $"<p style=\"margin:0;padding:4px 0;\">{content.Replace("\n", "<br/>")}</p>";
+
+            const string tableStyle = "style=\"width:100%;border-collapse:collapse;margin:20px 0;font-size:14px;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;\"";
+            const string thStyle = "bgcolor='#f1f5f9' style=\"background-color:#f1f5f9;color:#1e293b;font-weight:600;text-align:left;padding:12px;border:1px solid #e2e8f0;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;\"";
+            const string tdStyle = "style=\"padding:12px;border:1px solid #e2e8f0;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;\"";
 
             StringBuilder tableSb = new();
-            tableSb.Append("<table><thead><tr>");
+            tableSb.Append($"<table {tableStyle}><thead><tr>");
 
             string[] headers = lines[0].Split(delimiter);
             foreach (var header in headers)
             {
-                tableSb.Append($"<th>{header.Trim().Trim('\"')}</th>");
+                tableSb.Append($"<th {thStyle}>{header.Trim().Trim('\"')}</th>");
             }
             tableSb.Append("</tr></thead><tbody>");
 
             for (int i = 1; i < lines.Length; i++)
             {
                 string[] cells = lines[i].Split(delimiter);
-                tableSb.Append("<tr>");
+                string rowStyle = (i % 2 == 0) ? " style=\"background-color:#f8fafc;\"" : "";
+                tableSb.Append($"<tr{rowStyle}>");
                 foreach (var cell in cells)
                 {
-                    tableSb.Append($"<td>{cell.Trim().Trim('\"')}</td>");
+                    tableSb.Append($"<td {tdStyle}>{cell.Trim().Trim('\"')}</td>");
                 }
                 tableSb.Append("</tr>");
             }

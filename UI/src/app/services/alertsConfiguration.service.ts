@@ -34,4 +34,21 @@ export class alertsConfigurationService {
   getERPCustomers(): Observable<any> {
     return this.http.get(`${this.apiUrl}api/CustomerProductCatalog/getERPCustomers`);
   }
+
+  getCustomerAlertsByAlertId(alertId: number): Observable<any> {
+    const params = new HttpParams().set('alertId', alertId.toString());
+    return this.http.get(`${this.apiUrl}api/AlertsConfiguration/getCustomerAlertsByAlertId`, { params });
+  }
+
+  getCustomersDropdown(): Observable<any> {
+    return this.http.get(`${this.apiUrl}api/AlertsConfiguration/getCustomersDropdown`);
+  }
+
+  saveCustomerAlert(model: any): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}api/Customers/saveCustomerAlert`, model);
+  }
+
+  deleteCustomerAlert(model: any): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}api/Customers/deleteCustomerAlert`, model);
+  }
 }

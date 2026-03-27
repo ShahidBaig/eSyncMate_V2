@@ -1,0 +1,170 @@
+<div mat-dialog-content class="dialog-content">
+    <div class="dialog-header">
+        <h1 class="dialog-title">Add Partner Flow</h1>
+    </div>
+    <form [formGroup]="newFlowForm" class="flow-form">
+        <mat-tab-group>
+
+            <mat-tab>
+                <ng-template mat-tab-label>
+                    <mat-icon class="tab-icon">info</mat-icon> General
+                </ng-template>
+                <div class="tab-content">
+                    <div class="general-card">
+                        <div class="general-card-header">
+                            <mat-icon class="card-header-icon">business</mat-icon>
+                            <span>Partner & Flow Information</span>
+                        </div>
+                        <div class="general-card-body">
+                            <div class="form-row">
+                                <mat-form-field class="form-field" appearance="outline">
+                                    <mat-label>Partner</mat-label>
+                                    <mat-select formControlName="customerID" required (openedChange)="onCustomerSelectOpened($event)">
+                                        <div class="select-search-container">
+                                            <input matInput
+                                                   class="select-search-input"
+                                                   placeholder="Search Partner..."
+                                                   [(ngModel)]="customerSearchText"
+                                                   [ngModelOptions]="{standalone: true}"
+                                                   (input)="filterCustomerOptions()"
+                                                   (keydown)="$event.stopPropagation()">
+                                        </div>
+                                        <mat-option *ngFor="let customer of filteredCustomerOptions" [value]="customer.erpCustomerID">
+                                            {{ customer.name }}
+                                        </mat-option>
+                                    </mat-select>
+                                    <mat-icon matPrefix class="field-icon">storefront</mat-icon>
+                                </mat-form-field>
+
+                                <mat-form-field class="form-field" appearance="outline">
+                                    <mat-label>Flow Name</mat-label>
+                                    <input type="text" formControlName="title" matInput placeholder="Enter flow name" required>
+                                    <mat-icon matPrefix class="field-icon">label</mat-icon>
+                                </mat-form-field>
+
+                            </div>
+
+                            <div class="form-row">
+                                <mat-form-field class="form-field status-field" appearance="outline">
+                                    <mat-label>Status</mat-label>
+                                    <mat-select formControlName="status" required (selectionChange)="onFlowStatusChange($event.value)">
+                                        <mat-option value="Active">Active</mat-option>
+                                        <mat-option value="In-Active">In-Active</mat-option>
+                                    </mat-select>
+                                    <mat-icon matPrefix class="field-icon">toggle_on</mat-icon>
+                                    <mat-hint>Applies to all routes</mat-hint>
+                                </mat-form-field>
+
+                                <mat-form-field class="form-field description-field" appearance="outline">
+                                    <mat-label>Description</mat-label>
+                                    <textarea formControlName="description" matInput placeholder="Describe the purpose of this flow..." rows="3"></textarea>
+                                    <mat-icon matPrefix class="field-icon textarea-icon">notes</mat-icon>
+                                </mat-form-field>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </mat-tab>
+
+            <mat-tab>
+                <ng-template mat-tab-label>
+                    <mat-icon class="tab-icon">route</mat-icon> Route Details
+                </ng-template>
+                <div class="tab-content">
+                    <div class="details-header">
+                        <span class="details-count">
+                            <mat-icon>route</mat-icon>
+                            {{ flowDetails.length }} Route{{ flowDetails.length !== 1 ? 's' : '' }} configured
+                        </span>
+                        <button mat-flat-button color="primary" type="button" (click)="addDetail()">
+                            <mat-icon>add</mat-icon> Add Route
+                        </button>
+                    </div>
+
+                    <div class="details-table-container" *ngIf="flowDetails.length > 0">
+                        <table mat-table #detailsTable [dataSource]="flowDetails.controls" class="details-table">
+
+                            <ng-container matColumnDef="routeName">
+                                <th mat-header-cell *matHeaderCellDef>Route Name</th>
+                                <td mat-cell *matCellDef="let detail">
+                                    <span class="route-name-cell">{{ getRouteNameById(detail.get('routeId')?.value) }}</span>
+                                </td>
+                            </ng-container>
+
+                            <ng-container matColumnDef="status">
+                                <th mat-header-cell *matHeaderCellDef>Status</th>
+                                <td mat-cell *matCellDef="let detail">
+                                    <span class="status-chip"
+                                          [ngClass]="detail.get('status')?.value === 'Active' ? 'chip-active' : 'chip-inactive'">
+                                        {{ detail.get('status')?.value }}
+                                    </span>
+                                </td>
+                            </ng-container>
+
+                            <ng-container matColumnDef="frequency">
+                                <th mat-header-cell *matHeaderCellDef>Frequency</th>
+                                <td mat-cell *matCellDef="let detail; let i = index">
+                                    {{ getFrequencyDisplay(i) }}
+                                </td>
+                            </ng-container>
+
+                            <ng-container matColumnDef="startDate">
+                                <th mat-header-cell *matHeaderCellDef>Start Date</th>
+                                <td mat-cell *matCellDef="let detail">
+                                    {{ isValidDate(detail.get('startDate')?.value) ? (detail.get('startDate')?.value | date:'MMM dd, yyyy') : 'Not set' }}
+                                </td>
+                            </ng-container>
+
+                            <ng-container matColumnDef="nextRecurrence">
+                                <th mat-header-cell *matHeaderCellDef>Next Recurrence</th>
+                                <td mat-cell *matCellDef="let detail; let i = index">
+                                    <span class="next-recurrence" [ngClass]="detail.get('status')?.value === 'Active' ? 'recurrence-active' : 'recurrence-inactive'">
+                                        {{ getNextRecurrence(i) }}
+                                    </span>
+                                </td>
+                            </ng-container>
+
+                            <ng-container matColumnDef="actions">
+                                <th mat-header-cell *matHeaderCellDef>Actions</th>
+                                <td mat-cell *matCellDef="let detail; let i = index">
+                                    <button mat-icon-button color="primary" type="button" (click)="editDetail(i)"
+                                        matTooltip="Edit">
+                                        <mat-icon>edit</mat-icon>
+                                    </button>
+                                    <button mat-icon-button color="warn" type="button" (click)="removeFlowDetail(i)"
+                                        matTooltip="Remove">
+                                        <mat-icon>delete</mat-icon>
+                                    </button>
+                                </td>
+                            </ng-container>
+
+                            <tr mat-header-row *matHeaderRowDef="detailTableColumns"></tr>
+                            <tr mat-row *matRowDef="let row; columns: detailTableColumns;"></tr>
+
+                        </table>
+                    </div>
+
+                    <div class="empty-state" *ngIf="flowDetails.length === 0">
+                        <mat-icon>info_outline</mat-icon>
+                        <p>No routes added yet. Click "Add Route" to get started.</p>
+                    </div>
+                </div>
+            </mat-tab>
+
+        </mat-tab-group>
+    </form>
+</div>
+
+<div class="saving-overlay" *ngIf="isSaving">
+    <mat-spinner diameter="40"></mat-spinner>
+    <span class="saving-text">Saving flow...</span>
+</div>
+
+<div mat-dialog-actions class="dialog-actions">
+    <button mat-button class="cancel-button" (click)="onCancel()" [disabled]="isSaving">{{ 'Cancel' | translate }}</button>
+    <button mat-raised-button color="primary" (click)="onSave()" [disabled]="isSaving">
+        <mat-spinner *ngIf="isSaving" diameter="18" class="button-spinner"></mat-spinner>
+        <span *ngIf="!isSaving">{{ 'save' | translate }}</span>
+        <span *ngIf="isSaving">Saving...</span>
+    </button>
+</div>

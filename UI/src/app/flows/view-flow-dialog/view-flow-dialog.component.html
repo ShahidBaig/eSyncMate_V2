@@ -1,0 +1,360 @@
+<div mat-dialog-content class="view-dialog-content">
+    <!-- Header -->
+    <div class="view-header">
+        <div class="view-header-left">
+            <div class="partner-badge">
+                <mat-icon>storefront</mat-icon>
+                <span>{{ getPartnerDisplayName() }} — {{ data.title }}</span>
+            </div>
+        </div>
+        <span class="status-badge" [ngClass]="data.status === 'Active' ? 'badge-active' : 'badge-inactive'">
+            <mat-icon class="status-icon">{{ data.status === 'Active' ? 'check_circle' : 'cancel' }}</mat-icon>
+            {{ data.status }}
+        </span>
+    </div>
+
+    <!-- Description -->
+    <div class="desc-card" *ngIf="data.description">
+        <p>{{ data.description }}</p>
+    </div>
+
+    <!-- Date chips -->
+    <div class="info-row" *ngIf="isValidDate(data.createdDate) || isValidDate(data.modifiedDate)">
+        <div class="info-chip" *ngIf="isValidDate(data.createdDate)">
+            <mat-icon>calendar_today</mat-icon>
+            <span>Created: {{ data.createdDate | date:'MMM dd, yyyy' }}</span>
+        </div>
+        <div class="info-chip" *ngIf="isValidDate(data.modifiedDate)">
+            <mat-icon>update</mat-icon>
+            <span>Modified: {{ data.modifiedDate | date:'MMM dd, yyyy' }}</span>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <mat-tab-group class="view-tabs">
+
+        <!-- Route Details Tab -->
+        <mat-tab>
+            <ng-template mat-tab-label>
+                <mat-icon class="tab-icon">route</mat-icon> Route Details
+            </ng-template>
+            <div class="tab-content">
+                <div class="routes-panel" *ngIf="flowDetails.length > 0">
+                    <div class="routes-panel-header">
+                        <div class="routes-panel-title">
+                            <mat-icon>route</mat-icon>
+                            <span>Route Details</span>
+                        </div>
+                        <span class="routes-count-badge">{{ flowDetails.length }}</span>
+                    </div>
+                    <div class="routes-panel-body">
+                        <div class="route-cards-container">
+                            <div class="route-card" *ngFor="let detail of flowDetails.controls; let i = index"
+                                 [ngClass]="detail.get('status')?.value === 'Active' ? 'route-active' : 'route-inactive'">
+                                <div class="route-card-header">
+                                    <span class="route-name">{{ detail.get('routeName')?.value }}</span>
+                                    <span class="route-status-chip"
+                                          [ngClass]="detail.get('status')?.value === 'Active' ? 'chip-active' : 'chip-inactive'">
+                                        {{ detail.get('status')?.value }}
+                                    </span>
+                                </div>
+                                <div class="route-card-body">
+                                    <div class="route-detail-item">
+                                        <mat-icon class="route-detail-icon">schedule</mat-icon>
+                                        <div>
+                                            <label>Frequency</label>
+                                            <span>{{ getFrequencyDisplay(i) }}</span>
+                                        </div>
+                                    </div>
+                                    <div class="route-detail-item">
+                                        <mat-icon class="route-detail-icon">play_arrow</mat-icon>
+                                        <div>
+                                            <label>Start Date</label>
+                                            <span>{{ isValidDate(detail.get('startDate')?.value) ? (detail.get('startDate')?.value | date:'MMM dd, yyyy') : 'Not set' }}</span>
+                                        </div>
+                                    </div>
+                                    <div class="route-detail-item">
+                                        <mat-icon class="route-detail-icon">update</mat-icon>
+                                        <div>
+                                            <label>Next Recurrence</label>
+                                            <span [ngClass]="detail.get('status')?.value === 'Active' ? 'next-recurrence-active' : 'next-recurrence-inactive'">
+                                                {{ getNextRecurrence(i) }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="empty-state" *ngIf="flowDetails.length === 0">
+                    <mat-icon>info_outline</mat-icon>
+                    <p>No routes configured for this flow.</p>
+                </div>
+            </div>
+        </mat-tab>
+
+        <!-- Flow Diagram Tab -->
+        <mat-tab>
+            <ng-template mat-tab-label>
+                <mat-icon class="tab-icon">account_tree</mat-icon> Flow Diagram
+            </ng-template>
+            <div class="tab-content diagram-tab-content">
+                <!-- Diagram Toolbar -->
+                <div class="diagram-toolbar" *ngIf="diagramSteps.length > 0">
+                    <button mat-icon-button color="primary" (click)="downloadDiagramFromTab()" matTooltip="Download PDF">
+                        <mat-icon>download</mat-icon>
+                    </button>
+                    <button mat-icon-button color="primary" (click)="showFullscreen = true" matTooltip="Expand Diagram">
+                        <mat-icon>open_in_new</mat-icon>
+                    </button>
+                </div>
+
+                <div class="pipeline-container" *ngIf="diagramSteps.length > 0" #diagramTabContent>
+
+                    <!-- Pipeline Flow -->
+                    <div class="pipeline-flow">
+                        <ng-container *ngFor="let step of diagramSteps; let i = index; let last = last">
+
+                            <!-- Step Card -->
+                            <div class="pipeline-step" [ngClass]="step.status === 'Active' ? 'step-active' : 'step-inactive'">
+
+                                <!-- From System -->
+                                <div class="pipeline-system" [ngClass]="step.fromClass" [matTooltip]="'Source: ' + step.from">
+                                    <mat-icon>{{ step.fromIcon }}</mat-icon>
+                                    <span class="system-name">{{ step.from }}</span>
+                                </div>
+
+                                <!-- Connector Arrow Down -->
+                                <div class="pipeline-connector-down">
+                                    <div class="connector-line-v"></div>
+                                    <mat-icon class="connector-arrow-down">arrow_downward</mat-icon>
+                                </div>
+
+                                <!-- Route Action -->
+                                <div class="pipeline-action" [ngClass]="step.status === 'Active' ? 'action-active' : 'action-inactive'"
+                                     [matTooltip]="step.shortName + '\n' + step.frequency + '\nNext: ' + step.nextRecurrence + '\n' + step.description"
+                                     matTooltipClass="diagram-tooltip">
+                                    <div class="action-header">
+                                        <span class="action-step">{{ step.stepNum }}</span>
+                                        <span class="action-name">{{ step.shortName }}</span>
+                                    </div>
+                                    <div class="action-meta">
+                                        <div class="action-freq">
+                                            <mat-icon>schedule</mat-icon>
+                                            <span>{{ step.frequency }}</span>
+                                        </div>
+                                        <span class="action-status"
+                                              [ngClass]="step.status === 'Active' ? 'chip-active' : 'chip-inactive'">
+                                            {{ step.status }}
+                                        </span>
+                                    </div>
+                                    <div class="action-desc">{{ step.description }}</div>
+                                    <div class="action-next-recurrence">
+                                        <mat-icon>update</mat-icon>
+                                        <span>{{ step.nextRecurrence }}</span>
+                                    </div>
+                                </div>
+
+                                <!-- Connector Arrow Down -->
+                                <div class="pipeline-connector-down">
+                                    <div class="connector-line-v"></div>
+                                    <mat-icon class="connector-arrow-down">arrow_downward</mat-icon>
+                                </div>
+
+                                <!-- To System -->
+                                <div class="pipeline-system" [ngClass]="step.toClass" [matTooltip]="'Destination: ' + step.to">
+                                    <mat-icon>{{ step.toIcon }}</mat-icon>
+                                    <span class="system-name">{{ step.to }}</span>
+                                </div>
+                            </div>
+
+                            <!-- Horizontal connector between steps -->
+                            <div class="pipeline-step-connector" *ngIf="!last">
+                                <div class="connector-line-h"></div>
+                                <mat-icon>chevron_right</mat-icon>
+                            </div>
+
+                        </ng-container>
+                    </div>
+
+                </div>
+
+                <div class="empty-state" *ngIf="diagramSteps.length === 0">
+                    <mat-icon>info_outline</mat-icon>
+                    <p>No routes configured to generate diagram.</p>
+                </div>
+            </div>
+        </mat-tab>
+
+        <!-- Hub & Spoke Diagram Tab -->
+        <mat-tab>
+            <ng-template mat-tab-label>
+                <mat-icon class="tab-icon">hub</mat-icon> Hub & Spoke
+            </ng-template>
+            <div class="tab-content diagram-tab-content">
+                <div class="diagram-toolbar" *ngIf="diagramSteps.length > 0">
+                    <button mat-icon-button color="primary" (click)="downloadHubDiagram()" matTooltip="Download PDF">
+                        <mat-icon>download</mat-icon>
+                    </button>
+                </div>
+
+                <div class="hub-container" *ngIf="diagramSteps.length > 0" #hubDiagramContent>
+                    <!-- Left: ERP -->
+                    <div class="hub-side hub-left">
+                        <div class="hub-system-node hub-erp-node">
+                            <mat-icon>dns</mat-icon>
+                            <span>ERP (SPARS)</span>
+                        </div>
+                        <!-- ERP routes -->
+                        <div class="hub-routes">
+                            <ng-container *ngFor="let step of diagramSteps">
+                                <div class="hub-route-item" *ngIf="step.fromKey === 'spars' || step.toKey === 'spars'"
+                                     [ngClass]="step.status === 'Active' ? 'hub-route-active' : 'hub-route-inactive'"
+                                     [matTooltip]="step.shortName + '\n' + step.frequency + '\nNext: ' + step.nextRecurrence"
+                                     matTooltipClass="diagram-tooltip">
+                                    <div class="hub-route-arrow" [ngClass]="step.fromKey === 'spars' ? 'arrow-right' : 'arrow-left'">
+                                        <mat-icon>{{ step.fromKey === 'spars' ? 'east' : 'west' }}</mat-icon>
+                                    </div>
+                                    <div class="hub-route-label">
+                                        <span class="hub-route-name">{{ step.shortName }}</span>
+                                        <span class="hub-route-freq">{{ step.frequency }}</span>
+                                    </div>
+                                    <span class="hub-route-status"
+                                          [ngClass]="step.status === 'Active' ? 'chip-active' : 'chip-inactive'">
+                                        {{ step.status }}
+                                    </span>
+                                </div>
+                            </ng-container>
+                        </div>
+                    </div>
+
+                    <!-- Center: eSyncMate Hub -->
+                    <div class="hub-center">
+                        <div class="hub-center-node">
+                            <mat-icon>hub</mat-icon>
+                            <span class="hub-center-title">eSyncMate</span>
+                            <span class="hub-center-flow">{{ data.title }}</span>
+                        </div>
+                        <div class="hub-center-badge">
+                            {{ diagramSteps.length }} Routes
+                        </div>
+                    </div>
+
+                    <!-- Right: Trading Partner -->
+                    <div class="hub-side hub-right">
+                        <div class="hub-system-node hub-partner-node">
+                            <mat-icon>storefront</mat-icon>
+                            <span>{{ getPartnerDisplayName() }}</span>
+                        </div>
+                        <!-- Partner routes -->
+                        <div class="hub-routes">
+                            <ng-container *ngFor="let step of diagramSteps">
+                                <div class="hub-route-item" *ngIf="step.fromKey === 'partner' || step.toKey === 'partner'"
+                                     [ngClass]="step.status === 'Active' ? 'hub-route-active' : 'hub-route-inactive'"
+                                     [matTooltip]="step.shortName + '\n' + step.frequency + '\nNext: ' + step.nextRecurrence"
+                                     matTooltipClass="diagram-tooltip">
+                                    <span class="hub-route-status"
+                                          [ngClass]="step.status === 'Active' ? 'chip-active' : 'chip-inactive'">
+                                        {{ step.status }}
+                                    </span>
+                                    <div class="hub-route-label">
+                                        <span class="hub-route-name">{{ step.shortName }}</span>
+                                        <span class="hub-route-freq">{{ step.frequency }}</span>
+                                    </div>
+                                    <div class="hub-route-arrow" [ngClass]="step.toKey === 'partner' ? 'arrow-right' : 'arrow-left'">
+                                        <mat-icon>{{ step.toKey === 'partner' ? 'east' : 'west' }}</mat-icon>
+                                    </div>
+                                </div>
+                            </ng-container>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="empty-state" *ngIf="diagramSteps.length === 0">
+                    <mat-icon>info_outline</mat-icon>
+                    <p>No routes configured to generate diagram.</p>
+                </div>
+            </div>
+        </mat-tab>
+
+    </mat-tab-group>
+</div>
+
+<div mat-dialog-actions class="dialog-actions">
+    <button mat-raised-button color="primary" (click)="onClose()">Close</button>
+</div>
+
+<!-- Popup Diagram Overlay -->
+<div class="popup-backdrop" *ngIf="showFullscreen" (click)="showFullscreen = false">
+    <div class="popup-dialog" (click)="$event.stopPropagation()">
+        <div class="popup-header">
+            <div class="popup-title">
+                <mat-icon>account_tree</mat-icon>
+                <span>{{ getPartnerDisplayName() }} — {{ data.title }}</span>
+            </div>
+            <div class="popup-actions">
+                <button mat-icon-button class="popup-btn" (click)="downloadDiagram()" matTooltip="Download as Image">
+                    <mat-icon>download</mat-icon>
+                </button>
+                <button mat-icon-button class="popup-btn" (click)="showFullscreen = false" matTooltip="Close">
+                    <mat-icon>close</mat-icon>
+                </button>
+            </div>
+        </div>
+        <div class="popup-body" #diagramPopupBody>
+            <div class="pipeline-container" #diagramContent>
+                <div class="pipeline-flow">
+                    <ng-container *ngFor="let step of diagramSteps; let i = index; let last = last">
+                        <div class="pipeline-step" [ngClass]="step.status === 'Active' ? 'step-active' : 'step-inactive'">
+                            <div class="pipeline-system" [ngClass]="step.fromClass">
+                                <mat-icon>{{ step.fromIcon }}</mat-icon>
+                                <span class="system-name">{{ step.from }}</span>
+                            </div>
+                            <div class="pipeline-connector-down">
+                                <div class="connector-line-v"></div>
+                                <mat-icon class="connector-arrow-down">arrow_downward</mat-icon>
+                            </div>
+                            <div class="pipeline-action" [ngClass]="step.status === 'Active' ? 'action-active' : 'action-inactive'"
+                                 [matTooltip]="step.shortName + '\n' + step.frequency + '\nNext: ' + step.nextRecurrence + '\n' + step.description"
+                                 matTooltipClass="diagram-tooltip">
+                                <div class="action-header">
+                                    <span class="action-step">{{ step.stepNum }}</span>
+                                    <span class="action-name">{{ step.shortName }}</span>
+                                </div>
+                                <div class="action-meta">
+                                    <div class="action-freq">
+                                        <mat-icon>schedule</mat-icon>
+                                        <span>{{ step.frequency }}</span>
+                                    </div>
+                                    <span class="action-status"
+                                          [ngClass]="step.status === 'Active' ? 'chip-active' : 'chip-inactive'">
+                                        {{ step.status }}
+                                    </span>
+                                </div>
+                                <div class="action-desc">{{ step.description }}</div>
+                                <div class="action-next-recurrence">
+                                    <mat-icon>update</mat-icon>
+                                    <span>{{ step.nextRecurrence }}</span>
+                                </div>
+                            </div>
+                            <div class="pipeline-connector-down">
+                                <div class="connector-line-v"></div>
+                                <mat-icon class="connector-arrow-down">arrow_downward</mat-icon>
+                            </div>
+                            <div class="pipeline-system" [ngClass]="step.toClass">
+                                <mat-icon>{{ step.toIcon }}</mat-icon>
+                                <span class="system-name">{{ step.to }}</span>
+                            </div>
+                        </div>
+                        <div class="pipeline-step-connector" *ngIf="!last">
+                            <div class="connector-line-h"></div>
+                            <mat-icon>chevron_right</mat-icon>
+                        </div>
+                    </ng-container>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

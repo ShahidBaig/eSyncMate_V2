@@ -1,0 +1,92 @@
+table {
+  width: 100%;
+  margin-top: 1rem;
+}
+
+.mat-table-container {
+  margin: 10px;
+}
+
+/* Search form layout */
+.search-form {
+  width: 100%;
+}
+
+.search-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.search-field {
+  min-width: 150px;
+  flex: 1;
+}
+
+.route-name-field {
+  min-width: 320px;
+  flex: 2;
+}
+
+.search-btn {
+  margin-top: 4px;
+  height: 48px;
+  white-space: nowrap;
+}
+
+/* Status badges */
+%status-badge {
+  color: #ffffff;
+  font-size: 12px;
+  padding: 4px 12px;
+  text-align: center;
+  display: inline-block;
+  border-radius: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+
+.new-status { @extend %status-badge; background: #e8f5e9; border: 1px solid #66bb6a; color: #2e7d32; }
+.syncerror-status { @extend %status-badge; background: #ffebee; border: 1px solid #ef5350; color: #c62828; }
+.sysced-status { @extend %status-badge; background: #e8f5e9; border: 1px solid #66bb6a; color: #2e7d32; }
+
+/* Spinner overlay */
+.spinner-overlay {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: rgba(255, 255, 255, 0.8);
+  z-index: 1000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100vw;
+  height: 100vh;
+}
+
+/* Search inside mat-select dropdown */
+::ng-deep .select-search-container {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: white;
+  padding: 8px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+::ng-deep .select-search-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+  outline: none;
+  box-sizing: border-box;
+
+  &:focus {
+    border-color: #3f51b5;
+  }
+}

@@ -114,7 +114,7 @@ namespace eSyncMate.Processor.Managers
 
             if (customerName == "WAL4001MP")
             {
-                routeName = "Get Orders from Customer Portal";
+                routeName = "Walmart - Get Orders";
             }
             else
             {

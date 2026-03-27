@@ -21,17 +21,13 @@ namespace eSyncMate.DB.Entities
 
         public string AlertType { get; set; }
         public string EmailSubject { get; set; }
-        public string EmailBody { get; set; }
+        public string Description { get; set; }
         public string Query { get; set; }
-
-        public DateTime ModifiedDate { get; set; }
-        public int ModifiedBy { get; set; }
-
         public DateTime CreatedDate { get; set; }
         public int CreatedBy { get; set; }
-
+        public DateTime ModifiedDate { get; set; }
+        public int ModifiedBy { get; set; }
         public string ConnectorType { get; set; }
-
         private static string TableName { get; set; }
         private static string ViewName { get; set; }
         private static string PrimaryKeyName { get; set; }

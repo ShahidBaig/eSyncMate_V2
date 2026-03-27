@@ -90,7 +90,9 @@ namespace eSyncMate.Processor.Models
         Success = 200,
         Error = 400,
         Exception = 500,
-        CustomerAlreadyExists = 401
+        CustomerAlreadyExists = 401,
+        FlowAlreadyExists = 402,
+        NotFound = 404
     }
     public enum RouteTypesEnum
     {

@@ -6,7 +6,7 @@ import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatCardModule } from '@angular/material/card';
-import { FormGroup, FormControl, FormBuilder, Validators, ReactiveFormsModule } from '@angular/forms';
+import { FormGroup, FormControl, FormBuilder, Validators, ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
@@ -61,7 +61,8 @@ interface RouteTypes {
     CommonModule,
     MatSelectModule,
     MatPaginatorModule,
-    TranslateModule
+    TranslateModule,
+    FormsModule
   ],
 })
 export class InventoryComponent implements OnInit {
@@ -72,7 +73,11 @@ export class InventoryComponent implements OnInit {
   listOfBatchWiseInventory: BatchWiseInventory[] = []
   inventoryToDisplay: Inventory[] = [];
   customersOptions: Customers[] | undefined;
+  filteredCustomerOptions: Customers[] = [];
+  customerSearchText = '';
   routeTypeOptions: RouteTypes[] | undefined;
+  filteredRouteTypeOptions: RouteTypes[] = [];
+  routeTypeSearchText = '';
   InventoryForm: FormGroup;
   msg: string = '';
   code: number = 0;
@@ -125,6 +130,7 @@ export class InventoryComponent implements OnInit {
     this.api.getERPCustomers().subscribe({
       next: (res: any) => {
         this.customersOptions = res.customers;
+        this.filteredCustomerOptions = this.customersOptions || [];
       },
     });
   }
@@ -133,8 +139,37 @@ export class InventoryComponent implements OnInit {
     this.api.getRouteTypes().subscribe({
       next: (res: any) => {
         this.routeTypeOptions = res.routeType;
+        this.filteredRouteTypeOptions = this.routeTypeOptions || [];
       },
     });
+  }
+
+  filterCustomerOptions() {
+    const search = this.customerSearchText.toLowerCase();
+    this.filteredCustomerOptions = (this.customersOptions || []).filter(c =>
+      c.erpCustomerID.toLowerCase().includes(search)
+    );
+  }
+
+  onCustomerSelectOpened(opened: boolean) {
+    if (opened) {
+      this.customerSearchText = '';
+      this.filteredCustomerOptions = this.customersOptions || [];
+    }
+  }
+
+  filterRouteTypeOptions() {
+    const search = this.routeTypeSearchText.toLowerCase();
+    this.filteredRouteTypeOptions = (this.routeTypeOptions || []).filter(r =>
+      r.routeType.toLowerCase().includes(search)
+    );
+  }
+
+  onRouteTypeSelectOpened(opened: boolean) {
+    if (opened) {
+      this.routeTypeSearchText = '';
+      this.filteredRouteTypeOptions = this.routeTypeOptions || [];
+    }
   }
 
   getStatusTooltip(status: string, batchID: string): any {
@@ -229,10 +264,15 @@ export class InventoryComponent implements OnInit {
         let itemID = (this.InventoryForm.get('itemID') as FormControl).value;
 
         const dialogRef = this.dialog.open(InventoryBatchwiseComponent, {
-          width: '100%',
+          width: '95vw',
+          maxWidth: '95vw',
+          height: '85vh',
+          panelClass: 'batch-wise-dialog-panel',
           disableClose: true,
           data: {listofInventoryFiles: this.listOfBatchWiseInventory,
-                itemID: itemID ?? null, // Add itemID only if it exists, otherwise set as null
+                itemID: itemID ?? null,
+                batchStatus: element.status ?? '',
+                routeType: element.routeType ?? '',
           },
         });
 

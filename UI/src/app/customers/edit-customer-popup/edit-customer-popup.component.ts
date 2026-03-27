@@ -67,9 +67,9 @@ export class EditCustomerPopupComponent implements OnInit {
       id: [this.data.id, Validators.required],
       name: [this.data.name, Validators.required],
       erpCustomerId: [this.data.erpCustomerID, Validators.required],
-      isaCustomerId: [this.data.isaCustomerID],
-      isa810ReceiverId: [this.data.isA810ReceiverId],
-      isa856ReceiverId: [this.data.isA856ReceiverId],
+      isaCustomerId: [''],
+      isa810ReceiverId: [''],
+      isa856ReceiverId: [''],
       marketplace: [this.data.marketplace]
     });
   }

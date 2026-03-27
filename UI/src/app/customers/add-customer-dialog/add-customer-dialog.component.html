@@ -15,26 +15,8 @@
       </mat-form-field>
     </div>
 
-    <!-- Row 2: ISA Customer ID and ISA 810 Receiver ID -->
+    <!-- Row 2: Marketplace -->
     <div class="form-row">
-      <mat-form-field class="form-field">
-        <mat-label>ISA {{ 'customerID' | translate }}</mat-label>
-        <input matInput formControlName="isaCustomerId">
-      </mat-form-field>
-
-      <mat-form-field class="form-field">
-        <mat-label>ISA 810 {{ 'receiverID' | translate }}</mat-label>
-        <input matInput formControlName="isa810ReceiverId">
-      </mat-form-field>
-    </div>
-
-    <!-- Marketplace: Occupies full row -->
-    <div class="form-row">
-      <mat-form-field class="form-field">
-        <mat-label>ISA 856 {{ 'receiverID' | translate }}</mat-label>
-        <input matInput formControlName="isa856ReceiverId">
-      </mat-form-field>
-
       <mat-form-field class="form-field full-width">
         <mat-label>{{ 'marketPlace' | translate }}</mat-label>
         <input matInput formControlName="marketplace">

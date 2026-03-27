@@ -1,12 +1,14 @@
 <mat-accordion>
   <!-- Order Management -->
-  <mat-expansion-panel *ngIf="isSectionVisible(['nav.orders', 'nav.customers']) && company != 'GECKOTECH' && company != 'SURGIMAC'">
+  <mat-expansion-panel
+    *ngIf="isSectionVisible(['nav.orders']) && company != 'GECKOTECH' && company != 'SURGIMAC'">
     <mat-expansion-panel-header>
       <mat-panel-title> Order Management </mat-panel-title>
     </mat-expansion-panel-header>
     <mat-list role="list">
       <ng-container *ngFor="let option of sideNavContent">
-        <mat-list-item role="listitem" (click)="goToLink(option)" *ngIf="option.visible && (option.link == 'edi/all-orders' || option.link == 'edi/customers')">
+        <mat-list-item role="listitem" (click)="goToLink(option)"
+          *ngIf="option.visible && (option.link == 'edi/all-orders')">
           <a style="cursor: pointer">
             {{ option.title | translate }}
           </a>
@@ -21,7 +23,8 @@
     </mat-expansion-panel-header>
     <mat-list role="list">
       <ng-container *ngFor="let option of sideNavContent">
-        <mat-list-item role="listitem" (click)="goToLink(option)" *ngIf="option.visible && (option.link == 'edi/purchaseOrder')">
+        <mat-list-item role="listitem" (click)="goToLink(option)"
+          *ngIf="option.visible && (option.link == 'edi/purchaseOrder')">
           <a style="cursor: pointer">
             {{ option.title | translate }}
           </a>
@@ -32,13 +35,15 @@
 
 
 
-  <mat-expansion-panel *ngIf="isSectionVisible(['nav.carrierLoadTender','nav.customers','nav.ediFileCounter']) && company === 'GECKOTECH'">
+  <mat-expansion-panel
+    *ngIf="isSectionVisible(['nav.carrierLoadTender','nav.ediFileCounter']) && company === 'GECKOTECH'">
     <mat-expansion-panel-header>
       <mat-panel-title> Carrier Load Management </mat-panel-title>
     </mat-expansion-panel-header>
     <mat-list role="list">
       <ng-container *ngFor="let option of sideNavContent">
-        <mat-list-item role="listitem" (click)="goToLink(option)" *ngIf="option.visible && (option.link === 'edi/customers' || option.link === 'edi/carrier' || option.link === 'edi/ediFileCounter')">
+        <mat-list-item role="listitem" (click)="goToLink(option)"
+          *ngIf="option.visible && (option.link === 'edi/carrier' || option.link === 'edi/ediFileCounter')">
           <a style="cursor: pointer">
             {{ option.title | translate }}
           </a>
@@ -48,13 +53,15 @@
   </mat-expansion-panel>
 
   <!-- Product Management -->
-  <mat-expansion-panel *ngIf="isSectionVisible(['edi/customerProductCatalog', 'edi/productuploadprices', 'edi/inventory','edi/productPrices','edi/invFeedFromNDC','edi/sipmentFromNdc', 'edi/salesInvoiceNdc', 'edi/purchaseOrdersTracking']) && company != 'GECKOTECH' && company != 'RepaintStudios'">
+  <mat-expansion-panel
+    *ngIf="isSectionVisible(['edi/customerProductCatalog', 'edi/productuploadprices', 'edi/inventory','edi/productPrices','edi/invFeedFromNDC','edi/sipmentFromNdc', 'edi/salesInvoiceNdc', 'edi/purchaseOrdersTracking']) && company != 'GECKOTECH' && company != 'RepaintStudios'">
     <mat-expansion-panel-header>
       <mat-panel-title> Product Management </mat-panel-title>
     </mat-expansion-panel-header>
     <mat-list role="list">
       <ng-container *ngFor="let option of sideNavContent">
-        <mat-list-item role="listitem" (click)="goToLink(option)" *ngIf="option.visible && (option.link === 'edi/customerProductCatalog' || option.link === 'edi/productuploadprices' || option.link === 'edi/inventory' || option.link === 'edi/productPrices'|| option.link === 'edi/invFeedFromNDC'|| option.link === 'edi/sipmentFromNdc' || option.link == 'edi/salesInvoiceNdc' || option.link == 'edi/purchaseOrdersTracking')">
+        <mat-list-item role="listitem" (click)="goToLink(option)"
+          *ngIf="option.visible && (option.link === 'edi/customerProductCatalog' || option.link === 'edi/productuploadprices' || option.link === 'edi/inventory' || option.link === 'edi/productPrices'|| option.link === 'edi/invFeedFromNDC'|| option.link === 'edi/sipmentFromNdc' || option.link == 'edi/salesInvoiceNdc' || option.link == 'edi/purchaseOrdersTracking')">
           <a style="cursor: pointer">
             {{ option.title | translate }}
           </a>
@@ -63,13 +70,15 @@
     </mat-list>
   </mat-expansion-panel>
 
-  <mat-expansion-panel *ngIf="isSectionVisible(['edi/alertConfiguration']) && company != 'GECKOTECH' && company != 'RepaintStudios'">
+  <mat-expansion-panel
+    *ngIf="isSectionVisible(['edi/alertConfiguration']) && company != 'GECKOTECH' && company != 'RepaintStudios'">
     <mat-expansion-panel-header>
-      <mat-panel-title> Alerts Configuration </mat-panel-title>
+      <mat-panel-title> Alerts </mat-panel-title>
     </mat-expansion-panel-header>
     <mat-list role="list">
       <ng-container *ngFor="let option of sideNavContent">
-        <mat-list-item role="listitem" (click)="goToLink(option)" *ngIf="option.visible && (option.link === 'edi/alertConfiguration' )">
+        <mat-list-item role="listitem" (click)="goToLink(option)"
+          *ngIf="option.visible && (option.link === 'edi/alertConfiguration' )">
           <a style="cursor: pointer">
             {{ option.title | translate }}
           </a>
@@ -79,13 +88,15 @@
   </mat-expansion-panel>
 
   <!-- Setup -->
-  <mat-expansion-panel *ngIf="isSectionVisible(['nav.connectors', 'nav.maps', 'nav.partnerGroups', 'nav.routes', 'nav.routeTypes', 'hangfire/dashboard']) && isSetupMenu">
+  <mat-expansion-panel
+    *ngIf="isSectionVisible(['nav.customers', 'nav.connectors', 'nav.maps', 'nav.partnerGroups', 'nav.routes', 'nav.routeTypes', 'hangfire/dashboard', 'nav.flows']) && isSetupMenu">
     <mat-expansion-panel-header>
       <mat-panel-title> Setup </mat-panel-title>
     </mat-expansion-panel-header>
     <mat-list role="list">
       <ng-container *ngFor="let option of sideNavContent">
-        <mat-list-item role="listitem" (click)="goToLink(option)" *ngIf="option.visible && (option.link === 'edi/connectors' || option.link === 'edi/maps' || option.link === 'edi/partnergroups' || option.link === 'edi/routes' || option.link === 'edi/routeTypes' || option.link === 'hangfire/dashboard')">
+        <mat-list-item role="listitem" (click)="goToLink(option)"
+          *ngIf="option.visible && (option.link === 'edi/customers' || option.link === 'edi/connectors' || option.link === 'edi/maps' || option.link === 'edi/partnergroups' || option.link === 'edi/routes' || option.link === 'edi/routeTypes' || option.link === 'hangfire/dashboard' || option.link === 'edi/flows')">
           <a style="cursor: pointer">
             {{ option.title | translate }}
           </a>
@@ -101,7 +112,8 @@
     </mat-expansion-panel-header>
     <mat-list role="list">
       <ng-container *ngFor="let option of sideNavContent">
-        <mat-list-item role="listitem" (click)="goToLink(option)" *ngIf="option.visible && option.link === 'edi/routeExceptions'">
+        <mat-list-item role="listitem" (click)="goToLink(option)"
+          *ngIf="option.visible && option.link === 'edi/routeExceptions'">
           <a style="cursor: pointer">
             {{ option.title | translate }}
           </a>

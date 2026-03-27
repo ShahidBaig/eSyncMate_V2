@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../services/api.service';
 import { MatTableModule } from '@angular/material/table';
 import { MatCardModule } from '@angular/material/card';
+import { MatIconModule } from '@angular/material/icon';
 import { LanguageService } from '../services/language.service';
 import { TranslateModule } from '@ngx-translate/core';
 
@@ -15,7 +16,7 @@ export interface TableElement {
     templateUrl: './profile.component.html',
     styleUrls: ['./profile.component.scss'],
     standalone: true,
-    imports: [MatCardModule, MatTableModule, TranslateModule],
+    imports: [MatCardModule, MatTableModule, TranslateModule, MatIconModule],
 })
 export class ProfileComponent implements OnInit {
   dataSource: TableElement[] = [];

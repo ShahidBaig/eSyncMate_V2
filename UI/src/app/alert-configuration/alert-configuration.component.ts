@@ -70,7 +70,7 @@ export class AlertConfigurationComponent implements OnInit {
   code: number = 0;
   showSpinnerforSearch: boolean = false;
   showSpinner: boolean = false;
-  options = ['Select Connector', 'AlertID', 'Alert Name', 'Customer ID', 'Created Date'];
+  options = ['Select Connector', 'AlertID', 'Alert Name', 'Created Date'];
   selectedOption: string = 'Select Alerts Configuration';
   searchValue: string = '';
   startDate: string = '';
@@ -84,6 +84,7 @@ export class AlertConfigurationComponent implements OnInit {
   columns: string[] = [
     'AlertID',
     'AlertName',
+    'Description',
     //'CustomerID',
     'CreatedDate',
     'Edit',
@@ -94,14 +95,6 @@ export class AlertConfigurationComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    if (!this.isAdminUser) {
-      const editIndex = this.columns.indexOf('Edit');
-      if (editIndex !== -1) {
-        this.columns.splice(editIndex, 1);
-      }
-      
-    }
-
     if (this.selectedOption === 'Select Alerts Configuration') {
       this.getAlertsConfiguration();
     }
@@ -129,10 +122,22 @@ export class AlertConfigurationComponent implements OnInit {
     });
   }
 
+  openViewDialog(connectorData: any) {
+    this.dialog.open(EditAlertConfigurationComponent, {
+      width: '90vw',
+      maxWidth: '1100px',
+      maxHeight: '90vh',
+      data: { ...connectorData, viewMode: true },
+      disableClose: false
+    });
+  }
+
   openEditDialog(connectorData: any) {
     const dialogRef = this.dialog.open(EditAlertConfigurationComponent, {
-      width: '800px',
-      data: connectorData,
+      width: '90vw',
+      maxWidth: '1100px',
+      maxHeight: '90vh',
+      data: { ...connectorData, viewMode: false },
       disableClose: true
     });
 

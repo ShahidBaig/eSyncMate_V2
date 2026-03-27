@@ -14,14 +14,12 @@
 
     <div class="form-row">
       <mat-form-field class="form-field full-width">
-        <mat-label>{{ 'alertType' | translate }}</mat-label>
-        <mat-select formControlName="alertType">
-          <mat-option value="Customer">Customer</mat-option>
-          <mat-option value="System">System</mat-option>
-        </mat-select>
+        <mat-label>Description</mat-label>
+        <textarea matInput formControlName="description" rows="3"></textarea>
       </mat-form-field>
 
     </div>
+
     <div class="form-row">
       <mat-form-field class="form-field full-width">
         <mat-label>{{ 'query' | translate }}</mat-label>
@@ -36,17 +34,6 @@
       </mat-form-field>
 
     </div>
-    <div class="form-row">
-
-      <ng-container>
-        <mat-form-field class="form-field full-width">
-          <mat-label>Email Body</mat-label>
-          <textarea matInput formControlName="emailBody" rows="6"></textarea>
-        </mat-form-field>
-      </ng-container>
-
-    </div>
-
 
   </form>
 </div>

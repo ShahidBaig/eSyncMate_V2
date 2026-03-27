@@ -1,4 +1,5 @@
 
+<h2 class="page-title"><mat-icon>notifications</mat-icon><span class="title-text">{{ 'nav.alertConfiguration' | translate }}</span></h2>
 <div class="mat-table-container">
 
   <mat-card>
@@ -13,27 +14,12 @@
       </mat-form-field>
 
       &nbsp;
-      <ng-template #defaultField>
         <ng-container *ngIf="selectedOption !== 'Created Date' else dateRangeField">
           <mat-form-field appearance="fill" color="accent">
             <mat-label>{{ label }}</mat-label>
             <input matInput [(ngModel)]="searchValue" />
           </mat-form-field>
         </ng-container>
-      </ng-template>
-
-        <ng-container *ngIf="selectedOption === 'Customer ID' else defaultField">
-          <mat-form-field appearance="fill" color="accent">
-            <mat-label>Customer ID</mat-label>
-            <mat-select [(ngModel)]="searchValue">
-              <mat-option *ngFor="let customer of customersOptions" [value]="customer.erpCustomerID">
-                {{ customer.erpCustomerID }}
-              </mat-option>
-            </mat-select>
-          </mat-form-field>
-        </ng-container>
-
-
 
         <ng-template #dateRangeField>
           <mat-form-field appearance="fill" color="accent">
@@ -51,15 +37,14 @@
         &nbsp;
 
         <button mat-flat-button color="accent" (click)="getAlertsConfiguration()">
-          <span>{{ 'searchAlertsConfiguration' | translate }}</span>
+          <span>Search</span>
           <mat-spinner *ngIf="showSpinnerforSearch" diameter="20"></mat-spinner>
         </button>
 
         &nbsp;
 
         <button mat-flat-button color="accent" (click)="openAddCustomerDialog()" *ngIf="isAdminUser">
-          <span>{{ 'addAlertConfiguration' | translate }}</span>
-          <mat-spinner *ngIf="showSpinnerforSearch" diameter="20"></mat-spinner>
+          <span>Add</span>
         </button>
 
     </mat-card-content>
@@ -78,10 +63,16 @@
           <td mat-cell *matCellDef="let element"> {{element.alertID}} </td>
         </ng-container>
 
-        <!-- Connector Name -->
+        <!-- Alert Name -->
         <ng-container matColumnDef="AlertName">
           <th mat-header-cell *matHeaderCellDef>{{ 'alertName' | translate }}</th>
           <td mat-cell *matCellDef="let element"> {{element.alertName}} </td>
+        </ng-container>
+
+        <!-- Description -->
+        <ng-container matColumnDef="Description">
+          <th mat-header-cell *matHeaderCellDef>Description</th>
+          <td mat-cell *matCellDef="let element"> {{element.description}} </td>
         </ng-container>
 
         <!-- ConnectorType -->
@@ -105,11 +96,14 @@
         </ng-container>-->
 
 
-        <!--Edit-->
-        <ng-container matColumnDef="Edit" *ngIf="isAdminUser">
+        <!--Actions-->
+        <ng-container matColumnDef="Edit">
           <th mat-header-cell *matHeaderCellDef> {{ 'actions' | translate }}</th>
           <td mat-cell *matCellDef="let element">
-            <button mat-icon-button aria-label="normal button" (click)="openEditDialog(element)" color="accent" matTooltip="Edit Connector" matTooltipPosition="above">
+            <button mat-icon-button (click)="openViewDialog(element)" color="primary" matTooltip="View" matTooltipPosition="above">
+              <mat-icon>visibility</mat-icon>
+            </button>
+            <button mat-icon-button *ngIf="isAdminUser" (click)="openEditDialog(element)" color="accent" matTooltip="Edit" matTooltipPosition="above">
               <mat-icon>edit</mat-icon>
             </button>
           </td>

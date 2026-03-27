@@ -100,11 +100,11 @@ export class AddAlertConfigurationDialogComponent implements OnInit {
   ) {
     this.newConnectorForm = this.fb.group({
       alertName: ['', Validators.required],
+      description: [''],
       //customerID: [null, Validators.required], // Form control for connector type ID
       query: ['', Validators.required],
-      alertType: [null, Validators.required],
+      alertType: ['Customer'],
       emailSubject: [''],
-      emailBody: [''],
 
     });
   }
@@ -141,8 +141,8 @@ export class AddAlertConfigurationDialogComponent implements OnInit {
     const connectorModel =
     {
       alertName: this.newConnectorForm.get('alertName')?.value,
+      description: this.newConnectorForm.get('description')?.value,
       emailSubject: this.newConnectorForm.get('emailSubject')?.value,
-      emailBody: this.newConnectorForm.get('emailBody')?.value,
       query: this.newConnectorForm.get('query')?.value,
       alertType: this.newConnectorForm.get('alertType')?.value,
     };

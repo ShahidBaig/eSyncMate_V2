@@ -1,150 +1,187 @@
 <div mat-dialog-content class="dialog-content">
-  <h1 class="dialog-title">Batch [{{batchID }}] </h1>
 
-  <mat-card>
+  <!-- Header -->
+  <div class="dialog-header">
+    <div class="header-left">
+      <mat-icon class="header-icon">inventory_2</mat-icon>
+      <h1 class="dialog-title">Batch [{{ batchID }}]</h1>
+      <span class="status-chip"
+            [ngClass]="batchStatus === 'COMPLETED' ? 'chip-completed' : batchStatus === 'PROCESSING' ? 'chip-processing' : 'chip-error'">
+        {{ batchStatus }}
+      </span>
+    </div>
+    <span class="header-badge">{{ listBatchWiseInventory.length }} Items</span>
+  </div>
+
+  <!-- Search -->
+  <mat-card class="search-card">
     <mat-card-content>
       <form [formGroup]="batchWiseInventoryForm">
         <div class="form-row">
-
-          <mat-form-field appearance="fill" color="accent">
+          <mat-form-field appearance="fill" color="accent" class="item-search-field">
             <mat-label>{{ 'itemID' | translate }}</mat-label>
             <input matInput formControlName="itemID">
           </mat-form-field>
 
-          <button mat-flat-button color="accent" (click)="getBatchWiseItemID()">
+          <button mat-flat-button color="accent" (click)="getBatchWiseItemID()" class="search-btn">
             <span *ngIf="!showSpinnerforSearch">{{ 'search' | translate }}</span>
             <mat-spinner *ngIf="showSpinnerforSearch" diameter="20"></mat-spinner>
           </button>
         </div>
-
-
       </form>
     </mat-card-content>
   </mat-card>
 
-  <div class="mat-table-container">
-    <mat-card>
-      <mat-card-content>
-        <div class="custom-css">
+  <!-- Table -->
+  <div class="table-section">
+    <mat-card class="table-card">
+      <mat-card-content style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+        <div class="table-scroll">
           <table mat-table [dataSource]="dataSource" class="fixed-table">
-            <!----ID Column-->
 
             <ng-container matColumnDef="CustomerID">
-              <th mat-header-cell *matHeaderCellDef mat-sticky>{{ 'erpCustomerID' | translate }}</th>
-              <td mat-cell *matCellDef="let element"> {{element.customerID}} </td>
+              <th mat-header-cell *matHeaderCellDef mat-sticky>{{ 'customerID' | translate }}</th>
+              <td mat-cell *matCellDef="let element">{{ element.customerID }}</td>
             </ng-container>
 
             <ng-container matColumnDef="ItemID">
-              <th mat-header-cell *matHeaderCellDef mat-sticky>{{ 'erpItemID' | translate }}</th>
-              <td style="width:100%" mat-cell *matCellDef="let element"> {{element.itemId}} </td>
+              <th mat-header-cell *matHeaderCellDef mat-sticky>{{ 'itemId' | translate }}</th>
+              <td mat-cell *matCellDef="let element">{{ element.itemId }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="SyncDate">
+              <th mat-header-cell *matHeaderCellDef mat-sticky>{{ dateColumnLabel }}</th>
+              <td mat-cell *matCellDef="let element">
+                {{ (element.modifiedDate ? element.modifiedDate : element.createdDate) | date:'MMM-dd-yyyy HH:mm' }}
+              </td>
             </ng-container>
 
             <ng-container matColumnDef="Status">
               <th mat-header-cell *matHeaderCellDef mat-sticky>{{ 'status' | translate }}</th>
-              <td mat-cell *matCellDef="let element"> {{element.status}} </td>
+              <td mat-cell *matCellDef="let element">
+                <span class="table-status-chip"
+                      [ngClass]="element.status === 'SYNCED' ? 'tbl-chip-synced' : element.status === 'NEW' ? 'tbl-chip-new' : 'tbl-chip-default'">
+                  {{ element.status }}
+                </span>
+              </td>
             </ng-container>
 
             <ng-container matColumnDef="CustomerItemCode">
-              <th mat-header-cell *matHeaderCellDef mat-sticky>{{ 'CustomerItemCode' | translate }}</th>
-              <td mat-cell *matCellDef="let element"> {{element.customerItemCode}} </td>
+              <th mat-header-cell *matHeaderCellDef mat-sticky>{{ 'customerItemCode' | translate }}</th>
+              <td mat-cell *matCellDef="let element">{{ element.customerItemCode }}</td>
             </ng-container>
+
             <ng-container matColumnDef="ETADate">
-              <th mat-header-cell *matHeaderCellDef mat-sticky>{{ 'ETADate' | translate }}</th>
-              <td mat-cell *matCellDef="let element"> {{element.etA_Date | date:'MMM-dd-yyyy'}} </td>
+              <th mat-header-cell *matHeaderCellDef mat-sticky>{{ 'etaDate' | translate }}</th>
+              <td mat-cell *matCellDef="let element">{{ element.etA_Date | date:'MMM-dd-yyyy' }}</td>
             </ng-container>
+
             <ng-container matColumnDef="ETAQty">
-              <th mat-header-cell *matHeaderCellDef mat-sticky>{{ 'ETAQty' | translate }}</th>
-              <td mat-cell *matCellDef="let element"> {{element.etA_Qty}} </td>
+              <th mat-header-cell *matHeaderCellDef mat-sticky>{{ 'etaQty' | translate }}</th>
+              <td mat-cell *matCellDef="let element">{{ element.etA_Qty }}</td>
             </ng-container>
+
             <ng-container matColumnDef="TotalATS">
-              <th mat-header-cell *matHeaderCellDef mat-sticky>{{ 'TotalATS' | translate }}</th>
-              <td mat-cell *matCellDef="let element"> {{element.total_ATS}} </td>
+              <th mat-header-cell *matHeaderCellDef mat-sticky>{{ 'total_ATS' | translate }}</th>
+              <td mat-cell *matCellDef="let element">{{ element.total_ATS }}</td>
             </ng-container>
 
             <ng-container matColumnDef="ATSL10">
-              <th mat-header-cell *matHeaderCellDef mat-sticky>{{ 'ATSL10' | translate }}</th>
-              <td mat-cell *matCellDef="let element"> {{element.atS_L10}} </td>
+              <th mat-header-cell *matHeaderCellDef mat-sticky>ATS L10</th>
+              <td mat-cell *matCellDef="let element">{{ element.atS_L10 }}</td>
             </ng-container>
+
             <ng-container matColumnDef="ATSL21">
-              <th mat-header-cell *matHeaderCellDef mat-sticky>{{ 'ATSL21' | translate }}</th>
-              <td mat-cell *matCellDef="let element"> {{element.atS_L21}} </td>
+              <th mat-header-cell *matHeaderCellDef mat-sticky>ATS L21</th>
+              <td mat-cell *matCellDef="let element">{{ element.atS_L21 }}</td>
             </ng-container>
+
             <ng-container matColumnDef="ATSL28">
-              <th mat-header-cell *matHeaderCellDef mat-sticky>{{ 'ATSL28' | translate }}</th>
-              <td mat-cell *matCellDef="let element"> {{element.atS_L28}} </td>
-            </ng-container>
-            <ng-container matColumnDef="ATSL30">
-              <th mat-header-cell *matHeaderCellDef mat-sticky>{{ 'ATSL30' | translate }}</th>
-              <td mat-cell *matCellDef="let element"> {{element.atS_L30}} </td>
-            </ng-container>
-            <ng-container matColumnDef="ATSL34">
-              <th mat-header-cell *matHeaderCellDef mat-sticky>{{ 'ATSL34' | translate }}</th>
-              <td mat-cell *matCellDef="let element"> {{element.atS_L34}} </td>
-            </ng-container>
-            <ng-container matColumnDef="ATSL35">
-              <th mat-header-cell *matHeaderCellDef mat-sticky>{{ 'ATSL35' | translate }}</th>
-              <td mat-cell *matCellDef="let element"> {{element.atS_L35}} </td>
-            </ng-container>
-            <ng-container matColumnDef="ATSL36">
-              <th mat-header-cell *matHeaderCellDef mat-sticky>{{ 'ATSL36' | translate }}</th>
-              <td mat-cell *matCellDef="let element"> {{element.atS_L36}} </td>
-            </ng-container>
-            <ng-container matColumnDef="ATSL37">
-              <th mat-header-cell *matHeaderCellDef mat-sticky>{{ 'ATSL37' | translate }}</th>
-              <td mat-cell *matCellDef="let element"> {{element.atS_L37}} </td>
-            </ng-container>
-            <ng-container matColumnDef="ATSL40">
-              <th mat-header-cell *matHeaderCellDef mat-sticky>{{ 'ATSL40' | translate }}</th>
-              <td mat-cell *matCellDef="let element"> {{element.atS_L40}} </td>
-            </ng-container>
-            <ng-container matColumnDef="ATSL41">
-              <th mat-header-cell *matHeaderCellDef mat-sticky>{{ 'ATSL41' | translate }}</th>
-              <td mat-cell *matCellDef="let element"> {{element.atS_L41}} </td>
-            </ng-container>
-            <ng-container matColumnDef="ATSL55">
-              <th mat-header-cell *matHeaderCellDef mat-sticky>{{ 'ATSL55' | translate }}</th>
-              <td mat-cell *matCellDef="let element"> {{element.atS_L55}} </td>
-            </ng-container>
-            <ng-container matColumnDef="ATSL56">
-              <th mat-header-cell *matHeaderCellDef mat-sticky>{{ 'ATSL56' | translate }}</th>
-              <td mat-cell *matCellDef="let element"> {{element.atS_L56}} </td>
-            </ng-container>
-            <ng-container matColumnDef="ATSL57">
-              <th mat-header-cell *matHeaderCellDef mat-sticky>{{ 'ATSL57' | translate }}</th>
-              <td mat-cell *matCellDef="let element"> {{element.atS_L57}} </td>
-            </ng-container>
-            <ng-container matColumnDef="ATSL60">
-              <th mat-header-cell *matHeaderCellDef mat-sticky>{{ 'ATSL60' | translate }}</th>
-              <td mat-cell *matCellDef="let element"> {{element.atS_L60}} </td>
-            </ng-container>
-
-            <ng-container matColumnDef="ATSL70">
-              <th mat-header-cell *matHeaderCellDef mat-sticky>{{ 'ATSL70' | translate }}</th>
-              <td mat-cell *matCellDef="let element"> {{element.atS_L70}} </td>
-            </ng-container>
-
-            <ng-container matColumnDef="ATSL91">
-              <th mat-header-cell *matHeaderCellDef mat-sticky>{{ 'ATSL91' | translate }}</th>
-              <td mat-cell *matCellDef="let element"> {{element.atS_L91}} </td>
+              <th mat-header-cell *matHeaderCellDef mat-sticky>ATS L28</th>
+              <td mat-cell *matCellDef="let element">{{ element.atS_L28 }}</td>
             </ng-container>
 
             <ng-container matColumnDef="ATSL29">
-              <th mat-header-cell *matHeaderCellDef mat-sticky>{{ 'ATSL29' | translate }}</th>
-              <td mat-cell *matCellDef="let element"> {{element.atS_L29}} </td>
+              <th mat-header-cell *matHeaderCellDef mat-sticky>ATS L29</th>
+              <td mat-cell *matCellDef="let element">{{ element.atS_L29 }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="ATSL30">
+              <th mat-header-cell *matHeaderCellDef mat-sticky>ATS L30</th>
+              <td mat-cell *matCellDef="let element">{{ element.atS_L30 }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="ATSL34">
+              <th mat-header-cell *matHeaderCellDef mat-sticky>ATS L34</th>
+              <td mat-cell *matCellDef="let element">{{ element.atS_L34 }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="ATSL35">
+              <th mat-header-cell *matHeaderCellDef mat-sticky>ATS L35</th>
+              <td mat-cell *matCellDef="let element">{{ element.atS_L35 }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="ATSL36">
+              <th mat-header-cell *matHeaderCellDef mat-sticky>ATS L36</th>
+              <td mat-cell *matCellDef="let element">{{ element.atS_L36 }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="ATSL37">
+              <th mat-header-cell *matHeaderCellDef mat-sticky>ATS L37</th>
+              <td mat-cell *matCellDef="let element">{{ element.atS_L37 }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="ATSL40">
+              <th mat-header-cell *matHeaderCellDef mat-sticky>ATS L40</th>
+              <td mat-cell *matCellDef="let element">{{ element.atS_L40 }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="ATSL41">
+              <th mat-header-cell *matHeaderCellDef mat-sticky>ATS L41</th>
+              <td mat-cell *matCellDef="let element">{{ element.atS_L41 }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="ATSL55">
+              <th mat-header-cell *matHeaderCellDef mat-sticky>ATS L55</th>
+              <td mat-cell *matCellDef="let element">{{ element.atS_L55 }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="ATSL56">
+              <th mat-header-cell *matHeaderCellDef mat-sticky>ATS L56</th>
+              <td mat-cell *matCellDef="let element">{{ element.atS_L56 }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="ATSL57">
+              <th mat-header-cell *matHeaderCellDef mat-sticky>ATS L57</th>
+              <td mat-cell *matCellDef="let element">{{ element.atS_L57 }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="ATSL60">
+              <th mat-header-cell *matHeaderCellDef mat-sticky>ATS L60</th>
+              <td mat-cell *matCellDef="let element">{{ element.atS_L60 }}</td>
             </ng-container>
 
             <ng-container matColumnDef="ATSL65">
-              <th mat-header-cell *matHeaderCellDef mat-sticky>{{ 'ATSL65' | translate }}</th>
-              <td mat-cell *matCellDef="let element"> {{element.atS_L65}} </td>
+              <th mat-header-cell *matHeaderCellDef mat-sticky>ATS L65</th>
+              <td mat-cell *matCellDef="let element">{{ element.atS_L65 }}</td>
             </ng-container>
 
+            <ng-container matColumnDef="ATSL70">
+              <th mat-header-cell *matHeaderCellDef mat-sticky>ATS L70</th>
+              <td mat-cell *matCellDef="let element">{{ element.atS_L70 }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="ATSL91">
+              <th mat-header-cell *matHeaderCellDef mat-sticky>ATS L91</th>
+              <td mat-cell *matCellDef="let element">{{ element.atS_L91 }}</td>
+            </ng-container>
 
             <ng-container matColumnDef="File">
-              <th mat-header-cell *matHeaderCellDef></th>
+              <th mat-header-cell *matHeaderCellDef mat-sticky></th>
               <td mat-cell *matCellDef="let element">
-                <button mat-icon-button aria-label="normal button" color="accent" matTooltip="Get Inventory Files" matTooltipPosition="above"
+                <button mat-icon-button color="primary" matTooltip="View Inventory Files" matTooltipPosition="above"
                         (click)="getInventoryFiles(element)">
-                  <mat-icon>playlist_add</mat-icon>
+                  <mat-icon>visibility</mat-icon>
                 </button>
               </td>
             </ng-container>
@@ -153,18 +190,21 @@
             <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
 
           </table>
-
-
         </div>
-
       </mat-card-content>
     </mat-card>
-    <mat-paginator [length]="listBatchWiseInventory.length" [pageSize]="10" [pageSizeOptions]="[5, 10, 15, 20, 100,500]"
-                   (page)="onPageChange($event)">
-    </mat-paginator>
+
+    <div class="paginator-section">
+      <mat-paginator [length]="listBatchWiseInventory.length" [pageSize]="10" [pageSizeOptions]="[5, 10, 15, 20, 100, 500]"
+                     (page)="onPageChange($event)" showFirstLastButtons>
+      </mat-paginator>
+    </div>
   </div>
+
 </div>
 
 <div mat-dialog-actions class="dialog-actions">
-  <button mat-button class="cancel-button" (click)="onCancel()">{{ 'cancel' | translate }}</button>
+  <button mat-raised-button color="primary" (click)="onCancel()" class="close-button">
+    <mat-icon>close</mat-icon> Close
+  </button>
 </div>

@@ -1,0 +1,373 @@
+.dialog-content {
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    box-sizing: border-box;
+}
+
+.dialog-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.dialog-title {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 600;
+    color: #333;
+}
+
+.status-badge {
+    font-size: 11px;
+    padding: 3px 12px;
+    border-radius: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.badge-active {
+    background: #e8f5e9;
+    color: #2e7d32;
+}
+
+.badge-inactive {
+    background: #ffebee;
+    color: #c62828;
+}
+
+.flow-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    flex: 1;
+    overflow: hidden;
+}
+
+::ng-deep .mat-tab-body-wrapper {
+    flex: 1;
+}
+
+::ng-deep .mat-tab-body-content {
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.tab-content {
+    padding: 20px 4px;
+}
+
+/* Tab icons */
+.tab-icon {
+    margin-right: 6px;
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    vertical-align: middle;
+}
+
+/* General Card */
+.general-card {
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #fff;
+}
+
+.general-card-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 20px;
+    background: #f5f7fa;
+    border-bottom: 1px solid #e0e0e0;
+    font-size: 15px;
+    font-weight: 600;
+    color: #333;
+}
+
+.card-header-icon {
+    color: #3f51b5;
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+}
+
+.general-card-body {
+    padding: 20px;
+}
+
+/* Field prefix icon */
+.field-icon {
+    color: #999;
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+    margin-right: 4px;
+}
+
+.textarea-icon {
+    vertical-align: top;
+    margin-top: 4px;
+}
+
+/* Info chips row */
+.general-info-row {
+    display: flex;
+    gap: 16px;
+    margin-top: 16px;
+    flex-wrap: wrap;
+}
+
+.info-chip {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    background: #f5f7fa;
+    border-radius: 20px;
+    font-size: 12px;
+    color: #666;
+
+    mat-icon {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+        color: #999;
+    }
+}
+
+.form-row {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.form-field {
+    flex: 1;
+    min-width: 200px;
+}
+
+.status-field {
+    flex: 0 0 200px;
+    min-width: 200px;
+    max-width: 200px;
+}
+
+.description-field {
+    flex: 1;
+}
+
+.form-field.full-width {
+    flex: 1 1 100%;
+    min-width: 100%;
+}
+
+.dialog-actions {
+    display: flex;
+    justify-content: space-between;
+    padding: 16px 24px 24px;
+    border-top: 1px solid #eee;
+}
+
+.cancel-button {
+    color: #666;
+}
+
+mat-form-field {
+    width: 100%;
+}
+
+/* Bold, clear field labels */
+::ng-deep .mat-mdc-floating-label,
+::ng-deep .mdc-floating-label {
+    font-weight: 700 !important;
+    color: #333 !important;
+    font-size: 16px !important;
+}
+
+input[matInput] {
+    padding: 8px 12px;
+}
+
+.checkbox-container {
+    display: flex;
+}
+
+.checkbox-label {
+    margin-right: 20px;
+}
+
+/* Details Header */
+.details-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.details-count {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    color: #666;
+    font-weight: 500;
+
+    mat-icon {
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+        color: #3f51b5;
+    }
+}
+
+/* Details Table */
+.details-table-container {
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    overflow: hidden;
+    max-height: 450px;
+    overflow-y: auto;
+}
+
+.details-table {
+    width: 100%;
+}
+
+.details-table th {
+    background-color: #f5f5f5;
+    font-weight: 600;
+    color: #444;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.details-table td,
+.details-table th {
+    padding: 10px 14px;
+}
+
+.details-table tr:hover {
+    background-color: #f9f9f9;
+}
+
+.route-name-cell {
+    font-weight: 500;
+    color: #333;
+}
+
+/* Status Chip */
+.status-chip {
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 10px;
+    font-weight: 600;
+}
+
+.chip-active {
+    background: #e8f5e9;
+    color: #2e7d32;
+}
+
+.chip-inactive {
+    background: #ffebee;
+    color: #c62828;
+}
+
+/* Next Recurrence */
+.next-recurrence {
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.recurrence-active {
+    color: #1565c0;
+}
+
+.recurrence-inactive {
+    color: #999;
+    font-style: italic;
+}
+
+/* Empty State */
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 16px;
+    color: #999;
+
+    mat-icon {
+        font-size: 40px;
+        width: 40px;
+        height: 40px;
+        margin-bottom: 8px;
+    }
+
+    p {
+        margin: 0;
+        font-size: 14px;
+    }
+}
+
+/* Search inside mat-select dropdown */
+::ng-deep .select-search-container {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: white;
+    padding: 8px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+::ng-deep .select-search-input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 14px;
+    outline: none;
+    box-sizing: border-box;
+
+    &:focus {
+        border-color: #3f51b5;
+    }
+}
+
+/* Saving Overlay */
+.saving-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.8);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    gap: 12px;
+}
+
+.saving-text {
+    font-size: 14px;
+    color: #3f51b5;
+    font-weight: 500;
+}
+
+.button-spinner {
+    display: inline-block;
+    margin-right: 6px;
+    vertical-align: middle;
+
+    ::ng-deep circle {
+        stroke: #fff;
+    }
+}

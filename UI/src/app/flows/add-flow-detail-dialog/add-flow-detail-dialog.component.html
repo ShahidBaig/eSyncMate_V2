@@ -1,0 +1,151 @@
+<div class="detail-dialog">
+    <div class="detail-dialog-header">
+        <mat-icon class="header-icon">{{ isEdit ? 'edit' : 'add_circle' }}</mat-icon>
+        <h2>{{ isEdit ? 'Edit Route Detail' : 'Add Route Detail' }}</h2>
+    </div>
+
+    <mat-dialog-content>
+        <div class="detail-form" [formGroup]="detailInputForm">
+
+            <!-- Route Selection Section -->
+            <div class="section-card">
+                <div class="section-header">
+                    <mat-icon>route</mat-icon>
+                    <span>Route Selection</span>
+                </div>
+                <div class="section-body">
+                    <div class="form-row">
+                        <mat-form-field class="form-field route-field" appearance="outline">
+                            <mat-label>Route Name</mat-label>
+                            <mat-select formControlName="routeId" (openedChange)="onRouteSelectOpened($event)">
+                                <div class="select-search-container">
+                                    <input matInput
+                                           class="select-search-input"
+                                           placeholder="Search Route..."
+                                           [(ngModel)]="routeSearchText"
+                                           [ngModelOptions]="{standalone: true}"
+                                           (input)="filterRouteOptions()"
+                                           (keydown)="$event.stopPropagation()">
+                                </div>
+                                <mat-option *ngFor="let route of displayedRouteOptions" [value]="route.id" class="route-option">
+                                    <span class="route-option-name">{{ route.name }}</span>
+                                </mat-option>
+                            </mat-select>
+                            <mat-icon matPrefix class="field-icon">alt_route</mat-icon>
+                        </mat-form-field>
+
+                        <mat-form-field class="form-field status-field" appearance="outline">
+                            <mat-label>Status</mat-label>
+                            <mat-select formControlName="status">
+                                <mat-option value="Active">Active</mat-option>
+                                <mat-option value="In-Active">In-Active</mat-option>
+                            </mat-select>
+                            <mat-icon matPrefix class="field-icon">toggle_on</mat-icon>
+                        </mat-form-field>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Schedule Section -->
+            <div class="section-card">
+                <div class="section-header">
+                    <mat-icon>schedule</mat-icon>
+                    <span>Schedule Configuration</span>
+                </div>
+                <div class="section-body">
+                    <div class="form-row">
+                        <mat-form-field class="form-field" appearance="outline">
+                            <mat-label>Frequency Type</mat-label>
+                            <mat-select formControlName="frequencyType">
+                                <mat-option *ngFor="let ft of frequencyTypeOptions" [value]="ft">{{ ft }}</mat-option>
+                            </mat-select>
+                            <mat-icon matPrefix class="field-icon">repeat</mat-icon>
+                        </mat-form-field>
+
+                        <mat-form-field class="form-field" appearance="outline">
+                            <mat-label>Start Date</mat-label>
+                            <input formControlName="startDate" matInput [matDatepicker]="spInput" placeholder="Select date">
+                            <mat-datepicker-toggle matSuffix [for]="spInput"></mat-datepicker-toggle>
+                            <mat-datepicker #spInput></mat-datepicker>
+                            <mat-icon matPrefix class="field-icon">event</mat-icon>
+                        </mat-form-field>
+                    </div>
+
+                    <!-- Repeat Count (Minutely / Hourly) -->
+                    <div class="form-row" *ngIf="showInputRepeatCount()">
+                        <mat-form-field class="form-field repeat-field" appearance="outline">
+                            <mat-label>Repeat Every</mat-label>
+                            <input type="number" formControlName="repeatCount" matInput min="1">
+                            <mat-icon matPrefix class="field-icon">timer</mat-icon>
+                            <span matSuffix class="repeat-suffix">
+                                {{ detailInputForm.get('frequencyType')?.value === 'Minutely' ? 'minutes' : 'hours' }}
+                            </span>
+                        </mat-form-field>
+                    </div>
+
+                    <!-- Days of Week (Weekly) -->
+                    <div class="weekdays-section" *ngIf="showInputDaysOfWeek()">
+                        <label class="section-sublabel">
+                            <mat-icon>date_range</mat-icon> Run on Days
+                        </label>
+                        <div class="weekdays-grid">
+                            <div *ngFor="let day of daysOfWeek; let d = index" class="weekday-chip"
+                                 [class.weekday-selected]="getInputWeekdayCtrl(d).value"
+                                 (click)="getInputWeekdayCtrl(d).setValue(!getInputWeekdayCtrl(d).value)">
+                                {{ day.substring(0, 3) }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- On Day(s) (Monthly) -->
+                    <div class="form-row" *ngIf="showInputOnDayInput()">
+                        <mat-form-field class="form-field full-width" appearance="outline">
+                            <mat-label>On Day(s) of Month</mat-label>
+                            <mat-chip-grid #onDayChipGrid aria-label="On Day selection">
+                                <mat-chip-row *ngFor="let day of inputOnDayList" [removable]="true" (removed)="removeOnDay(day)">
+                                    {{ day.name }}
+                                    <button matChipRemove><mat-icon>cancel</mat-icon></button>
+                                </mat-chip-row>
+                                <input placeholder="Add day (1-31)..." [matChipInputFor]="onDayChipGrid"
+                                    [matChipInputSeparatorKeyCodes]="separatorKeysCodes" [matChipInputAddOnBlur]="true"
+                                    (matChipInputTokenEnd)="addOnDay($event)" matInput>
+                            </mat-chip-grid>
+                            <mat-icon matPrefix class="field-icon">today</mat-icon>
+                            <mat-hint>Press Enter or comma to add</mat-hint>
+                        </mat-form-field>
+                    </div>
+
+                    <!-- Execution Time (Daily / Weekly) -->
+                    <div class="form-row" *ngIf="showInputExecutionTime()">
+                        <mat-form-field class="form-field full-width" appearance="outline">
+                            <mat-label>Execution Time(s)</mat-label>
+                            <mat-chip-grid #execTimeChipGrid aria-label="Execution Time selection">
+                                <mat-chip-row *ngFor="let time of inputExecutionTimeList" [removable]="true"
+                                    (removed)="removeExecutionTime(time)">
+                                    {{ time.name }}
+                                    <button matChipRemove><mat-icon>cancel</mat-icon></button>
+                                </mat-chip-row>
+                                <input placeholder="Add time (HH:MM)..." [matChipInputFor]="execTimeChipGrid"
+                                    [matChipInputSeparatorKeyCodes]="separatorKeysCodes" [matChipInputAddOnBlur]="true"
+                                    (matChipInputTokenEnd)="addExecutionTime($event)" matInput type="time">
+                            </mat-chip-grid>
+                            <mat-icon matPrefix class="field-icon">access_time</mat-icon>
+                            <mat-hint>Press Enter or comma to add</mat-hint>
+                        </mat-form-field>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </mat-dialog-content>
+
+    <mat-dialog-actions class="detail-dialog-actions">
+        <button mat-button class="cancel-btn" (click)="onCancel()">
+            <mat-icon>close</mat-icon> Cancel
+        </button>
+        <button mat-raised-button color="primary" (click)="onSave()" [disabled]="detailInputForm.invalid">
+            <mat-icon>{{ isEdit ? 'save' : 'add' }}</mat-icon>
+            {{ isEdit ? 'Update' : 'Add Route' }}
+        </button>
+    </mat-dialog-actions>
+</div>
