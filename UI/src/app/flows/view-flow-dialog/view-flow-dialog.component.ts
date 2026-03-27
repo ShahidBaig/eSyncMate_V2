@@ -74,6 +74,7 @@ export class ViewFlowDialogComponent implements OnInit {
     @ViewChild('detailsTable') detailsTable!: MatTable<any>;
     @ViewChild('diagramContent') diagramContent!: ElementRef;
     @ViewChild('diagramTabContent') diagramTabContent!: ElementRef;
+    @ViewChild('hubDiagramContent') hubDiagramContent!: ElementRef;
 
     constructor(
         public dialogRef: MatDialogRef<ViewFlowDialogComponent>,
@@ -552,6 +553,12 @@ export class ViewFlowDialogComponent implements OnInit {
 
     downloadDiagramFromTab(): void {
         const element = this.diagramTabContent?.nativeElement as HTMLElement;
+        if (!element) return;
+        this.captureAndDownload(element);
+    }
+
+    downloadHubDiagram(): void {
+        const element = this.hubDiagramContent?.nativeElement as HTMLElement;
         if (!element) return;
         this.captureAndDownload(element);
     }
