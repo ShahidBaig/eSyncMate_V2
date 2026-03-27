@@ -7,7 +7,7 @@ import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatCardModule } from '@angular/material/card';
-import { FormGroup, FormControl, FormBuilder, Validators, ReactiveFormsModule } from '@angular/forms';
+import { FormGroup, FormControl, FormBuilder, Validators, ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
@@ -53,7 +53,8 @@ import { ViewChild } from '@angular/core';
     CommonModule,
     MatSelectModule,
     MatPaginatorModule,
-    TranslateModule
+    TranslateModule,
+    FormsModule
   ],
 })
 export class RouteExceptionComponent implements OnInit {
@@ -67,6 +68,8 @@ export class RouteExceptionComponent implements OnInit {
   showSpinner: boolean = false;
   statusOptions = ['Select Status ', 'Active', 'In-Active',];
   routeOptions: any[] = [];
+  filteredRouteOptions: any[] = [];
+  routeSearchText = '';
   loadingStates = new Map<number, boolean>();
   isAdminUser: boolean = false;
   dataSource = new MatTableDataSource<RouteLog>([]);
@@ -114,12 +117,26 @@ export class RouteExceptionComponent implements OnInit {
     this.routeApi.getRouteName().subscribe({
       next: (res: any) => {
         this.routeOptions = res.routes;
-        this.routeOptions.unshift({ name: 'Select Route Name' });
+        this.filteredRouteOptions = this.routeOptions;
       },
       error: (error) => {
         console.error('Error fetching route names:', error);
       }
     });
+  }
+
+  filterRouteOptions() {
+    const search = this.routeSearchText.toLowerCase();
+    this.filteredRouteOptions = (this.routeOptions || []).filter(r =>
+      r.name.toLowerCase().includes(search)
+    );
+  }
+
+  onRouteSelectOpened(opened: boolean) {
+    if (opened) {
+      this.routeSearchText = '';
+      this.filteredRouteOptions = this.routeOptions || [];
+    }
   }
 
   onPageChange(event: PageEvent) {

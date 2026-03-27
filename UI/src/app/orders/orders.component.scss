@@ -1,23 +1,15 @@
-/*:host {
-  display: block;
-  margin: 3rem auto 0;
-  width: 70%;
-}
-*/
-
 table {
   width: 100%;
   margin-top: 1rem;
 }
-
 
 .spinner-overlay {
   position: fixed;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background-color: rgba(255, 255, 255, 0.8); /* Add background color if desired */
-  z-index: 1000; /* Adjust as needed to make sure it's above other elements */
+  background-color: rgba(255, 255, 255, 0.8);
+  z-index: 1000;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -28,223 +20,93 @@ table {
 .button-container {
   display: flex;
   justify-content: space-between;
-  margin: 10px; /* Adds space around the container */
+  margin: 10px;
 }
 
 .mat-table-container {
-  margin: 10px; /* Adds space around the table */
+  margin: 10px;
 }
 
-.new-status {
-  background: linear-gradient(to bottom, palegreen 0%, palegreen 100%);
-  border: 1px solid palegreen;
-  color: #ffffff;
-  cursor: pointer;
-  font-size: 16px;
-  padding: 10px 20px;
-  text-align: center;
-  text-decoration: none;
-  display: -webkit-inline-box;
-  border-radius: 20px;
-  transition: background 0.3s ease;
-  box-shadow: 0px 4px 5px rgba(0, 0, 0, 0.1);
-  justify-content: center;
-  height: 100%;
-  margin: 4px auto;
+/* Search form layout */
+.search-form {
+  width: 100%;
 }
 
-.syncerror-status {
-  background: linear-gradient(to bottom, red 0%, red 100%);
-  border: 1px solid red;
-  color: #ffffff;
-  cursor: pointer;
-  font-size: 16px;
-  padding: 10px 20px;
-  text-align: center;
-  text-decoration: none;
-  display: -webkit-inline-box;
-  border-radius: 20px;
-  transition: background 0.3s ease;
-  box-shadow: 0px 4px 5px rgba(0, 0, 0, 0.1);
-  justify-content: center;
-  height: 100%;
-  margin: 4px auto;
-}
-.sysced-status {
-  background: linear-gradient(to bottom, lightskyblue 0%, lightskyblue 100%);
-  border: 1px solid lightskyblue;
-  color: #ffffff;
-  cursor: pointer;
-  font-size: 16px;
-  padding: 10px 20px;
-  text-align: center;
-  text-decoration: none;
-  display: -webkit-inline-box;
-  border-radius: 20px;
-  transition: background 0.3s ease;
-  box-shadow: 0px 4px 5px rgba(0, 0, 0, 0.1);
-  justify-content: center;
-  height: 100%;
-  margin: 4px auto;
-}
-.processed-status {
-  background: linear-gradient(to bottom, green 0%, green 100%);
-  border: 1px solid green;
-  color: #ffffff;
-  cursor: pointer;
-  font-size: 16px;
-  padding: 10px 20px;
-  text-align: center;
-  text-decoration: none;
-  display: -webkit-inline-box;
-  border-radius: 20px;
-  transition: background 0.3s ease;
-  box-shadow: 0px 4px 5px rgba(0, 0, 0, 0.1);
-  justify-content: center;
-  height: 100%;
-  margin: 4px auto;
-}
-.asngen-status {
-  background: linear-gradient(to bottom, firebrick 0%, firebrick 100%);
-  border: 1px solid firebrick;
-  color: #ffffff;
-  cursor: pointer;
-  font-size: 16px;
-  padding: 10px 20px;
-  text-align: center;
-  text-decoration: none;
-  display: -webkit-inline-box;
-  border-radius: 20px;
-  transition: background 0.3s ease;
-  box-shadow: 0px 4px 5px rgba(0, 0, 0, 0.1);
-  justify-content: center;
-  height: 100%;
-  margin: 4px auto;
+.search-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-start;
 }
 
-.asnmark-status {
-  background: linear-gradient(to bottom, lightslategray 0%, lightslategray 100%);
-  border: 1px solid lightslategray;
-  color: #ffffff;
-  cursor: pointer;
-  font-size: 16px;
-  padding: 10px 20px;
-  text-align: center;
-  text-decoration: none;
-  display: -webkit-inline-box;
-  border-radius: 20px;
-  transition: background 0.3s ease;
-  box-shadow: 0px 4px 5px rgba(0, 0, 0, 0.1);
-  justify-content: center;
-  height: 100%;
-  margin: 4px auto;
+.search-field {
+  min-width: 150px;
+  flex: 1;
 }
 
-.invoiced-status {
-  background: linear-gradient(to bottom, mediumpurple 0%, mediumpurple 100%);
-  border: 1px solid mediumpurple;
-  color: #ffffff;
-  cursor: pointer;
-  font-size: 16px;
-  padding: 10px 20px;
-  text-align: center;
-  text-decoration: none;
-  display: -webkit-inline-box;
-  border-radius: 20px;
-  transition: background 0.3s ease;
-  box-shadow: 0px 4px 5px rgba(0, 0, 0, 0.1);
-  justify-content: center;
-  height: 100%;
-  margin: 4px auto;
+.customer-field {
+  min-width: 200px;
+  flex: 2;
 }
 
-.complete-status {
-  background: linear-gradient(to bottom, gray 0%, gray 100%);
-  border: 1px solid gray;
-  color: #ffffff;
-  cursor: pointer;
-  font-size: 16px;
-  padding: 10px 20px;
-  text-align: center;
-  text-decoration: none;
-  display: -webkit-inline-box;
-  border-radius: 20px;
-  transition: background 0.3s ease;
-  box-shadow: 0px 4px 5px rgba(0, 0, 0, 0.1);
-  justify-content: center;
-  height: 100%;
-  margin: 4px auto;
+.search-btn {
+  margin-top: 4px;
+  height: 48px;
+  white-space: nowrap;
 }
 
-.finished-status {
-  background: linear-gradient(to bottom, olivedrab 0%, olivedrab 100%);
-  border: 1px solid olivedrab;
-  color: #ffffff;
-  cursor: pointer;
-  font-size: 16px;
-  padding: 10px 20px;
-  text-align: center;
-  text-decoration: none;
-  display: -webkit-inline-box;
-  border-radius: 20px;
-  transition: background 0.3s ease;
-  box-shadow: 0px 4px 5px rgba(0, 0, 0, 0.1);
-  justify-content: center;
-  height: 100%;
-  margin: 4px auto;
+/* Actions column */
+.actions-cell {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
 }
 
-.splited-status {
-  background: linear-gradient(to bottom, brown 0%, brown 100%);
-  border: 1px solid brown;
-  color: #ffffff;
-  cursor: pointer;
-  font-size: 16px;
-  padding: 10px 20px;
+/* Status badges — compact, readable, dark text on light bg */
+%status-badge {
+  font-size: 12px;
+  padding: 4px 12px;
   text-align: center;
-  text-decoration: none;
-  display: -webkit-inline-box;
-  border-radius: 20px;
-  transition: background 0.3s ease;
-  box-shadow: 0px 4px 5px rgba(0, 0, 0, 0.1);
-  justify-content: center;
-  height: 100%;
-  margin: 4px auto;
+  display: inline-block;
+  border-radius: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  line-height: 1.4;
 }
 
-.invedi-status {
-  background: linear-gradient(to bottom, blue 0%, blue 100%);
-  border: 1px solid blue;
-  color: #ffffff;
-  cursor: pointer;
-  font-size: 16px;
-  padding: 10px 20px;
-  text-align: center;
-  text-decoration: none;
-  display: -webkit-inline-box;
-  border-radius: 20px;
-  transition: background 0.3s ease;
-  box-shadow: 0px 4px 5px rgba(0, 0, 0, 0.1);
-  justify-content: center;
-  height: 100%;
-  margin: 4px auto;
+.new-status { @extend %status-badge; background: #e3f2fd; border: 1px solid #42a5f5; color: #0d47a1; }
+.syncerror-status { @extend %status-badge; background: #ffebee; border: 1px solid #ef5350; color: #c62828; }
+.sysced-status { @extend %status-badge; background: #e8f5e9; border: 1px solid #66bb6a; color: #2e7d32; }
+.processed-status { @extend %status-badge; background: #e8f5e9; border: 1px solid #4caf50; color: #1b5e20; }
+.asngen-status { @extend %status-badge; background: #fff3e0; border: 1px solid #ff9800; color: #e65100; }
+.asnmark-status { @extend %status-badge; background: #eceff1; border: 1px solid #90a4ae; color: #37474f; }
+.invoiced-status { @extend %status-badge; background: #f3e5f5; border: 1px solid #ab47bc; color: #6a1b9a; }
+.complete-status { @extend %status-badge; background: #f5f5f5; border: 1px solid #9e9e9e; color: #424242; }
+.finished-status { @extend %status-badge; background: #f1f8e9; border: 1px solid #8bc34a; color: #33691e; }
+.splited-status { @extend %status-badge; background: #efebe9; border: 1px solid #8d6e63; color: #4e342e; }
+.invedi-status { @extend %status-badge; background: #e8eaf6; border: 1px solid #5c6bc0; color: #283593; }
+.acknowledged-status { @extend %status-badge; background: #e1f5fe; border: 1px solid #29b6f6; color: #01579b; }
+
+/* Search inside mat-select dropdown */
+::ng-deep .select-search-container {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: white;
+  padding: 8px;
+  border-bottom: 1px solid #e0e0e0;
 }
 
-.acknowledged-status {
-  background: linear-gradient(to bottom, #0094ff 0%, #0094ff 100%);
-  border: 1px solid #0094ff;
-  color: #ffffff;
-  cursor: pointer;
-  font-size: 16px;
-  padding: 10px 20px;
-  text-align: center;
-  text-decoration: none;
-  display: -webkit-inline-box;
-  border-radius: 20px;
-  transition: background 0.3s ease;
-  box-shadow: 0px 4px 5px rgba(0, 0, 0, 0.1);
-  justify-content: center;
-  height: 100%;
-  margin: 4px auto;
-}
+::ng-deep .select-search-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+  outline: none;
+  box-sizing: border-box;
 
+  &:focus {
+    border-color: #3f51b5;
+  }
+}

@@ -3,6 +3,7 @@ using eSyncMate.DB.Entities;
 using System.Reflection;
 using eSyncMate.Processor.Models;
 using System.Data;
+using System.Linq;
 using eSyncMate.DB;
 using Hangfire;
 using Microsoft.AspNetCore.Authorization;
@@ -22,6 +23,35 @@ namespace eSyncMate.Processor.Controllers
         {
             _logger = logger;
             _config = config;
+        }
+
+        [HttpGet("getConfiguredRouteIds")]
+        public Task<ConfiguredRouteIdsResponse> GetConfiguredRouteIds([FromQuery] long? excludeFlowId)
+        {
+            var l_Response = new ConfiguredRouteIdsResponse();
+            var l_Connection = new DBConnector(CommonUtils.ConnectionString);
+            try
+            {
+                DataTable l_DT = new();
+                string l_Query = "SELECT DISTINCT RouteId FROM FlowDetails WHERE (Status IS NULL OR Status NOT IN ('DELETED')) AND RouteId IS NOT NULL";
+                if (excludeFlowId.HasValue && excludeFlowId.Value > 0)
+                {
+                    l_Query += $" AND FlowId != {excludeFlowId.Value}";
+                }
+                l_Connection.GetData(l_Query, ref l_DT);
+
+                l_Response.RouteIds = l_DT.AsEnumerable()
+                    .Select(r => Convert.ToInt32(r["RouteId"]))
+                    .ToList();
+                l_Response.Code = (int)ResponseCodes.Success;
+                l_Response.Message = "Configured route IDs retrieved.";
+            }
+            catch (Exception ex)
+            {
+                l_Response.Code = (int)ResponseCodes.Exception;
+                l_Response.Message = ex.Message;
+            }
+            return Task.FromResult(l_Response);
         }
 
         [HttpGet("GetByRouteId")]
@@ -162,7 +192,7 @@ namespace eSyncMate.Processor.Controllers
                     FlowDetails l_DetailEntity = new(l_Flow.Connection);
                     string l_Ids = string.Join(",", l_FlowIds);
 
-                    if (l_DetailEntity.GetViewList($"FlowId IN ({l_Ids})", string.Empty, ref l_DetailData))
+                    if (l_DetailEntity.GetViewList($"FlowId IN ({l_Ids}) AND (Status IS NULL OR Status != 'DELETED')", string.Empty, ref l_DetailData))
                     {
                         var l_DetailsByFlowId = new Dictionary<long, List<FlowsDetailsearchModel>>();
                         foreach (DataRow l_DetailRow in l_DetailData.Rows)
@@ -216,10 +246,13 @@ namespace eSyncMate.Processor.Controllers
                 Flows l_Flow = new();
                 l_Flow.UseConnection(string.Empty, l_Connection);
 
-                if (l_Flow.GetObject("Title", flowModel.Title).IsSuccess)
+                // Check duplicate: same Title + CustomerID among non-deleted flows
+                DataTable l_DupCheck = new();
+                l_Flow.GetList($"Title = '{flowModel.Title.Replace("'", "''")}' AND CustomerID = '{flowModel.CustomerID.Replace("'", "''")}' AND ISNULL(Status,'') != 'DELETED'", "Id", ref l_DupCheck);
+                if (l_DupCheck.Rows.Count > 0)
                 {
                     l_Response.Code = (int)ResponseCodes.FlowAlreadyExists;
-                    l_Response.Description = $"This flow {flowModel.Title} already exists!";
+                    l_Response.Description = $"Flow '{flowModel.Title}' already exists for this partner!";
                     return Task.FromResult(l_Response);
                 }
 
@@ -262,7 +295,9 @@ namespace eSyncMate.Processor.Controllers
                             l_DR["In_Out"] = detailModel.In_Out;
                             l_DR["FrequencyType"] = detailModel.FrequencyType;
                             l_DR["StartDate"] = (object)detailModel.StartDate ?? DBNull.Value;
-                            l_DR["EndDate"] = (object)detailModel.EndDate ?? DBNull.Value;
+                            l_DR["EndDate"] = detailModel.EndDate != null && detailModel.EndDate != default(DateTime) && detailModel.EndDate.Year > 1900
+                                ? (object)detailModel.EndDate
+                                : DateTime.Now.AddYears(5);
                             l_DR["RepeatCount"] = detailModel.RepeatCount;
                             l_DR["WeekDays"] = detailModel.WeekDays;
                             l_DR["OnDay"] = detailModel.OnDay;
@@ -293,6 +328,37 @@ namespace eSyncMate.Processor.Controllers
                     l_Response.Message = l_Result.Description;
                     int detailCount = flowModel.FlowDetails?.Count ?? 0;
                     l_Response.Description = $"Flow {flowModel.Title} created! ({detailCount} detail(s) saved)";
+
+                    // Schedule Hangfire jobs and update Routes status after commit
+                    if (flowModel.FlowDetails != null)
+                    {
+                        RouteEngine l_Engine = new RouteEngine(this._config);
+                        foreach (var detailModel in flowModel.FlowDetails)
+                        {
+                            try
+                            {
+                                if (!detailModel.RouteId.HasValue) continue;
+                                var l_UpdateConn = new DBConnector(CommonUtils.ConnectionString);
+                                string l_DetailStatus = (detailModel.Status ?? "").Trim();
+
+                                if (l_DetailStatus.Equals("Active", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    var l_StartDate = detailModel.StartDate == default(DateTime) ? DateTime.Now : detailModel.StartDate;
+                                    string l_JobId = l_Engine.ScheduleWaitJob(new Routes { Id = detailModel.RouteId.Value, StartDate = l_StartDate });
+                                    l_UpdateConn.Execute($"UPDATE Routes SET Status = 'Active', JobID = '{l_JobId ?? ""}', ModifiedDate = GETDATE() WHERE Id = {detailModel.RouteId.Value}");
+                                }
+                                else
+                                {
+                                    // InActive detail: ensure Route is also InActive with no job
+                                    l_UpdateConn.Execute($"UPDATE Routes SET Status = 'In-Active', JobID = NULL, ModifiedDate = GETDATE() WHERE Id = {detailModel.RouteId.Value}");
+                                }
+                            }
+                            catch (Exception jobEx)
+                            {
+                                this._logger.LogWarning($"CreateFlow: Failed to process Hangfire job for RouteId={detailModel.RouteId}: {jobEx.Message}");
+                            }
+                        }
+                    }
                 }
                 else
                 {
@@ -311,7 +377,7 @@ namespace eSyncMate.Processor.Controllers
             return Task.FromResult(l_Response);
         }
 
-        [HttpDelete]
+        [HttpPost]
         [Route("deleteFlow/{id}")]
         public Task<FlowsResponseModel> DeleteFlow(long id)
         {
@@ -319,17 +385,67 @@ namespace eSyncMate.Processor.Controllers
             DBConnector l_Connection = new DBConnector(CommonUtils.ConnectionString);
             try
             {
+                // Get active details to clean up Hangfire jobs before soft-delete
+                DataTable l_DetailsDT = new();
+                eSyncMate.DB.Entities.FlowDetails l_DetailEntity = new();
+                l_DetailEntity.UseConnection(string.Empty, l_Connection);
+                l_DetailEntity.GetList($"FlowId = {id} AND (Status IS NULL OR Status != 'DELETED')", "*", ref l_DetailsDT);
+
+                RouteEngine l_CleanupEngine = new RouteEngine(this._config);
+                foreach (DataRow l_DetailRow in l_DetailsDT.Rows)
+                {
+                    try
+                    {
+                        if (l_DetailRow["RouteId"] != DBNull.Value)
+                        {
+                            int l_RouteId = Convert.ToInt32(l_DetailRow["RouteId"]);
+
+                            // Get full Route data for proper Hangfire cleanup
+                            Routes l_RouteEntity = new();
+                            l_RouteEntity.UseConnection(string.Empty, l_Connection);
+                            l_RouteEntity.Id = l_RouteId;
+                            l_RouteEntity.GetObject();
+
+                            // 1. Delete scheduled BackgroundJob (one-time wait job)
+                            if (!string.IsNullOrEmpty(l_RouteEntity.JobID))
+                            {
+                                try { BackgroundJob.Delete(l_RouteEntity.JobID); }
+                                catch (Exception hjEx)
+                                {
+                                    this._logger.LogWarning($"DeleteFlow: Failed to delete BackgroundJob [{l_RouteEntity.JobID}] for RouteId={l_RouteId}: {hjEx.Message}");
+                                }
+                            }
+
+                            // 2. Remove all RecurringJobs (Daily/Weekly/Monthly recurring patterns)
+                            try { l_CleanupEngine.RemoveRouteJob(l_RouteEntity); }
+                            catch (Exception rrEx)
+                            {
+                                this._logger.LogWarning($"DeleteFlow: Failed to remove RecurringJob for RouteId={l_RouteId}: {rrEx.Message}");
+                            }
+
+                            // 3. Set Route to InActive and clear JobID
+                            l_Connection.Execute($"UPDATE Routes SET Status = 'In-Active', JobID = NULL, ModifiedDate = GETDATE() WHERE Id = {l_RouteId}");
+                        }
+                    }
+                    catch (Exception detailEx)
+                    {
+                        this._logger.LogWarning($"DeleteFlow: Error cleaning up RouteId in detail: {detailEx.Message}");
+                    }
+                }
+
                 // Soft-delete the parent Flow record
-                bool l_FlowDeleted = l_Connection.Execute($"UPDATE Flows SET Status = 'DELETED' WHERE Id = {id}");
+                bool l_FlowDeleted = l_Connection.Execute($"UPDATE Flows SET Status = 'DELETED', ModifiedDate = GETDATE() WHERE Id = {id}");
 
                 if (l_FlowDeleted)
                 {
-                    // Soft-delete all child FlowDetails records for this Flow
-                    l_Connection.Execute($"UPDATE FlowDetails SET Status = 'DELETED' WHERE FlowId = {id}");
+                    // Soft-delete all child FlowDetails records
+                    l_Connection.Execute($"UPDATE FlowDetails SET Status = 'DELETED', ModifiedDate = GETDATE() WHERE FlowId = {id}");
 
                     l_Response.Code = 200;
                     l_Response.Message = "Flow and its details have been deleted successfully.";
                     l_Response.Description = $"Flow {id} deleted successfully!";
+
+                    this._logger.LogInformation($"DeleteFlow: Flow {id} soft-deleted. {l_DetailsDT.Rows.Count} detail(s) cleaned up, Hangfire jobs deleted, Routes set to InActive.");
                 }
                 else
                 {
@@ -346,7 +462,7 @@ namespace eSyncMate.Processor.Controllers
             return Task.FromResult(l_Response);
         }
 
-        [HttpPut]
+        [HttpPost]
         [Route("updateFlow")]
         public Task<FlowsResponseModel> UpdateFlow([FromBody] EditFlowDataModel flowModel)
         {
@@ -362,10 +478,27 @@ namespace eSyncMate.Processor.Controllers
 
                 int l_UserIdVal = FlowsManager.GetUserId(User.Identity as ClaimsIdentity);
 
-                if (!l_Flow.ResolveIdByTitle(flowModel.Title))
+                if (flowModel.Id > 0)
+                {
+                    l_Flow.Id = flowModel.Id;
+                    var l_GetResult = l_Flow.GetObject();
+                    if (!l_GetResult.IsSuccess)
+                    {
+                        l_Result = Result.GetFailureResult();
+                        l_Result.Description = $"Flow with ID {flowModel.Id} not found.";
+                    }
+                    else
+                    {
+                        PublicFunctions.CopyTo(flowModel, l_Flow);
+                        l_Flow.ModifiedBy = flowModel.ModifiedBy ?? 0;
+                        l_Flow.ModifiedDate = DateTime.Now;
+                        l_Result = l_Flow.Modify();
+                    }
+                }
+                else if (!l_Flow.ResolveIdByTitle(flowModel.Title))
                 {
                     l_Result = Result.GetFailureResult();
-                    l_Result.Description = $"Flow with Title '{flowModel.Title}' not found. A valid Flow ID or Title is required for updating.";
+                    l_Result.Description = $"Flow with Title '{flowModel.Title}' not found.";
                 }
                 else
                 {
@@ -381,16 +514,88 @@ namespace eSyncMate.Processor.Controllers
                     eSyncMate.DB.Entities.FlowDetails l_DetailEntity = new();
                     l_DetailEntity.UseConnection(string.Empty, l_Connection);
                     DataTable l_ExistingDT = new();
-                    l_DetailEntity.GetList($"FlowId = {flowModel.Id}", "*", ref l_ExistingDT);
+                    l_DetailEntity.GetList($"FlowId = {flowModel.Id} AND (Status IS NULL OR Status != 'DELETED')", "*", ref l_ExistingDT);
 
                     var l_ExistingRows = l_ExistingDT.AsEnumerable()
                         .Where(r => r["RouteId"] != DBNull.Value)
                         .ToDictionary(r => Convert.ToInt32(r["RouteId"]), r => r);
 
+                    this._logger.LogInformation($"UpdateFlow [{flowModel.Id}]: Existing DB RouteIds=[{string.Join(",", l_ExistingRows.Keys)}], Incoming RouteIds=[{string.Join(",", flowModel.FlowDetails.Where(d => d.RouteId.HasValue).Select(d => d.RouteId.Value))}]");
+
                     foreach (var detailModel in flowModel.FlowDetails)
                     {
                         l_Result = FlowsManager.ProcessUpdateDetail(flowModel, detailModel, l_ExistingRows, l_Connection, l_UserIdVal, this._config);
                         if (!l_Result.IsSuccess) break;
+                    }
+
+                    // Soft-delete removed details: existing rows not present in the incoming payload
+                    if (l_Result.IsSuccess)
+                    {
+                        var l_IncomingRouteIds = flowModel.FlowDetails
+                            .Where(d => d.RouteId.HasValue)
+                            .Select(d => d.RouteId.Value)
+                            .ToHashSet();
+
+                        var l_RemovedRouteIds = l_ExistingRows.Keys.Where(k => !l_IncomingRouteIds.Contains(k)).ToList();
+
+                        if (l_RemovedRouteIds.Count > 0)
+                        {
+                            var l_RemovedDetailIds = l_RemovedRouteIds
+                                .Select(k => Convert.ToInt64(l_ExistingRows[k]["Id"]))
+                                .ToList();
+
+                            string l_DetailIdsStr = string.Join(",", l_RemovedDetailIds);
+
+                            // Delete Hangfire jobs and update Routes for removed details
+                            RouteEngine l_CleanupEngine = new RouteEngine(this._config);
+                            foreach (int l_RmRouteId in l_RemovedRouteIds)
+                            {
+                                try
+                                {
+                                    // Get full Route data for proper Hangfire cleanup
+                                    Routes l_RmRoute = new();
+                                    l_RmRoute.UseConnection(string.Empty, l_Connection);
+                                    l_RmRoute.Id = l_RmRouteId;
+                                    l_RmRoute.GetObject();
+                                    string l_RmJobId = l_RmRoute.JobID;
+
+                                    // 1. Delete scheduled BackgroundJob (one-time wait job)
+                                    if (!string.IsNullOrEmpty(l_RmJobId))
+                                    {
+                                        try { BackgroundJob.Delete(l_RmJobId); }
+                                        catch (Exception hjEx)
+                                        {
+                                            this._logger.LogWarning($"UpdateFlow: Failed to delete BackgroundJob [{l_RmJobId}] for RouteId={l_RmRouteId}: {hjEx.Message}");
+                                        }
+                                    }
+
+                                    // 2. Remove all RecurringJobs (Daily/Weekly/Monthly recurring patterns)
+                                    try { l_CleanupEngine.RemoveRouteJob(l_RmRoute); }
+                                    catch (Exception rrEx)
+                                    {
+                                        this._logger.LogWarning($"UpdateFlow: Failed to remove RecurringJob for RouteId={l_RmRouteId}: {rrEx.Message}");
+                                    }
+
+                                    // 3. Update Route: set InActive and clear JobID
+                                    l_Connection.Execute($"UPDATE Routes SET Status = 'In-Active', JobID = NULL, ModifiedDate = GETDATE(), ModifiedBy = {l_UserIdVal} WHERE Id = {l_RmRouteId}");
+
+                                    // 4. Log removal to FlowHistory
+                                    long l_RmDetailId = Convert.ToInt64(l_ExistingRows[l_RmRouteId]["Id"]);
+                                    l_Connection.Execute($"INSERT INTO FlowHistory (FlowId, FlowDetailId, RouteId, UserId, FlowStatus, JobId, CreatedDate, CreatedBy) VALUES ({flowModel.Id}, {l_RmDetailId}, {l_RmRouteId}, {l_UserIdVal}, 'DELETED', '{l_RmJobId ?? ""}', GETDATE(), {l_UserIdVal})");
+
+                                    this._logger.LogInformation($"UpdateFlow: Removed RouteId={l_RmRouteId} from Flow {flowModel.Id}. BackgroundJob [{l_RmJobId}] deleted, RecurringJobs removed, Route set to InActive.");
+                                }
+                                catch (Exception rmEx)
+                                {
+                                    this._logger.LogWarning($"UpdateFlow: Error cleaning up removed RouteId={l_RmRouteId}: {rmEx.Message}");
+                                }
+                            }
+
+                            // Soft-delete removed flow details
+                            l_Connection.Execute($"UPDATE FlowDetails SET Status = 'DELETED', ModifiedDate = GETDATE(), ModifiedBy = {l_UserIdVal} WHERE Id IN ({l_DetailIdsStr})");
+
+                            this._logger.LogInformation($"Soft-deleted FlowDetails [{l_DetailIdsStr}] for Flow {flowModel.Id}. Removed routes: [{string.Join(",", l_RemovedRouteIds)}]");
+                        }
                     }
                 }
 

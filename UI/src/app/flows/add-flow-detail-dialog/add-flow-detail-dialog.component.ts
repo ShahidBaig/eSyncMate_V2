@@ -1,4 +1,4 @@
-import { Component, Inject, OnInit, inject } from '@angular/core';
+import { Component, Inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { FormBuilder, FormGroup, FormArray, ReactiveFormsModule, FormsModule, FormControl } from '@angular/forms';
@@ -40,8 +40,10 @@ export class AddFlowDetailDialogComponent implements OnInit {
   detailInputForm: FormGroup;
   frequencyTypeOptions: string[] = [];
   filteredRouteOptions: any[] = [];
+  displayedRouteOptions: any[] = [];
   allRouteOptions: any[] = [];
   daysOfWeek: string[] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  routeSearchText: string = '';
 
   readonly separatorKeysCodes = [ENTER, COMMA] as const;
 
@@ -60,15 +62,19 @@ export class AddFlowDetailDialogComponent implements OnInit {
     this.isEdit = data.isEdit;
     this.frequencyTypeOptions = data.frequencyTypeOptions || ['Minutely', 'Hourly', 'Daily', 'Weekly', 'Monthly'];
     this.filteredRouteOptions = data.filteredRouteOptions || [];
+    this.displayedRouteOptions = [...this.filteredRouteOptions];
     this.allRouteOptions = data.allRouteOptions || [];
+
+    // Default end date: 5 years from now
+    const defaultEndDate = new Date();
+    defaultEndDate.setFullYear(defaultEndDate.getFullYear() + 5);
 
     this.detailInputForm = this.fb.group({
       routeId: [data.detail?.routeId || null],
       status: [data.detail?.status || 'Active'],
-      in_Out: [{ value: data.detail?.in_Out || '', disabled: true }],
       frequencyType: [data.detail?.frequencyType || ''],
       startDate: [data.detail?.startDate || ''],
-      endDate: [data.detail?.endDate || ''],
+      endDate: [data.detail?.endDate || defaultEndDate],
       repeatCount: [data.detail?.repeatCount || 0],
       selectedWeekday: this.fb.array(this.daysOfWeek.map(() => this.fb.control(false))),
       onDay: [''],
@@ -93,7 +99,6 @@ export class AddFlowDetailDialogComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    // Only listen if not edit mode or if user changes routeId
     this.detailInputForm.get('routeId')?.valueChanges.subscribe((routeId) => {
       if (routeId) {
         this.onRouteSelected(routeId);
@@ -101,13 +106,37 @@ export class AddFlowDetailDialogComponent implements OnInit {
     });
   }
 
+  // Route search methods
+  filterRouteOptions() {
+    const search = this.routeSearchText.trim().toLowerCase();
+    if (!search) {
+      this.displayedRouteOptions = [...this.filteredRouteOptions];
+    } else {
+      this.displayedRouteOptions = this.filteredRouteOptions.filter(
+        (r: any) => r.name?.toLowerCase().includes(search)
+      );
+    }
+  }
+
+  onRouteSelectOpened(opened: boolean) {
+    if (opened) {
+      this.routeSearchText = '';
+      this.filterRouteOptions();
+    }
+  }
+
   onRouteSelected(routeId: number) {
     const route = this.allRouteOptions.find(r => r.id === routeId);
-    if (route && !this.isEdit) { // Only auto-fill from base route if adding new
+
+    // Default end date: 5 years from now
+    const defaultEndDate = new Date();
+    defaultEndDate.setFullYear(defaultEndDate.getFullYear() + 5);
+
+    if (route && !this.isEdit) {
       this.detailInputForm.patchValue({
         frequencyType: route.frequencyType || '',
         startDate: route.startDate ? new Date(route.startDate) : '',
-        endDate: route.endDate ? new Date(route.endDate) : '',
+        endDate: route.endDate ? new Date(route.endDate) : defaultEndDate,
         repeatCount: route.repeatCount ?? 0,
       });
 
@@ -136,7 +165,7 @@ export class AddFlowDetailDialogComponent implements OnInit {
             const patch: any = {};
             if (d.frequencyType) patch.frequencyType = d.frequencyType;
             if (d.startDate) patch.startDate = new Date(d.startDate);
-            if (d.endDate) patch.endDate = new Date(d.endDate);
+            patch.endDate = d.endDate ? new Date(d.endDate) : defaultEndDate;
             if (d.repeatCount) patch.repeatCount = parseInt(d.repeatCount, 10);
             if (Object.keys(patch).length > 0) {
               this.detailInputForm.patchValue(patch, { emitEvent: false });
@@ -184,7 +213,19 @@ export class AddFlowDetailDialogComponent implements OnInit {
 
   addOnDay(event: MatChipInputEvent): void {
     const value = (event.value || '').trim();
-    if (value) { this.inputOnDayList.push({ name: value }); }
+    if (value) {
+      const day = parseInt(value, 10);
+      if (isNaN(day) || day < 1 || day > 31) {
+        this.toast.warning({ detail: "WARNING", summary: "Day must be between 1 and 31", duration: 3000, position: 'topRight' });
+        event.chipInput!.clear();
+        return;
+      }
+      if (this.inputOnDayList.some(d => d.name === value)) {
+        event.chipInput!.clear();
+        return;
+      }
+      this.inputOnDayList.push({ name: value });
+    }
     event.chipInput!.clear();
   }
   removeOnDay(item: { name: string }): void {
@@ -193,7 +234,19 @@ export class AddFlowDetailDialogComponent implements OnInit {
   }
   addExecutionTime(event: MatChipInputEvent): void {
     const value = (event.value || '').trim();
-    if (value) { this.inputExecutionTimeList.push({ name: value }); }
+    if (value) {
+      const timeRegex = /^([0-1][0-9]|2[0-3]):[0-5][0-9]$/;
+      if (!timeRegex.test(value)) {
+        this.toast.warning({ detail: "WARNING", summary: "Time must be in HH:MM format (00:00 - 23:59)", duration: 3000, position: 'topRight' });
+        event.chipInput!.clear();
+        return;
+      }
+      if (this.inputExecutionTimeList.some(t => t.name === value)) {
+        event.chipInput!.clear();
+        return;
+      }
+      this.inputExecutionTimeList.push({ name: value });
+    }
     event.chipInput!.clear();
   }
   removeExecutionTime(item: { name: string }): void {
@@ -206,17 +259,39 @@ export class AddFlowDetailDialogComponent implements OnInit {
   }
 
   onSave(): void {
-    const formVal = this.detailInputForm.getRawValue(); // gets disabled values too
+    const formVal = this.detailInputForm.getRawValue();
     if (!formVal.routeId) {
       this.toast.warning({ detail: "WARNING", summary: "Please select a Route Name", duration: 3000, position: 'topRight' });
       return;
     }
+    if (!formVal.frequencyType) {
+      this.toast.warning({ detail: "WARNING", summary: "Please select a Frequency Type", duration: 3000, position: 'topRight' });
+      return;
+    }
+    if ((formVal.frequencyType === 'Minutely' || formVal.frequencyType === 'Hourly') && (!formVal.repeatCount || formVal.repeatCount <= 0)) {
+      this.toast.warning({ detail: "WARNING", summary: "Repeat Count must be greater than 0", duration: 3000, position: 'topRight' });
+      return;
+    }
+    if ((formVal.frequencyType === 'Daily' || formVal.frequencyType === 'Weekly') && this.inputExecutionTimeList.length === 0) {
+      this.toast.warning({ detail: "WARNING", summary: "Please add at least one Execution Time", duration: 3000, position: 'topRight' });
+      return;
+    }
+    if (formVal.frequencyType === 'Weekly') {
+      const hasDay = formVal.selectedWeekday.some((v: boolean) => v);
+      if (!hasDay) {
+        this.toast.warning({ detail: "WARNING", summary: "Please select at least one day of the week", duration: 3000, position: 'topRight' });
+        return;
+      }
+    }
+    if (formVal.frequencyType === 'Monthly' && this.inputOnDayList.length === 0) {
+      this.toast.warning({ detail: "WARNING", summary: "Please add at least one day of the month", duration: 3000, position: 'topRight' });
+      return;
+    }
 
-    // Return all the data to parent map
     this.dialogRef.close({
       routeId: formVal.routeId,
       status: formVal.status,
-      in_Out: formVal.in_Out,
+      in_Out: '',
       frequencyType: formVal.frequencyType,
       startDate: formVal.startDate,
       endDate: formVal.endDate,
@@ -227,4 +302,3 @@ export class AddFlowDetailDialogComponent implements OnInit {
     });
   }
 }
-// Trigger rebuild

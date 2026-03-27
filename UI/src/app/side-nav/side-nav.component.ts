@@ -90,12 +90,6 @@ export class SideNavComponent {
       visible: this.api.getTokenUserInfo()?.company.toLocaleUpperCase() === 'GECKOTECH' ? this.api.getTokenUserInfo()?.userType.toLocaleUpperCase() === 'ADMIN' ? true : false : true,
     },
     {
-      title: 'nav.hangfireDashboard',
-      link: 'hangfire/dashboard',
-      visible: this.api.getTokenUserInfo()?.company.toLocaleUpperCase() === 'GECKOTECH' ? this.api.getTokenUserInfo()?.userType.toLocaleUpperCase() === 'ADMIN' ? true : false : true,
-    },
-
-    {
       title: 'nav.routeExceptions',
       link: 'edi/routeExceptions',
       visible: this.api.getTokenUserInfo()?.company.toLocaleUpperCase() === 'GECKOTECH' ? this.api.getTokenUserInfo()?.userType.toLocaleUpperCase() === 'ADMIN' ? true : false : true,
@@ -149,6 +143,11 @@ export class SideNavComponent {
       title: 'nav.flows',
       link: 'edi/flows',
       visible: true
+    },
+    {
+      title: 'nav.hangfireDashboard',
+      link: 'hangfire/dashboard',
+      visible: this.api.getTokenUserInfo()?.company.toLocaleUpperCase() === 'GECKOTECH' ? this.api.getTokenUserInfo()?.userType.toLocaleUpperCase() === 'ADMIN' ? true : false : true,
     },
   ];
 

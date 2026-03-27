@@ -57,10 +57,13 @@ import { InventorypopupComponent } from '../inventory-popup/inventory-popup.comp
 export class InventoryBatchwiseComponent {
 
   mydate = environment.date;
-  displayedColumns: string[] = ['CustomerID', 'ItemID', 'Status', 'CustomerItemCode', 'ETADate', 'ETAQty', 'TotalATS', 'ATSL10', 'ATSL21', 'ATSL28', 'ATSL29', 'ATSL30', 'ATSL34', 'ATSL35', 'ATSL36', 'ATSL37', 'ATSL40', 'ATSL41', 'ATSL55', 'ATSL56', 'ATSL57', 'ATSL60', 'ATSL65', 'ATSL70', 'ATSL91','File',]; // Add the actual column names from your data
+  displayedColumns: string[] = ['CustomerID', 'ItemID', 'SyncDate', 'Status', 'CustomerItemCode', 'ETADate', 'ETAQty', 'TotalATS', 'ATSL10', 'ATSL21', 'ATSL28', 'ATSL29', 'ATSL30', 'ATSL34', 'ATSL35', 'ATSL36', 'ATSL37', 'ATSL40', 'ATSL41', 'ATSL55', 'ATSL56', 'ATSL57', 'ATSL60', 'ATSL65', 'ATSL70', 'ATSL91','File',]; // Add the actual column names from your data
   //'ATSL10', 'ATSL21', 'ATSL28', 'ATSL30', 'ATSL34', 'ATSL35', 'ATSL36', 'ATSL37', 'ATSL40', 'ATSL41', 'ATSL55', 'ATSL60', 'ATSL70', 'ATSL91'
   dataSource = this.data.listofInventoryFiles || [];
   batchID?: string;
+  batchStatus: string = '';
+  routeType: string = '';
+  dateColumnLabel: string = 'Sent Date';
   showSpinner: boolean = false;
   msg: string = '';
   code: number = 0;
@@ -74,6 +77,9 @@ export class InventoryBatchwiseComponent {
     public dialogRef: MatDialogRef<InventoryBatchwiseComponent>,
     @Inject(MAT_DIALOG_DATA) public data: any, private dialog: MatDialog, private api: InventoryService, private fb: FormBuilder, private toast: NgToastService, public languageService: LanguageService) {
     this.batchID = data.listofInventoryFiles[0].batchID;
+    this.batchStatus = data.batchStatus || '';
+    this.routeType = data.routeType || '';
+    this.dateColumnLabel = this.isReceivedType() ? 'Received Date' : 'Sent Date';
 
     const threeDaysAgo = new Date();
     threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
@@ -100,6 +106,11 @@ export class InventoryBatchwiseComponent {
 
     this.dataSource = this.listBatchWiseInventory.slice(0, 10);
 
+  }
+
+  isReceivedType(): boolean {
+    const rt = this.routeType.toLowerCase();
+    return rt.includes('full') || rt.includes('differential') || rt.includes('scsfullinventoryfeed') || rt.includes('scsdifferentialinventoryfeed');
   }
 
   onCancel() {

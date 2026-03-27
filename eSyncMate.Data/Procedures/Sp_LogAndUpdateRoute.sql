@@ -39,11 +39,11 @@ BEGIN
         @UserId
     );
 
-    -- 2. Update Routes table if status is Active
+    -- 2. Update Routes table based on status
     IF (LOWER(@FlowStatus) = 'active')
     BEGIN
         UPDATE [Routes]
-        SET 
+        SET
             Status = @FlowStatus,
             FrequencyType = @FrequencyType,
             StartDate = @StartDate,
@@ -52,6 +52,17 @@ BEGIN
             WeekDays = @WeekDays,
             OnDay = @OnDay,
             ExecutionTime = @ExecutionTime,
+            JobID = @NewJobId,
+            ModifiedDate = GETDATE(),
+            ModifiedBy = @UserId
+        WHERE Id = @RouteId;
+    END
+    ELSE
+    BEGIN
+        -- When InActive or other status: update Route status and clear JobID
+        UPDATE [Routes]
+        SET
+            Status = 'In-Active',
             JobID = @NewJobId,
             ModifiedDate = GETDATE(),
             ModifiedBy = @UserId

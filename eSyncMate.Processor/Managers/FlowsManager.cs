@@ -57,7 +57,9 @@ namespace eSyncMate.Processor.Managers
                 l_Row.In_Out = detailModel.In_Out;
                 l_Row.FrequencyType = detailModel.FrequencyType;
                 l_Row.StartDate = detailModel.StartDate;
-                l_Row.EndDate = detailModel.EndDate;
+                l_Row.EndDate = detailModel.EndDate != default(DateTime) && detailModel.EndDate.Year > 1900
+                    ? detailModel.EndDate
+                    : DateTime.Now.AddYears(5);
                 l_Row.RepeatCount = detailModel.RepeatCount;
                 l_Row.WeekDays = detailModel.WeekDays;
                 l_Row.OnDay = detailModel.OnDay;
@@ -102,13 +104,31 @@ namespace eSyncMate.Processor.Managers
 
                 if (l_DetailStatus == "active")
                 {
-                    if (!string.IsNullOrEmpty(l_OldJobId)) BackgroundJob.Delete(l_OldJobId);
+                    // Remove old jobs before scheduling new ones
+                    if (!string.IsNullOrEmpty(l_OldJobId))
+                    {
+                        try { BackgroundJob.Delete(l_OldJobId); } catch { }
+                    }
+                    // Remove any existing RecurringJobs for this route
+                    Routes l_FullRoute = new();
+                    DBEntity.PopulateObjectFromRow(l_FullRoute, l_RoutesDT, l_RouteRow);
+                    try { l_Engine.RemoveRouteJob(l_FullRoute); } catch { }
+
                     var l_StartDate = detailModel.StartDate == default(DateTime) ? DateTime.Now : detailModel.StartDate;
                     l_NewJobID = l_Engine.ScheduleWaitJob(new Routes { Id = l_RouteId, StartDate = l_StartDate });
                 }
                 else if ((l_OldStatus ?? "").Equals("active", StringComparison.CurrentCultureIgnoreCase) && l_DetailStatus != "active")
                 {
-                    if (!string.IsNullOrEmpty(l_OldJobId)) BackgroundJob.Delete(l_OldJobId);
+                    // Transitioning Active -> InActive: remove all Hangfire jobs
+                    if (!string.IsNullOrEmpty(l_OldJobId))
+                    {
+                        try { BackgroundJob.Delete(l_OldJobId); } catch { }
+                    }
+                    // Remove RecurringJobs
+                    Routes l_FullRoute = new();
+                    DBEntity.PopulateObjectFromRow(l_FullRoute, l_RoutesDT, l_RouteRow);
+                    try { l_Engine.RemoveRouteJob(l_FullRoute); } catch { }
+
                     l_NewJobID = null;
                 }
             }

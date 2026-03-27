@@ -77,14 +77,18 @@ export class EditFlowDialogComponent implements OnInit {
     customerOptions: Customers[] | undefined;
     allRouteOptions: RouteOption[] = [];
     filteredRouteOptions: RouteOption[] = [];
+    configuredRouteIds: Set<number> = new Set();
+    customerSearchText: string = '';
+    filteredCustomerOptions: Customers[] = [];
     frequencyTypeOptions = ['Minutely', 'Hourly', 'Daily', 'Weekly', 'Monthly'];
     daysOfWeek: string[] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
     detailOnDayLists: { name: string }[][] = [];
     detailExecutionTimeLists: { name: string }[][] = [];
+    isSaving: boolean = false;
 
     // Table columns for the details table
-    detailTableColumns: string[] = ['index', 'routeName', 'status', 'inOut', 'startDate', 'endDate', 'actions'];
+    detailTableColumns: string[] = ['routeName', 'status', 'frequency', 'startDate', 'nextRecurrence', 'actions'];
 
     @ViewChild('detailsTable') detailsTable!: MatTable<any>;
 
@@ -102,10 +106,10 @@ export class EditFlowDialogComponent implements OnInit {
     ) {
         this.editFlowForm = this.fb.group({
             id: [data.id],
-            customerID: [data.customerID, Validators.required],
+            customerID: [{ value: data.customerID, disabled: true }, Validators.required],
             title: [data.title, Validators.required],
             description: [data.description],
-            status: [data.status],
+            status: [data.status, Validators.required],
             flowDetails: this.fb.array([])
         });
     }
@@ -115,6 +119,7 @@ export class EditFlowDialogComponent implements OnInit {
     }
 
     ngOnInit() {
+        this.getConfiguredRoutes();
         this.getCustomersData();
         this.getRoutes();
         this.initFlowDetails();
@@ -129,10 +134,33 @@ export class EditFlowDialogComponent implements OnInit {
         this.ERPApi.getERPCustomers().subscribe({
             next: (res: any) => {
                 this.customerOptions = res.customers;
+                this.filteredCustomerOptions = this.customerOptions ? [...this.customerOptions] : [];
                 // Filter routes once customers are loaded
                 this.filterRoutesByCustomer();
             },
         });
+    }
+
+    filterCustomerOptions() {
+        if (!this.customerOptions) {
+            this.filteredCustomerOptions = [];
+            return;
+        }
+        const search = this.customerSearchText.trim().toLowerCase();
+        if (!search) {
+            this.filteredCustomerOptions = [...this.customerOptions];
+        } else {
+            this.filteredCustomerOptions = this.customerOptions.filter(
+                c => c.name.toLowerCase().includes(search) || c.erpCustomerID.toLowerCase().includes(search)
+            );
+        }
+    }
+
+    onCustomerSelectOpened(opened: boolean) {
+        if (opened) {
+            this.customerSearchText = '';
+            this.filterCustomerOptions();
+        }
     }
 
     getRoutes() {
@@ -158,6 +186,16 @@ export class EditFlowDialogComponent implements OnInit {
         });
     }
 
+    getConfiguredRoutes() {
+        const flowId = this.data.id;
+        this.flowsApi.getConfiguredRouteIds(flowId).subscribe({
+            next: (res: any) => {
+                this.configuredRouteIds = new Set(res.routeIds || []);
+                this.filterRoutesByCustomer();
+            },
+        });
+    }
+
     filterRoutesByCustomer() {
         const selectedCustomerID = this.editFlowForm.get('customerID')?.value;
         if (!selectedCustomerID || !this.customerOptions || !this.allRouteOptions) {
@@ -165,16 +203,16 @@ export class EditFlowDialogComponent implements OnInit {
             return;
         }
 
-        // Find the customer name for the selected customerID
         const selectedCustomer = this.customerOptions.find(c => c.erpCustomerID === selectedCustomerID);
         if (!selectedCustomer) {
             this.filteredRouteOptions = [];
             return;
         }
 
-        // Filter routes by matching customerName
+        // Filter by customer AND exclude routes configured in OTHER flows
         this.filteredRouteOptions = this.allRouteOptions.filter(
             route => route.customerName && route.customerName.toLowerCase() === selectedCustomer.name.toLowerCase()
+                && !this.configuredRouteIds.has(route.id)
         );
     }
 
@@ -206,12 +244,35 @@ export class EditFlowDialogComponent implements OnInit {
         }
     }
 
+    getAvailableRoutes(): RouteOption[] {
+        const selectedCustomerID = this.editFlowForm.get('customerID')?.value;
+        if (!selectedCustomerID || !this.customerOptions || !this.allRouteOptions) return [];
+
+        const selectedCustomer = this.customerOptions.find(c => c.erpCustomerID === selectedCustomerID);
+        if (!selectedCustomer) return [];
+
+        // Routes already added in the current flow detail list
+        const currentRouteIds = new Set(
+            this.flowDetails.controls
+                .map(ctrl => (ctrl as FormGroup).get('routeId')?.value)
+                .filter(id => id != null)
+        );
+
+        return this.allRouteOptions.filter(route =>
+            route.customerName && route.customerName.toLowerCase() === selectedCustomer.name.toLowerCase()
+            && !this.configuredRouteIds.has(route.id)
+            && !currentRouteIds.has(route.id)
+        );
+    }
+
     addDetail() {
         const customerID = this.editFlowForm.get('customerID')?.value;
         if (!customerID) {
             this.toast.warning({ detail: "WARNING", summary: "Please explicitly select a Partner ID first!", duration: 3000, position: 'topRight' });
             return;
         }
+
+        const availableRoutes = this.getAvailableRoutes();
 
         const dialogRef = this.dialog.open(AddFlowDetailDialogComponent, {
             width: '800px',
@@ -220,7 +281,7 @@ export class EditFlowDialogComponent implements OnInit {
                 isEdit: false,
                 customerID: customerID,
                 frequencyTypeOptions: this.frequencyTypeOptions,
-                filteredRouteOptions: this.filteredRouteOptions,
+                filteredRouteOptions: availableRoutes,
                 allRouteOptions: this.allRouteOptions,
             }
         });
@@ -348,12 +409,161 @@ export class EditFlowDialogComponent implements OnInit {
         return route ? route.name : (routeId?.toString() || '');
     }
 
+    onFlowStatusChange(status: string) {
+        this.flowDetails.controls.forEach((ctrl) => {
+            (ctrl as FormGroup).get('status')?.setValue(status);
+        });
+        if (this.detailsTable) {
+            this.detailsTable.renderRows();
+        }
+    }
+
+    getFrequencyDisplay(index: number): string {
+        const detail = this.flowDetails.at(index) as FormGroup;
+        const freqType = detail.get('frequencyType')?.value || '';
+        const repeatCount = detail.get('repeatCount')?.value || 0;
+        const weekDaysArr = detail.get('selectedWeekday') as FormArray;
+        const onDayList = this.detailOnDayLists[index] || [];
+        const execTimeList = this.detailExecutionTimeLists[index] || [];
+
+        switch (freqType) {
+            case 'Minutely':
+                return `Every ${repeatCount} min${repeatCount > 1 ? 's' : ''}`;
+            case 'Hourly':
+                return `Every ${repeatCount} hr${repeatCount > 1 ? 's' : ''}`;
+            case 'Daily': {
+                if (execTimeList.length > 0) return `Daily at ${execTimeList.map(t => t.name).join(', ')}`;
+                return 'Daily';
+            }
+            case 'Weekly': {
+                const days = this.daysOfWeek.filter((_, i) => weekDaysArr?.at(i)?.value).map(d => d.substring(0, 3));
+                let display = `Weekly on ${days.join(', ')}`;
+                if (execTimeList.length > 0) display += ` at ${execTimeList.map(t => t.name).join(', ')}`;
+                return display;
+            }
+            case 'Monthly': {
+                let display = onDayList.length > 0 ? `Monthly on day${onDayList.length > 1 ? 's' : ''} ${onDayList.map(d => d.name).join(', ')}` : 'Monthly';
+                if (execTimeList.length > 0) display += ` at ${execTimeList.map(t => t.name).join(', ')}`;
+                return display;
+            }
+            default:
+                return freqType || 'Not configured';
+        }
+    }
+
+    getNextRecurrence(index: number): string {
+        const detail = this.flowDetails.at(index) as FormGroup;
+        if (detail.get('status')?.value !== 'Active') return 'Inactive';
+
+        const freqType = detail.get('frequencyType')?.value || '';
+        const repeatCount = detail.get('repeatCount')?.value || 0;
+        const weekDaysArr = detail.get('selectedWeekday') as FormArray;
+        const onDayList = this.detailOnDayLists[index] || [];
+        const execTimeList = this.detailExecutionTimeLists[index] || [];
+        const now = new Date();
+        let nextDate: Date | null = null;
+
+        try {
+            switch (freqType) {
+                case 'Minutely': {
+                    if (repeatCount <= 0) break;
+                    const next = new Date(now);
+                    const nextMin = Math.ceil((next.getMinutes() + 1) / repeatCount) * repeatCount;
+                    next.setMinutes(nextMin, 0, 0);
+                    if (next <= now) next.setMinutes(next.getMinutes() + repeatCount);
+                    nextDate = next;
+                    break;
+                }
+                case 'Hourly': {
+                    if (repeatCount <= 0) break;
+                    const next = new Date(now);
+                    const nextHr = Math.ceil((next.getHours() + 1) / repeatCount) * repeatCount;
+                    next.setHours(nextHr, 0, 0, 0);
+                    if (next <= now) next.setHours(next.getHours() + repeatCount);
+                    nextDate = next;
+                    break;
+                }
+                case 'Daily': {
+                    if (execTimeList.length > 0) {
+                        for (let d = 0; d <= 1; d++) {
+                            const date = new Date(now.getFullYear(), now.getMonth(), now.getDate() + d);
+                            const result = this.findNextExecTimeForDate(date, now, execTimeList);
+                            if (result) { nextDate = result; break; }
+                        }
+                    } else {
+                        const next = new Date(now);
+                        next.setDate(next.getDate() + 1);
+                        next.setHours(0, 0, 0, 0);
+                        nextDate = next;
+                    }
+                    break;
+                }
+                case 'Weekly': {
+                    const activeDays: number[] = [];
+                    const dayMap = [1, 2, 3, 4, 5, 6, 0];
+                    this.daysOfWeek.forEach((_, i) => { if (weekDaysArr?.at(i)?.value) activeDays.push(dayMap[i]); });
+                    if (activeDays.length === 0) break;
+                    for (let d = 0; d <= 7; d++) {
+                        const candidate = new Date(now); candidate.setDate(candidate.getDate() + d);
+                        if (activeDays.includes(candidate.getDay())) {
+                            if (execTimeList.length > 0) {
+                                const result = this.findNextExecTimeForDate(candidate, now, execTimeList);
+                                if (result) { nextDate = result; break; }
+                            } else if (d > 0) {
+                                candidate.setHours(0, 0, 0, 0); nextDate = candidate; break;
+                            }
+                        }
+                    }
+                    break;
+                }
+                case 'Monthly': {
+                    if (onDayList.length === 0) break;
+                    const days = onDayList.map(d => parseInt(d.name, 10)).filter(d => !isNaN(d)).sort((a, b) => a - b);
+                    for (let m = 0; m <= 1; m++) {
+                        const monthDate = new Date(now.getFullYear(), now.getMonth() + m, 1);
+                        for (const day of days) {
+                            const candidate = new Date(monthDate.getFullYear(), monthDate.getMonth(), day);
+                            if (candidate.getMonth() !== monthDate.getMonth()) continue;
+                            if (execTimeList.length > 0) {
+                                const result = this.findNextExecTimeForDate(candidate, now, execTimeList);
+                                if (result) { nextDate = result; break; }
+                            } else { candidate.setHours(0, 0, 0, 0); if (candidate > now) { nextDate = candidate; break; } }
+                        }
+                        if (nextDate) break;
+                    }
+                    break;
+                }
+            }
+        } catch (e) { return 'N/A'; }
+
+        if (!nextDate) return 'N/A';
+        return this.datePipe.transform(nextDate, 'MMM dd, yyyy hh:mm a') || 'N/A';
+    }
+
+    private findNextExecTimeForDate(date: Date, now: Date, execTimeList: { name: string }[]): Date | null {
+        const times = execTimeList
+            .map(t => { const p = t.name.split(':'); return p.length === 2 ? { h: parseInt(p[0], 10), m: parseInt(p[1], 10) } : null; })
+            .filter(t => t !== null)
+            .sort((a, b) => a!.h * 60 + a!.m - (b!.h * 60 + b!.m));
+        for (const time of times) {
+            const candidate = new Date(date.getFullYear(), date.getMonth(), date.getDate(), time!.h, time!.m, 0, 0);
+            if (candidate > now) return candidate;
+        }
+        return null;
+    }
+
+    isValidDate(value: any): boolean {
+        if (!value) return false;
+        const date = new Date(value);
+        return !isNaN(date.getTime()) && date.getFullYear() > 1900;
+    }
+
     onCancel(): void {
         this.dialogRef.close();
     }
 
     onSave(): void {
-        const customerID = this.editFlowForm.get('customerID')?.value;
+        const customerID = this.editFlowForm.getRawValue().customerID;
         const title = this.editFlowForm.get('title')?.value;
 
         if (!customerID || customerID.toString().trim() === '') {
@@ -364,6 +574,13 @@ export class EditFlowDialogComponent implements OnInit {
         if (!title || title.trim() === '') {
             this.editFlowForm.markAllAsTouched();
             this.toast.warning({ detail: "WARNING", summary: "Title is required", duration: 3000, position: 'topRight' });
+            return;
+        }
+
+        const status = this.editFlowForm.get('status')?.value;
+        if (!status || status.trim() === '') {
+            this.editFlowForm.markAllAsTouched();
+            this.toast.warning({ detail: "WARNING", summary: "Status is required", duration: 3000, position: 'topRight' });
             return;
         }
 
@@ -388,15 +605,17 @@ export class EditFlowDialogComponent implements OnInit {
 
         const flowModel = {
             id: this.editFlowForm.get('id')?.value,
-            customerID: this.editFlowForm.get('customerID')?.value,
+            customerID: this.editFlowForm.getRawValue().customerID,
             title: this.editFlowForm.get('title')?.value,
             description: this.editFlowForm.get('description')?.value,
             status: details.some(d => d.status === 'Active') ? 'Active' : (details.length > 0 ? 'In-Active' : 'Active'),
             flowDetails: details
         };
 
+        this.isSaving = true;
         this.flowsApi.updateFlow(flowModel).subscribe({
             next: (res) => {
+                this.isSaving = false;
                 if (res.code === 100) {
                     this.toast.success({ detail: "SUCCESS", summary: res.description || res.message || 'Flow updated!', duration: 5000, position: 'topRight' });
                     this.dialogRef.close('updated');
@@ -405,6 +624,7 @@ export class EditFlowDialogComponent implements OnInit {
                 }
             },
             error: (err) => {
+                this.isSaving = false;
                 this.toast.error({ detail: "ERROR", summary: err.error?.message || err.message || 'Server error', duration: 5000, position: 'topRight' });
             }
         });

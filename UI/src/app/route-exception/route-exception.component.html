@@ -1,84 +1,94 @@
+<h2 class="page-title"><mat-icon>bug_report</mat-icon><span class="title-text">{{ 'nav.routeExceptions' | translate }}</span></h2>
 <div class="mat-table-container">
   <mat-card>
     <mat-card-content>
-      <form [formGroup]="RouteLogForm">
+      <form [formGroup]="RouteLogForm" class="search-form">
+        <div class="search-row">
 
-        <mat-form-field appearance="fill" color="accent">
-          <mat-label>{{ 'routeName' | translate }}</mat-label>
-          <mat-select formControlName="name">
-            <mat-option *ngFor="let name of routeOptions" [value]="name">
-              {{ name.name }}
-            </mat-option>
-          </mat-select>
-        </mat-form-field>
+          <mat-form-field appearance="fill" color="accent" class="search-field route-name-field">
+            <mat-label>Route Name</mat-label>
+            <mat-select formControlName="name" (openedChange)="onRouteSelectOpened($event)">
+              <div class="select-search-container">
+                <input matInput
+                       class="select-search-input"
+                       placeholder="Search Route..."
+                       [(ngModel)]="routeSearchText"
+                       [ngModelOptions]="{standalone: true}"
+                       (input)="filterRouteOptions()"
+                       (keydown)="$event.stopPropagation()">
+              </div>
+              <mat-option value="">All Routes</mat-option>
+              <mat-option *ngFor="let name of filteredRouteOptions" [value]="name">
+                {{ name.name }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
 
-        &nbsp;
-        <mat-form-field appearance="fill" color="accent">
-          <mat-label>{{ 'exception' | translate }}</mat-label>
-          <input matInput formControlName="message">
-        </mat-form-field>
-        &nbsp;
-        <mat-form-field color="accent">
-          <mat-label>{{ 'fromDate' | translate }}</mat-label>
-          <input formControlName="fromDate" matInput [matDatepicker]="fromDate">
-          <mat-hint>MM/DD/YYYY</mat-hint>
-          <mat-datepicker-toggle matIconSuffix [for]="fromDate"></mat-datepicker-toggle>
-          <mat-datepicker #fromDate></mat-datepicker>
-        </mat-form-field>
-        &nbsp;
-        <mat-form-field color="accent">
-          <mat-label>{{ 'toDate' | translate }}</mat-label>
-          <input formControlName="toDate" matInput [matDatepicker]="toDate">
-          <mat-hint>MM/DD/YYYY</mat-hint>
-          <mat-datepicker-toggle matIconSuffix [for]="toDate"></mat-datepicker-toggle>
-          <mat-datepicker #toDate></mat-datepicker>
-        </mat-form-field>
-        &nbsp;
-        <mat-form-field appearance="fill" color="accent">
-          <mat-label>{{ 'status' | translate }}</mat-label>
-          <mat-select formControlName="status">
-            <mat-option *ngFor="let status of statusOptions" [value]="status">
-              {{ status }}
-            </mat-option>
-          </mat-select>
-        </mat-form-field>
-        &nbsp;
-        <button mat-flat-button color="accent" (click)="getRouteExceptions()">
-          <span *ngIf="!showSpinnerforSearch">{{ 'search' | translate }}</span>
-          <mat-spinner *ngIf="showSpinnerforSearch" diameter="20"></mat-spinner>
-        </button>
+          <mat-form-field appearance="fill" color="accent" class="search-field">
+            <mat-label>Exception</mat-label>
+            <input matInput formControlName="message">
+          </mat-form-field>
+
+          <mat-form-field color="accent" class="search-field">
+            <mat-label>From Date</mat-label>
+            <input formControlName="fromDate" matInput [matDatepicker]="fromDate">
+            <mat-hint>MM/DD/YYYY</mat-hint>
+            <mat-datepicker-toggle matIconSuffix [for]="fromDate"></mat-datepicker-toggle>
+            <mat-datepicker #fromDate></mat-datepicker>
+          </mat-form-field>
+
+          <mat-form-field color="accent" class="search-field">
+            <mat-label>To Date</mat-label>
+            <input formControlName="toDate" matInput [matDatepicker]="toDate">
+            <mat-hint>MM/DD/YYYY</mat-hint>
+            <mat-datepicker-toggle matIconSuffix [for]="toDate"></mat-datepicker-toggle>
+            <mat-datepicker #toDate></mat-datepicker>
+          </mat-form-field>
+
+          <mat-form-field appearance="fill" color="accent" class="search-field">
+            <mat-label>Status</mat-label>
+            <mat-select formControlName="status">
+              <mat-option *ngFor="let status of statusOptions" [value]="status">
+                {{ status }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <button mat-flat-button color="accent" (click)="getRouteExceptions()" class="search-btn">
+            <span *ngIf="!showSpinnerforSearch">{{ 'search' | translate }}</span>
+            <mat-spinner *ngIf="showSpinnerforSearch" diameter="20"></mat-spinner>
+          </button>
+
+        </div>
       </form>
     </mat-card-content>
   </mat-card>
+
   &nbsp;
   <mat-card>
     <mat-card-content>
       <table mat-table [dataSource]="dataSource">
 
-        <!-- Route Name -->
         <ng-container matColumnDef="name">
-          <th mat-header-cell *matHeaderCellDef>{{ 'routeName' | translate }}</th>
-          <td mat-cell *matCellDef="let element"> {{element.name}} </td>
+          <th mat-header-cell *matHeaderCellDef>Route Name</th>
+          <td mat-cell *matCellDef="let element">{{ element.name }}</td>
         </ng-container>
 
-        <!-- Status -->
         <ng-container matColumnDef="Status">
-          <th mat-header-cell *matHeaderCellDef>{{ 'status' | translate }}</th>
-          <td mat-cell *matCellDef="let element" [ngClass]="getStatusClass(element.status)">
-            {{element.status}}
+          <th mat-header-cell *matHeaderCellDef>Status</th>
+          <td mat-cell *matCellDef="let element">
+            <span [ngClass]="getStatusClass(element.status)">{{ element.status }}</span>
           </td>
         </ng-container>
 
-        <!-- Exception -->
         <ng-container matColumnDef="Message">
-          <th mat-header-cell *matHeaderCellDef>{{ 'exception' | translate }}</th>
-          <td mat-cell *matCellDef="let element"> {{element.message}} </td>
+          <th mat-header-cell *matHeaderCellDef>Exception</th>
+          <td mat-cell *matCellDef="let element">{{ element.message }}</td>
         </ng-container>
 
-        <!-- Exception Date -->
         <ng-container matColumnDef="CreatedDate">
-          <th mat-header-cell *matHeaderCellDef>{{ 'exceptionDate' | translate }}</th>
-          <td mat-cell *matCellDef="let element"> {{element.createdDate | date:'MMM-dd-yyyy HH:mm:ss'}} </td>
+          <th mat-header-cell *matHeaderCellDef>Exception Date</th>
+          <td mat-cell *matCellDef="let element">{{ element.createdDate | date:'MMM-dd-yyyy HH:mm:ss' }}</td>
         </ng-container>
 
         <ng-container matColumnDef="DownloadFile" *ngIf="isAdminUser">

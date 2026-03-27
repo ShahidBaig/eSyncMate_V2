@@ -22,11 +22,11 @@ export class FlowsService {
     }
 
     updateFlow(flowModel: any): Observable<any> {
-        return this.http.put<any>(this.apiUrl + 'api/Flows/updateFlow', flowModel);
+        return this.http.post<any>(this.apiUrl + 'api/Flows/updateFlow', flowModel);
     }
 
     deleteFlow(id: number): Observable<any> {
-        return this.http.delete<any>(`${this.apiUrl}api/Flows/deleteFlow/${id}`);
+        return this.http.post<any>(`${this.apiUrl}api/Flows/deleteFlow/${id}`, {});
     }
 
     getAutofillByRouteId(customerId: string, routeId: number): Observable<any> {
@@ -34,5 +34,13 @@ export class FlowsService {
             .set('customerId', customerId)
             .set('routeId', routeId.toString());
         return this.http.get<any>(`${this.apiUrl}api/Flows/GetByRouteId`, { params });
+    }
+
+    getConfiguredRouteIds(excludeFlowId?: number): Observable<any> {
+        let params = new HttpParams();
+        if (excludeFlowId) {
+            params = params.set('excludeFlowId', excludeFlowId.toString());
+        }
+        return this.http.get<any>(`${this.apiUrl}api/Flows/getConfiguredRouteIds`, { params });
     }
 }

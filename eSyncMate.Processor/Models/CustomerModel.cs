@@ -240,4 +240,11 @@
         public string Description { get; set; } = string.Empty;
         public AutofillDataModel? Data { get; set; }
     }
+
+    public class ConfiguredRouteIdsResponse
+    {
+        public int Code { get; set; }
+        public string Message { get; set; } = string.Empty;
+        public List<int> RouteIds { get; set; } = new();
+    }
 }

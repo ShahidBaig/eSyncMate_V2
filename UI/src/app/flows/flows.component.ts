@@ -24,6 +24,7 @@ import { CustomerProductCatalogService } from '../services/customerProductCatalo
 import { AddFlowDialogComponent } from './add-flow-dialog/add-flow-dialog.component';
 import { EditFlowDialogComponent } from './edit-flow-dialog/edit-flow-dialog.component';
 import { ViewFlowDialogComponent } from './view-flow-dialog/view-flow-dialog.component';
+import { ConfirmDeleteDialogComponent } from './confirm-delete-dialog/confirm-delete-dialog.component';
 
 export interface Flows {
   id: number;
@@ -80,6 +81,8 @@ export class FlowsComponent implements OnInit {
   showDataColumn: boolean = true;
   isAdminUser: boolean = false;
   customerOptions: Customers[] | undefined;
+  filteredCustomerOptions: Customers[] = [];
+  customerSearchText: string = '';
 
   dataSource = new MatTableDataSource<Flows>([]);
   @ViewChild(MatPaginator) paginator!: MatPaginator;
@@ -88,8 +91,7 @@ export class FlowsComponent implements OnInit {
     'CustomerID',
     'Title',
     'Status',
-    'CreatedDate',
-    'ModifiedDate',
+    'ActivityDate',
     'Edit'
   ];
 
@@ -147,30 +149,22 @@ export class FlowsComponent implements OnInit {
   openViewDialog(flowData: any) {
     const dialogRef = this.dialog.open(ViewFlowDialogComponent, {
       width: '1300px',
+      height: '80vh',
       disableClose: true,
-      data: flowData
+      data: flowData,
+      panelClass: 'view-flow-dialog-panel'
     });
   }
 
   getERPCustomer() {
     this.ERPApi.getERPCustomers().subscribe({
       next: (res: any) => {
-        let availableCustomers = res.customers || [];
-
-        const userInfo = this.token.getTokenUserInfo();
-        let userCustomers: string[] = [];
-        if (userInfo && userInfo.customerName) {
-          userCustomers = userInfo.customerName.split(',').map(s => s.trim()).filter(s => s);
-          userCustomers = [...new Set(userCustomers)];
-        }
-
-        if (userCustomers.length > 0) {
-          availableCustomers = availableCustomers.filter((c: any) =>
-            userCustomers.includes(c.name) || userCustomers.includes(c.erpCustomerID)
-          );
-        }
-
-        this.customerOptions = availableCustomers;
+        const allCustomers = res.customers || [];
+        const hiddenPartners = ['esyncmate', 'spars'];
+        this.customerOptions = allCustomers.filter((c: any) =>
+          !hiddenPartners.includes(c.name?.toLowerCase())
+        );
+        this.filteredCustomerOptions = this.customerOptions ? [...this.customerOptions] : [];
 
         if (this.customerOptions && this.customerOptions.length === 1) {
           this.selectedCustomer = this.customerOptions[0].erpCustomerID;
@@ -184,15 +178,38 @@ export class FlowsComponent implements OnInit {
     });
   }
 
+  filterCustomerOptions() {
+    if (!this.customerOptions) {
+      this.filteredCustomerOptions = [];
+      return;
+    }
+    const search = this.customerSearchText.trim().toLowerCase();
+    if (!search) {
+      this.filteredCustomerOptions = [...this.customerOptions];
+    } else {
+      this.filteredCustomerOptions = this.customerOptions.filter(
+        c => c.name.toLowerCase().includes(search) || c.erpCustomerID.toLowerCase().includes(search)
+      );
+    }
+  }
+
+  onCustomerSelectOpened(opened: boolean) {
+    if (opened) {
+      this.customerSearchText = '';
+      this.filterCustomerOptions();
+    }
+  }
+
   getFlows(resetPage: boolean = false) {
+    if (!this.selectedCustomer || this.selectedCustomer === 'EMPTY') {
+      this.toast.warning({ detail: "WARNING", summary: "Please select a Partner first before searching.", duration: 3000, position: 'topRight' });
+      return;
+    }
+
     this.showSpinnerforSearch = true;
 
     let searchOption = 'Customer ID';
     let searchValue = this.selectedCustomer;
-    if (searchValue === '' || searchValue === 'EMPTY') {
-      searchOption = '';
-      searchValue = '';
-    }
 
     this.flowsApi.getFlows(searchOption, searchValue).subscribe({
       next: (res: any) => {
@@ -237,17 +254,25 @@ export class FlowsComponent implements OnInit {
   }
 
   onCustomerChange() {
-    // If they have > 1 customer assigned, changing the dropdown should wipe the grid 
-    // until they press Search.
     if (this.customerOptions && this.customerOptions.length > 1) {
       this.listOfFlows = [];
       this.flowsToDisplay = [];
       this.dataSource.data = [];
+      this.paginator?.firstPage();
     }
   }
 
   deleteFlow(element: any) {
-    if (confirm(`Are you sure you want to delete the flow '${element.title}'?`)) {
+    const routeCount = element.flowDetails?.length || 0;
+    const dialogRef = this.dialog.open(ConfirmDeleteDialogComponent, {
+      width: '460px',
+      disableClose: true,
+      data: { title: element.title, routeCount: routeCount }
+    });
+
+    dialogRef.afterClosed().subscribe((confirmed: boolean) => {
+      if (!confirmed) return;
+
       this.showSpinner = true;
       this.flowsApi.deleteFlow(element.id).subscribe({
         next: (res: any) => {
@@ -280,7 +305,7 @@ export class FlowsComponent implements OnInit {
           this.toast.error({ detail: "ERROR", summary: errMsg, duration: 10000, position: 'topRight' });
         }
       });
-    }
+    });
   }
 
   getStatusTooltip(status: string, customerIdentifier: string): any {
@@ -371,6 +396,12 @@ export class FlowsComponent implements OnInit {
     } else {
       return '';
     }
+  }
+
+  isValidDate(value: any): boolean {
+    if (!value) return false;
+    const date = new Date(value);
+    return !isNaN(date.getTime()) && date.getFullYear() > 1900;
   }
 
 }

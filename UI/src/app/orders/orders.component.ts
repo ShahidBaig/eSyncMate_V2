@@ -7,7 +7,7 @@ import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatCardModule } from '@angular/material/card';
-import { FormGroup, FormControl, FormBuilder, Validators, ReactiveFormsModule } from '@angular/forms';
+import { FormGroup, FormControl, FormBuilder, Validators, ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
@@ -66,7 +66,8 @@ interface Customers {
     CommonModule,
     MatSelectModule,
     MatPaginatorModule,
-    TranslateModule
+    TranslateModule,
+    FormsModule
   ],
 })
 export class OrdersComponent implements OnInit {
@@ -86,6 +87,10 @@ export class OrdersComponent implements OnInit {
   isAdminUser: boolean = false;
   isCompany: string | undefined = '';
   customerOptions: Customers[] | undefined;
+  filteredCustomerOptions: Customers[] = [];
+  customerSearchText = '';
+  filteredStatusOptions: string[] = [];
+  statusSearchText = '';
   erpCustomerID: any = 'EMPTY';
   id: any = null;
   CustomerName: any = '';
@@ -102,28 +107,8 @@ export class OrdersComponent implements OnInit {
     'ERPSoNum',
     'OrderDate',
     'CreatedDate',
-    'File',
-    'SendOrderStatus',
-    'GenerateASN',
-    'MarkOrderforASN',
-    'CreateInvoice',
-    'Create810',
-    'SyncOrder',
-    'GetStoresOrder',
-    'ModifyOrder',
-    'OrderStatusError',
+    'Actions',
     'ERPCustomerID'
-    // 'ProcessShipment'
-  ];
-
-  columnsToRemove: string[] = [
-    'SendOrderStatus',
-    'GenerateASN',
-    'MarkOrderforASN',
-    'CreateInvoice',
-    'Create810',
-    'SyncOrder',
-    'GetStoresOrder'
   ];
 
   statusToRemove: string[] =
@@ -160,23 +145,11 @@ export class OrdersComponent implements OnInit {
     //   }
     // }
 
-    if (this.isCompany?.toLocaleLowerCase() == 'esyncmate') {
-      this.columns = this.columns.filter(column => !this.columnsToRemove.includes(column));
-    }
-
-    if (this.isCompany?.toLocaleLowerCase() == 'esyncmate') {
-      this.statusOptions = this.statusOptions.filter(column => !this.statusToRemove.includes(column));
-    }
-
-    if (this.isCompany?.toLocaleLowerCase() == 'repaintstudios') {
-      this.columns = this.columns.filter(column => !this.columnsToRemove.includes(column));
-    }
-
-    if (this.isCompany?.toLocaleLowerCase() == 'repaintstudios') {
+    if (this.isCompany?.toLocaleLowerCase() == 'esyncmate' || this.isCompany?.toLocaleLowerCase() == 'repaintstudios') {
       this.statusOptions = this.statusOptions.filter(column => !this.statusToRemove.includes(column));
     }
     this.getERPCustomer();
-
+    this.filteredStatusOptions = this.getFilterableStatuses();
   }
 
   ngAfterViewInit(): void {
@@ -297,8 +270,41 @@ export class OrdersComponent implements OnInit {
     this.ERPApi.getERPCustomers().subscribe({
       next: (res: any) => {
         this.customerOptions = res.customers;
+        this.filteredCustomerOptions = this.customerOptions || [];
       },
     });
+  }
+
+  filterCustomerOptions() {
+    const search = this.customerSearchText.toLowerCase();
+    this.filteredCustomerOptions = (this.customerOptions || []).filter(c =>
+      c.name.toLowerCase().includes(search) || c.erpCustomerID.toLowerCase().includes(search)
+    );
+  }
+
+  onCustomerSelectOpened(opened: boolean) {
+    if (opened) {
+      this.customerSearchText = '';
+      this.filteredCustomerOptions = this.customerOptions || [];
+    }
+  }
+
+  private getFilterableStatuses(): string[] {
+    return this.statusOptions.filter(s => s !== 'Select Status');
+  }
+
+  filterStatusOptions() {
+    const search = this.statusSearchText.toLowerCase();
+    this.filteredStatusOptions = this.getFilterableStatuses().filter(s =>
+      s.toLowerCase().includes(search)
+    );
+  }
+
+  onStatusSelectOpened(opened: boolean) {
+    if (opened) {
+      this.statusSearchText = '';
+      this.filteredStatusOptions = this.getFilterableStatuses();
+    }
   }
 
   editOrder(data: any) {

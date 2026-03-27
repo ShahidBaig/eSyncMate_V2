@@ -117,11 +117,11 @@ namespace eSyncMate.Processor.Managers
 
             if (customerName == "TAR6266P")
             {
-                routeName = "Get Orders from Customer Portal";
+                routeName = "Target - Get Orders";
             }
             else if (customerName == "TAR6266PAH")
             {
-                routeName = "SEI - Get Orders from Customer Portal";
+                routeName = "Target SEI - Get Orders";
             }
             else
             {

@@ -3,6 +3,7 @@ import { User } from '../models/models';
 import { ApiService } from '../services/api.service';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTableModule } from '@angular/material/table';
+import { MatIconModule } from '@angular/material/icon';
 import { LanguageService } from '../services/language.service';
 import { TranslateModule } from '@ngx-translate/core';
 
@@ -11,7 +12,7 @@ import { TranslateModule } from '@ngx-translate/core';
     templateUrl: './users-list.component.html',
     styleUrls: ['./users-list.component.scss'],
     standalone: true,
-    imports: [MatTableModule, MatButtonModule, TranslateModule],
+    imports: [MatTableModule, MatButtonModule, TranslateModule, MatIconModule],
 })
 export class UsersListComponent implements OnInit {
   users: User[] = [];

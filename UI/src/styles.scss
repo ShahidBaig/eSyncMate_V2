@@ -51,3 +51,99 @@ body {
 }
 html, body { height: 100%; }
 body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
+
+/* Page title displayed at the top of every interface */
+.page-title {
+  margin: 10px 10px 0 10px;
+  padding: 12px 16px;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  color: #333;
+  font-family: "Poppins", "Roboto", sans-serif;
+  background: #fff;
+  border-radius: 4px;
+  box-shadow: 0 2px 1px -1px rgba(0,0,0,.2), 0 1px 1px 0 rgba(0,0,0,.14), 0 1px 3px 0 rgba(0,0,0,.12);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.page-title mat-icon {
+  color: #E8834A;
+  font-size: 22px;
+  width: 22px;
+  height: 22px;
+}
+
+/* View Flow Dialog — no main scroll, only route details scroll */
+.view-flow-dialog-panel .mat-mdc-dialog-container {
+  height: 100%;
+}
+
+.view-flow-dialog-panel .mat-mdc-dialog-container .mdc-dialog__surface {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.view-flow-dialog-panel .mat-mdc-dialog-content,
+.view-flow-dialog-panel .mdc-dialog__content {
+  max-height: none !important;
+  overflow: hidden !important;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.view-flow-dialog-panel .mat-mdc-dialog-actions {
+  flex-shrink: 0;
+}
+
+/* Batch-wise inventory dialog — fixed height, scroll inside */
+.batch-wise-dialog-panel .mat-mdc-dialog-container {
+  height: 100%;
+}
+
+.batch-wise-dialog-panel .mat-mdc-dialog-container .mdc-dialog__surface {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.batch-wise-dialog-panel .mat-mdc-dialog-content,
+.batch-wise-dialog-panel .mdc-dialog__content {
+  max-height: none !important;
+  overflow: hidden !important;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.batch-wise-dialog-panel .mat-mdc-dialog-actions {
+  flex-shrink: 0;
+}
+
+/* Diagram tooltip - multiline with larger text */
+.diagram-tooltip.mat-mdc-tooltip .mdc-tooltip__surface {
+  max-width: 320px !important;
+  white-space: pre-line !important;
+  font-size: 13px !important;
+  line-height: 1.6 !important;
+  padding: 10px 14px !important;
+  text-align: left !important;
+}
+
+/* Hide browser native password reveal icon globally (Edge, Chrome) */
+input::-ms-reveal,
+input::-ms-clear {
+  display: none;
+}
+
+input::-webkit-credentials-auto-fill-button {
+  display: none !important;
+}

@@ -1,15 +1,79 @@
-.detail-input-card {
+/* Dialog */
+.detail-dialog {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.detail-dialog-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 20px 24px 12px;
+    border-bottom: 1px solid #e8e8e8;
+
+    .header-icon {
+        color: #3f51b5;
+        font-size: 24px;
+        width: 24px;
+        height: 24px;
+    }
+
+    h2 {
+        margin: 0;
+        font-size: 20px;
+        font-weight: 600;
+        color: #333;
+    }
+}
+
+/* Form */
+.detail-form {
     display: flex;
     flex-direction: column;
     gap: 16px;
     padding: 16px 0;
 }
 
+/* Section Card */
+.section-card {
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #fff;
+}
+
+.section-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 18px;
+    background: #f5f7fa;
+    border-bottom: 1px solid #e8e8e8;
+    font-size: 14px;
+    font-weight: 600;
+    color: #444;
+
+    mat-icon {
+        color: #3f51b5;
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+    }
+}
+
+.section-body {
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+/* Form Layout */
 .form-row {
     display: flex;
     flex-wrap: wrap;
     gap: 16px;
-    margin-bottom: 8px;
 }
 
 .form-field {
@@ -17,13 +81,166 @@
     min-width: 200px;
 }
 
+.route-field {
+    flex: 2;
+    min-width: 300px;
+}
+
+.status-field {
+    flex: 0 0 180px;
+    min-width: 180px;
+    max-width: 180px;
+}
+
+.repeat-field {
+    max-width: 280px;
+}
+
 .full-width {
     flex: 1 1 100%;
 }
 
-.checkbox-container {
+/* Bold, clear field labels */
+::ng-deep .mat-mdc-floating-label,
+::ng-deep .mdc-floating-label {
+    font-weight: 700 !important;
+    color: #333 !important;
+    font-size: 16px !important;
+}
+
+/* Field icon */
+.field-icon {
+    color: #999;
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+    margin-right: 4px;
+}
+
+/* Repeat suffix */
+.repeat-suffix {
+    font-size: 13px;
+    color: #666;
+    padding-right: 8px;
+}
+
+/* Weekdays */
+.weekdays-section {
+    padding: 4px 0 8px;
+}
+
+.section-sublabel {
     display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #666;
+    margin-bottom: 10px;
+
+    mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+        color: #999;
+    }
+}
+
+.weekdays-grid {
+    display: flex;
+    gap: 8px;
     flex-wrap: wrap;
-    gap: 16px;
-    padding: 8px 0;
+}
+
+.weekday-chip {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 52px;
+    height: 36px;
+    border-radius: 18px;
+    border: 1.5px solid #d0d0d0;
+    font-size: 13px;
+    font-weight: 500;
+    color: #666;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    user-select: none;
+
+    &:hover {
+        border-color: #3f51b5;
+        color: #3f51b5;
+        background: #f0f2ff;
+    }
+}
+
+.weekday-selected {
+    background: #3f51b5;
+    border-color: #3f51b5;
+    color: #fff;
+
+    &:hover {
+        background: #303f9f;
+        border-color: #303f9f;
+        color: #fff;
+    }
+}
+
+/* Dialog Actions */
+.detail-dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 14px 24px;
+    border-top: 1px solid #e8e8e8;
+
+    button {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+}
+
+.cancel-btn {
+    color: #666;
+}
+
+/* Route option in dropdown */
+::ng-deep .route-option {
+    line-height: 1.4;
+    padding: 8px 16px !important;
+    height: auto !important;
+    min-height: 42px;
+}
+
+.route-option-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: #333;
+    white-space: normal;
+    word-break: break-word;
+}
+
+/* Search inside mat-select dropdown */
+::ng-deep .select-search-container {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: white;
+    padding: 8px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+::ng-deep .select-search-input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 14px;
+    outline: none;
+    box-sizing: border-box;
+
+    &:focus {
+        border-color: #3f51b5;
+    }
 }

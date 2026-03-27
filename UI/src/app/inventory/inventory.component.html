@@ -1,63 +1,84 @@
 
+<h2 class="page-title"><mat-icon>inventory_2</mat-icon><span class="title-text">{{ 'nav.inventory' | translate }}</span></h2>
 <div class="mat-table-container">
 
   <mat-card>
     <mat-card-content>
-      <form [formGroup]="InventoryForm">
-        <mat-form-field appearance="fill" color="accent">
-          <mat-label>{{ 'itemID' | translate }}</mat-label>
-          <input matInput formControlName="itemID">
-          <!--<mat-hint class="custom-hint">{{ 'searchInventoryRecords' | translate }}</mat-hint>-->
-        </mat-form-field>
-        &nbsp;
-        <mat-form-field appearance="fill" color="accent">
-          <mat-label>{{ 'erpCustomerID' | translate }}</mat-label>
-          <mat-select formControlName="customerID">
-            <mat-option *ngFor="let customers of customersOptions" [value]="customers.erpCustomerID">
-              {{ customers.erpCustomerID }}
-            </mat-option>
-          </mat-select>
-        </mat-form-field>
-        &nbsp;
-        <mat-form-field appearance="fill" color="accent">
-          <mat-label>{{ 'routeType' | translate }}</mat-label>
-          <mat-select formControlName="routeType">
-            <mat-option *ngFor="let route of routeTypeOptions" [value]="route.routeType">
-              {{ route.routeType }}
-            </mat-option>
-          </mat-select>
-        </mat-form-field>
-        &nbsp;
-        <mat-form-field color="accent">
-          <mat-label>{{ 'start_Date' | translate }}</mat-label>
-          <input formControlName="startDate" matInput [matDatepicker]="startDate">
-          <mat-hint>MM/DD/YYYY</mat-hint>
-          <mat-datepicker-toggle matIconSuffix [for]="startDate"></mat-datepicker-toggle>
-          <mat-datepicker #startDate></mat-datepicker>
-        </mat-form-field>
-        &nbsp;
-        <mat-form-field color="accent">
-          <mat-label>{{ 'finish_Date' | translate }}</mat-label>
-          <input formControlName="finishDate" matInput [matDatepicker]="finishDate">
-          <mat-hint>MM/DD/YYYY</mat-hint>
-          <mat-datepicker-toggle matIconSuffix [for]="finishDate"></mat-datepicker-toggle>
-          <mat-datepicker #finishDate></mat-datepicker>
-        </mat-form-field>
-        &nbsp;
-        <mat-form-field appearance="fill" color="accent">
-          <mat-label>{{ 'status' | translate }}</mat-label>
-          <mat-select formControlName="status">
-            <mat-option *ngFor="let status of statusOptions" [value]="status">
-              {{ status }}
-            </mat-option>
-          </mat-select>
-        </mat-form-field>
-        &nbsp;
-        <button mat-flat-button color="accent" (click)="getInventory()">
-          <span *ngIf="!showSpinnerforSearch">{{ 'searchInventory' | translate }}</span>
-          <mat-spinner *ngIf="showSpinnerforSearch" diameter="20"></mat-spinner>
-        </button>
+      <form [formGroup]="InventoryForm" class="search-form">
+        <div class="search-row">
+          <mat-form-field appearance="fill" color="accent" class="search-field">
+            <mat-label>{{ 'itemID' | translate }}</mat-label>
+            <input matInput formControlName="itemID">
+          </mat-form-field>
 
+          <mat-form-field appearance="fill" color="accent" class="search-field">
+            <mat-label>{{ 'erpCustomerID' | translate }}</mat-label>
+            <mat-select formControlName="customerID" (openedChange)="onCustomerSelectOpened($event)">
+              <div class="select-search-container">
+                <input matInput
+                       class="select-search-input"
+                       placeholder="Search Customer..."
+                       [(ngModel)]="customerSearchText"
+                       [ngModelOptions]="{standalone: true}"
+                       (input)="filterCustomerOptions()"
+                       (keydown)="$event.stopPropagation()">
+              </div>
+              <mat-option value="">All Customers</mat-option>
+              <mat-option *ngFor="let customer of filteredCustomerOptions" [value]="customer.erpCustomerID">
+                {{ customer.erpCustomerID }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="fill" color="accent" class="search-field route-type-field">
+            <mat-label>{{ 'routeType' | translate }}</mat-label>
+            <mat-select formControlName="routeType" (openedChange)="onRouteTypeSelectOpened($event)">
+              <div class="select-search-container">
+                <input matInput
+                       class="select-search-input"
+                       placeholder="Search Route Type..."
+                       [(ngModel)]="routeTypeSearchText"
+                       [ngModelOptions]="{standalone: true}"
+                       (input)="filterRouteTypeOptions()"
+                       (keydown)="$event.stopPropagation()">
+              </div>
+              <mat-option value="">All Route Types</mat-option>
+              <mat-option *ngFor="let route of filteredRouteTypeOptions" [value]="route.routeType">
+                {{ route.routeType }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field color="accent" class="search-field">
+            <mat-label>{{ 'start_Date' | translate }}</mat-label>
+            <input formControlName="startDate" matInput [matDatepicker]="startDate">
+            <mat-hint>MM/DD/YYYY</mat-hint>
+            <mat-datepicker-toggle matIconSuffix [for]="startDate"></mat-datepicker-toggle>
+            <mat-datepicker #startDate></mat-datepicker>
+          </mat-form-field>
+
+          <mat-form-field color="accent" class="search-field">
+            <mat-label>{{ 'finish_Date' | translate }}</mat-label>
+            <input formControlName="finishDate" matInput [matDatepicker]="finishDate">
+            <mat-hint>MM/DD/YYYY</mat-hint>
+            <mat-datepicker-toggle matIconSuffix [for]="finishDate"></mat-datepicker-toggle>
+            <mat-datepicker #finishDate></mat-datepicker>
+          </mat-form-field>
+
+          <mat-form-field appearance="fill" color="accent" class="search-field">
+            <mat-label>{{ 'status' | translate }}</mat-label>
+            <mat-select formControlName="status">
+              <mat-option *ngFor="let status of statusOptions" [value]="status">
+                {{ status }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <button mat-flat-button color="accent" (click)="getInventory()" class="search-btn">
+            <span *ngIf="!showSpinnerforSearch">{{ 'searchInventory' | translate }}</span>
+            <mat-spinner *ngIf="showSpinnerforSearch" diameter="20"></mat-spinner>
+          </button>
+        </div>
       </form>
     </mat-card-content>
   </mat-card>
@@ -68,47 +89,43 @@
     <mat-card-content>
       <table mat-table [dataSource]="dataSource">
 
-        <!-- BatchID Column -->
-        <!-- ItemCount Column -->
         <ng-container matColumnDef="ItemCount">
           <th mat-header-cell *matHeaderCellDef>{{ 'itemCount' | translate }}</th>
-          <td mat-cell *matCellDef="let element"> {{element.itemCount}} </td>
+          <td mat-cell *matCellDef="let element">{{ element.itemCount }}</td>
         </ng-container>
 
-        <!-- Status -->
         <ng-container matColumnDef="Status">
           <th mat-header-cell *matHeaderCellDef>{{ 'status' | translate }}</th>
-          <td mat-cell *matCellDef="let element" [ngClass]="getStatusClass(element.status)" [matTooltip]="getTooltipWithTranslation(element)">
-            {{ element.status }}
+          <td mat-cell *matCellDef="let element" [matTooltip]="getTooltipWithTranslation(element)">
+            <span [ngClass]="getStatusClass(element.status)">{{ element.status }}</span>
           </td>
         </ng-container>
 
-        <!-- StartDate -->
         <ng-container matColumnDef="StartDate">
           <th mat-header-cell *matHeaderCellDef>{{ 'start_Date' | translate }}</th>
-          <td mat-cell *matCellDef="let element"> {{element.startDate | date:'MMM-dd-yyyy HH:mm:ss' }} </td>
+          <td mat-cell *matCellDef="let element">{{ element.startDate | date:'MMM-dd-yyyy HH:mm:ss' }}</td>
         </ng-container>
 
-        <!-- FinishDate Column -->
         <ng-container matColumnDef="FinishDate">
           <th mat-header-cell *matHeaderCellDef>{{ 'finish_Date' | translate }}</th>
-          <td mat-cell *matCellDef="let element"> {{element.finishDate | date:'MMM-dd-yyyy HH:mm:ss'}} </td>
+          <td mat-cell *matCellDef="let element">{{ element.finishDate | date:'MMM-dd-yyyy HH:mm:ss' }}</td>
         </ng-container>
 
-        <!-- Total_ATS Column -->
         <ng-container matColumnDef="PageCount">
           <th mat-header-cell *matHeaderCellDef>{{ 'pageCount' | translate }}</th>
-          <td mat-cell *matCellDef="let element"> {{element.pageCount}} </td>
+          <td mat-cell *matCellDef="let element">{{ element.pageCount }}</td>
         </ng-container>
 
         <ng-container matColumnDef="Type">
           <th mat-header-cell *matHeaderCellDef>{{ 'routeType' | translate }}</th>
-          <td mat-cell *matCellDef="let element"> {{element.routeType}} </td>
+          <td mat-cell *matCellDef="let element">
+            <span class="route-type-badge">{{ element.routeType }}</span>
+          </td>
         </ng-container>
 
         <ng-container matColumnDef="CustomerID">
-          <th mat-header-cell *matHeaderCellDef>{{ 'erpCustomerID' | translate }}</th>
-          <td mat-cell *matCellDef="let element"> {{element.customerID}} </td>
+          <th mat-header-cell *matHeaderCellDef>{{ 'customerID' | translate }}</th>
+          <td mat-cell *matCellDef="let element">{{ element.customerID }}</td>
         </ng-container>
 
         <!--GetInventoryFiles-->
