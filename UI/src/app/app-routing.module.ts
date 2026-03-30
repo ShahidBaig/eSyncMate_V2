@@ -31,8 +31,14 @@ import { SalesInvoiceNdcComponent } from './sales-invoice-ndc/sales-invoice-ndc.
 import { PurchaseOrdersTrackingComponent } from './purchase-orders-tracking/purchase-orders-tracking.component';
 import { AlertConfigurationComponent } from './alert-configuration/alert-configuration.component';
 import { FlowsComponent } from './flows/flows.component';
+import { DashboardComponent } from './dashboard/dashboard.component';
 
 const routes: Routes = [
+  {
+    path: 'edi/dashboard',
+    component: DashboardComponent,
+    canActivate: [AuthenticationGuard],
+  },
   {
     path: 'login',
     component: LoginComponent,

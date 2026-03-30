@@ -132,6 +132,21 @@ namespace eSyncMate.Processor.Managers
             }
         }
 
+        public void ExecuteWithNotification(int routeId, long notificationId)
+        {
+            try
+            {
+                Execute(routeId);
+                eSyncMate.DB.Entities.Notifications.UpdateNotification(
+                    CommonUtils.ConnectionString, notificationId, "COMPLETED", "Route completed successfully.");
+            }
+            catch (Exception ex)
+            {
+                eSyncMate.DB.Entities.Notifications.UpdateNotification(
+                    CommonUtils.ConnectionString, notificationId, "FAILED", $"Route failed: {ex.Message}");
+            }
+        }
+
         public void Execute(int routeId)
         {
             if (UseExternalProcess)

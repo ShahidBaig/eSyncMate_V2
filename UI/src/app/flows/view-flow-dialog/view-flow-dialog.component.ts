@@ -7,8 +7,11 @@ import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/materia
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { TranslateModule } from '@ngx-translate/core';
 import { RoutesService } from '../../services/routes.service';
+import { FlowsService } from '../../services/flows.service';
+import { NgToastService } from 'ng-angular-popup';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 
@@ -58,7 +61,8 @@ interface DiagramStep {
         MatTabsModule,
         TranslateModule,
         MatDialogModule,
-        MatTooltipModule
+        MatTooltipModule,
+        MatProgressSpinnerModule
     ],
 })
 export class ViewFlowDialogComponent implements OnInit {
@@ -67,6 +71,7 @@ export class ViewFlowDialogComponent implements OnInit {
     allRouteOptions: RouteInfo[] = [];
     diagramSteps: DiagramStep[] = [];
     showFullscreen = false;
+    testRunLoading = new Map<number, boolean>();
 
     detailOnDayLists: { name: string }[][] = [];
     detailExecutionTimeLists: { name: string }[][] = [];
@@ -82,6 +87,8 @@ export class ViewFlowDialogComponent implements OnInit {
         private fb: FormBuilder,
         private datePipe: DatePipe,
         private routeApi: RoutesService,
+        private flowsApi: FlowsService,
+        private toast: NgToastService,
     ) {
         this.viewFlowForm = this.fb.group({
             customerID: [{ value: data.customerID, disabled: true }],
@@ -601,6 +608,31 @@ export class ViewFlowDialogComponent implements OnInit {
 
             pdf.save(`${fileName}.pdf`);
         });
+    }
+
+    testRunRoute(routeId: number, routeName: string): void {
+        if (this.testRunLoading.get(routeId)) return;
+
+        this.testRunLoading.set(routeId, true);
+
+        this.flowsApi.testRunRoute(routeId).subscribe({
+            next: (res: any) => {
+                this.testRunLoading.set(routeId, false);
+                if (res.code === 200) {
+                    this.toast.success({ detail: 'SUCCESS', summary: res.message, duration: 5000, position: 'topRight' });
+                } else {
+                    this.toast.error({ detail: 'ERROR', summary: res.message || `Failed to trigger '${routeName}'.`, duration: 5000, position: 'topRight' });
+                }
+            },
+            error: (err: any) => {
+                this.testRunLoading.set(routeId, false);
+                this.toast.error({ detail: 'ERROR', summary: `Failed to trigger '${routeName}'. ${err.message || ''}`, duration: 5000, position: 'topRight' });
+            }
+        });
+    }
+
+    isTestRunning(routeId: number): boolean {
+        return this.testRunLoading.get(routeId) || false;
     }
 
     onClose(): void {

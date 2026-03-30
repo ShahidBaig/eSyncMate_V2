@@ -12,3 +12,26 @@ mat-list-item {
     background-color: rgba($color: #3f51b5, $alpha: 0.1);
   }
 }
+
+.dashboard-nav {
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 4px;
+  margin-bottom: 4px;
+
+  mat-list-item {
+    font-weight: 700;
+    font-size: 14px;
+    color: #3f51b5;
+
+    mat-icon {
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+      color: #E8834A;
+    }
+  }
+
+  .active-link {
+    background-color: rgba($color: #3f51b5, $alpha: 0.1);
+  }
+}

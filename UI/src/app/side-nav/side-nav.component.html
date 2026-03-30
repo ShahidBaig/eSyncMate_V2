@@ -1,4 +1,14 @@
 <mat-accordion>
+  <!-- Dashboard -->
+  <mat-list role="list" *ngIf="isEsyncmate" class="dashboard-nav">
+    <mat-list-item role="listitem" routerLink="/edi/dashboard" routerLinkActive="active-link">
+      <a style="cursor: pointer; display: flex; align-items: center; gap: 8px;">
+        <mat-icon>dashboard</mat-icon>
+        Dashboard
+      </a>
+    </mat-list-item>
+  </mat-list>
+
   <!-- Order Management -->
   <mat-expansion-panel
     *ngIf="isSectionVisible(['nav.orders']) && company != 'GECKOTECH' && company != 'SURGIMAC'">

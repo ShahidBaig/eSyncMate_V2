@@ -168,7 +168,57 @@
     border-bottom: 1px solid #f0f0f0;
 }
 
-.route-name { font-size: 14px; font-weight: 700; color: #333; }
+.route-name { font-size: 14px; font-weight: 700; color: #333; flex: 1; }
+
+.route-detail-action {
+    display: flex;
+    align-items: center;
+    margin-left: auto;
+}
+
+.test-run-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 800;
+    padding: 2px 16px;
+    height: 32px;
+    letter-spacing: 0.3px;
+    background: none !important;
+    color: #E8834A !important;
+    border: 2px solid #E8834A !important;
+    border-radius: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+
+    &:hover:not([disabled]) {
+        background: #E8834A !important;
+        color: #fff !important;
+    }
+
+    &[disabled] {
+        border-color: #ccc !important;
+        color: #999 !important;
+        cursor: not-allowed;
+    }
+
+    mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+    }
+}
+
+.btn-spinner {
+    display: inline-block;
+
+    ::ng-deep circle {
+        stroke: #fff;
+    }
+}
 
 .route-status-chip {
     font-size: 12px;

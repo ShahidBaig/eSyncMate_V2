@@ -36,6 +36,10 @@ export class FlowsService {
         return this.http.get<any>(`${this.apiUrl}api/Flows/GetByRouteId`, { params });
     }
 
+    testRunRoute(routeId: number): Observable<any> {
+        return this.http.post<any>(`${this.apiUrl}api/Flows/testRun/${routeId}`, {});
+    }
+
     getConfiguredRouteIds(excludeFlowId?: number): Observable<any> {
         let params = new HttpParams();
         if (excludeFlowId) {

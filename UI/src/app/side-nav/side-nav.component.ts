@@ -3,6 +3,7 @@ import { SideNavItem } from '../models/models';
 import { RouterLinkActive, RouterLink } from '@angular/router';
 import { NgFor, TitleCasePipe, CommonModule } from '@angular/common';
 import { MatListModule } from '@angular/material/list';
+import { MatIconModule } from '@angular/material/icon';
 import { Router } from '@angular/router';
 import { environment } from '../../environments/environment';
 import { ApiService } from '../services/api.service';
@@ -22,7 +23,8 @@ import { MatExpansionModule } from '@angular/material/expansion'; // Import MatE
     TitleCasePipe,
     CommonModule,
     TranslateModule,
-    MatExpansionModule // Add MatExpansionModule to imports
+    MatExpansionModule,
+    MatIconModule
   ],
 })
 export class SideNavComponent {
@@ -30,6 +32,7 @@ export class SideNavComponent {
   apiUrl = environment.apiUrl;
   company = this.api.getTokenUserInfo()?.company;
   isSetupMenu = this.api.getTokenUserInfo()?.isSetupMenu.toLocaleUpperCase() === 'TRUE' || this.api.getTokenUserInfo()?.userType.toLocaleUpperCase() === 'ADMIN';
+  isEsyncmate = ['ESYNCMATE', 'REPAINTSTUDIOS'].includes(this.api.getTokenUserInfo()?.company?.toUpperCase() || '');
 
   sideNavContent: SideNavItem[] = [
     {

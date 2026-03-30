@@ -75,14 +75,21 @@ export class LoginComponent {
       ]),
     });
 
-    if (this.api.getTokenUserInfo()?.company.toLocaleUpperCase() === 'GECKOTECH') {
+    if (this.api.getTokenUserInfo()?.firstName) {
+      this.redirectByCompany();
+    }
+  }
+
+  private redirectByCompany() {
+    const company = this.api.getTokenUserInfo()?.company?.toLocaleUpperCase();
+    if (company === 'ESYNCMATE' || company === 'REPAINTSTUDIOS') {
+      this.router.navigateByUrl('/edi/dashboard');
+    } else if (company === 'GECKOTECH') {
       this.router.navigateByUrl('/edi/carrier');
-    }
-    if (this.api.getTokenUserInfo()?.company.toLocaleUpperCase() === 'ESYNCMATE' || this.api.getTokenUserInfo()?.company.toLocaleUpperCase() === 'REPAINTSTUDIOS') {
-      this.router.navigateByUrl('/edi/all-orders');
-    }
-    if (this.api.getTokenUserInfo()?.company.toLocaleUpperCase() === 'SURGIMAC') {
+    } else if (company === 'SURGIMAC') {
       this.router.navigateByUrl('/edi/purchaseOrder');
+    } else {
+      this.router.navigateByUrl('/edi/dashboard');
     }
   }
 
@@ -105,18 +112,7 @@ export class LoginComponent {
           localStorage.setItem("email", this.api.getTokenUserInfo()?.email || "");
           if (isActive)
           {
-            if (this.api.getTokenUserInfo()?.company.toLocaleUpperCase() === 'GECKOTECH')
-            {
-              this.router.navigateByUrl('/edi/carrier');
-            }
-            if (this.api.getTokenUserInfo()?.company.toLocaleUpperCase() === 'ESYNCMATE' ||
-              this.api.getTokenUserInfo()?.company.toLocaleUpperCase() === 'REPAINTSTUDIOS')
-            {
-              this.router.navigateByUrl('/edi/all-orders');
-            }
-            if (this.api.getTokenUserInfo()?.company.toLocaleUpperCase() === 'SURGIMAC') {
-              this.router.navigateByUrl('/edi/purchaseOrder');
-            }
+              this.redirectByCompany();
           }
 
           else {

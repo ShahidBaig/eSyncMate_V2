@@ -50,7 +50,12 @@
       "Bash(sc query:*)",
       "Bash(msiexec:*)",
       "Bash(npm install:*)",
-      "Bash(grep -E \"\\\\.\\(cs|json\\)$\")"
+      "Bash(grep -E \"\\\\.\\(cs|json\\)$\")",
+      "Bash(grep -r 'CREATE TABLE.*Orders' D:eSoftage_ProjectseSyncMate_V2 --include=*.sql)",
+      "Bash(grep -l \"VW_Orders\\\\|VIEW.*Orders\" D:eSoftage_ProjectseSyncMate_V2eSyncMate.DataViews*)",
+      "WebFetch(domain:www.espncricinfo.com)",
+      "WebFetch(domain:www.geckoboard.com)",
+      "WebFetch(domain:uibakery.io)"
     ]
   },
   "enableAllProjectMcpServers": true,
