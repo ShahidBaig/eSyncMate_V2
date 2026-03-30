@@ -1,0 +1,717 @@
+/* ESPN CricInfo-inspired Dashboard */
+.dashboard-container {
+  padding: 20px 24px;
+  background: #f5f5f5;
+  height: calc(100vh - 64px);
+  overflow: hidden;
+}
+
+/* ===== HEADER ===== */
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.dashboard-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.title-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 8px;
+  background: #E8834A;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  mat-icon { font-size: 24px; width: 24px; height: 24px; color: #fff; }
+}
+
+.dashboard-title h2 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+  color: #1a1a2e;
+}
+
+.title-sub {
+  margin: 0;
+  font-size: 12px;
+  color: #999;
+  font-weight: 500;
+}
+
+.dashboard-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.refresh-btn {
+  color: #666 !important;
+  .spinning { animation: spin 1s linear infinite; }
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.time-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  background: #fff;
+  color: #E8834A;
+  border: 1px solid #eee;
+  mat-icon { font-size: 14px; width: 14px; height: 14px; }
+}
+
+/* ===== LOADING ===== */
+.loading-overlay {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 100px 0;
+}
+
+.loading-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  color: #999;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* ===== SUMMARY CARDS — ESPN Score Strip ===== */
+.summary-cards {
+  display: flex;
+  gap: 0;
+  margin-bottom: 16px;
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #e0e0e0;
+}
+
+.summary-card {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 18px;
+  border-right: 1px solid #f0f0f0;
+  position: relative;
+  overflow: hidden;
+  transition: background 0.15s;
+  cursor: default;
+  border-left: none;
+
+  &:last-child { border-right: none; }
+  &:hover { background: #fafafa; }
+}
+
+.card-watermark { display: none; }
+
+.card-icon-wrap {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  mat-icon { font-size: 22px; width: 22px; height: 22px; color: #fff; }
+}
+
+.icon-total { background: #3f51b5; }
+.icon-new { background: #1565c0; }
+.icon-synced { background: #2e7d32; }
+.icon-shipped { background: #33691e; }
+.icon-error { background: #c62828; }
+
+.card-total, .card-new, .card-synced, .card-shipped, .card-error {
+  border-left: none;
+}
+
+.card-body {
+  display: flex;
+  flex-direction: column;
+}
+
+.card-value {
+  font-size: 28px;
+  font-weight: 900;
+  color: #1a1a2e;
+  line-height: 1;
+  -webkit-font-smoothing: antialiased;
+}
+
+.card-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #888;
+  margin-top: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+@media (max-width: 900px) {
+  .summary-cards { flex-wrap: wrap; }
+  .summary-card { min-width: 140px; }
+}
+
+/* ===== CONTENT CARDS ===== */
+.content-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .content-row { grid-template-columns: 1fr; }
+}
+
+.content-card {
+  background: #fff;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+  overflow: hidden;
+}
+
+.card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  background: #fff;
+}
+
+.card-top-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.card-top-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: #3f51b5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  mat-icon { font-size: 18px; width: 18px; height: 18px; color: #fff; }
+}
+
+.card-top h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 800;
+  color: #1a1a2e;
+}
+
+.card-top p {
+  margin: 1px 0 0;
+  font-size: 10px;
+  color: #bbb;
+  font-weight: 500;
+}
+
+.card-top-badge {
+  padding: 3px 10px;
+  background: #f5f5f5;
+  color: #666;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.card-content {
+  padding: 0;
+  max-height: 350px;
+  overflow-y: auto;
+  &::-webkit-scrollbar { width: 4px; }
+  &::-webkit-scrollbar-track { background: transparent; }
+  &::-webkit-scrollbar-thumb { background: #ddd; border-radius: 2px; }
+}
+
+/* ===== PARTNER LIST — ESPN Match List Style ===== */
+.customer-list { padding: 0; }
+
+.customer-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-bottom: 1px solid #f2f2f2;
+  transition: background 0.1s;
+  &:last-child { border-bottom: none; }
+  &:hover { background: #f8f8f8; }
+}
+
+.customer-rank {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  background: #f0f0f0;
+  color: #888;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.customer-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 100px;
+}
+
+.customer-name {
+  font-size: 15px;
+  font-weight: 900;
+  color: #1a1a2e;
+  -webkit-font-smoothing: antialiased;
+}
+
+.customer-id {
+  font-size: 11px;
+  color: #aaa;
+  font-weight: 600;
+}
+
+.customer-bar-wrap {
+  flex: 1;
+  height: 6px;
+  background: #f0f0f0;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.customer-bar {
+  height: 100%;
+  border-radius: 3px;
+  background: #E8834A;
+  transition: width 0.6s ease;
+  min-width: 3px;
+}
+
+.customer-count {
+  font-size: 18px;
+  font-weight: 900;
+  color: #E8834A;
+  min-width: 32px;
+  text-align: right;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ===== STATUS GRID — ESPN Compact Tiles ===== */
+.status-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 1px;
+  padding: 0;
+  background: #f0f0f0;
+}
+
+.status-tile {
+  padding: 12px 10px;
+  background: #fff;
+  border-left: 3px solid #ccc;
+  transition: background 0.15s;
+  border-radius: 0;
+  &:hover { background: #fafafa; }
+}
+
+.status-tile-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2px;
+  mat-icon { font-size: 16px; width: 16px; height: 16px; }
+}
+
+.status-tile-count {
+  font-size: 20px;
+  font-weight: 900;
+  -webkit-font-smoothing: antialiased;
+}
+
+.status-tile-name {
+  font-size: 10px;
+  font-weight: 800;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.status-tile-bar {
+  height: 2px;
+  background: #eee;
+  border-radius: 1px;
+  margin: 5px 0 2px;
+  overflow: hidden;
+}
+
+.status-tile-fill {
+  height: 100%;
+  border-radius: 1px;
+  transition: width 0.6s ease;
+  min-width: 2px;
+}
+
+.status-tile-pct {
+  font-size: 9px;
+  font-weight: 700;
+  color: #bbb;
+}
+
+/* ===== TABS — ESPN Section Tabs ===== */
+.dashboard-tabs { background: transparent; }
+
+.tab-label-custom {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tab-icon-wrap {
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  mat-icon { font-size: 18px; width: 18px; height: 18px; color: #fff; }
+}
+
+.tab-icon-orders { background: #3f51b5; }
+.tab-icon-inventory { background: #2e7d32; }
+
+.tab-text {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+
+.tab-main {
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.tab-sub {
+  font-size: 9px;
+  font-weight: 600;
+  opacity: 0.6;
+  line-height: 1.2;
+}
+
+.tab-body { padding: 16px 0; }
+
+::ng-deep .dashboard-tabs .mat-mdc-tab-header {
+  background: #fff;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  border: 1px solid #e0e0e0;
+}
+
+::ng-deep .dashboard-tabs .mat-mdc-tab-label-container {
+  border-bottom: none !important;
+}
+
+::ng-deep .dashboard-tabs .mdc-tab {
+  min-width: 170px;
+  height: 52px !important;
+  border-right: 1px solid #f0f0f0;
+  transition: all 0.2s ease !important;
+  background: #fff;
+  border-radius: 0 !important;
+  padding: 0 16px !important;
+
+  &:first-child { border-radius: 8px 0 0 8px !important; }
+  &:last-child { border-right: none; border-radius: 0 8px 8px 0 !important; }
+}
+
+::ng-deep .dashboard-tabs .mdc-tab--active {
+  background: #fff !important;
+  border-bottom: 3px solid #E8834A !important;
+
+  .mdc-tab__text-label { color: #1a1a2e !important; }
+  .tab-sub { color: #E8834A !important; opacity: 1 !important; }
+}
+
+::ng-deep .dashboard-tabs .mdc-tab:not(.mdc-tab--active) {
+  .mdc-tab__text-label { color: #999 !important; }
+  .tab-icon-wrap { opacity: 0.4; }
+  &:hover {
+    background: #fafafa !important;
+    .tab-icon-wrap { opacity: 0.7; }
+    .mdc-tab__text-label { color: #666 !important; }
+  }
+}
+
+::ng-deep .dashboard-tabs .mdc-tab-indicator__content--underline { display: none !important; }
+::ng-deep .dashboard-tabs .mdc-tab__ripple::before { border-radius: 0 !important; }
+
+/* ===== INVENTORY KPI STRIP ===== */
+.inv-kpi-strip {
+  display: flex;
+  align-items: center;
+  background: #fff;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+  padding: 0;
+  margin-bottom: 16px;
+  overflow: hidden;
+}
+
+.inv-kpi {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  transition: background 0.15s;
+  cursor: default;
+  &:hover { background: #fafafa; }
+}
+
+.inv-kpi-icon {
+  font-size: 24px !important;
+  width: 24px !important;
+  height: 24px !important;
+}
+
+.inv-kpi-data {
+  display: flex;
+  flex-direction: column;
+}
+
+.inv-kpi-value {
+  font-size: 22px;
+  font-weight: 900;
+  color: #1a1a2e;
+  line-height: 1;
+  -webkit-font-smoothing: antialiased;
+}
+
+.inv-kpi-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: #aaa;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 2px;
+}
+
+.inv-kpi-divider {
+  width: 1px;
+  height: 36px;
+  background: #eee;
+  flex-shrink: 0;
+}
+
+@media (max-width: 900px) {
+  .inv-kpi-strip { flex-wrap: wrap; }
+  .inv-kpi { min-width: 120px; }
+  .inv-kpi-divider { display: none; }
+}
+
+/* Section Title */
+.inv-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 14px;
+  font-weight: 800;
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+
+  mat-icon {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+    color: #E8834A;
+  }
+}
+
+/* ===== PARTNER INVENTORY CARDS ===== */
+.inv-partner-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 8px;
+  max-height: calc(100vh - 350px);
+  padding-bottom: 10px;
+  overflow-y: auto;
+  padding-right: 4px;
+
+  &::-webkit-scrollbar { width: 4px; }
+  &::-webkit-scrollbar-track { background: transparent; }
+  &::-webkit-scrollbar-thumb { background: #ddd; border-radius: 2px; }
+  &::-webkit-scrollbar-thumb:hover { background: #bbb; }
+}
+
+@media (max-width: 1100px) { .inv-partner-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 600px) { .inv-partner-grid { grid-template-columns: 1fr; } }
+
+.inv-partner-card {
+  background: #fff;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+  overflow: hidden;
+  transition: border-color 0.15s;
+
+  &:hover { border-color: #bbb; }
+}
+
+.ipc-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  background: #f7f7f7;
+  border-bottom: 1px solid #eee;
+}
+
+.ipc-icon {
+  font-size: 16px !important;
+  width: 16px !important;
+  height: 16px !important;
+  color: #E8834A;
+}
+
+.ipc-name {
+  font-size: 14px;
+  font-weight: 900;
+  color: #1a1a2e;
+  -webkit-font-smoothing: antialiased;
+}
+
+.ipc-total {
+  font-size: 20px;
+  font-weight: 900;
+  color: #E8834A;
+  -webkit-font-smoothing: antialiased;
+}
+
+.ipc-body {
+  padding: 6px 8px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ipc-section-row {
+  display: flex;
+  gap: 4px;
+}
+
+.ipc-mini-tile {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 8px;
+  border-radius: 6px;
+  cursor: default;
+  border: 1px solid;
+
+  mat-icon {
+    font-size: 18px !important;
+    width: 18px !important;
+    height: 18px !important;
+    flex-shrink: 0;
+  }
+}
+
+/* Full Feed — indigo */
+.ipc-mini-full {
+  background: #f5f6fb;
+  border-color: #d1d5eb;
+  mat-icon { color: #3f51b5; }
+}
+
+.ipc-mini-full .ipc-mini-value { color: #3f51b5; }
+.ipc-mini-full .ipc-mini-label { color: #5c6bc0; }
+
+/* Differential — orange */
+.ipc-mini-diff {
+  background: #fef8f4;
+  border-color: #f0d5c0;
+  mat-icon { color: #E8834A; }
+}
+
+.ipc-mini-diff .ipc-mini-value { color: #E8834A; }
+.ipc-mini-diff .ipc-mini-label { color: #d4722f; }
+
+/* Uploaded — green */
+.ipc-mini-up {
+  background: #e8f5e9;
+  border-color: #c8e6c9;
+  mat-icon { color: #2e7d32; }
+}
+
+.ipc-mini-up .ipc-mini-value { color: #2e7d32; }
+.ipc-mini-up .ipc-mini-label { color: #388e3c; }
+
+/* Partial Upload — amber */
+.ipc-mini-partial {
+  background: #fff8e1;
+  border-color: #ffe082;
+  mat-icon { color: #f57f17; }
+}
+
+.ipc-mini-partial .ipc-mini-value { color: #f57f17; }
+.ipc-mini-partial .ipc-mini-label { color: #f9a825; }
+
+.ipc-mini-data {
+  display: flex;
+  flex-direction: column;
+}
+
+.ipc-mini-value {
+  font-size: 18px;
+  font-weight: 900;
+  line-height: 1;
+  -webkit-font-smoothing: antialiased;
+}
+
+.ipc-mini-label {
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.2px;
+  margin-top: 1px;
+}
+
+/* ===== EMPTY STATE ===== */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px;
+  color: #ccc;
+  mat-icon { font-size: 40px; width: 40px; height: 40px; margin-bottom: 10px; }
+  p { margin: 0; font-size: 13px; font-weight: 500; }
+}
+
+/* Unused but kept for compatibility */
+.inv-status-list, .inv-status-row, .inv-status-info, .inv-status-name,
+.inv-bar-wrap, .inv-bar, .inv-count, .inv-pct,
+.success-rate-container, .success-circle, .rate-good, .rate-warn, .rate-bad,
+.rate-value, .rate-label, .rate-details, .rate-detail-row, .rate-dot { display: none; }

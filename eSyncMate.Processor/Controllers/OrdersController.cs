@@ -570,6 +570,63 @@ namespace eSyncMate.Processor.Controllers
         }
 
         [HttpGet]
+        [Route("getDashboardStats")]
+        public Task<object> GetDashboardStats()
+        {
+            try
+            {
+                var claimsIdentity = User.Identity as ClaimsIdentity;
+                if (claimsIdentity?.Claims == null)
+                    return Task.FromResult<object>(new { code = 401, message = "Not Authorized" });
+
+                var userData = eSyncMate.Processor.Managers.CustomersManager.GetCustomerNames(claimsIdentity);
+
+                DBConnector l_Conn = new DBConnector(CommonUtils.ConnectionString);
+
+                string l_CustomerFilter = "";
+                if (userData.UserType?.ToUpper() != "ADMIN" && !string.IsNullOrEmpty(userData.Customers))
+                    l_CustomerFilter = $" AND ERPCustomerID IN ({userData.Customers})";
+
+                // Customer-wise order counts (last 24h)
+                string l_CustomerQuery = $@"SELECT ISNULL(CustomerName,'') as CustomerName, ISNULL(ERPCustomerID,'') as ERPCustomerID, COUNT(*) as OrderCount
+                    FROM VW_Orders
+                    WHERE CreatedDate >= DATEADD(HOUR, -24, GETDATE()) AND Status <> 'DELETED'{l_CustomerFilter}
+                    GROUP BY CustomerName, ERPCustomerID ORDER BY OrderCount DESC";
+
+                DataTable l_CustomerDT = new DataTable();
+                l_Conn.GetData(l_CustomerQuery, ref l_CustomerDT);
+                var customerWise = new List<object>();
+                int totalOrders = 0;
+                foreach (DataRow row in l_CustomerDT.Rows)
+                {
+                    int count = Convert.ToInt32(row["OrderCount"]);
+                    totalOrders += count;
+                    customerWise.Add(new { customerName = row["CustomerName"]?.ToString(), erpCustomerID = row["ERPCustomerID"]?.ToString(), orderCount = count });
+                }
+
+                // Status-wise order counts (last 24h)
+                string l_StatusQuery = $@"SELECT ISNULL(Status,'') as Status, COUNT(*) as StatusCount
+                    FROM VW_Orders
+                    WHERE CreatedDate >= DATEADD(HOUR, -24, GETDATE()) AND Status <> 'DELETED'{l_CustomerFilter}
+                    GROUP BY Status ORDER BY StatusCount DESC";
+
+                DataTable l_StatusDT = new DataTable();
+                l_Conn.GetData(l_StatusQuery, ref l_StatusDT);
+                var statusWise = new List<object>();
+                foreach (DataRow row in l_StatusDT.Rows)
+                {
+                    statusWise.Add(new { status = row["Status"]?.ToString(), statusCount = Convert.ToInt32(row["StatusCount"]) });
+                }
+
+                return Task.FromResult<object>(new { code = 200, message = "Success", customerWise, statusWise, totalOrders });
+            }
+            catch (Exception ex)
+            {
+                return Task.FromResult<object>(new { code = 500, message = ex.Message });
+            }
+        }
+
+        [HttpGet]
         [Route("getOrders/{OrderId}/{FromDate}/{ToDate}/{OrderNumber}/{Status}/{ExternalId}/{CustomerId}")]
         public async Task<GetOrdersResponseModel> GetOrders(int? OrderId = 0, string FromDate = "", string ToDate = "", string OrderNumber = "", string Status = "", string ExternalId = "", string CustomerId = "")
         {

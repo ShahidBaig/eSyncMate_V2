@@ -116,6 +116,9 @@ export class ApiService {
     return this.http.get<Order[]>(this.apiUrl + 'EDIProcessor/api/v1/orders/getOrders/' + orderId + '/' + fromDate + '/' + toDate + '/' + orderNumber + '/' + status + '/' + ExternalId + '/' + CustomerId);
   }
 
+  getDashboardStats() {
+    return this.http.get<any>(this.apiUrl + 'EDIProcessor/api/v1/orders/getDashboardStats');
+  }
 
   getRouteExceptions(name: string, message: string, fromDate: string, toDate: string, status: string) {
     return this.http.get<RouteLog[]>(this.apiUrl + 'api/v1/routeExceptions/getRouteExceptions/' + name + '/' + message + '/' + fromDate + '/' + toDate + '/' + status);

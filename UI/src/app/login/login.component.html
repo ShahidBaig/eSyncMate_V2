@@ -17,10 +17,7 @@
         <mat-grid-tile colspan="2">
           <mat-form-field appearance="fill" color="accent">
             <mat-label>{{ 'password' | translate }}</mat-label>
-            <input matInput [type]="hide ? 'password' : 'text'" formControlName="password" autocomplete="current-password">
-            <button mat-icon-button matSuffix (click)="hide = !hide">
-              <mat-icon>{{hide ? 'visibility_off' : 'visibility'}}</mat-icon>
-            </button>
+            <input matInput type="password" formControlName="password" autocomplete="new-password">
             <mat-error *ngIf="this.Password.invalid" style="font-size: 10px;">{{getPasswordErrors()}}</mat-error>
           </mat-form-field>
         </mat-grid-tile>

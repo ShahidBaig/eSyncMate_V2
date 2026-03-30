@@ -4,9 +4,15 @@
   </button>
   <img *ngIf="isGeckotec" src="/assets/images/cropped-logo_small.png" style="height: 52px; width: 207px; margin-left: -620px; ">
 
-  <img src="/assets/images/Bizmate.png" style="height:52px; width: 130px;">
+  <img src="/assets/images/Bizmate.png" style="height:52px; width: 130px; cursor: pointer;" (click)="goHome()">
 
   <div class="user-info">
+    <!-- Notification Bell -->
+    <button mat-icon-button [matMenuTriggerFor]="notifMenu" class="notif-btn" *ngIf="isEsyncmate">
+      <mat-icon>notifications</mat-icon>
+      <span class="notif-badge" *ngIf="unreadCount > 0">{{ unreadCount > 9 ? '9+' : unreadCount }}</span>
+    </button>
+
     <span>
       {{ 'hi' | translate }},
       {{this.api.getTokenUserInfo()?.firstName | titlecase}}
@@ -16,6 +22,34 @@
     </button>
   </div>
 
+  <!-- Notification Dropdown -->
+  <mat-menu #notifMenu="matMenu" class="notif-menu-panel">
+    <div class="notif-header" (click)="$event.stopPropagation()">
+      <span class="notif-title">Notifications</span>
+      <button mat-button class="notif-mark-all" (click)="markAllRead()" *ngIf="unreadCount > 0">
+        Mark all read
+      </button>
+    </div>
+    <div class="notif-list" (click)="$event.stopPropagation()">
+      <div *ngFor="let n of notifications" class="notif-item" [class.notif-unread]="!n.isRead" (click)="onNotifClick(n)">
+        <mat-icon class="notif-icon"
+                  [ngClass]="n.status === 'COMPLETED' ? 'notif-success' : n.status === 'FAILED' ? 'notif-error' : 'notif-running'">
+          {{ n.status === 'COMPLETED' ? 'check_circle' : n.status === 'FAILED' ? 'error' : 'hourglass_empty' }}
+        </mat-icon>
+        <div class="notif-content">
+          <span class="notif-route">{{ n.routeName }}</span>
+          <span class="notif-msg">{{ n.message }}</span>
+          <span class="notif-time">{{ getTimeAgo(n.createdDate) }}</span>
+        </div>
+      </div>
+      <div class="notif-empty" *ngIf="notifications.length === 0">
+        <mat-icon>notifications_none</mat-icon>
+        <span>No notifications</span>
+      </div>
+    </div>
+  </mat-menu>
+
+  <!-- User Menu -->
   <mat-menu #userMenu="matMenu">
     <button mat-menu-item routerLink="/login" *ngIf="!api.getTokenUserInfo()?.firstName">
       <mat-icon>login</mat-icon>

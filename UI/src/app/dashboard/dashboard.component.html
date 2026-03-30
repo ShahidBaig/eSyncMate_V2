@@ -1,0 +1,182 @@
+<div class="dashboard-container">
+
+  <!-- Header -->
+  <div class="dashboard-header">
+    <div class="dashboard-title">
+      <div class="title-icon">
+        <mat-icon>dashboard</mat-icon>
+      </div>
+      <div>
+        <h2>Dashboard</h2>
+        <p class="title-sub">Real-time overview of your EDI operations</p>
+      </div>
+    </div>
+    <div class="dashboard-actions">
+      <div class="time-chip">
+        <mat-icon>schedule</mat-icon>
+        <span>Last 24 Hours</span>
+      </div>
+      <button mat-icon-button (click)="manualRefresh()" [disabled]="loading || inventoryLoading" class="refresh-btn">
+        <mat-icon [class.spinning]="loading || inventoryLoading">sync</mat-icon>
+      </button>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <mat-tab-group class="dashboard-tabs" animationDuration="200ms">
+
+    <!-- ===== ORDERS TAB ===== -->
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <div class="tab-label-custom">
+          <div class="tab-icon-wrap tab-icon-orders"><mat-icon>shopping_cart</mat-icon></div>
+          <div class="tab-text">
+            <span class="tab-main">Orders</span>
+            <span class="tab-sub">{{ totalOrders }} total</span>
+          </div>
+        </div>
+      </ng-template>
+
+      <div class="loading-overlay" *ngIf="loading">
+        <div class="loading-content">
+          <mat-spinner diameter="44"></mat-spinner>
+          <span>Loading order statistics...</span>
+        </div>
+      </div>
+
+      <div class="tab-body" *ngIf="!loading">
+
+        <div class="inv-kpi-strip">
+          <div class="inv-kpi">
+            <mat-icon class="inv-kpi-icon" style="color:#3f51b5;">shopping_cart</mat-icon>
+            <div class="inv-kpi-data">
+              <span class="inv-kpi-value">{{ totalOrders }}</span>
+              <span class="inv-kpi-label">Total Orders</span>
+            </div>
+          </div>
+          <div class="inv-kpi-divider"></div>
+          <div class="inv-kpi">
+            <mat-icon class="inv-kpi-icon" style="color:#E8834A;">fiber_new</mat-icon>
+            <div class="inv-kpi-data">
+              <span class="inv-kpi-value" style="color:#E8834A;">{{ getStatusCount('NEW') }}</span>
+              <span class="inv-kpi-label">New</span>
+            </div>
+          </div>
+          <div class="inv-kpi-divider"></div>
+          <div class="inv-kpi">
+            <mat-icon class="inv-kpi-icon" style="color:#2e7d32;">check_circle</mat-icon>
+            <div class="inv-kpi-data">
+              <span class="inv-kpi-value" style="color:#2e7d32;">{{ getStatusCount('SYNCED') }}</span>
+              <span class="inv-kpi-label">Synced</span>
+            </div>
+          </div>
+          <div class="inv-kpi-divider"></div>
+          <div class="inv-kpi">
+            <mat-icon class="inv-kpi-icon" style="color:#3f51b5;">local_shipping</mat-icon>
+            <div class="inv-kpi-data">
+              <span class="inv-kpi-value" style="color:#3f51b5;">{{ getStatusCount('SHIPPED') }}</span>
+              <span class="inv-kpi-label">Shipped</span>
+            </div>
+          </div>
+          <div class="inv-kpi-divider"></div>
+          <div class="inv-kpi">
+            <mat-icon class="inv-kpi-icon" style="color:#c62828;">error</mat-icon>
+            <div class="inv-kpi-data">
+              <span class="inv-kpi-value" style="color:#c62828;">{{ getErrorCount() }}</span>
+              <span class="inv-kpi-label">Errors</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="inv-section-title">
+          <mat-icon>storefront</mat-icon>
+          <span>Partner Order Distribution</span>
+        </div>
+
+        <div class="content-row">
+          <div class="content-card">
+            <div class="card-top">
+              <div class="card-top-left">
+                <div class="card-top-icon" style="background:#E8834A;"><mat-icon>storefront</mat-icon></div>
+                <div>
+                  <h3>Orders by Partner</h3>
+                  <p>Order count per trading partner</p>
+                </div>
+              </div>
+              <span class="card-top-badge">{{ customerStats.length }} partners</span>
+            </div>
+            <div class="card-content">
+              <div class="customer-list" *ngIf="customerStats.length > 0">
+                <div class="customer-row" *ngFor="let row of customerStats; let i = index">
+                  <div class="customer-rank">{{ i + 1 }}</div>
+                  <div class="customer-info">
+                    <span class="customer-name">{{ getPartnerName(row.erpCustomerID) }}</span>
+                    <span class="customer-id">{{ row.erpCustomerID }}</span>
+                  </div>
+                  <div class="customer-bar-wrap">
+                    <div class="customer-bar" [style.width.%]="totalOrders > 0 ? (row.orderCount / totalOrders * 100) : 0"></div>
+                  </div>
+                  <div class="customer-count">{{ row.orderCount }}</div>
+                </div>
+              </div>
+              <div class="empty-state" *ngIf="customerStats.length === 0">
+                <mat-icon>inbox</mat-icon>
+                <p>No orders in the last 24 hours</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="content-card">
+            <div class="card-top">
+              <div class="card-top-left">
+                <div class="card-top-icon" style="background:#00695c;"><mat-icon>donut_small</mat-icon></div>
+                <div>
+                  <h3>Orders by Status</h3>
+                  <p>Status breakdown of all orders</p>
+                </div>
+              </div>
+              <span class="card-top-badge">{{ statusStats.length }} statuses</span>
+            </div>
+            <div class="card-content">
+              <div class="status-grid" *ngIf="statusStats.length > 0">
+                <div class="status-tile" *ngFor="let stat of statusStats" [style.borderLeftColor]="getStatusColor(stat.status)">
+                  <div class="status-tile-top">
+                    <mat-icon [style.color]="getStatusColor(stat.status)">{{ getStatusIcon(stat.status) }}</mat-icon>
+                    <span class="status-tile-count" [style.color]="getStatusColor(stat.status)">{{ stat.statusCount }}</span>
+                  </div>
+                  <span class="status-tile-name">{{ stat.status }}</span>
+                  <div class="status-tile-bar">
+                    <div class="status-tile-fill" [style.width.%]="totalOrders > 0 ? (stat.statusCount / totalOrders * 100) : 0"
+                         [style.background]="getStatusColor(stat.status)"></div>
+                  </div>
+                  <span class="status-tile-pct">{{ totalOrders > 0 ? (stat.statusCount / totalOrders * 100).toFixed(1) : 0 }}%</span>
+                </div>
+              </div>
+              <div class="empty-state" *ngIf="statusStats.length === 0">
+                <mat-icon>inbox</mat-icon>
+                <p>No orders in the last 24 hours</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </mat-tab>
+
+    <!-- INVENTORY TAB — hidden for now -->
+    <!--
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <div class="tab-label-custom">
+          <div class="tab-icon-wrap tab-icon-inventory"><mat-icon>inventory_2</mat-icon></div>
+          <div class="tab-text">
+            <span class="tab-main">Inventory</span>
+            <span class="tab-sub">{{ totalBatches }} batches</span>
+          </div>
+        </div>
+      </ng-template>
+    </mat-tab>
+    -->
+
+  </mat-tab-group>
+
+</div>

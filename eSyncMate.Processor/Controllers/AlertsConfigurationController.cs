@@ -6,6 +6,8 @@ using System.Data;
 using eSyncMate.DB;
 using Hangfire;
 using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
+using eSyncMate.Processor.Managers;
 
 namespace eSyncMate.Processor.Controllers
 {
@@ -220,6 +222,18 @@ namespace eSyncMate.Processor.Controllers
             {
                 l_Response.Code = (int)ResponseCodes.Error;
 
+                // Filter by user's assigned customers
+                string l_CustomerFilter = "";
+                var claimsIdentity = User.Identity as ClaimsIdentity;
+                if (claimsIdentity != null)
+                {
+                    var userData = CustomersManager.GetCustomerNames(claimsIdentity);
+                    if (userData.UserType?.ToUpper() != "ADMIN" && !string.IsNullOrEmpty(userData.Customers))
+                    {
+                        l_CustomerFilter = $" AND c.ERPCustomerID IN ({userData.Customers})";
+                    }
+                }
+
                 DBConnector connection = new DBConnector(CommonUtils.ConnectionString);
                 string query = $@"SELECT ca.Id, ca.CustomerId, c.Name AS CustomerName, ca.AlertId,
                                          ac.AlertName, ca.FrequencyType, ca.RepeatCount, ca.ExecutionTime,
@@ -227,7 +241,7 @@ namespace eSyncMate.Processor.Controllers
                                   FROM CustomerAlerts ca
                                   LEFT JOIN Customers c ON ca.CustomerId = c.Id
                                   LEFT JOIN AlertsConfiguration ac ON ca.AlertId = ac.AlertID
-                                  WHERE ca.AlertId = {alertId}
+                                  WHERE ca.AlertId = {alertId}{l_CustomerFilter}
                                   ORDER BY ca.Id DESC";
 
                 connection.GetData(query, ref l_Data);
@@ -282,8 +296,20 @@ namespace eSyncMate.Processor.Controllers
             {
                 l_Response.Code = (int)ResponseCodes.Error;
 
+                // Filter by user's assigned customers
+                string l_CustomerFilter = "";
+                var claimsIdentity = User.Identity as ClaimsIdentity;
+                if (claimsIdentity != null)
+                {
+                    var userData = CustomersManager.GetCustomerNames(claimsIdentity);
+                    if (userData.UserType?.ToUpper() != "ADMIN" && !string.IsNullOrEmpty(userData.Customers))
+                    {
+                        l_CustomerFilter = $" AND ERPCustomerID IN ({userData.Customers})";
+                    }
+                }
+
                 DBConnector connection = new DBConnector(CommonUtils.ConnectionString);
-                connection.GetData("SELECT Id, Name FROM Customers WHERE Name NOT IN ('eSyncMate', 'SPARS') ORDER BY Name", ref l_Data);
+                connection.GetData($"SELECT Id, Name FROM Customers WHERE Name NOT IN ('eSyncMate', 'SPARS'){l_CustomerFilter} ORDER BY Name", ref l_Data);
 
                 l_Response.Customers = new List<CustomerDropdownModel>();
                 foreach (DataRow row in l_Data.Rows)

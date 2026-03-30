@@ -462,6 +462,118 @@ namespace eSyncMate.Processor.Controllers
             return Task.FromResult(l_Response);
         }
 
+        [HttpPost("testRun/{routeId}")]
+        public Task<FlowsResponseModel> TestRunRoute(int routeId)
+        {
+            FlowsResponseModel l_Response = new();
+            try
+            {
+                int l_UserId = FlowsManager.GetUserId(User.Identity as ClaimsIdentity);
+
+                Routes l_Route = new();
+                l_Route.UseConnection(CommonUtils.ConnectionString);
+                l_Route.Id = routeId;
+                var l_GetResult = l_Route.GetObject();
+
+                if (!l_GetResult.IsSuccess)
+                {
+                    l_Response.Code = (int)ResponseCodes.Error;
+                    l_Response.Message = $"Route with ID {routeId} not found.";
+                    return Task.FromResult(l_Response);
+                }
+
+                string l_RouteName = l_Route.Name ?? $"Route #{routeId}";
+
+                // Create notification with RUNNING status
+                long l_NotifId = Notifications.CreateNotification(
+                    CommonUtils.ConnectionString, l_UserId, routeId, l_RouteName,
+                    "TEST_RUN", "RUNNING", $"'{l_RouteName}' is running...");
+
+                // Enqueue with notification ID so we can update it on completion
+                RouteEngine l_Engine = new RouteEngine(this._config);
+                BackgroundJob.Enqueue(() => l_Engine.ExecuteWithNotification(routeId, l_NotifId));
+
+                _logger.LogInformation($"TestRun: Route [{routeId}] '{l_RouteName}' triggered by User [{l_UserId}]. NotificationId={l_NotifId}");
+
+                l_Response.Code = (int)ResponseCodes.Success;
+                l_Response.Message = $"'{l_RouteName}' has been triggered successfully.";
+                l_Response.Description = l_RouteName;
+            }
+            catch (Exception ex)
+            {
+                l_Response.Code = (int)ResponseCodes.Exception;
+                l_Response.Message = $"Failed to trigger route: {ex.Message}";
+                _logger.LogError($"TestRun Error: RouteId={routeId}, Error={ex.Message}");
+            }
+            return Task.FromResult(l_Response);
+        }
+
+        // ===== NOTIFICATION ENDPOINTS =====
+
+        [HttpGet("notifications")]
+        public Task<object> GetNotifications()
+        {
+            try
+            {
+                int l_UserId = FlowsManager.GetUserId(User.Identity as ClaimsIdentity);
+                var l_DT = Notifications.GetUserNotifications(CommonUtils.ConnectionString, l_UserId);
+                int l_Unread = Notifications.GetUnreadCount(CommonUtils.ConnectionString, l_UserId);
+
+                var l_List = new List<object>();
+                foreach (DataRow row in l_DT.Rows)
+                {
+                    l_List.Add(new
+                    {
+                        id = Convert.ToInt64(row["Id"]),
+                        routeId = row["RouteId"] != DBNull.Value ? Convert.ToInt32(row["RouteId"]) : 0,
+                        routeName = row["RouteName"]?.ToString(),
+                        type = row["Type"]?.ToString(),
+                        status = row["Status"]?.ToString(),
+                        message = row["Message"]?.ToString(),
+                        isRead = Convert.ToBoolean(row["IsRead"]),
+                        createdDate = row["CreatedDate"] != DBNull.Value ? Convert.ToDateTime(row["CreatedDate"]).ToString("yyyy-MM-ddTHH:mm:ssZ") : null,
+                        completedDate = row["CompletedDate"] != DBNull.Value ? Convert.ToDateTime(row["CompletedDate"]).ToString("yyyy-MM-ddTHH:mm:ssZ") : null
+                    });
+                }
+
+                return Task.FromResult<object>(new { code = 200, notifications = l_List, unreadCount = l_Unread, serverTimeUtc = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ") });
+            }
+            catch (Exception ex)
+            {
+                return Task.FromResult<object>(new { code = 500, message = ex.Message });
+            }
+        }
+
+        [HttpPost("notifications/markRead/{id}")]
+        public Task<object> MarkNotificationRead(long id)
+        {
+            try
+            {
+                int l_UserId = FlowsManager.GetUserId(User.Identity as ClaimsIdentity);
+                Notifications.MarkAsRead(CommonUtils.ConnectionString, id, l_UserId);
+                return Task.FromResult<object>(new { code = 200, message = "Marked as read" });
+            }
+            catch (Exception ex)
+            {
+                return Task.FromResult<object>(new { code = 500, message = ex.Message });
+            }
+        }
+
+        [HttpPost("notifications/markAllRead")]
+        public Task<object> MarkAllNotificationsRead()
+        {
+            try
+            {
+                int l_UserId = FlowsManager.GetUserId(User.Identity as ClaimsIdentity);
+                Notifications.MarkAllAsRead(CommonUtils.ConnectionString, l_UserId);
+                return Task.FromResult<object>(new { code = 200, message = "All marked as read" });
+            }
+            catch (Exception ex)
+            {
+                return Task.FromResult<object>(new { code = 500, message = ex.Message });
+            }
+        }
+
         [HttpPost]
         [Route("updateFlow")]
         public Task<FlowsResponseModel> UpdateFlow([FromBody] EditFlowDataModel flowModel)

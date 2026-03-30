@@ -103,8 +103,12 @@ namespace eSyncMate.Processor.Controllers
                     l_Criteria = $" Marketplace = '{searchModel.SearchValue}'";
                 }
 
-                if (string.IsNullOrEmpty(l_Criteria) && !string.IsNullOrEmpty(userData?.Customers) && userData?.UserType?.ToUpper() != "ADMIN")
-                    l_Criteria = $" ERPCustomerID IN ({userData?.Customers})";
+                // Always filter by assigned customers for non-admin users
+                if (!string.IsNullOrEmpty(userData?.Customers) && userData?.UserType?.ToUpper() != "ADMIN")
+                {
+                    string customerFilter = $"ERPCustomerID IN ({userData?.Customers})";
+                    l_Criteria = string.IsNullOrEmpty(l_Criteria) ? customerFilter : $"{l_Criteria} AND {customerFilter}";
+                }
 
                 this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Search criteria ready ({l_Criteria}).");
                 this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Staring Customer search.");
