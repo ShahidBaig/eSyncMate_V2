@@ -399,6 +399,14 @@ namespace eSyncMate.Processor.Managers
                 {
                     AmazonASNShipmentNotificationRoute.Execute(_config, route);
                 }
+                else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.LowesWHSWInventoryUpload))
+                {
+                    LowesUploadWarehouseWiseInventoryRoute.Execute(_config, route);
+                }
+                else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.LowesWHSWInventoryStatus))
+                {
+                    LowesWHSWInventoryStatusRoute.Execute(_config, route);
+                }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.LowesInventoryUpload))
                 {
                     LowesUpdateInventory.Execute(_config, route);
@@ -418,6 +426,14 @@ namespace eSyncMate.Processor.Managers
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.LowesCancellationLines))
                 {
                     LowesCancellationRoute.Execute(_config, route);
+                }
+                else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.LowesPriceImport))
+                {
+                    LowesPriceImportRoute.Execute(_config, route);
+                }
+                else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.LowesPriceImportStatus))
+                {
+                    LowesPriceImportStatusRoute.Execute(_config, route);
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.RepaintGetOrders))
                 {

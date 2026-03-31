@@ -5,6 +5,7 @@ using eSyncMate.Processor.Models;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System.CommandLine;
+using static Org.BouncyCastle.Math.EC.ECCurve;
 
 namespace eSyncMate.RouteWorker
 {
@@ -217,6 +218,14 @@ namespace eSyncMate.RouteWorker
                     MacysCancellationRoute.Execute(config, route);
                 }
                 // Lowes Routes
+                else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.LowesWHSWInventoryUpload))
+                {
+                    LowesUploadWarehouseWiseInventoryRoute.Execute(config, route);
+                }
+                else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.LowesWHSWInventoryStatus))
+                {
+                    LowesWHSWInventoryStatusRoute.Execute(config, route);
+                }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.LowesInventoryUpload))
                 {
                     LowesUpdateInventory.Execute(config, route);
@@ -236,6 +245,14 @@ namespace eSyncMate.RouteWorker
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.LowesCancellationLines))
                 {
                     LowesCancellationRoute.Execute(config, route);
+                }
+                else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.LowesPriceImport))
+                {
+                    LowesPriceImportRoute.Execute(config, route);
+                }
+                else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.LowesPriceImportStatus))
+                {
+                    LowesPriceImportStatusRoute.Execute(config, route);
                 }
                 // Micheal Routes
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.MichealInventoryUpload))

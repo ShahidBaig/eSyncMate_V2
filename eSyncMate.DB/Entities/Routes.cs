@@ -35,6 +35,7 @@ namespace eSyncMate.DB.Entities
         public string ExecutionTime { get; set; }
         public string JobID { get; set; }
         public string RouteGroup { get; set; }
+        public string CustomerName { get; set; }
         public DateTime CreatedDate { get; set; }
         public int CreatedBy { get; set; }
         public DateTime ModifiedDate { get; set; }

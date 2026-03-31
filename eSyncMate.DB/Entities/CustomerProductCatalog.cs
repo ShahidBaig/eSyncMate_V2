@@ -1046,6 +1046,24 @@ namespace eSyncMate.DB.Entities
             return this.Connection.Execute(updateQuery);
         }
 
+        public bool UpdateInventoryBatchWiseStatus(string p_batchID, string p_FeedDocumentID, string p_Status, string CustomerID = "", string Data = "")
+        {
+            string updateQuery = "UPDATE InventoryBatchWiseFeedDetail " +
+                     "SET Status = @Status, Data = @Data " +
+                     "WHERE batchID = @BatchID AND CustomerID = @CustomerID AND FeedDocumentID = @FeedDocumentID";
+
+            SqlParameter[] parameters = new SqlParameter[]
+            {
+                new SqlParameter("@BatchID", SqlDbType.VarChar) { Value = p_batchID },
+                new SqlParameter("@FeedDocumentID", SqlDbType.VarChar) { Value = p_FeedDocumentID },
+                new SqlParameter("@Status", SqlDbType.VarChar) { Value = p_Status },
+                new SqlParameter("@CustomerID", SqlDbType.VarChar) { Value = CustomerID },
+                new SqlParameter("@Data", SqlDbType.NVarChar) { Value = Data }
+            };
+
+            return this.Connection.Execute(updateQuery, p_SQLParams: parameters);
+        }
+
         public bool UpdateStatusSCSInventoryFeed(string CustomerID, string BatchID, string FeedDocumentID, long MessageID)
         {
             string l_Query = string.Empty;

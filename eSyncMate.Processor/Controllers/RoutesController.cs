@@ -179,6 +179,15 @@ namespace eSyncMate.Processor.Controllers
                 l_Routes.CreatedBy = l_Routes.CreatedBy;
                 l_Routes.CreatedDate = DateTime.Now;
 
+                // Look up ERPCustomerID for CustomerName — use the external partner (not internal system)
+                if (string.IsNullOrEmpty(l_Routes.CustomerName))
+                {
+                    string customerName = GetExternalCustomerName(l_Routes.Connection, l_Routes.DestinationPartyId);
+                    if (string.IsNullOrEmpty(customerName))
+                        customerName = GetExternalCustomerName(l_Routes.Connection, l_Routes.SourcePartyId);
+                    l_Routes.CustomerName = customerName;
+                }
+
                 if (l_Routes.Status == "Active")
                 {
                     l_JobID = this.SetupRouteJob(l_Routes);
@@ -203,7 +212,8 @@ namespace eSyncMate.Processor.Controllers
             catch (Exception ex)
             {
                 l_Response.Code = (int)ResponseCodes.Exception;
-                l_Result.Description = ex.Message;
+                l_Response.Message = ex.Message;
+                this._logger?.LogError($"CreateRoute failed: {ex}");
             }
             finally
             {
@@ -233,6 +243,15 @@ namespace eSyncMate.Processor.Controllers
 
                 l_Routes.ModifiedBy = Declarations.g_UserNo;
                 l_Routes.ModifiedDate = DateTime.Now;
+
+                // Look up ERPCustomerID for CustomerName — use the external partner (not internal system)
+                if (string.IsNullOrEmpty(l_Routes.CustomerName))
+                {
+                    string customerName = GetExternalCustomerName(l_Routes.Connection, l_Routes.DestinationPartyId);
+                    if (string.IsNullOrEmpty(customerName))
+                        customerName = GetExternalCustomerName(l_Routes.Connection, l_Routes.SourcePartyId);
+                    l_Routes.CustomerName = customerName;
+                }
 
                 l_OldRoute.GetObject(l_Routes.Id);
 
@@ -265,7 +284,8 @@ namespace eSyncMate.Processor.Controllers
             catch (Exception ex)
             {
                 l_Response.Code = (int)ResponseCodes.Exception;
-                l_Result.Description = ex.Message;
+                l_Response.Message = ex.Message;
+                this._logger?.LogError($"UpdateRoute failed: {ex}");
             }
             finally
             {
@@ -563,6 +583,25 @@ namespace eSyncMate.Processor.Controllers
             RouteEngine l_Engine = new RouteEngine(this._config);
 
             l_Engine.RemoveRouteJob(route);
+        }
+
+        private string GetExternalCustomerName(DBConnector connection, int partyId)
+        {
+            if (partyId <= 0) return null;
+            try
+            {
+                Customers l_Customer = new Customers();
+                l_Customer.UseConnection(string.Empty, connection);
+                l_Customer.Id = partyId;
+                var result = l_Customer.GetObjectOnly();
+                if (result.IsSuccess && !string.IsNullOrEmpty(l_Customer.ERPCustomerID)
+                    && l_Customer.ERPCustomerID != "eSyncMate" && l_Customer.ERPCustomerID != "SPARS Customer")
+                {
+                    return l_Customer.ERPCustomerID;
+                }
+            }
+            catch { }
+            return null;
         }
 
         [HttpGet]

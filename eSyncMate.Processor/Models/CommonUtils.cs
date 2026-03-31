@@ -54,6 +54,11 @@ namespace eSyncMate.Processor.Models
         public static HttpClient ShipStation => GetOrCreateClient("shipstation");
 
         /// <summary>
+        /// Gets or creates a shared HttpClient for Lowes/Mirakl API calls
+        /// </summary>
+        public static HttpClient Lowes => GetOrCreateClient("lowes");
+
+        /// <summary>
         /// Gets or creates a shared HttpClient for a specific service key
         /// </summary>
         public static HttpClient GetOrCreateClient(string serviceKey)
@@ -154,6 +159,8 @@ namespace eSyncMate.Processor.Models
         LowesGetOrders = 45,
         LowesASNShipmentNotification = 46,
         LowesCancellationLines = 47,
+        LowesPriceImport = 66,
+        LowesPriceImportStatus = 67,
         AmazonInventoryUpload = 48,
         AmazonGetOrders = 49,
         AmazonInventoryStatus = 50,
@@ -170,6 +177,8 @@ namespace eSyncMate.Processor.Models
         MichealCancellationLines = 61,
         AmazonWHSWInventoryUpload = 62,
         WalmartInventoryStatus = 63,
+        LowesWHSWInventoryUpload = 64,
+        LowesWHSWInventoryStatus = 65,
         RepaintGetOrders = 500,
         RepaintCreateOrder = 501,
         RepaintGenerate855 = 502,
@@ -197,7 +206,7 @@ namespace eSyncMate.Processor.Models
         //public static string ConnectionString { get; set; } = "Server=rxo.geckotech.com.mx;Database=EDIProcessor;UID=sa;PWD=Gecko8079;";
         // public static string ConnectionString { get; set; } = "Server=192.168.0.44,7100;Database=ESYNCMATE;UID=esyncmate;PWD=eSyncMate786$$$;";
         //public static string ConnectionString { get; set; } = "Server=209.74.79.232;Database=SURGIMAC;UID=sa;PWD=Surgimac8079;";
-        public static string ConnectionString { get; set; } = "Server=192.168.0.44,7100;Database=ESYNCMATE;UID=esyncmate;PWD=eSyncMate786$$$;";
+        public static string ConnectionString { get; set; } = "Server=110.93.227.0,1433;Database=ESYNCMATE_TEST;UID=sa;PWD=eSoft#123456;";
         public static string MySqlConnectionString { get; set; } = "Server=162.241.63.30;Database=geckote1_edi;User=geckote1_esyncmate;Password=Gecko8079;";
         //public static string SMTPHost { get; set; } = "smtpout.secureserver.net";
         //public static int SMTPPort { get; set; } = 587;

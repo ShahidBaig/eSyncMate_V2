@@ -510,6 +510,17 @@ namespace eSyncMate.DB.Entities
             return this.Connection.GetData(l_Query, ref p_dataTable);
         }
 
+        public string GetLowesStockImportHeader()
+        {
+            DataTable dt = new DataTable();
+            this.Connection.GetDataSP("Sp_Lowes_GetStockImportHeader", ref dt);
+
+            if (dt.Rows.Count > 0)
+                return dt.Rows[0]["HeaderRow"].ToString();
+
+            return string.Empty;
+        }
+
         public bool UpdateInventoryBatchWise(InventoryBatchWise p_InventoryBatchWise)
         {
             string updateQuery = "UPDATE InventoryBatchWise SET FinishDate = GETDATE(), Status = @Status WHERE BatchID = @BatchID";
@@ -558,6 +569,22 @@ namespace eSyncMate.DB.Entities
             }
         }
 
+
+        public bool UpdateInventoryBatchWiseFeedDetail(string BatchID, string FeedDocumentID, string Status, string Data)
+        {
+            string updateQuery = "UPDATE InventoryBatchWiseFeedDetail SET Status = @Status, Data = @Data " +
+                                 "WHERE BatchID = @BatchID AND FeedDocumentID = @FeedDocumentID";
+
+            SqlParameter[] parameters = new SqlParameter[]
+            {
+                new SqlParameter("@BatchID", SqlDbType.VarChar) { Value = BatchID },
+                new SqlParameter("@FeedDocumentID", SqlDbType.VarChar) { Value = FeedDocumentID },
+                new SqlParameter("@Status", SqlDbType.VarChar) { Value = Status },
+                new SqlParameter("@Data", SqlDbType.NVarChar) { Value = Data }
+            };
+
+            return this.Connection.Execute(updateQuery, p_SQLParams: parameters);
+        }
 
         public void BulkNewInsertData(string connectionString, string destinationTableName, DataTable dataTable)
         {
@@ -621,6 +648,69 @@ namespace eSyncMate.DB.Entities
                         throw new Exception("Error during bulk insert", ex);
                     }
                 }
+            }
+        }
+
+        public void BulkLowesFeedData(string connectionString, string destinationTableName, DataTable dataTable)
+        {
+            using (SqlConnection connection = new SqlConnection(connectionString))
+            {
+                connection.Open();
+
+                using (SqlBulkCopy bulkCopy = new SqlBulkCopy(connection))
+                {
+                    bulkCopy.DestinationTableName = destinationTableName;
+                    bulkCopy.BulkCopyTimeout = 600;
+
+                    try
+                    {
+                        bulkCopy.ColumnMappings.Add("BatchID", "BatchID");
+                        bulkCopy.ColumnMappings.Add("ItemID", "ItemID");
+                        bulkCopy.ColumnMappings.Add("CustomerID", "CustomerID");
+                        bulkCopy.ColumnMappings.Add("ImportId", "ImportId");
+                        bulkCopy.ColumnMappings.Add("Data", "Data");
+
+                        bulkCopy.WriteToServer(dataTable);
+                    }
+                    catch (Exception ex)
+                    {
+                        throw new Exception("Error during bulk insert", ex);
+                    }
+                }
+           }
+        }
+
+        public bool UpdateSCSLowesFeedData(string p_BatchID, string p_ImportId, string p_Guid)
+        {
+            string updateQuery = $"UPDATE SCSLowesFeedData SET ImportId = '{p_ImportId}' ";
+            updateQuery += $"WHERE ImportId = '{p_Guid}' AND BatchID = '{p_BatchID}'";
+
+            return this.Connection.Execute(updateQuery);
+        }
+
+        public bool LowesUpdateStatusSCSInventoryFeed(string CustomerID, string BatchID, string ImportId)
+        {
+            string l_Query = string.Empty;
+            string l_Param = string.Empty;
+
+            try
+            {
+                l_Query = "EXEC Sp_Lowes_UpdateStatusSCSInventoryFeed";
+
+                PublicFunctions.FieldToParam(CustomerID, ref l_Param, Declarations.FieldTypes.String);
+                l_Query += l_Param;
+
+                PublicFunctions.FieldToParam(BatchID, ref l_Param, Declarations.FieldTypes.String);
+                l_Query += ", " + l_Param;
+
+                PublicFunctions.FieldToParam(ImportId, ref l_Param, Declarations.FieldTypes.String);
+                l_Query += ", " + l_Param;
+
+                return this.Connection.Execute(l_Query);
+            }
+            catch (Exception)
+            {
+                throw;
             }
         }
 

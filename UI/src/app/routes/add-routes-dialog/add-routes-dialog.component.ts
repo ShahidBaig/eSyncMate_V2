@@ -266,19 +266,17 @@ export class AddRoutesDialogComponent {
       next: (res) => {
         if (res.code === 100) {
           this.toast.success({ detail: "SUCCESS", summary: res.description, duration: 5000, position: 'topRight' });
+          this.dialogRef.close('saved');
         } else if (res.code === 400) {
-          this.toast.error({ detail: "ERROR", summary: res.message, duration: 5000, /*sticky: true,*/ position: 'topRight' });
-        } else if (res.code === 401) {
-          this.toast.warning({ detail: "WARNING", summary: res.description, duration: 5000, /*sticky: true,*/ position: 'topRight' });
+          this.toast.error({ detail: "ERROR", summary: res.message, duration: 5000, position: 'topRight' });
+        } else if (res.code === 500) {
+          this.toast.error({ detail: "ERROR", summary: res.message || 'An unexpected error occurred', duration: 5000, position: 'topRight' });
         } else {
-          this.toast.info({ detail: "INFO", summary: res.message, duration: 5000, /*sticky: true,*/ position: 'topRight' });
+          this.toast.error({ detail: "ERROR", summary: res.message || res.description, duration: 5000, position: 'topRight' });
         }
-
-        this.dialogRef.close('saved');
       },
       error: (err) => {
-        this.toast.error({ detail: "ERROR", summary: err.message, duration: 5000, /*sticky: true,*/ position: 'topRight' });
-
+        this.toast.error({ detail: "ERROR", summary: err.message, duration: 5000, position: 'topRight' });
       }
     });
     //}
