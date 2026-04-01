@@ -93,10 +93,10 @@ namespace eSyncMate.Processor.Managers
                                 continue;
                             }
 
-                            if (importStatus == "FAILED" || hasErrorReport)
-                            {
-                                feed.LowesUpdateStatusSCSInventoryFeed(customerId, batchId, importId);
-                            }
+                            //if (importStatus == "FAILED" || hasErrorReport)
+                            //{
+                            //    feed.LowesUpdateStatusSCSInventoryFeed(customerId, batchId, importId);
+                            //}
 
                             if (hasErrorReport)
                             {
@@ -114,13 +114,13 @@ namespace eSyncMate.Processor.Managers
                                 else
                                 {
                                     route.SaveLog(LogTypeEnum.Error, $"Lowes STO03 failed for import_id [{importId}]. HTTP {(int)sourceResponse.StatusCode} {sourceResponse.StatusCode}.", sourceResponse.Content ?? sourceResponse.ErrorMessage, userNo);
-                                    l_CustomerProductCatalog.UpdateInventoryBatchWiseStatus(batchId, importId, "Error", customerId, sourceResponse.Content ?? sourceResponse.ErrorMessage ?? "");
+                                    l_CustomerProductCatalog.UpdateInventoryBatchWiseStatus(batchId, importId, "Completed", customerId, sourceResponse.Content ?? sourceResponse.ErrorMessage ?? "");
                                 }
                             }
                             else if (importStatus == "FAILED")
                             {
                                 route.SaveLog(LogTypeEnum.Error, $"Import [{importId}] FAILED without error report.", sourceResponse.Content, userNo);
-                                l_CustomerProductCatalog.UpdateInventoryBatchWiseStatus(batchId, importId, "Error", customerId, sourceResponse.Content ?? "");
+                                l_CustomerProductCatalog.UpdateInventoryBatchWiseStatus(batchId, importId, "Completed", customerId, sourceResponse.Content ?? "");
                             }
                             else
                             {

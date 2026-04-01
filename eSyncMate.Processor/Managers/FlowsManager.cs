@@ -4,7 +4,6 @@ using System.Security.Claims;
 using System.Linq;
 using eSyncMate.DB.Entities;
 using eSyncMate.DB;
-using Hangfire;
 using Microsoft.Extensions.Configuration;
 
 namespace eSyncMate.Processor.Managers
@@ -102,33 +101,26 @@ namespace eSyncMate.Processor.Managers
                 RouteEngine l_Engine = new RouteEngine(config);
                 string l_DetailStatus = (detailModel.Status ?? "active").ToLower();
 
+                // Always remove existing RecurringJobs first
+                Routes l_FullRoute = new();
+                DBEntity.PopulateObjectFromRow(l_FullRoute, l_RoutesDT, l_RouteRow);
+                try { l_Engine.RemoveRouteJob(l_FullRoute); } catch { }
+
                 if (l_DetailStatus == "active")
                 {
-                    // Remove old jobs before scheduling new ones
-                    if (!string.IsNullOrEmpty(l_OldJobId))
-                    {
-                        try { BackgroundJob.Delete(l_OldJobId); } catch { }
-                    }
-                    // Remove any existing RecurringJobs for this route
-                    Routes l_FullRoute = new();
-                    DBEntity.PopulateObjectFromRow(l_FullRoute, l_RoutesDT, l_RouteRow);
-                    try { l_Engine.RemoveRouteJob(l_FullRoute); } catch { }
+                    // Apply scheduling from flow detail to route
+                    l_FullRoute.FrequencyType = detailModel.FrequencyType ?? l_FullRoute.FrequencyType;
+                    l_FullRoute.RepeatCount = detailModel.RepeatCount > 0 ? detailModel.RepeatCount : l_FullRoute.RepeatCount;
+                    l_FullRoute.WeekDays = detailModel.WeekDays ?? l_FullRoute.WeekDays;
+                    l_FullRoute.OnDay = detailModel.OnDay ?? l_FullRoute.OnDay;
+                    l_FullRoute.ExecutionTime = detailModel.ExecutionTime ?? l_FullRoute.ExecutionTime;
 
-                    var l_StartDate = detailModel.StartDate == default(DateTime) ? DateTime.Now : detailModel.StartDate;
-                    l_NewJobID = l_Engine.ScheduleWaitJob(new Routes { Id = l_RouteId, StartDate = l_StartDate });
+                    // Create RecurringJob and store returned job name as JobID
+                    l_NewJobID = l_Engine.SetupRouteJob(l_FullRoute);
                 }
-                else if ((l_OldStatus ?? "").Equals("active", StringComparison.CurrentCultureIgnoreCase) && l_DetailStatus != "active")
+                else
                 {
-                    // Transitioning Active -> InActive: remove all Hangfire jobs
-                    if (!string.IsNullOrEmpty(l_OldJobId))
-                    {
-                        try { BackgroundJob.Delete(l_OldJobId); } catch { }
-                    }
-                    // Remove RecurringJobs
-                    Routes l_FullRoute = new();
-                    DBEntity.PopulateObjectFromRow(l_FullRoute, l_RoutesDT, l_RouteRow);
-                    try { l_Engine.RemoveRouteJob(l_FullRoute); } catch { }
-
+                    // In-Active: ensure job is removed and clear JobID
                     l_NewJobID = null;
                 }
             }

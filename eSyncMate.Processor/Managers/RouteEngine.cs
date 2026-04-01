@@ -539,7 +539,7 @@ namespace eSyncMate.Processor.Managers
             }
         }
 
-        private void SetupRouteJob(Routes route)
+        public string SetupRouteJob(Routes route)
         {
 
             RouteEngine l_Engine = this;
@@ -603,6 +603,8 @@ namespace eSyncMate.Processor.Managers
                     }
                 }
             }
+
+            return $"Route [{route.Id}]";
         }
 
         public void RemoveRouteJob(Routes route)
@@ -679,14 +681,7 @@ namespace eSyncMate.Processor.Managers
                 RecurringJob.Trigger(route.JobID);
             }
         }
-        public string ScheduleWaitJob(Routes route)
-        {
-            TimeSpan l_Delay = route.StartDate - DateTime.Now;
-            if (l_Delay.TotalSeconds <= 0)
-            {
-                l_Delay = TimeSpan.FromSeconds(1);
-            }
-            return BackgroundJob.Schedule(() => this.Schedule(route.Id), l_Delay);
-        }
+
+
     }
 }

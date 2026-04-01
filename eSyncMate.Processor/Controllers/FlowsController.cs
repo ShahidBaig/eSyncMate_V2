@@ -329,7 +329,7 @@ namespace eSyncMate.Processor.Controllers
                     int detailCount = flowModel.FlowDetails?.Count ?? 0;
                     l_Response.Description = $"Flow {flowModel.Title} created! ({detailCount} detail(s) saved)";
 
-                    // Schedule Hangfire jobs and update Routes status after commit
+                    // Schedule Hangfire RecurringJobs and update Routes status after commit
                     if (flowModel.FlowDetails != null)
                     {
                         RouteEngine l_Engine = new RouteEngine(this._config);
@@ -343,13 +343,24 @@ namespace eSyncMate.Processor.Controllers
 
                                 if (l_DetailStatus.Equals("Active", StringComparison.OrdinalIgnoreCase))
                                 {
-                                    var l_StartDate = detailModel.StartDate == default(DateTime) ? DateTime.Now : detailModel.StartDate;
-                                    string l_JobId = l_Engine.ScheduleWaitJob(new Routes { Id = detailModel.RouteId.Value, StartDate = l_StartDate });
-                                    l_UpdateConn.Execute($"UPDATE Routes SET Status = 'Active', JobID = '{l_JobId ?? ""}', ModifiedDate = GETDATE() WHERE Id = {detailModel.RouteId.Value}");
+                                    // Load full route data for SetupRouteJob
+                                    Routes l_RouteForJob = new();
+                                    l_RouteForJob.UseConnection(CommonUtils.ConnectionString);
+                                    l_RouteForJob.Id = detailModel.RouteId.Value;
+                                    l_RouteForJob.GetObject();
+
+                                    // Apply scheduling from flow detail
+                                    l_RouteForJob.FrequencyType = detailModel.FrequencyType ?? l_RouteForJob.FrequencyType;
+                                    l_RouteForJob.RepeatCount = detailModel.RepeatCount > 0 ? detailModel.RepeatCount : l_RouteForJob.RepeatCount;
+                                    l_RouteForJob.WeekDays = detailModel.WeekDays ?? l_RouteForJob.WeekDays;
+                                    l_RouteForJob.OnDay = detailModel.OnDay ?? l_RouteForJob.OnDay;
+                                    l_RouteForJob.ExecutionTime = detailModel.ExecutionTime ?? l_RouteForJob.ExecutionTime;
+
+                                    string l_JobId = l_Engine.SetupRouteJob(l_RouteForJob);
+                                    l_UpdateConn.Execute($"UPDATE Routes SET Status = 'Active', JobID = '{l_JobId}', ModifiedDate = GETDATE() WHERE Id = {detailModel.RouteId.Value}");
                                 }
                                 else
                                 {
-                                    // InActive detail: ensure Route is also InActive with no job
                                     l_UpdateConn.Execute($"UPDATE Routes SET Status = 'In-Active', JobID = NULL, ModifiedDate = GETDATE() WHERE Id = {detailModel.RouteId.Value}");
                                 }
                             }
@@ -406,24 +417,14 @@ namespace eSyncMate.Processor.Controllers
                             l_RouteEntity.Id = l_RouteId;
                             l_RouteEntity.GetObject();
 
-                            // 1. Delete scheduled BackgroundJob (one-time wait job)
-                            if (!string.IsNullOrEmpty(l_RouteEntity.JobID))
-                            {
-                                try { BackgroundJob.Delete(l_RouteEntity.JobID); }
-                                catch (Exception hjEx)
-                                {
-                                    this._logger.LogWarning($"DeleteFlow: Failed to delete BackgroundJob [{l_RouteEntity.JobID}] for RouteId={l_RouteId}: {hjEx.Message}");
-                                }
-                            }
-
-                            // 2. Remove all RecurringJobs (Daily/Weekly/Monthly recurring patterns)
+                            // Remove RecurringJobs
                             try { l_CleanupEngine.RemoveRouteJob(l_RouteEntity); }
                             catch (Exception rrEx)
                             {
                                 this._logger.LogWarning($"DeleteFlow: Failed to remove RecurringJob for RouteId={l_RouteId}: {rrEx.Message}");
                             }
 
-                            // 3. Set Route to InActive and clear JobID
+                            // Set Route to InActive and clear JobID
                             l_Connection.Execute($"UPDATE Routes SET Status = 'In-Active', JobID = NULL, ModifiedDate = GETDATE() WHERE Id = {l_RouteId}");
                         }
                     }
@@ -658,44 +659,32 @@ namespace eSyncMate.Processor.Controllers
 
                             string l_DetailIdsStr = string.Join(",", l_RemovedDetailIds);
 
-                            // Delete Hangfire jobs and update Routes for removed details
+                            // Remove RecurringJobs and update Routes for removed details
                             RouteEngine l_CleanupEngine = new RouteEngine(this._config);
                             foreach (int l_RmRouteId in l_RemovedRouteIds)
                             {
                                 try
                                 {
-                                    // Get full Route data for proper Hangfire cleanup
                                     Routes l_RmRoute = new();
                                     l_RmRoute.UseConnection(string.Empty, l_Connection);
                                     l_RmRoute.Id = l_RmRouteId;
                                     l_RmRoute.GetObject();
-                                    string l_RmJobId = l_RmRoute.JobID;
 
-                                    // 1. Delete scheduled BackgroundJob (one-time wait job)
-                                    if (!string.IsNullOrEmpty(l_RmJobId))
-                                    {
-                                        try { BackgroundJob.Delete(l_RmJobId); }
-                                        catch (Exception hjEx)
-                                        {
-                                            this._logger.LogWarning($"UpdateFlow: Failed to delete BackgroundJob [{l_RmJobId}] for RouteId={l_RmRouteId}: {hjEx.Message}");
-                                        }
-                                    }
-
-                                    // 2. Remove all RecurringJobs (Daily/Weekly/Monthly recurring patterns)
+                                    // Remove RecurringJobs
                                     try { l_CleanupEngine.RemoveRouteJob(l_RmRoute); }
                                     catch (Exception rrEx)
                                     {
                                         this._logger.LogWarning($"UpdateFlow: Failed to remove RecurringJob for RouteId={l_RmRouteId}: {rrEx.Message}");
                                     }
 
-                                    // 3. Update Route: set InActive and clear JobID
+                                    // Update Route: set InActive
                                     l_Connection.Execute($"UPDATE Routes SET Status = 'In-Active', JobID = NULL, ModifiedDate = GETDATE(), ModifiedBy = {l_UserIdVal} WHERE Id = {l_RmRouteId}");
 
-                                    // 4. Log removal to FlowHistory
+                                    // Log removal to FlowHistory
                                     long l_RmDetailId = Convert.ToInt64(l_ExistingRows[l_RmRouteId]["Id"]);
-                                    l_Connection.Execute($"INSERT INTO FlowHistory (FlowId, FlowDetailId, RouteId, UserId, FlowStatus, JobId, CreatedDate, CreatedBy) VALUES ({flowModel.Id}, {l_RmDetailId}, {l_RmRouteId}, {l_UserIdVal}, 'DELETED', '{l_RmJobId ?? ""}', GETDATE(), {l_UserIdVal})");
+                                    l_Connection.Execute($"INSERT INTO FlowHistory (FlowId, FlowDetailId, RouteId, UserId, FlowStatus, JobId, CreatedDate, CreatedBy) VALUES ({flowModel.Id}, {l_RmDetailId}, {l_RmRouteId}, {l_UserIdVal}, 'DELETED', '', GETDATE(), {l_UserIdVal})");
 
-                                    this._logger.LogInformation($"UpdateFlow: Removed RouteId={l_RmRouteId} from Flow {flowModel.Id}. BackgroundJob [{l_RmJobId}] deleted, RecurringJobs removed, Route set to InActive.");
+                                    this._logger.LogInformation($"UpdateFlow: Removed RouteId={l_RmRouteId} from Flow {flowModel.Id}. RecurringJobs removed, Route set to InActive.");
                                 }
                                 catch (Exception rmEx)
                                 {

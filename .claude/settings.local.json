@@ -55,7 +55,16 @@
       "Bash(grep -l \"VW_Orders\\\\|VIEW.*Orders\" D:eSoftage_ProjectseSyncMate_V2eSyncMate.DataViews*)",
       "WebFetch(domain:www.espncricinfo.com)",
       "WebFetch(domain:www.geckoboard.com)",
-      "WebFetch(domain:uibakery.io)"
+      "WebFetch(domain:uibakery.io)",
+      "Bash(grep -i \"\\\\.sql$\")",
+      "WebFetch(domain:developer.mirakl.com)",
+      "WebFetch(domain:www.scribd.com)",
+      "WebFetch(domain:www.postman.com)",
+      "WebFetch(domain:docs.celigo.com)",
+      "WebFetch(domain:ssl.re-in.de)",
+      "WebFetch(domain:help.mirakl.com)",
+      "WebFetch(domain:seller.lowes.com)",
+      "WebFetch(domain:help.beezup.com)"
     ]
   },
   "enableAllProjectMcpServers": true,

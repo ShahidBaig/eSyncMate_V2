@@ -168,7 +168,6 @@ namespace eSyncMate.Processor.Controllers
         {
             GetRoutesResponseModel l_Response = new GetRoutesResponseModel();
             Result l_Result = new Result();
-            string l_JobID = string.Empty;
             try
             {
                 DB.Entities.Routes l_Routes = new DB.Entities.Routes();
@@ -188,9 +187,10 @@ namespace eSyncMate.Processor.Controllers
                     l_Routes.CustomerName = customerName;
                 }
 
+                // Create RecurringJob before save so JobID is included
                 if (l_Routes.Status == "Active")
                 {
-                    l_JobID = this.SetupRouteJob(l_Routes);
+                    string l_JobID = this.SetupRouteJob(l_Routes);
                     l_Routes.JobID = l_JobID;
                 }
 
@@ -229,7 +229,6 @@ namespace eSyncMate.Processor.Controllers
         {
             GetRoutesResponseModel l_Response = new GetRoutesResponseModel();
             Result l_Result = new Result();
-            string l_JobID = string.Empty;
 
             try
             {
@@ -255,16 +254,21 @@ namespace eSyncMate.Processor.Controllers
 
                 l_OldRoute.GetObject(l_Routes.Id);
 
+                // Remove old RecurringJobs if previously Active
                 if (l_OldRoute.Status == "Active")
                 {
                     this.RemoveRouteJob(l_OldRoute);
-                    l_Routes.JobID = null;
                 }
 
+                // Create RecurringJob and set JobID, or clear JobID if deactivating
                 if (l_Routes.Status == "Active")
                 {
-                    l_JobID = this.SetupRouteJob(l_Routes);
+                    string l_JobID = this.SetupRouteJob(l_Routes);
                     l_Routes.JobID = l_JobID;
+                }
+                else
+                {
+                    l_Routes.JobID = null;
                 }
 
                 l_Result = l_Routes.Modify();
@@ -574,8 +578,7 @@ namespace eSyncMate.Processor.Controllers
         private string SetupRouteJob(Routes route)
         {
             RouteEngine l_Engine = new RouteEngine(this._config);
-
-            return BackgroundJob.Schedule(() => l_Engine.Schedule(route.Id), route.StartDate - DateTime.Now);
+            return l_Engine.SetupRouteJob(route);
         }
 
         private void RemoveRouteJob(Routes route)
