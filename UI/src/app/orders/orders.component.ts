@@ -649,11 +649,9 @@ export class OrdersComponent implements OnInit {
     let customerName = (this.OrderForm.get('customerName') as FormControl).value;
     let stringFromDate = '';
     let stringToDate = '';
-    this.showSpinnerforSearch = true;
 
     if (((customerName == '' || customerName == null || customerName == undefined) && (orderId == '' || orderId == null || orderId == 0) && (fromDate == '' || fromDate == null) && (toDate == '' || toDate == undefined) && (orderNo == '' || orderNo == 'EMPTY') && (status == '' || status == 'Select Status') && (soNo == '' || soNo == 'EMPTY' || soNo == null || soNo == undefined))) {
       this.toast.info({ detail: "orderId", summary: this.languageService.getTranslation('provideFieldMessage'), duration: 5000, /*sticky: true,*/ position: 'topRight' });
-      this.showSpinnerforSearch = false;
       return;
     }
 
@@ -714,21 +712,14 @@ export class OrdersComponent implements OnInit {
           });
         }
 
-        if (this.code === 200) {
-          this.showSpinnerforSearch = false;
-        } else if (this.code === 400) {
+        if (this.code === 400) {
           this.toast.error({ detail: "ERROR", summary: this.msg, duration: 5000, position: 'topRight' });
-          this.showSpinnerforSearch = false;
-        } else {
-          this.toast.info({ detail: "INFO", summary: this.msg, duration: 5000, position: 'topRight' });
-          this.showSpinnerforSearch = false;
         }
-        this.showSpinnerforSearch = false;
+
         this.isLoading = false;
       },
       error: (err: any) => {
         this.toast.error({ detail: "ERROR", summary: err.message, duration: 5000, position: 'topRight' });
-        this.showSpinnerforSearch = false;
         this.isLoading = false;
       },
     });

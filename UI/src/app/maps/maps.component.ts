@@ -26,9 +26,6 @@ import { MatPaginatorModule } from '@angular/material/paginator';
 import { PageEvent } from '@angular/material/paginator';
 import { LanguageService } from '../services/language.service';
 import { TranslateModule } from '@ngx-translate/core'; 
-import { MatTableDataSource } from '@angular/material/table';
-import { MatPaginator } from '@angular/material/paginator';
-import { ViewChild } from '@angular/core';
 
 @Component({
   selector: 'maps',
@@ -76,8 +73,9 @@ export class MapsComponent implements OnInit {
   canAdd = false;
   canEdit = false;
   canDelete = false;
-  dataSource = new MatTableDataSource<Map>([]);
-  @ViewChild(MatPaginator) paginator!: MatPaginator;
+  totalCount: number = 0;
+  pageNumber: number = 1;
+  pageSize: number = 10;
 
   columns: string[] = [
     'id',
@@ -160,12 +158,16 @@ export class MapsComponent implements OnInit {
     return year + '-' + month + '-' + day;
   }
   onPageChange(event: PageEvent) {
-    const startIndex = event.pageIndex * event.pageSize;
-    this.mapsToDisplay = this.listOfMaps.slice(startIndex, startIndex + event.pageSize);
+    this.pageNumber = event.pageIndex + 1;
+    this.pageSize = event.pageSize;
+    this.getMaps();
   }
 
-  getMaps() {
-    this.showSpinnerforSearch = false;
+  getMaps(resetPage: boolean = false) {
+    if (resetPage) {
+      this.pageNumber = 1;
+    }
+
     let stringFromDate = '';
     let stringToDate = '';
 
@@ -184,46 +186,26 @@ export class MapsComponent implements OnInit {
     }
 
     this.isLoading = true;
-    this.api.getMaps(this.selectedOption, this.searchValue).subscribe({
+    this.api.getMaps(this.selectedOption, this.searchValue, this.pageNumber, this.pageSize).subscribe({
       next: (res: any) => {
-        this.listOfMaps = res.maps;
+        this.listOfMaps = res.maps ?? [];
+        this.totalCount = res.totalCount ?? 0;
+        this.mapsToDisplay = this.listOfMaps;
         this.msg = res.message;
         this.code = res.code;
 
-        if (this.listOfMaps == null || this.listOfMaps.length === 0) {
-          this.toast.info({ detail: "INFO", summary: this.languageService.getTranslation('noFilterDataMessage'), duration: 5000, /*sticky: true,*/ position: 'topRight' });
-          this.showSpinnerforSearch = false;
-          this.mapsToDisplay = [];
-
-          return;
+        if (this.listOfMaps.length === 0 && this.pageNumber === 1) {
+          this.toast.info({ detail: "INFO", summary: this.languageService.getTranslation('noFilterDataMessage'), duration: 5000, position: 'topRight' });
         }
 
-        //this.mapsToDisplay = this.listOfMaps.slice(0, 10);
-
-        this.dataSource.data = this.listOfMaps;  // set full list
-
-        setTimeout(() => {
-          this.dataSource.paginator = this.paginator;
-        }, 0); // ensures paginator initializes
-
-
-        if (this.code === 200) {
-          this.showSpinnerforSearch = false;
-        }
-        else if (this.code === 400) {
-          this.toast.error({ detail: "ERROR", summary: this.msg, duration: 5000, /*sticky: true,*/ position: 'topRight' });
-          this.showSpinnerforSearch = false;
-        } else {
-          this.toast.info({ detail: "INFO", summary: this.msg, duration: 5000, /*sticky: true,*/ position: 'topRight' });
-          this.showSpinnerforSearch = false;
+        if (this.code === 400) {
+          this.toast.error({ detail: "ERROR", summary: this.msg, duration: 5000, position: 'topRight' });
         }
 
-        this.showSpinnerforSearch = false;
         this.isLoading = false;
       },
       error: (err: any) => {
-        this.toast.error({ detail: "ERROR", summary: err.message, duration: 5000, /*sticky: true,*/ position: 'topRight' });
-        this.showSpinnerforSearch = false;
+        this.toast.error({ detail: "ERROR", summary: err.message, duration: 5000, position: 'topRight' });
         this.isLoading = false;
       },
     });

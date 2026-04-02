@@ -93,7 +93,7 @@
       <div style="display: flex; justify-content: flex-end; margin-bottom: 10px;">
         <button mat-flat-button color="primary" (click)="exportToExcel()">Export to Excel</button>
       </div>
-      <mat-progress-bar *ngIf="isLoading" mode="indeterminate" color="accent"></mat-progress-bar>
+      <mat-progress-bar [style.visibility]="isLoading ? 'visible' : 'hidden'" mode="indeterminate" color="accent"></mat-progress-bar>
       <table mat-table [dataSource]="customerProductCatalogToDisplay">
 
         <ng-container matColumnDef="ProductId">

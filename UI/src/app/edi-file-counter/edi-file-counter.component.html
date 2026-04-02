@@ -66,7 +66,7 @@
   <!-- src/app/edi-export/edi-export.component.html -->
 <mat-card>
   <mat-card-content>
-    <mat-progress-bar *ngIf="isLoading" mode="indeterminate" color="accent"></mat-progress-bar>
+    <mat-progress-bar [style.visibility]="isLoading ? 'visible' : 'hidden'" mode="indeterminate" color="accent"></mat-progress-bar>
     <table mat-table [dataSource]="ediDataToDisplay">
       <ng-container matColumnDef="CustomerName">
         <th mat-header-cell *matHeaderCellDef>{{ 'customerName' | translate }}</th>

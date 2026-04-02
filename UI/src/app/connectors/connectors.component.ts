@@ -27,9 +27,6 @@ import { PageEvent } from '@angular/material/paginator';
 import { LanguageService } from '../services/language.service';
 import { TranslateModule } from '@ngx-translate/core'; 
 import { ApiService } from '../services/api.service';
-import { MatTableDataSource } from '@angular/material/table';
-import { MatPaginator } from '@angular/material/paginator';
-import { ViewChild } from '@angular/core';
 
 @Component({
   selector: 'connectors',
@@ -77,8 +74,9 @@ export class ConnectorsComponent implements OnInit {
   canAdd = false;
   canEdit = false;
   canDelete = false;
-  dataSource = new MatTableDataSource<Connector>([]);
-  @ViewChild(MatPaginator) paginator!: MatPaginator;
+  totalCount: number = 0;
+  pageNumber: number = 1;
+  pageSize: number = 10;
 
   columns: string[] = [
     'id',
@@ -145,12 +143,9 @@ export class ConnectorsComponent implements OnInit {
   }
 
   onPageChange(event: PageEvent) {
-    const startIndex = event.pageIndex * event.pageSize;
-    this.connectorsToDisplay = this.listOfConnectors.slice(startIndex, startIndex + event.pageSize);
-  }
-
-  ngAfterViewInit(): void {
-    this.dataSource.paginator = this.paginator;
+    this.pageNumber = event.pageIndex + 1;
+    this.pageSize = event.pageSize;
+    this.getConnectors();
   }
 
   get label(): string {
@@ -170,7 +165,10 @@ export class ConnectorsComponent implements OnInit {
   }
 
   getConnectors(resetPage: boolean = false) {
-    this.showSpinnerforSearch = false;
+    if (resetPage) {
+      this.pageNumber = 1;
+    }
+
     let stringFromDate = '';
     let stringToDate = '';
 
@@ -189,57 +187,27 @@ export class ConnectorsComponent implements OnInit {
     }
 
     this.isLoading = true;
-    this.ConnectorsApi.getConnectors(this.selectedOption, this.searchValue).subscribe({
+    this.ConnectorsApi.getConnectors(this.selectedOption, this.searchValue, this.pageNumber, this.pageSize).subscribe({
       next: (res: any) => {
         this.msg = res.message;
         this.code = res.code;
 
-        // ✅ old page info BEFORE updating data
-        const oldPageIndex = this.paginator?.pageIndex ?? 0;
-        const oldPageSize = this.paginator?.pageSize ?? 10;
-
         this.listOfConnectors = res.connectors ?? [];
+        this.totalCount = res.totalCount ?? 0;
+        this.connectorsToDisplay = this.listOfConnectors;
 
-
-        if (this.listOfConnectors == null || this.listOfConnectors.length === 0) {
-          this.toast.info({ detail: "INFO", summary: this.languageService.getTranslation('noFilterDataMessage'), duration: 5000, /*sticky: true,*/ position: 'topRight' });
-          this.showSpinnerforSearch = false;
-          this.connectorsToDisplay = [];
-          this.dataSource.data = [];
-
-          return;
+        if (this.listOfConnectors.length === 0 && this.pageNumber === 1) {
+          this.toast.info({ detail: "INFO", summary: this.languageService.getTranslation('noFilterDataMessage'), duration: 5000, position: 'topRight' });
         }
 
-        this.dataSource.data = this.listOfConnectors;
-
-        // ✅ resetPage ? first page : keep old page
-        if (resetPage) {
-          this.paginator?.firstPage();
-        } else {
-          const maxPageIndex = Math.max(Math.ceil(this.listOfConnectors.length / oldPageSize) - 1, 0);
-          this.paginator.pageIndex = Math.min(oldPageIndex, maxPageIndex);
-
-          // force re-render on same page
-          this.paginator._changePageSize(this.paginator.pageSize);
+        if (this.code === 400) {
+          this.toast.error({ detail: "ERROR", summary: this.msg, duration: 5000, position: 'topRight' });
         }
 
-        if (this.code === 200) {
-          this.showSpinnerforSearch = false;
-        }
-        else if (this.code === 400) {
-          this.toast.error({ detail: "ERROR", summary: this.msg, duration: 5000, /*sticky: true,*/ position: 'topRight' });
-          this.showSpinnerforSearch = false;
-        } else {
-          this.toast.info({ detail: "INFO", summary: this.msg, duration: 5000, /*sticky: true,*/ position: 'topRight' });
-          this.showSpinnerforSearch = false;
-        }
-
-        this.showSpinnerforSearch = false;
         this.isLoading = false;
       },
       error: (err: any) => {
-        this.toast.error({ detail: "ERROR", summary: err.message, duration: 5000, /*sticky: true,*/ position: 'topRight' });
-        this.showSpinnerforSearch = false;
+        this.toast.error({ detail: "ERROR", summary: err.message, duration: 5000, position: 'topRight' });
         this.isLoading = false;
       },
     });

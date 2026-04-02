@@ -222,7 +222,7 @@ namespace eSyncMate.Processor.Controllers
 
         [HttpGet]
         [Route("getBatchData/{BatchID}")]
-        public async Task<GetInventoryResponseModel> GetBatchData(string BatchID)
+        public async Task<GetInventoryResponseModel> GetBatchData(string BatchID, [FromQuery] string itemID = "", [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
             MethodBase l_Me = MethodBase.GetCurrentMethod();
             GetInventoryResponseModel l_Response = new GetInventoryResponseModel();
@@ -240,9 +240,17 @@ namespace eSyncMate.Processor.Controllers
 
                 l_Inventory.UseConnection(CommonUtils.ConnectionString);
 
-                l_Inventory.GetBatchWiseData($"BatchID = '{BatchID}'", ref l_Data);
+                string l_BWCriteria = $"BatchID = '{BatchID}'";
+                if (!string.IsNullOrEmpty(itemID))
+                {
+                    l_BWCriteria += $" AND ItemId LIKE '%{itemID}%'";
+                }
+
+                int totalCount = 0;
+                l_Inventory.GetBatchWiseDataPaged(l_BWCriteria, ref l_Data, pageNumber, pageSize, out totalCount);
 
                 l_Response.BatchWiseInventory = l_Data;
+                l_Response.TotalCount = totalCount;
                 l_Response.Code = (int)ResponseCodes.Success;
                 l_Response.Message = "Batch Wise Inventory fetched successfully!";
 

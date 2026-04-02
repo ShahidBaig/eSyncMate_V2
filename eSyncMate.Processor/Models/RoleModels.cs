@@ -47,6 +47,7 @@ namespace eSyncMate.Processor.Models
         public string ExternalUrl { get; set; } = string.Empty;
         public int SortOrder { get; set; }
         public string Company { get; set; } = string.Empty;
+        public bool IsHidden { get; set; }
         public bool IsActive { get; set; }
         public DateTime CreatedDate { get; set; }
         public int CreatedBy { get; set; }
@@ -108,6 +109,36 @@ namespace eSyncMate.Processor.Models
     {
         public int UserId { get; set; }
         public int RoleId { get; set; }
+    }
+
+    // Direct user-menu assignment models (for hidden menus)
+    public class UserMenuDataModel
+    {
+        public int Id { get; set; }
+        public int UserId { get; set; }
+        public int MenuId { get; set; }
+        public bool CanView { get; set; }
+        public bool CanAdd { get; set; }
+        public bool CanEdit { get; set; }
+        public bool CanDelete { get; set; }
+        public DateTime CreatedDate { get; set; }
+        public int CreatedBy { get; set; }
+    }
+
+    public class GetUserMenusDirectResponseModel : ResponseModel
+    {
+        public List<UserMenuDataModel> UserMenus { get; set; }
+    }
+
+    public class GetHiddenMenusResponseModel : ResponseModel
+    {
+        public List<MenuDataModel> Menus { get; set; }
+    }
+
+    public class SaveUserMenusDirectRequestModel
+    {
+        public int UserId { get; set; }
+        public List<RoleMenuItemModel> Menus { get; set; }
     }
 
     // User menu tree models (returned after login)

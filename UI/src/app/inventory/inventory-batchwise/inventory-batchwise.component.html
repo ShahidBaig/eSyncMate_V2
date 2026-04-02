@@ -10,7 +10,7 @@
         {{ batchStatus }}
       </span>
     </div>
-    <span class="header-badge">{{ listBatchWiseInventory.length }} Items</span>
+    <span class="header-badge">{{ totalCount }} Items</span>
   </div>
 
   <!-- Search -->
@@ -24,8 +24,7 @@
           </mat-form-field>
 
           <button mat-flat-button color="accent" (click)="getBatchWiseItemID()" class="search-btn">
-            <span *ngIf="!showSpinnerforSearch">{{ 'search' | translate }}</span>
-            <mat-spinner *ngIf="showSpinnerforSearch" diameter="20"></mat-spinner>
+            <span>{{ 'search' | translate }}</span>
           </button>
         </div>
       </form>
@@ -37,6 +36,7 @@
     <mat-card class="table-card">
       <mat-card-content style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
         <div class="table-scroll">
+          <mat-progress-bar [style.visibility]="isLoading ? 'visible' : 'hidden'" mode="indeterminate" color="accent"></mat-progress-bar>
           <table mat-table [dataSource]="dataSource" class="fixed-table">
 
             <ng-container matColumnDef="CustomerID">
@@ -195,7 +195,7 @@
     </mat-card>
 
     <div class="paginator-section">
-      <mat-paginator [length]="listBatchWiseInventory.length" [pageSize]="10" [pageSizeOptions]="[5, 10, 15, 20, 100, 500]"
+      <mat-paginator [length]="totalCount" [pageSize]="pageSize" [pageSizeOptions]="[5, 10, 25, 100]"
                      (page)="onPageChange($event)" showFirstLastButtons>
       </mat-paginator>
     </div>

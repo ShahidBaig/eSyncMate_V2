@@ -13,7 +13,7 @@ This document describes the complete RBAC system implemented in eSyncMate V2, po
 | Table | Purpose |
 |-------|---------|
 | `Roles` | Role definitions (SuperAdmin, Admin, Operator, Viewer) |
-| `Modules` | Top-level menu groups (Order Management, Setup, Admin, etc.) |
+| `Modules` | Top-level menu groups (Orders, Setup, Admin, etc.) |
 | `Menus` | Individual menu items with routes, icons, and company filtering |
 | `RoleMenus` | Role-to-menu permission mapping (canView/canAdd/canEdit/canDelete) |
 | `UserRoles` | User-to-role assignment (one role per user) |
@@ -27,8 +27,83 @@ SELECT ur.UserId, r.RoleName, m.ModuleId, m.ModuleName, mn.MenuId, mn.MenuName,
 FROM UserRoles ur
 JOIN Roles r ON ur.RoleId = r.Id AND r.IsActive = 1
 JOIN RoleMenus rm ON r.Id = rm.RoleId AND rm.CanView = 1
-JOIN Menus mn ON rm.MenuId = mn.Id AND mn.IsActive = 1
+JOIN Menus mn ON rm.MenuId = mn.Id AND mn.IsActive = 1 AND (mn.IsHidden = 0 OR mn.IsHidden IS NULL)
 JOIN Modules m ON mn.ModuleId = m.Id AND m.IsActive = 1
+```
+
+### Hidden Menus (`IsHidden` Flag)
+
+The `Menus.IsHidden` column controls menu visibility across the entire system:
+
+| IsHidden | Behavior |
+|----------|----------|
+| `0` (default) | Menu is visible in navigation and role assignment UI |
+| `1` | Menu is completely hidden — not shown in nav, not assignable in roles |
+
+**Currently Hidden Menus:**
+| Menu | Route | Reason |
+|------|-------|--------|
+| Connectors | `edi/connectors` | Internal setup — not needed for client users |
+| Maps | `edi/maps` | Internal setup — not needed for client users |
+| Partner Groups | `edi/partnergroups` | Internal setup — not needed for client users |
+| Routes | `edi/routes` | Internal setup — not needed for client users |
+| Route Types | `edi/routeTypes` | Internal setup — not needed for client users |
+| Hangfire Dashboard | `hangfire/dashboard` | System admin tool — not for end users |
+
+**How it works:**
+- Hidden menus are **permanently excluded** from the Role Management UI (`getMenus` filters `IsHidden = 0`)
+- Hidden menus are **excluded** from `VW_UserMenus` role-based query
+- Hidden menus can be **granted to specific users** via the `UserMenus` table (direct assignment)
+- `VW_UserMenus` uses a `UNION` of role-based menus + direct user-menu assignments
+
+### Direct User Menu Assignment (`UserMenus` Table)
+
+For granting hidden menus to specific users without making them role-configurable:
+
+| Table | Purpose |
+|-------|---------|
+| `UserMenus` | Direct user-to-menu mapping that bypasses roles entirely |
+
+**Columns:** `Id`, `UserId`, `MenuId`, `CanView`, `CanAdd`, `CanEdit`, `CanDelete`, `CreatedDate`, `CreatedBy`
+
+**How to grant hidden menus to a specific user:**
+```sql
+-- Grant Connectors (MenuId=8) to user with Id=1
+DECLARE @Id INT = (SELECT ISNULL(MAX(Id), 0) + 1 FROM [dbo].[UserMenus]);
+INSERT INTO [dbo].[UserMenus] (Id, UserId, MenuId, CanView, CanAdd, CanEdit, CanDelete, CreatedDate, CreatedBy)
+VALUES (@Id, 1, 8, 1, 1, 1, 1, GETDATE(), 0);
+
+-- Revoke it
+DELETE FROM [dbo].[UserMenus] WHERE UserId = 1 AND MenuId = 8;
+```
+
+**API Endpoints for direct user-menu management:**
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/Role/getHiddenMenus` | GET | List all hidden menus (for admin UI) |
+| `/api/Role/getUserMenusDirect?userId=X` | GET | Get direct menu assignments for a user |
+| `/api/Role/saveUserMenusDirect` | POST | Save direct menu assignments for a user |
+
+**Security architecture:**
+```
+                    ┌─────────────────────┐
+                    │   Role Management   │
+                    │   (Roles UI)        │
+                    │                     │
+                    │  Only sees menus    │
+                    │  where IsHidden=0   │
+                    └─────────┬───────────┘
+                              │
+              ┌───────────────┴───────────────┐
+              │         VW_UserMenus          │
+              │          (UNION)              │
+              ├───────────────┬───────────────┤
+              │  Role-Based   │  Direct User  │
+              │  (IsHidden=0) │  (UserMenus)  │
+              │  via Roles +  │  Any menu,    │
+              │  RoleMenus    │  per user     │
+              └───────────────┴───────────────┘
 ```
 
 ### Company-Scoped Menus
@@ -59,7 +134,7 @@ All tables use manual ID generation via the ORM's `GetMax()` method. This is the
 |----|------|-------------|-------------|
 | 1 | SuperAdmin | Full access to all modules | All menus, full CRUD |
 | 2 | Admin | Access to most menus | All menus except Role Management |
-| 3 | Operator | Operational menus | Orders, Purchases, Products, Exceptions, Alerts (no delete) |
+| 3 | Operator | Operational menus | Orders, Products, Exceptions, Setup (no delete) |
 | 4 | Viewer | Read-only access | Orders, Purchases, Products (view only) |
 
 ---
@@ -69,14 +144,13 @@ All tables use manual ID generation via the ORM's `GetMax()` method. This is the
 | Id | Name | Icon | Sort |
 |----|------|------|------|
 | 1 | Dashboard | dashboard | 1 |
-| 2 | Order Management | shopping_cart | 2 |
-| 3 | Purchases | receipt_long | 3 |
-| 4 | Carrier Load Management | local_shipping | 4 |
-| 5 | Product Management | inventory_2 | 5 |
-| 6 | Setup | settings | 6 |
-| 7 | Exceptions | error | 7 |
-| 8 | Admin | admin_panel_settings | 8 |
-| 9 | Alerts | notifications | 9 |
+| 2 | Orders | shopping_cart | 2 |
+| 3 | Products | inventory_2 | 3 |
+| 4 | Setup | settings | 4 |
+| 5 | Logs | description | 5 |
+| 6 | Admin | admin_panel_settings | 6 |
+
+> **Note:** Alerts module was removed. Alert Configuration is now under Setup.
 
 ---
 
@@ -85,29 +159,29 @@ All tables use manual ID generation via the ORM's `GetMax()` method. This is the
 | Route | Menu Name | Module | Company |
 |-------|-----------|--------|---------|
 | `edi/dashboard` | Dashboard | Dashboard | ESYNCMATE,REPAINTSTUDIOS |
-| `edi/all-orders` | Orders | Order Management | ESYNCMATE,REPAINTSTUDIOS |
-| `edi/customers` | Customers | Order Management / Carrier Load | ESYNCMATE,REPAINTSTUDIOS / GECKOTECH |
+| `edi/all-orders` | Orders | Orders | ESYNCMATE,REPAINTSTUDIOS |
+| `edi/customers` | Customers | Orders / Carrier Load | ESYNCMATE,REPAINTSTUDIOS / GECKOTECH |
 | `edi/purchaseOrder` | Purchase Orders | Purchases | SURGIMAC |
 | `edi/carrier` | Carrier Load Tender | Carrier Load Management | GECKOTECH |
 | `edi/ediFileCounter` | EDI File Counter | Carrier Load Management | GECKOTECH |
-| `edi/customerProductCatalog` | Customer Product Catalog | Product Management | ESYNCMATE |
-| `edi/productuploadprices` | Product Upload Prices | Product Management | ESYNCMATE |
-| `edi/productPrices` | Product Prices | Product Management | ESYNCMATE |
-| `edi/inventory` | Inventory | Product Management | ESYNCMATE |
-| `edi/invFeedFromNDC` | Inv Feed From NDC | Product Management | SURGIMAC |
-| `edi/sipmentFromNdc` | Shipment From NDC | Product Management | SURGIMAC |
-| `edi/salesInvoiceNdc` | Sales Invoice NDC | Product Management | SURGIMAC |
-| `edi/purchaseOrdersTracking` | PO Tracking | Product Management | SURGIMAC |
+| `edi/customerProductCatalog` | Customer Product Catalog | Products | ESYNCMATE |
+| `edi/productuploadprices` | Product Upload Prices | Products | ESYNCMATE |
+| `edi/productPrices` | Product Prices | Products | ESYNCMATE |
+| `edi/inventory` | Inventory Feed Summary | Products | ESYNCMATE |
+| `edi/invFeedFromNDC` | Inv Feed From NDC | Products | SURGIMAC |
+| `edi/sipmentFromNdc` | Shipment From NDC | Products | SURGIMAC |
+| `edi/salesInvoiceNdc` | Sales Invoice NDC | Products | SURGIMAC |
+| `edi/purchaseOrdersTracking` | PO Tracking | Products | SURGIMAC |
 | `edi/connectors` | Connectors | Setup | Shared |
 | `edi/maps` | Maps | Setup | Shared |
 | `edi/partnergroups` | Partner Groups | Setup | Shared |
 | `edi/routes` | Routes | Setup | Shared |
 | `edi/routeTypes` | Route Types | Setup | Shared |
 | `edi/flows` | Flows | Setup | Shared |
-| `edi/routeExceptions` | Route Exceptions | Exceptions | Shared |
+| `edi/routeExceptions` | Exceptions | Logs | Shared |
 | `edi/users` | User Management | Admin | Shared |
 | `edi/roles` | Role Management | Admin | Shared |
-| `edi/alertConfiguration` | Alert Configuration | Alerts | Shared |
+| `edi/alertConfiguration` | Alert Configuration | Setup | Shared |
 
 ---
 

@@ -1,11 +1,11 @@
-import { Component, Inject, OnInit, NgModule } from '@angular/core';
-import { DatePipe, NgIf, formatDate } from '@angular/common';
+import { Component, Inject, OnInit } from '@angular/core';
+import { DatePipe, NgIf } from '@angular/common';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatCardModule } from '@angular/material/card';
-import { FormGroup, FormControl, FormBuilder, Validators, ReactiveFormsModule, FormsModule } from '@angular/forms';
+import { FormGroup, FormControl, FormBuilder, ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
@@ -14,16 +14,14 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialog, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { CommonModule } from '@angular/common';
 import { MatSelectModule } from '@angular/material/select';
-import { FileContentViewerDialogComponent } from '../../file-content-viewer-dialog/file-content-viewer-dialog.component';
-import { RouteDataService } from '../../services/routedata.service';
-import { BatchWiseInventory, Inventory, RouteData } from '../../models/models';
+import { BatchWiseInventory, Inventory } from '../../models/models';
 import { LanguageService } from '../../services/language.service';
 import { TranslateModule } from '@ngx-translate/core';
 import { PageEvent } from '@angular/material/paginator';
 import { MatPaginatorModule } from '@angular/material/paginator';
-import * as moment from 'moment';
 import { environment } from 'src/environments/environment';
 import { InventoryService } from '../../services/inventory.service';
 import { InventorypopupComponent } from '../inventory-popup/inventory-popup.component';
@@ -48,44 +46,46 @@ import { InventorypopupComponent } from '../inventory-popup/inventory-popup.comp
     MatTooltipModule,
     MatIconModule,
     MatProgressSpinnerModule,
+    MatProgressBarModule,
     CommonModule,
     MatSelectModule,
     MatPaginatorModule,
     TranslateModule
   ],
 })
-export class InventoryBatchwiseComponent {
+export class InventoryBatchwiseComponent implements OnInit {
 
   mydate = environment.date;
-  displayedColumns: string[] = ['CustomerID', 'ItemID', 'SyncDate', 'Status', 'CustomerItemCode', 'ETADate', 'ETAQty', 'TotalATS', 'ATSL10', 'ATSL21', 'ATSL28', 'ATSL29', 'ATSL30', 'ATSL34', 'ATSL35', 'ATSL36', 'ATSL37', 'ATSL40', 'ATSL41', 'ATSL55', 'ATSL56', 'ATSL57', 'ATSL60', 'ATSL65', 'ATSL70', 'ATSL91','File',]; // Add the actual column names from your data
-  //'ATSL10', 'ATSL21', 'ATSL28', 'ATSL30', 'ATSL34', 'ATSL35', 'ATSL36', 'ATSL37', 'ATSL40', 'ATSL41', 'ATSL55', 'ATSL60', 'ATSL70', 'ATSL91'
-  dataSource = this.data.listofInventoryFiles || [];
-  batchID?: string;
+  displayedColumns: string[] = ['CustomerID', 'ItemID', 'SyncDate', 'Status', 'CustomerItemCode', 'ETADate', 'ETAQty', 'TotalATS', 'ATSL10', 'ATSL21', 'ATSL28', 'ATSL29', 'ATSL30', 'ATSL34', 'ATSL35', 'ATSL36', 'ATSL37', 'ATSL40', 'ATSL41', 'ATSL55', 'ATSL56', 'ATSL57', 'ATSL60', 'ATSL65', 'ATSL70', 'ATSL91','File',];
+  dataSource: any[] = [];
+  batchID: string = '';
   batchStatus: string = '';
   routeType: string = '';
   dateColumnLabel: string = 'Sent Date';
   showSpinner: boolean = false;
+  isLoading: boolean = false;
   msg: string = '';
   code: number = 0;
-  showSpinnerforSearch: boolean = false;
   loadingStates = new Map<number, boolean>();
   batchWiseInventoryForm: FormGroup;
-  listBatchWiseInventory: BatchWiseInventory[] = [];
-  listOfInventoryFiles: Inventory[] = []
-  constructor(
+  listOfInventoryFiles: Inventory[] = [];
+  totalCount: number = 0;
+  pageNumber: number = 1;
+  pageSize: number = 10;
 
+  constructor(
     public dialogRef: MatDialogRef<InventoryBatchwiseComponent>,
-    @Inject(MAT_DIALOG_DATA) public data: any, private dialog: MatDialog, private api: InventoryService, private fb: FormBuilder, private toast: NgToastService, public languageService: LanguageService) {
-    this.batchID = data.listofInventoryFiles[0].batchID;
+    @Inject(MAT_DIALOG_DATA) public data: any,
+    private dialog: MatDialog,
+    private api: InventoryService,
+    private fb: FormBuilder,
+    private toast: NgToastService,
+    public languageService: LanguageService
+  ) {
+    this.batchID = data.batchID || (data.listofInventoryFiles?.[0]?.batchID ?? '');
     this.batchStatus = data.batchStatus || '';
     this.routeType = data.routeType || '';
     this.dateColumnLabel = this.isReceivedType() ? 'Received Date' : 'Sent Date';
-
-    const threeDaysAgo = new Date();
-    threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
-
-    const today = new Date();
-    today.setDate(today.getDate() + this.mydate);
 
     this.batchWiseInventoryForm = this.fb.group({
       itemID: fb.control('')
@@ -95,17 +95,9 @@ export class InventoryBatchwiseComponent {
       this.batchWiseInventoryForm.get('itemID')?.setValue(this.data.itemID);
     }
   }
+
   ngOnInit(): void {
-    //this.getSearchRouteData();
-    if (this.data.itemID)
-      this.listBatchWiseInventory = this.dataSource.filter((item: any) =>
-        item.itemId.toString().includes(this.data.itemID.toString())
-      );
-    else
-      this.listBatchWiseInventory = this.dataSource;
-
-    this.dataSource = this.listBatchWiseInventory.slice(0, 10);
-
+    this.loadBatchData();
   }
 
   isReceivedType(): boolean {
@@ -117,56 +109,48 @@ export class InventoryBatchwiseComponent {
     this.dialogRef.close();
   }
 
-  isLoading(fileId: number): boolean {
-    // Retrieve loading state for a specific fileId
+  isLoadingFile(fileId: number): boolean {
     return this.loadingStates.get(fileId) || false;
   }
 
-  getBatchWiseItemID() {
-
-    let itemID = (this.batchWiseInventoryForm.get('itemID') as FormControl).value;
-
-    this.showSpinnerforSearch = true;
-    let batchID: any = this.batchID;
-
-    // if (((itemID == '' ))) {
-    //   this.toast.info({ detail: "orderId", summary: this.languageService.getTranslation('provideFieldMessage'), duration: 5000, /*sticky: true,*/ position: 'topRight' });
-    //   this.showSpinnerforSearch = false;
-    //   return;
-    // }
-
-    if (itemID)
-      this.listBatchWiseInventory = this.dataSource.filter((item: any) =>
-        item.itemId.toString().includes(itemID.toString())
-      );
-      else
-      this.listBatchWiseInventory = this.data.listofInventoryFiles;
-
-      this.dataSource = this.listBatchWiseInventory.slice(0, 10);
-
-      this.showSpinnerforSearch = false;
-  }
-
-  getFormattedDate(date: any) {
-    // let year = date.getFullYear();
-    // let month = (1 + date.getMonth()).toString().padStart(2, '0');
-    // let day = date.getDate().toString().padStart(2, '0');
-
-    // return year + '-' + month + '-' + day;
-    return moment(date).format('YYYY-MM-DD');
-  }
-
   onPageChange(event: PageEvent) {
-    const startIndex = event.pageIndex * event.pageSize;
-    this.dataSource = this.listBatchWiseInventory.slice(startIndex, startIndex + event.pageSize);
+    this.pageNumber = event.pageIndex + 1;
+    this.pageSize = event.pageSize;
+    this.loadBatchData();
   }
 
+  getBatchWiseItemID() {
+    this.pageNumber = 1;
+    this.loadBatchData();
+  }
+
+  loadBatchData() {
+    this.isLoading = true;
+    const itemID = this.batchWiseInventoryForm.get('itemID')?.value || '';
+    this.api.getbatchWise(this.batchID, itemID, this.pageNumber, this.pageSize).subscribe({
+      next: (res: any) => {
+        this.dataSource = res.batchWiseInventory ?? [];
+        this.totalCount = res.totalCount ?? 0;
+        this.msg = res.message;
+        this.code = res.code;
+
+        if (this.dataSource.length === 0 && this.pageNumber === 1) {
+          this.toast.info({ detail: "INFO", summary: this.languageService.getTranslation('noInventoryDataMsg'), duration: 5000, position: 'topRight' });
+        }
+
+        this.isLoading = false;
+      },
+      error: (err: any) => {
+        this.toast.error({ detail: "ERROR", summary: err.message, duration: 5000, position: 'topRight' });
+        this.isLoading = false;
+      },
+    });
+  }
 
   getInventoryFiles(element: any) {
     let customerId = element.customerID;
     let itemId = element.itemId;
     let batchId = element.batchID;
-
 
     this.showSpinner = false;
 
@@ -177,9 +161,8 @@ export class InventoryBatchwiseComponent {
         this.code = res.code;
 
         if (this.listOfInventoryFiles.length === 0) {
-          this.toast.info({ detail: "INFO", summary: this.languageService.getTranslation('noInventoryDataMsg'), duration: 5000, /*sticky: true,*/ position: 'topRight' });
+          this.toast.info({ detail: "INFO", summary: this.languageService.getTranslation('noInventoryDataMsg'), duration: 5000, position: 'topRight' });
           this.showSpinner = false;
-
           return;
         }
 
@@ -196,7 +179,7 @@ export class InventoryBatchwiseComponent {
         this.showSpinner = false;
       },
       error: (err: any) => {
-        this.toast.error({ detail: "ERROR", summary: err.message, duration: 5000, /*sticky: true,*/ position: 'topRight' });
+        this.toast.error({ detail: "ERROR", summary: err.message, duration: 5000, position: 'topRight' });
         this.showSpinner = false;
       },
     });

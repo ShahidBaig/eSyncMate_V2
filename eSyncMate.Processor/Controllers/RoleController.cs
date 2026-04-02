@@ -196,7 +196,7 @@ namespace eSyncMate.Processor.Controllers
                 l_Response.Code = (int)ResponseCodes.Error;
 
                 l_Entity.UseConnection(CommonUtils.ConnectionString);
-                l_Entity.GetList("IsActive = 1", string.Empty, ref l_Data, "ModuleId ASC, SortOrder ASC");
+                l_Entity.GetList("IsActive = 1 AND (IsHidden = 0 OR IsHidden IS NULL)", string.Empty, ref l_Data, "ModuleId ASC, SortOrder ASC");
 
                 l_Response.Menus = new List<MenuDataModel>();
                 foreach (DataRow l_Row in l_Data.Rows)
@@ -461,6 +461,127 @@ namespace eSyncMate.Processor.Controllers
             finally
             {
                 l_Data.Dispose();
+            }
+
+            return l_Response;
+        }
+
+        [HttpGet]
+        [Route("getHiddenMenus")]
+        public async Task<GetHiddenMenusResponseModel> GetHiddenMenus()
+        {
+            GetHiddenMenusResponseModel l_Response = new GetHiddenMenusResponseModel();
+            DataTable l_Data = new DataTable();
+
+            try
+            {
+                Menus l_Entity = new Menus();
+                l_Response.Code = (int)ResponseCodes.Error;
+
+                l_Entity.UseConnection(CommonUtils.ConnectionString);
+                l_Entity.GetList("IsActive = 1 AND IsHidden = 1", string.Empty, ref l_Data, "ModuleId ASC, SortOrder ASC");
+
+                l_Response.Menus = new List<MenuDataModel>();
+                foreach (DataRow l_Row in l_Data.Rows)
+                {
+                    MenuDataModel l_Item = new MenuDataModel();
+                    DBEntity.PopulateObjectFromRow(l_Item, l_Data, l_Row);
+                    l_Response.Menus.Add(l_Item);
+                }
+
+                l_Response.Code = (int)ResponseCodes.Success;
+                l_Response.Message = "Hidden menus fetched successfully!";
+            }
+            catch (Exception ex)
+            {
+                l_Response.Code = (int)ResponseCodes.Exception;
+                l_Response.Message = ex.Message;
+            }
+            finally
+            {
+                l_Data.Dispose();
+            }
+
+            return l_Response;
+        }
+
+        [HttpGet]
+        [Route("getUserMenusDirect")]
+        public async Task<GetUserMenusDirectResponseModel> GetUserMenusDirect(int userId)
+        {
+            GetUserMenusDirectResponseModel l_Response = new GetUserMenusDirectResponseModel();
+            DataTable l_Data = new DataTable();
+
+            try
+            {
+                UserMenus l_Entity = new UserMenus();
+                l_Response.Code = (int)ResponseCodes.Error;
+
+                l_Entity.UseConnection(CommonUtils.ConnectionString);
+                l_Entity.GetList($"UserId = {userId}", string.Empty, ref l_Data);
+
+                l_Response.UserMenus = new List<UserMenuDataModel>();
+                foreach (DataRow l_Row in l_Data.Rows)
+                {
+                    UserMenuDataModel l_Item = new UserMenuDataModel();
+                    DBEntity.PopulateObjectFromRow(l_Item, l_Data, l_Row);
+                    l_Response.UserMenus.Add(l_Item);
+                }
+
+                l_Response.Code = (int)ResponseCodes.Success;
+                l_Response.Message = "User direct menus fetched successfully!";
+            }
+            catch (Exception ex)
+            {
+                l_Response.Code = (int)ResponseCodes.Exception;
+                l_Response.Message = ex.Message;
+            }
+            finally
+            {
+                l_Data.Dispose();
+            }
+
+            return l_Response;
+        }
+
+        [HttpPost]
+        [Route("saveUserMenusDirect")]
+        public async Task<ResponseModel> SaveUserMenusDirect([FromBody] SaveUserMenusDirectRequestModel model)
+        {
+            ResponseModel l_Response = new ResponseModel();
+
+            try
+            {
+                UserMenus l_Entity = new UserMenus();
+                l_Entity.UseConnection(CommonUtils.ConnectionString);
+
+                // Delete existing direct menu assignments for this user
+                l_Entity.DeleteByUserId(model.UserId);
+
+                // Insert new direct menu assignments
+                foreach (var menuItem in model.Menus)
+                {
+                    UserMenus l_NewEntity = new UserMenus();
+                    l_NewEntity.UseConnection(CommonUtils.ConnectionString);
+                    l_NewEntity.UserId = model.UserId;
+                    l_NewEntity.MenuId = menuItem.MenuId;
+                    l_NewEntity.CanView = menuItem.CanView;
+                    l_NewEntity.CanAdd = menuItem.CanAdd;
+                    l_NewEntity.CanEdit = menuItem.CanEdit;
+                    l_NewEntity.CanDelete = menuItem.CanDelete;
+                    l_NewEntity.CreatedDate = DateTime.Now;
+                    l_NewEntity.CreatedBy = 0;
+
+                    l_NewEntity.SaveNew();
+                }
+
+                l_Response.Code = (int)ResponseCodes.Success;
+                l_Response.Message = "User direct menus saved successfully!";
+            }
+            catch (Exception ex)
+            {
+                l_Response.Code = (int)ResponseCodes.Exception;
+                l_Response.Message = ex.Message;
             }
 
             return l_Response;

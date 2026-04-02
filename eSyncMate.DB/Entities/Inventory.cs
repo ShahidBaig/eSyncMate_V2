@@ -464,5 +464,19 @@ namespace eSyncMate.DB.Entities
 
             return Connection.GetData(l_SQL, ref p_Data);
         }
+
+        public bool GetBatchWiseDataPaged(string p_Criteria, ref DataTable p_Data, int pageNumber, int pageSize, out int totalCount)
+        {
+            totalCount = 0;
+            string l_CountQuery = $"SELECT COUNT(*) FROM VW_BatchWiseInventory WHERE {p_Criteria}";
+            var l_CountData = new DataTable();
+            Connection.GetData(l_CountQuery, ref l_CountData);
+            if (l_CountData.Rows.Count > 0) totalCount = Convert.ToInt32(l_CountData.Rows[0][0]);
+            l_CountData.Dispose();
+
+            int offset = (pageNumber - 1) * pageSize;
+            string l_SQL = $"SELECT * FROM VW_BatchWiseInventory WHERE {p_Criteria} ORDER BY Id DESC OFFSET {offset} ROWS FETCH NEXT {pageSize} ROWS ONLY";
+            return Connection.GetData(l_SQL, ref p_Data);
+        }
     }
 }

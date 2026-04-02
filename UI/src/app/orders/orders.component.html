@@ -66,9 +66,8 @@
             </mat-select>
           </mat-form-field>
 
-          <button mat-flat-button color="accent" (click)="getOrders()" class="search-btn">
-            <span *ngIf="!showSpinnerforSearch">{{ 'searchOrders' | translate }}</span>
-            <mat-spinner *ngIf="showSpinnerforSearch" diameter="20"></mat-spinner>
+          <button mat-flat-button color="accent" (click)="getOrders(true)" class="search-btn">
+            <span>{{ 'searchOrders' | translate }}</span>
           </button>
         </div>
       </form>
@@ -79,7 +78,7 @@
   &nbsp;
   <mat-card>
     <mat-card-content>
-      <mat-progress-bar *ngIf="isLoading" mode="indeterminate" color="accent"></mat-progress-bar>
+      <mat-progress-bar [style.visibility]="isLoading ? 'visible' : 'hidden'" mode="indeterminate" color="accent"></mat-progress-bar>
       <table mat-table [dataSource]="ordersToDisplay">
 
         <ng-container matColumnDef="id">

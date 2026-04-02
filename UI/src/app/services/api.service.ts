@@ -140,6 +140,19 @@ export class ApiService {
     return this.http.post(`${this.apiUrl}api/Role/saveUserRole`, data);
   }
 
+  // Direct user-menu assignments (for hidden menus)
+  getHiddenMenus(): Observable<any> {
+    return this.http.get(`${this.apiUrl}api/Role/getHiddenMenus`);
+  }
+
+  getUserMenusDirect(userId: number): Observable<any> {
+    return this.http.get(`${this.apiUrl}api/Role/getUserMenusDirect?userId=${userId}`);
+  }
+
+  saveUserMenusDirect(data: any): Observable<any> {
+    return this.http.post(`${this.apiUrl}api/Role/saveUserMenusDirect`, data);
+  }
+
   getTokenUserInfo(): User | null {
     if (!this.isLoggedIn()) return null;
     let token = this.jwt.decodeToken();
@@ -315,18 +328,22 @@ export class ApiService {
     );
   }
 
-  getMaps(searchOption: string, searchValue: string): Observable<any> {
+  getMaps(searchOption: string, searchValue: string, pageNumber: number = 1, pageSize: number = 10): Observable<any> {
     const params = new HttpParams()
       .set('searchOption', searchOption)
-      .set('searchValue', searchValue);
+      .set('searchValue', searchValue)
+      .set('pageNumber', pageNumber.toString())
+      .set('pageSize', pageSize.toString());
 
     return this.http.get(`${this.apiUrl}api/Maps/getMaps`, { params });
   }
 
-  getPartnerGroups(searchOption: string, searchValue: string): Observable<any> {
+  getPartnerGroups(searchOption: string, searchValue: string, pageNumber: number = 1, pageSize: number = 10): Observable<any> {
     const params = new HttpParams()
       .set('searchOption', searchOption)
-      .set('searchValue', searchValue);
+      .set('searchValue', searchValue)
+      .set('pageNumber', pageNumber.toString())
+      .set('pageSize', pageSize.toString());
 
     return this.http.get(`${this.apiUrl}api/PartnerGroups/getPartnerGroups`, { params });
   }

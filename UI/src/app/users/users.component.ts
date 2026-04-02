@@ -63,6 +63,9 @@ import { RouterLink } from '@angular/router';
 })
 export class UsersComponent {
   isLoading: boolean = false;
+  totalCount: number = 0;
+  pageNumber: number = 1;
+  pageSize: number = 10;
   listOfUsers: User[] = [];
   UserToDisplay: User[] = [];
   msg: string = '';
@@ -186,12 +189,16 @@ export class UsersComponent {
   }
 
   onPageChange(event: PageEvent) {
-    const startIndex = event.pageIndex * event.pageSize;
-    this.UserToDisplay = this.listOfUsers.slice(startIndex, startIndex + event.pageSize);
+    this.pageNumber = event.pageIndex + 1;
+    this.pageSize = event.pageSize;
+    this.getUsers();
   }
 
-  getUsers() {
-    this.showSpinnerforSearch = false;
+  getUsers(resetPage: boolean = false) {
+    if (resetPage) {
+      this.pageNumber = 1;
+    }
+
     let stringFromDate = '';
     let stringToDate = '';
 
@@ -210,38 +217,26 @@ export class UsersComponent {
     }
 
     this.isLoading = true;
-    this.api.getUsers(this.selectedOption, this.searchValue).subscribe({
+    this.api.getUsers(this.selectedOption, this.searchValue, this.pageNumber, this.pageSize).subscribe({
       next: (res: any) => {
-        this.listOfUsers = res.user;
+        this.listOfUsers = res.user ?? [];
+        this.totalCount = res.totalCount ?? 0;
+        this.UserToDisplay = this.listOfUsers;
         this.msg = res.message;
         this.code = res.code;
 
-        if (this.listOfUsers == null || this.listOfUsers.length === 0) {
+        if (this.listOfUsers.length === 0 && this.pageNumber === 1) {
           this.toast.info({ detail: "INFO", summary: this.languageService.getTranslation('noFilterDataMessage'), duration: 5000, position: 'topRight' });
-          this.showSpinnerforSearch = false;
-          this.UserToDisplay = [];
-          return;
         }
 
-        this.UserToDisplay = this.listOfUsers.slice(0, 10);
-
-        if (this.code === 200) {
-          this.showSpinnerforSearch = false;
-        }
-        else if (this.code === 400) {
+        if (this.code === 400) {
           this.toast.error({ detail: "ERROR", summary: this.msg, duration: 5000, position: 'topRight' });
-          this.showSpinnerforSearch = false;
-        } else {
-          this.toast.info({ detail: "INFO", summary: this.msg, duration: 5000, position: 'topRight' });
-          this.showSpinnerforSearch = false;
         }
 
-        this.showSpinnerforSearch = false;
         this.isLoading = false;
       },
       error: (err: any) => {
         this.toast.error({ detail: "ERROR", summary: err.message, duration: 5000, position: 'topRight' });
-        this.showSpinnerforSearch = false;
         this.isLoading = false;
       },
     });

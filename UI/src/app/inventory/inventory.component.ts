@@ -247,48 +247,24 @@ export class InventoryComponent implements OnInit {
 
 
   getBatchiWiseInventory(element: any) {
-    let batchID = element.batchID;
+    let itemID = (this.InventoryForm.get('itemID') as FormControl).value;
 
-    this.showSpinner = false;
-
-    this.api.getbatchWise(batchID).subscribe({
-      next: (res: any) => {
-        this.listOfBatchWiseInventory = res.batchWiseInventory;
-        this.msg = res.message;
-        this.code = res.code;
-
-        if (this.listOfBatchWiseInventory.length === 0) {
-          this.toast.info({ detail: "INFO", summary: this.languageService.getTranslation('noInventoryDataMsg'), duration: 5000, /*sticky: true,*/ position: 'topRight' });
-          this.showSpinner = false;
-
-          return;
-        }
-
-        let itemID = (this.InventoryForm.get('itemID') as FormControl).value;
-
-        const dialogRef = this.dialog.open(InventoryBatchwiseComponent, {
-          width: '95vw',
-          maxWidth: '95vw',
-          height: '85vh',
-          panelClass: 'batch-wise-dialog-panel',
-          disableClose: true,
-          data: {listofInventoryFiles: this.listOfBatchWiseInventory,
-                itemID: itemID ?? null,
-                batchStatus: element.status ?? '',
-                routeType: element.routeType ?? '',
-          },
-        });
-
-        dialogRef.afterClosed().subscribe(result => {
-          console.log('The dialog was closed');
-        });
-
-        this.showSpinner = false;
+    const dialogRef = this.dialog.open(InventoryBatchwiseComponent, {
+      width: '95vw',
+      maxWidth: '95vw',
+      height: '85vh',
+      panelClass: 'batch-wise-dialog-panel',
+      disableClose: true,
+      data: {
+        batchID: element.batchID,
+        itemID: itemID ?? null,
+        batchStatus: element.status ?? '',
+        routeType: element.routeType ?? '',
       },
-      error: (err: any) => {
-        this.toast.error({ detail: "ERROR", summary: err.message, duration: 5000, /*sticky: true,*/ position: 'topRight' });
-        this.showSpinner = false;
-      },
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      console.log('The dialog was closed');
     });
   }
 

@@ -55,8 +55,8 @@
   &nbsp;
   <mat-card>
     <mat-card-content>
-      <mat-progress-bar *ngIf="isLoading" mode="indeterminate" color="accent"></mat-progress-bar>
-      <table mat-table [dataSource]="dataSource">
+      <mat-progress-bar [style.visibility]="isLoading ? 'visible' : 'hidden'" mode="indeterminate" color="accent"></mat-progress-bar>
+      <table mat-table [dataSource]="customersToDisplay">
 
         <!-- ID Column -->
         <ng-container matColumnDef="id">
@@ -131,10 +131,8 @@
 
       </table>
 
-      <mat-paginator 
-                     [pageSize]="10"
-                     [pageSizeOptions]="[5, 10, 25, 100]"
-                     showFirstLastButtons>
+      <mat-paginator [length]="totalCount" [pageSize]="pageSize" [pageSizeOptions]="[5, 10, 25, 100]"
+        (page)="onPageChange($event)" showFirstLastButtons>
       </mat-paginator>
 
     </mat-card-content>

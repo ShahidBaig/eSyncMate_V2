@@ -12,6 +12,7 @@ import { CommonModule } from '@angular/common';
 import { LanguageService } from '../services/language.service';
 import { TranslateModule } from '@ngx-translate/core';
 import { NgToastService } from 'ng-angular-popup';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 
 @Component({
     selector: 'login',
@@ -28,12 +29,14 @@ import { NgToastService } from 'ng-angular-popup';
         MatSelectModule,
         RouterLink,
         CommonModule,
-        TranslateModule
+        TranslateModule,
+        MatProgressBarModule
     ],
 })
 export class LoginComponent {
 
   hide = true;
+  isLoading = false;
   loginForm: FormGroup;
   responseMsg: string = '';
   message: string | null = '';
@@ -105,12 +108,14 @@ export class LoginComponent {
     };
 
     localStorage.setItem("userID", loginInfo.userID);
+    this.isLoading = true;
 
     this.api.login(loginInfo).subscribe({
       next: (res: any) => {
-        if (res.token === 'Invalid')
+        if (res.token === 'Invalid') {
           this.responseMsg = res.message;
-        else {
+          this.isLoading = false;
+        } else {
           this.responseMsg = '';
           this.api.saveToken(res.token);
 
@@ -152,6 +157,7 @@ export class LoginComponent {
       error: (err: any) => {
         console.log('Error: ');
         console.log(err);
+        this.isLoading = false;
       },
     });
   }

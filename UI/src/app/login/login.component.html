@@ -32,11 +32,8 @@
         <div class="field-group">
           <label class="field-label">{{ 'password' | translate }}</label>
           <mat-form-field appearance="outline" class="login-field">
-            <input matInput [type]="hide ? 'password' : 'text'" formControlName="password" autocomplete="current-password">
+            <input matInput type="password" formControlName="password" autocomplete="current-password">
             <mat-icon matPrefix class="field-icon">lock_outline</mat-icon>
-            <button mat-icon-button matSuffix (click)="hide = !hide" type="button" tabindex="-1">
-              <mat-icon>{{hide ? 'visibility_off' : 'visibility'}}</mat-icon>
-            </button>
             <mat-error *ngIf="this.Password.invalid" style="font-size: 11px;">{{getPasswordErrors()}}</mat-error>
           </mat-form-field>
         </div>
@@ -54,21 +51,23 @@
         </div>
 
         <!-- Login Button -->
-        <button class="login-submit-btn" [disabled]="loginForm.invalid" (click)="login()" type="button">
+        <mat-progress-bar *ngIf="isLoading" mode="indeterminate" color="accent" class="login-progress"></mat-progress-bar>
+        <button class="login-submit-btn" [disabled]="loginForm.invalid || isLoading" (click)="login()" type="button">
           <mat-icon class="btn-icon">lock_open</mat-icon>
           <span>{{ 'login' | translate }}</span>
         </button>
 
-        <!-- Cancel link -->
-        <button class="login-cancel-link" (click)="cancel()" type="button">
-          {{ 'Cancel' | translate }}
+        <!-- Cancel Button -->
+        <button class="login-submit-btn login-cancel-btn" (click)="cancel()" type="button">
+          <mat-icon class="btn-icon">refresh</mat-icon>
+          <span>Clear</span>
         </button>
       </form>
 
       <!-- Terms -->
       <p class="login-terms">
         By clicking on the Log In button, you understand and agree to
-        <a href="javascript:void(0)">Terms of Use</a> and <a href="javascript:void(0)">Privacy Policy</a>
+        <a routerLink="/terms-of-use" target="_blank">Terms of Use</a> and <a routerLink="/privacy-policy" target="_blank">Privacy Policy</a>
       </p>
 
       <!-- Footer -->

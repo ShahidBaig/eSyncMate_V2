@@ -19,10 +19,12 @@ export class CustomersService {
     return this.http.post<any>(this.apiUrl + 'api/Customers/updateCustomer', customerModel);
   }
 
-  getCustomers(searchOption: string, searchValue: string): Observable<any> {
+  getCustomers(searchOption: string, searchValue: string, pageNumber: number = 1, pageSize: number = 10): Observable<any> {
     const params = new HttpParams()
       .set('searchOption', searchOption)
       .set('searchValue', searchValue)
+      .set('pageNumber', pageNumber.toString())
+      .set('pageSize', pageSize.toString());
     return this.http.get(`${this.apiUrl}api/Customers/getCustomers`, { params });
   }
 

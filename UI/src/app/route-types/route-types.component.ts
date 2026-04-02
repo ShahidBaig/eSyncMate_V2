@@ -28,9 +28,6 @@ import { TranslateModule } from '@ngx-translate/core';
 
 import { HttpClientModule, HttpClient } from '@angular/common/http';
 import { ApiService } from '../services/api.service';
-import { MatTableDataSource } from '@angular/material/table';
-import { MatPaginator } from '@angular/material/paginator';
-import { ViewChild } from '@angular/core';
 
 
 @Component({
@@ -80,8 +77,9 @@ export class RouteTypesComponent {
   canAdd = false;
   canEdit = false;
   canDelete = false;
-  dataSource = new MatTableDataSource<RouteType>([]);
-  @ViewChild(MatPaginator) paginator!: MatPaginator;
+  totalCount: number = 0;
+  pageNumber: number = 1;
+  pageSize: number = 10;
 
   columns: string[] = [
     'id',
@@ -163,13 +161,16 @@ export class RouteTypesComponent {
   }
 
   onPageChange(event: PageEvent) {
-    const startIndex = event.pageIndex * event.pageSize;
-    this.RouteTypeToDisplay = this.listOfRouteType.slice(startIndex, startIndex + event.pageSize);
+    this.pageNumber = event.pageIndex + 1;
+    this.pageSize = event.pageSize;
+    this.getRouteTypes();
   }
 
+  getRouteTypes(resetPage: boolean = false) {
+    if (resetPage) {
+      this.pageNumber = 1;
+    }
 
-  getRouteTypes() {
-    this.showSpinnerforSearch = false;
     let stringFromDate = '';
     let stringToDate = '';
 
@@ -188,42 +189,26 @@ export class RouteTypesComponent {
     }
 
     this.isLoading = true;
-    this.api.getRouteTypes(this.selectedOption, this.searchValue).subscribe({
+    this.api.getRouteTypes(this.selectedOption, this.searchValue, this.pageNumber, this.pageSize).subscribe({
       next: (res: any) => {
-        this.listOfRouteType = res.routeType;
+        this.listOfRouteType = res.routeType ?? [];
+        this.totalCount = res.totalCount ?? 0;
+        this.RouteTypeToDisplay = this.listOfRouteType;
         this.msg = res.message;
         this.code = res.code;
 
-        if (this.listOfRouteType == null || this.listOfRouteType.length === 0) {
-          this.toast.info({ detail: "INFO", summary: this.languageService.getTranslation('noFilterDataMessage'), duration: 5000, /*sticky: true,*/ position: 'topRight' });
-          this.showSpinnerforSearch = false;
-          this.RouteTypeToDisplay = [];
-          return;
+        if (this.listOfRouteType.length === 0 && this.pageNumber === 1) {
+          this.toast.info({ detail: "INFO", summary: this.languageService.getTranslation('noFilterDataMessage'), duration: 5000, position: 'topRight' });
         }
 
-        //this.RouteTypeToDisplay = this.listOfRouteType.slice(0, 10);
-        this.dataSource.data = this.listOfRouteType;  // set full list
-
-        setTimeout(() => {
-          this.dataSource.paginator = this.paginator;
-        }, 0); // ensures paginator initializes
-        if (this.code === 200) {
-          this.showSpinnerforSearch = false;
-        }
-        else if (this.code === 400) {
-          this.toast.error({ detail: "ERROR", summary: this.msg, duration: 5000, /*sticky: true,*/ position: 'topRight' });
-          this.showSpinnerforSearch = false;
-        } else {
-          this.toast.info({ detail: "INFO", summary: this.msg, duration: 5000, /*sticky: true,*/ position: 'topRight' });
-          this.showSpinnerforSearch = false;
+        if (this.code === 400) {
+          this.toast.error({ detail: "ERROR", summary: this.msg, duration: 5000, position: 'topRight' });
         }
 
-        this.showSpinnerforSearch = false;
         this.isLoading = false;
       },
       error: (err: any) => {
-        this.toast.error({ detail: "ERROR", summary: err.message, duration: 5000, /*sticky: true,*/ position: 'topRight' });
-        this.showSpinnerforSearch = false;
+        this.toast.error({ detail: "ERROR", summary: err.message, duration: 5000, position: 'topRight' });
         this.isLoading = false;
       },
     });

@@ -6,45 +6,38 @@ using System.Reflection;
 
 namespace eSyncMate.DB.Entities
 {
-    public class Menus : DBEntity, IDBEntity, IDisposable, IEqualityComparer
+    public class UserMenus : DBEntity, IDBEntity, IDisposable, IEqualityComparer
     {
         public int Id { get; set; }
-        public int ModuleId { get; set; }
-        public string Name { get; set; } = string.Empty;
-        public string TranslationKey { get; set; } = string.Empty;
-        public string Route { get; set; } = string.Empty;
-        public string Icon { get; set; } = string.Empty;
-        public bool IsExternalLink { get; set; }
-        public string ExternalUrl { get; set; } = string.Empty;
-        public int SortOrder { get; set; }
-        public string Company { get; set; } = string.Empty;
-        public bool IsHidden { get; set; }
-        public bool IsActive { get; set; } = true;
+        public int UserId { get; set; }
+        public int MenuId { get; set; }
+        public bool CanView { get; set; } = true;
+        public bool CanAdd { get; set; }
+        public bool CanEdit { get; set; }
+        public bool CanDelete { get; set; }
         public DateTime CreatedDate { get; set; }
         public int CreatedBy { get; set; }
 
         private static string TableName { get; set; }
-        private static string ViewName { get; set; }
         private static string PrimaryKeyName { get; set; }
         private static string InsertQueryStart { get; set; }
         private static string EndingPropertyName { get; set; }
         public static List<PropertyInfo> DBProperties { get; set; }
 
-        public Menus() : base() { SetupDBEntity(); }
-        public Menus(DBConnector p_Connection) : base(p_Connection) { SetupDBEntity(); }
-        public Menus(string p_ConnectionString) : base(p_ConnectionString) { SetupDBEntity(); }
+        public UserMenus() : base() { SetupDBEntity(); }
+        public UserMenus(DBConnector p_Connection) : base(p_Connection) { SetupDBEntity(); }
+        public UserMenus(string p_ConnectionString) : base(p_ConnectionString) { SetupDBEntity(); }
 
         private void SetupDBEntity()
         {
             string l_Query = string.Empty;
 
-            if (string.IsNullOrEmpty(Menus.TableName)) Menus.TableName = "Menus";
-            if (string.IsNullOrEmpty(Menus.ViewName)) Menus.ViewName = "Menus";
-            if (string.IsNullOrEmpty(Menus.PrimaryKeyName)) Menus.PrimaryKeyName = "Id";
-            if (string.IsNullOrEmpty(Menus.EndingPropertyName)) Menus.EndingPropertyName = "CreatedBy";
-            if (Menus.DBProperties == null) Menus.DBProperties = new List<PropertyInfo>(this.GetType().GetProperties());
-            if (string.IsNullOrEmpty(Menus.InsertQueryStart))
-                Menus.InsertQueryStart = PrepareQueries(this, Menus.TableName, Menus.EndingPropertyName, ref l_Query, Menus.DBProperties);
+            if (string.IsNullOrEmpty(UserMenus.TableName)) UserMenus.TableName = "UserMenus";
+            if (string.IsNullOrEmpty(UserMenus.PrimaryKeyName)) UserMenus.PrimaryKeyName = "Id";
+            if (string.IsNullOrEmpty(UserMenus.EndingPropertyName)) UserMenus.EndingPropertyName = "CreatedBy";
+            if (UserMenus.DBProperties == null) UserMenus.DBProperties = new List<PropertyInfo>(this.GetType().GetProperties());
+            if (string.IsNullOrEmpty(UserMenus.InsertQueryStart))
+                UserMenus.InsertQueryStart = PrepareQueries(this, UserMenus.TableName, UserMenus.EndingPropertyName, ref l_Query, UserMenus.DBProperties);
         }
 
         public void UseConnection(string p_ConnectionString, DBConnector p_Connection = null)
@@ -58,8 +51,8 @@ namespace eSyncMate.DB.Entities
         public bool GetList(string p_Criteria, string p_Fields, ref DataTable p_Data, string p_OrderBy = "")
         {
             string l_Query = string.IsNullOrEmpty(p_Fields)
-                ? "SELECT * FROM [" + Menus.TableName + "]"
-                : "SELECT " + p_Fields + " FROM [" + Menus.TableName + "]";
+                ? "SELECT * FROM [" + UserMenus.TableName + "]"
+                : "SELECT " + p_Fields + " FROM [" + UserMenus.TableName + "]";
 
             if (!string.IsNullOrEmpty(p_Criteria)) l_Query += " WHERE " + p_Criteria;
             if (!string.IsNullOrEmpty(p_OrderBy)) l_Query += " ORDER BY " + p_OrderBy;
@@ -73,7 +66,7 @@ namespace eSyncMate.DB.Entities
             int l_MaxNo = 1;
             Common l_Common = new Common();
             l_Common.UseConnection(string.Empty, Connection);
-            if (!l_Common.GetList("SELECT MAX(CONVERT(INT, ISNULL(" + Menus.PrimaryKeyName + ", '0'))) FROM " + Menus.TableName, ref l_Data))
+            if (!l_Common.GetList("SELECT MAX(CONVERT(INT, ISNULL(" + UserMenus.PrimaryKeyName + ", '0'))) FROM " + UserMenus.TableName, ref l_Data))
                 return l_MaxNo;
             l_MaxNo = PublicFunctions.ConvertNullAsInteger(l_Data.Rows[0][0], 0) + 1;
             l_Data.Dispose();
@@ -90,7 +83,7 @@ namespace eSyncMate.DB.Entities
             {
                 l_Trans = this.Connection.BeginTransaction();
                 this.Id = this.GetMax();
-                string l_Query = this.PrepareInsertQuery(this, Menus.InsertQueryStart, Menus.EndingPropertyName, Menus.DBProperties);
+                string l_Query = this.PrepareInsertQuery(this, UserMenus.InsertQueryStart, UserMenus.EndingPropertyName, UserMenus.DBProperties);
                 l_Process = this.Connection.Execute(l_Query);
 
                 if (l_Trans)
@@ -108,7 +101,7 @@ namespace eSyncMate.DB.Entities
             return l_Result;
         }
 
-        public Result Modify()
+        public Result DeleteByUserId(int userId)
         {
             Result l_Result = Result.GetFailureResult();
             bool l_Trans = false;
@@ -117,7 +110,7 @@ namespace eSyncMate.DB.Entities
             try
             {
                 l_Trans = this.Connection.BeginTransaction();
-                string l_Query = this.PrepareUpdateQuery(this, Menus.TableName, Menus.PrimaryKeyName, Menus.EndingPropertyName, Menus.DBProperties);
+                string l_Query = $"DELETE FROM [{UserMenus.TableName}] WHERE UserId = {userId}";
                 l_Process = this.Connection.Execute(l_Query);
 
                 if (l_Trans)
@@ -144,7 +137,7 @@ namespace eSyncMate.DB.Entities
             try
             {
                 l_Trans = this.Connection.BeginTransaction();
-                string l_Query = this.PrepareDeleteQuery(this, Menus.TableName, Menus.PrimaryKeyName);
+                string l_Query = this.PrepareDeleteQuery(this, UserMenus.TableName, UserMenus.PrimaryKeyName);
                 l_Process = this.Connection.Execute(l_Query);
 
                 if (l_Trans)
@@ -169,28 +162,14 @@ namespace eSyncMate.DB.Entities
         #endregion
 
         #region IEqualityComparer Support
-        public new bool Equals(object x, object y) { return ((Menus)x).Id == ((Menus)y).Id; }
+        public new bool Equals(object x, object y) { return ((UserMenus)x).Id == ((UserMenus)y).Id; }
         public new int GetHashCode(object obj) { return this.Id; }
 
-        public bool GetViewList(string Criteria, string Fields, ref DataTable Data, string OrderBy = "")
-        {
-            throw new NotImplementedException();
-        }
-
-        public Result GetObjectFromQuery(string Query, bool isOnlyObject = false)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Result GetObject()
-        {
-            throw new NotImplementedException();
-        }
-
-        public Result GetObjectOnly()
-        {
-            throw new NotImplementedException();
-        }
+        public bool GetViewList(string Criteria, string Fields, ref DataTable Data, string OrderBy = "") { throw new NotImplementedException(); }
+        public Result GetObjectFromQuery(string Query, bool isOnlyObject = false) { throw new NotImplementedException(); }
+        public Result GetObject() { throw new NotImplementedException(); }
+        public Result GetObjectOnly() { throw new NotImplementedException(); }
+        public Result Modify() { throw new NotImplementedException(); }
         #endregion
     }
 }

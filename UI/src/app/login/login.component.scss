@@ -238,6 +238,14 @@ $red:           #dc2626;
 }
 
 // ============================================================
+// Login Progress Bar
+// ============================================================
+.login-progress {
+  margin-bottom: 10px;
+  border-radius: 4px;
+}
+
+// ============================================================
 // Login Button
 // ============================================================
 .login-submit-btn {
@@ -280,31 +288,27 @@ $red:           #dc2626;
   }
 }
 
-// Cancel link
-.login-cancel-link {
-  display: block;
-  margin: 14px auto 0;
-  padding: 0;
-  border: none;
-  background: none;
-  color: $primary;
-  font-family: 'Poppins', 'Segoe UI', sans-serif;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: color 0.15s ease;
+// Cancel Button
+.login-cancel-btn {
+  margin-top: 10px !important;
+  background: $teal !important;
+  color: $white !important;
+  border: none !important;
 
-  &:hover {
-    color: $primary-dark;
-    text-decoration: underline;
+  &:hover:not(:disabled) {
+    background: #0f766e !important;
+  }
+
+  &:active:not(:disabled) {
+    background: #115e59 !important;
   }
 }
 
 // Terms
 .login-terms {
   margin: 16px 0 0;
-  font-size: 11px;
-  color: $gray-400;
+  font-size: 14px;
+  color: $gray-600;
   line-height: 1.6;
   text-align: center;
 

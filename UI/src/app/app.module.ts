@@ -81,6 +81,8 @@ import { SalesInvoiceNdcComponent } from './sales-invoice-ndc/sales-invoice-ndc.
 import { AlertConfigurationComponent } from './alert-configuration/alert-configuration.component';
 import { AddAlertConfigurationDialogComponent } from './alert-configuration/add-alert-configuration-dialog/add-alert-configuration-dialog.component';
 import { RoleManagementComponent } from './role-management/role-management.component';
+import { TermsOfUseComponent } from './terms-of-use/terms-of-use.component';
+import { PrivacyPolicyComponent } from './privacy-policy/privacy-policy.component';
 
 @NgModule({
   declarations: [AppComponent],
@@ -164,6 +166,8 @@ import { RoleManagementComponent } from './role-management/role-management.compo
     AlertConfigurationComponent,
     AddAlertConfigurationDialogComponent,
     RoleManagementComponent,
+    TermsOfUseComponent,
+    PrivacyPolicyComponent,
     TranslateModule.forRoot({
       loader: {
         provide: TranslateLoader,

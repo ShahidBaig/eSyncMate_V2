@@ -56,7 +56,7 @@
   &nbsp;
   <mat-card>
     <mat-card-content>
-      <mat-progress-bar *ngIf="isLoading" mode="indeterminate" color="accent"></mat-progress-bar>
+      <mat-progress-bar [style.visibility]="isLoading ? 'visible' : 'hidden'" mode="indeterminate" color="accent"></mat-progress-bar>
       <table mat-table [dataSource]="mapsToDisplay">
 
         <!-- ID Column -->
