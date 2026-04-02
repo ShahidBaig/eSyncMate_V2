@@ -17,6 +17,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { PopupComponent } from '../popup/popup.component';
 import { MatDialog } from '@angular/material/dialog';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { StoresOrderComponent } from '../stores-order/stores-order.component';
 import { CommonModule } from '@angular/common';
 import { MatSelectChange, MatSelectModule } from '@angular/material/select';
@@ -28,9 +29,6 @@ import { TranslateService } from '@ngx-translate/core';
 import { environment } from 'src/environments/environment';
 import { CustomerProductCatalogService } from '../services/customerProductCatalogDialog.service';
 import { OrderDetailComponent } from './order-detail/order-detail.component';
-import { MatTableDataSource } from '@angular/material/table';
-import { MatPaginator } from '@angular/material/paginator';
-import { ViewChild } from '@angular/core';
 import { LiveAnnouncer } from '@angular/cdk/a11y';
 import { AfterViewInit, inject } from '@angular/core';
 import { MatSort, Sort, MatSortModule } from '@angular/material/sort';
@@ -63,6 +61,7 @@ interface Customers {
     MatTooltipModule,
     MatIconModule,
     MatProgressSpinnerModule,
+    MatProgressBarModule,
     CommonModule,
     MatSelectModule,
     MatPaginatorModule,
@@ -71,12 +70,12 @@ interface Customers {
   ],
 })
 export class OrdersComponent implements OnInit {
+  isLoading: boolean = false;
   mydate = environment.date;
   selectedCustomerId: any;
   customer: string = 'EMPTY';
   listOfOrders: Order[] = [];
   listOfOrderFiles: Order[] = [];
-  ordersToDisplay: Order[] = [];
   OrderForm: FormGroup;
   msg: string = '';
   code: number = 0;
@@ -85,6 +84,12 @@ export class OrdersComponent implements OnInit {
   listOfStoresOrder: Order[] = [];
   statusOptions = ['Select Status', 'ACKNOWLEDGED', 'ASNGEN', 'ASNMARK', 'COMPLETE', 'FINISHED', 'INVEDI', 'INVOICED', 'NEW', 'PROCESSED', 'SYNCERROR', 'SYNCED', 'SPLITED', 'CANCELLED', 'SHIPPED', 'ERROR', 'ASNERROR','INPROGRESS'];
   isAdminUser: boolean = false;
+  canAdd = false;
+  canEdit = false;
+  canDelete = false;
+  totalCount: number = 0;
+  pageNumber: number = 1;
+  pageSize: number = 10;
   isCompany: string | undefined = '';
   customerOptions: Customers[] | undefined;
   filteredCustomerOptions: Customers[] = [];
@@ -96,8 +101,7 @@ export class OrdersComponent implements OnInit {
   CustomerName: any = '';
   showDataColumn: boolean = true;
   name: string = '';
-  dataSource = new MatTableDataSource<Order>([]);
-  @ViewChild(MatPaginator) paginator!: MatPaginator;
+  ordersToDisplay: Order[] = [];
 
   columns: string[] = [
     'id',
@@ -137,8 +141,19 @@ export class OrdersComponent implements OnInit {
   ngOnInit(): void {
     this.getOrders(true);
     this.isCompany = this.api.getTokenUserInfo()?.company.toLocaleLowerCase();
-    this.isAdminUser = ["ADMIN", "WRITER"].includes(this.api.getTokenUserInfo()?.userType || '');
-    // if (!this.isAdminUser) {
+    const permissions = this.api.getMenuPermissions('edi/all-orders');
+    if (permissions) {
+      this.canAdd = permissions.canAdd;
+      this.canEdit = permissions.canEdit;
+      this.canDelete = permissions.canDelete;
+    } else {
+      const isAdmin = ["ADMIN", "WRITER"].includes(this.api.getTokenUserInfo()?.userType || '');
+      this.canAdd = isAdmin;
+      this.canEdit = isAdmin;
+      this.canDelete = isAdmin;
+      this.isAdminUser = isAdmin;
+    }
+    // if (!this.canEdit) {
     //   const editIndex = this.columns.indexOf('ProcessShipment');
     //   if (editIndex !== -1) {
     //     this.columns.splice(editIndex, 1);
@@ -152,9 +167,10 @@ export class OrdersComponent implements OnInit {
     this.filteredStatusOptions = this.getFilterableStatuses();
   }
 
-  ngAfterViewInit(): void {
-    // paginator ko ek dafa attach karo
-    this.dataSource.paginator = this.paginator;
+  onPageChange(event: PageEvent) {
+    this.pageNumber = event.pageIndex + 1;
+    this.pageSize = event.pageSize;
+    this.getOrders();
   }
 
   getStatusTooltip(status: string, customerName: string): any {
@@ -620,12 +636,10 @@ export class OrdersComponent implements OnInit {
     return year + '-' + month + '-' + day;
   }
 
-  onPageChange(event: PageEvent) {
-    const startIndex = event.pageIndex * event.pageSize;
-    this.ordersToDisplay = this.listOfOrders.slice(startIndex, startIndex + event.pageSize);
-  }
-
   getOrders(resetPage: boolean = false) {
+    if (resetPage) {
+      this.pageNumber = 1;
+    }
     let orderId = (this.OrderForm.get('orderId') as FormControl).value;
     let fromDate = (this.OrderForm.get('fromDate') as FormControl).value;
     let toDate = (this.OrderForm.get('toDate') as FormControl).value;
@@ -681,44 +695,25 @@ export class OrdersComponent implements OnInit {
     } else {
       stringToDate = '1999-01-01';
     }
-    this.api.getOrders(orderId, stringFromDate, stringToDate, orderNo, status, soNo, customerName).subscribe({
+    this.isLoading = true;
+    this.api.getOrders(orderId, stringFromDate, stringToDate, orderNo, status, soNo, customerName, this.pageNumber, this.pageSize).subscribe({
       next: (res: any) => {
         this.msg = res.message;
         this.code = res.code;
 
-        // ✅ keep old page info BEFORE updating data
-        const oldPageIndex = this.paginator?.pageIndex ?? 0;
-        const oldPageSize = this.paginator?.pageSize ?? 10;
-
         this.listOfOrders = res.ordersData ?? [];
+        this.totalCount = res.totalCount ?? 0;
+        this.ordersToDisplay = this.listOfOrders;
 
-        if (this.listOfOrders.length === 0) {
+        if (this.listOfOrders.length === 0 && this.pageNumber === 1) {
           this.toast.info({
             detail: "INFO",
             summary: this.languageService.getTranslation('noFilterDataMessage'),
             duration: 5000,
             position: 'topRight'
           });
-          this.dataSource.data = [];
-          this.showSpinnerforSearch = false;
-          return;
         }
 
-        // ✅ set data once
-        this.dataSource.data = this.listOfOrders;
-
-        // ✅ compare logic: resetPage ? first page : keep old page
-        if (resetPage) {
-          this.paginator?.firstPage();
-        } else {
-          const maxPageIndex = Math.max(Math.ceil(this.listOfOrders.length / oldPageSize) - 1, 0);
-          this.paginator.pageIndex = Math.min(oldPageIndex, maxPageIndex);
-
-          // force table to render correct page with updated data
-          this.paginator._changePageSize(this.paginator.pageSize);
-        }
-
-        // toast handling (same as your code)
         if (this.code === 200) {
           this.showSpinnerforSearch = false;
         } else if (this.code === 400) {
@@ -729,10 +724,12 @@ export class OrdersComponent implements OnInit {
           this.showSpinnerforSearch = false;
         }
         this.showSpinnerforSearch = false;
+        this.isLoading = false;
       },
       error: (err: any) => {
         this.toast.error({ detail: "ERROR", summary: err.message, duration: 5000, position: 'topRight' });
         this.showSpinnerforSearch = false;
+        this.isLoading = false;
       },
     });
 

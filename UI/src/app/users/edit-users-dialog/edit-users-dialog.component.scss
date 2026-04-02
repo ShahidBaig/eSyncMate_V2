@@ -17,16 +17,16 @@
 .form-row {
   display: flex;
   gap: 20px;
-  flex-wrap: wrap; /* Allows fields to wrap on smaller screens */
+  flex-wrap: wrap;
 }
 
 .form-field {
-  flex: 1; /* Each field takes equal space */
-  max-width: 500px; /* Increase max-width as needed */
+  flex: 1;
+  max-width: 500px;
 }
 
 .full-width {
-  flex: 0 0 98%; /* Full width for single field rows */
+  flex: 0 0 98%;
 }
 
 .dialog-actions {
@@ -40,7 +40,6 @@
   color: #666;
 }
 
-/* Additional global styles */
 mat-form-field {
   width: 100%;
 }

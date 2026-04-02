@@ -1,0 +1,120 @@
+<h2 class="page-title"><mat-icon>security</mat-icon><span class="title-text">{{ 'nav.roleManagement' | translate }}</span></h2>
+<div class="role-management-container">
+  <mat-tab-group>
+    <!-- Roles Tab -->
+    <mat-tab label="Roles">
+      <div class="tab-content">
+        <div class="header-actions">
+          <h3>Role Management</h3>
+          <button mat-raised-button color="primary" (click)="openNewRole()">
+            <mat-icon>add</mat-icon> New Role
+          </button>
+        </div>
+
+        <!-- Role Form -->
+        <mat-card *ngIf="showRoleForm" class="role-form-card">
+          <mat-card-header>
+            <mat-card-title>{{ editingRole.id > 0 ? 'Edit' : 'New' }} Role</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Role Name</mat-label>
+              <input matInput [(ngModel)]="editingRole.name" placeholder="Enter role name" />
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Description</mat-label>
+              <input matInput [(ngModel)]="editingRole.description" placeholder="Enter description" />
+            </mat-form-field>
+            <mat-slide-toggle [(ngModel)]="editingRole.isActive">Active</mat-slide-toggle>
+          </mat-card-content>
+          <mat-card-actions>
+            <button mat-raised-button color="primary" (click)="saveRole()">Save</button>
+            <button mat-raised-button (click)="cancelEdit()">Cancel</button>
+          </mat-card-actions>
+        </mat-card>
+
+        <!-- Roles Table -->
+        <table mat-table [dataSource]="roles" class="mat-elevation-z2 full-width">
+          <ng-container matColumnDef="name">
+            <th mat-header-cell *matHeaderCellDef>Name</th>
+            <td mat-cell *matCellDef="let role">{{ role.name }}</td>
+          </ng-container>
+          <ng-container matColumnDef="description">
+            <th mat-header-cell *matHeaderCellDef>Description</th>
+            <td mat-cell *matCellDef="let role">{{ role.description }}</td>
+          </ng-container>
+          <ng-container matColumnDef="isActive">
+            <th mat-header-cell *matHeaderCellDef>Active</th>
+            <td mat-cell *matCellDef="let role">{{ role.isActive ? 'Yes' : 'No' }}</td>
+          </ng-container>
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef>Actions</th>
+            <td mat-cell *matCellDef="let role">
+              <button mat-icon-button color="primary" (click)="editRole(role)" matTooltip="Edit">
+                <mat-icon>edit</mat-icon>
+              </button>
+              <button mat-icon-button color="accent" (click)="selectRole(role)" matTooltip="Assign Menus">
+                <mat-icon>assignment</mat-icon>
+              </button>
+              <button mat-icon-button color="warn" (click)="deleteRole(role)" matTooltip="Delete">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </td>
+          </ng-container>
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+        </table>
+      </div>
+    </mat-tab>
+
+    <!-- Menu Assignments Tab -->
+    <mat-tab label="Menu Assignments" [disabled]="!selectedRole">
+      <div class="tab-content" *ngIf="selectedRole">
+        <div class="header-actions">
+          <h3>Menu Permissions for: <strong>{{ selectedRole.name }}</strong></h3>
+          <button mat-raised-button color="primary" (click)="saveMenuAssignments()">
+            <mat-icon>save</mat-icon> Save Permissions
+          </button>
+        </div>
+
+        <mat-accordion>
+          <mat-expansion-panel *ngFor="let moduleName of getUniqueModules()">
+            <mat-expansion-panel-header>
+              <mat-panel-title>
+                {{ moduleName }}
+              </mat-panel-title>
+              <mat-panel-description>
+                <mat-checkbox
+                  (click)="$event.stopPropagation()"
+                  (change)="toggleSelectAll(moduleName, $event.checked)">
+                  Select All
+                </mat-checkbox>
+              </mat-panel-description>
+            </mat-expansion-panel-header>
+
+            <table class="permissions-table full-width">
+              <thead>
+                <tr>
+                  <th>Menu</th>
+                  <th>View</th>
+                  <th>Add</th>
+                  <th>Edit</th>
+                  <th>Delete</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let menu of getMenusByModule(moduleName)">
+                  <td>{{ menu.menuName }}</td>
+                  <td><mat-checkbox [(ngModel)]="menu.canView"></mat-checkbox></td>
+                  <td><mat-checkbox [(ngModel)]="menu.canAdd"></mat-checkbox></td>
+                  <td><mat-checkbox [(ngModel)]="menu.canEdit"></mat-checkbox></td>
+                  <td><mat-checkbox [(ngModel)]="menu.canDelete"></mat-checkbox></td>
+                </tr>
+              </tbody>
+            </table>
+          </mat-expansion-panel>
+        </mat-accordion>
+      </div>
+    </mat-tab>
+  </mat-tab-group>
+</div>

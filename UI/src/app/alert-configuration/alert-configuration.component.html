@@ -43,7 +43,7 @@
 
         &nbsp;
 
-        <button mat-flat-button color="accent" (click)="openAddCustomerDialog()" *ngIf="isAdminUser">
+        <button mat-flat-button color="accent" (click)="openAddCustomerDialog()" *ngIf="canAdd">
           <span>Add</span>
         </button>
 
@@ -55,6 +55,7 @@
 
   <mat-card>
     <mat-card-content>
+      <mat-progress-bar *ngIf="isLoading" mode="indeterminate" color="accent"></mat-progress-bar>
       <table mat-table [dataSource]="dataSource">
 
         <!-- ID Column -->
@@ -103,7 +104,7 @@
             <button mat-icon-button (click)="openViewDialog(element)" color="primary" matTooltip="View" matTooltipPosition="above">
               <mat-icon>visibility</mat-icon>
             </button>
-            <button mat-icon-button *ngIf="isAdminUser" (click)="openEditDialog(element)" color="accent" matTooltip="Edit" matTooltipPosition="above">
+            <button mat-icon-button *ngIf="canEdit" (click)="openEditDialog(element)" color="accent" matTooltip="Edit" matTooltipPosition="above">
               <mat-icon>edit</mat-icon>
             </button>
           </td>

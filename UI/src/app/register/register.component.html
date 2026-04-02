@@ -41,7 +41,6 @@
         <mat-form-field appearance="fill" color="accent">
           <mat-label>{{ 'phoneNo' | translate }}</mat-label>
           <input matInput formControlName="mobile">
-          <!--<mat-error *ngIf="this.LastName.invalid">{{getLastNameErrors()}}</mat-error>-->
         </mat-form-field>
       </mat-grid-tile>
 
@@ -67,19 +66,20 @@
             {{ 'passwordMessage' | translate }}
           </mat-error>
         </mat-form-field>
-
-
       </mat-grid-tile>
+
       <mat-grid-tile>
         <mat-form-field class="form-field">
-          <mat-label>{{ 'userType' | translate }}</mat-label>
-          <mat-select formControlName="userType">
-            <mat-option [value]="'ADMIN'">ADMIN</mat-option>
-            <mat-option [value]="'READER'">READER</mat-option>
-            <mat-option [value]="'WRITER'">WRITER</mat-option>
+          <mat-label>{{ 'role' | translate }}</mat-label>
+          <mat-select [(ngModel)]="selectedRoleId" [ngModelOptions]="{standalone: true}" required>
+            <mat-option [value]="0">-- {{ 'selectRole' | translate }} --</mat-option>
+            <mat-option *ngFor="let role of roles" [value]="role.id">
+              {{ role.name }}
+            </mat-option>
           </mat-select>
         </mat-form-field>
       </mat-grid-tile>
+
       <mat-grid-tile>
         <mat-form-field class="form-field">
           <mat-label>{{ 'status' | translate }}</mat-label>
@@ -104,15 +104,26 @@
         </mat-form-field>
       </mat-grid-tile>
 
-      <mat-grid-tile *ngIf="registerForm.get('userType')?.value === 'WRITER' && registerForm.get('userType')?.value !== ''">
-        <mat-checkbox formControlName="isSetupMenu">{{ 'showSetupMenu' | translate }}</mat-checkbox>
-      </mat-grid-tile>
-
       <mat-grid-tile colspan="2">
         <button mat-flat-button color="accent" class="create-account-btn" (click)="register()"
-                [disabled]="registerForm.invalid">
+                [disabled]="registerForm.invalid || selectedRoleId === 0">
                 {{ 'createAccount' | translate }}
         </button>
+      </mat-grid-tile>
+
+      <mat-grid-tile style="display: none">
+        <mat-form-field class="form-field">
+          <mat-label>{{ 'userType' | translate }}</mat-label>
+          <mat-select formControlName="userType">
+            <mat-option [value]="'ADMIN'">ADMIN</mat-option>
+            <mat-option [value]="'READER'">READER</mat-option>
+            <mat-option [value]="'WRITER'">WRITER</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </mat-grid-tile>
+
+      <mat-grid-tile style="display: none">
+        <mat-checkbox formControlName="isSetupMenu">{{ 'showSetupMenu' | translate }}</mat-checkbox>
       </mat-grid-tile>
 
     </mat-grid-list>

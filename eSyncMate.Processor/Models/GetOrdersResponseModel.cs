@@ -6,7 +6,7 @@ namespace eSyncMate.Processor.Models
     {
         public List<OrderDataModel> Orders { get; set; }
         public DataTable OrdersData { get; set; }
-
+        public int TotalCount { get; set; }
     }
     public class GetOrderFilesResponseModel : ResponseModel
     {

@@ -8,6 +8,7 @@ namespace eSyncMate.Processor.Models
         public DataTable Inventory { get; set; }
         public DataTable BatchWiseInventory { get; set; }
         public DataTable RouteType { get; set; }
+        public int TotalCount { get; set; }
     }
     public class GetInventoryFilesResponseModel : ResponseModel
     {

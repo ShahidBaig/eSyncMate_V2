@@ -52,218 +52,88 @@
   margin-top: -90px;
 }
 
+// Status chips — modern pill style
+%status-base {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: default;
+}
+
 .new-status {
-  background: linear-gradient(to bottom, palegreen 0%, palegreen 100%);
-  border: 1px solid palegreen;
-  color: #ffffff;
-  cursor: pointer;
-  font-size: 16px;
-  padding: 10px 20px;
-  text-align: center;
-  text-decoration: none;
-  display: -webkit-inline-box;
-  border-radius: 20px;
-  transition: background 0.3s ease;
-  box-shadow: 0px 4px 5px rgba(0, 0, 0, 0.1);
-  justify-content: center;
-  height: 100%;
-  margin: 4px auto;
+  @extend %status-base;
+  background: #eff6ff;
+  color: #1d4ed8;
 }
 
 .syncerror-status {
-  background: linear-gradient(to bottom, red 0%, red 100%);
-  border: 1px solid red;
-  color: #ffffff;
-  cursor: pointer;
-  font-size: 16px;
-  padding: 10px 20px;
-  text-align: center;
-  text-decoration: none;
-  display: -webkit-inline-box;
-  border-radius: 20px;
-  transition: background 0.3s ease;
-  box-shadow: 0px 4px 5px rgba(0, 0, 0, 0.1);
-  justify-content: center;
-  height: 100%;
-  margin: 4px auto;
+  @extend %status-base;
+  background: #fef2f2;
+  color: #b91c1c;
 }
 
 .sysced-status {
-  background: linear-gradient(to bottom, lightskyblue 0%, lightskyblue 100%);
-  border: 1px solid lightskyblue;
-  color: #ffffff;
-  cursor: pointer;
-  font-size: 16px;
-  padding: 10px 20px;
-  text-align: center;
-  text-decoration: none;
-  display: -webkit-inline-box;
-  border-radius: 20px;
-  transition: background 0.3s ease;
-  box-shadow: 0px 4px 5px rgba(0, 0, 0, 0.1);
-  justify-content: center;
-  height: 100%;
-  margin: 4px auto;
+  @extend %status-base;
+  background: #f0f9ff;
+  color: #0369a1;
 }
 
 .processed-status {
-  background: linear-gradient(to bottom, green 0%, green 100%);
-  border: 1px solid green;
-  color: #ffffff;
-  cursor: pointer;
-  font-size: 16px;
-  padding: 10px 20px;
-  text-align: center;
-  text-decoration: none;
-  display: -webkit-inline-box;
-  border-radius: 20px;
-  transition: background 0.3s ease;
-  box-shadow: 0px 4px 5px rgba(0, 0, 0, 0.1);
-  justify-content: center;
-  height: 100%;
-  margin: 4px auto;
+  @extend %status-base;
+  background: #f0fdf4;
+  color: #15803d;
 }
 
 .asngen-status {
-  background: linear-gradient(to bottom, firebrick 0%, firebrick 100%);
-  border: 1px solid firebrick;
-  color: #ffffff;
-  cursor: pointer;
-  font-size: 16px;
-  padding: 10px 20px;
-  text-align: center;
-  text-decoration: none;
-  display: -webkit-inline-box;
-  border-radius: 20px;
-  transition: background 0.3s ease;
-  box-shadow: 0px 4px 5px rgba(0, 0, 0, 0.1);
-  justify-content: center;
-  height: 100%;
-  margin: 4px auto;
+  @extend %status-base;
+  background: #fff7ed;
+  color: #c2410c;
 }
 
 .asnmark-status {
-  background: linear-gradient(to bottom, lightslategray 0%, lightslategray 100%);
-  border: 1px solid lightslategray;
-  color: #ffffff;
-  cursor: pointer;
-  font-size: 16px;
-  padding: 10px 20px;
-  text-align: center;
-  text-decoration: none;
-  display: -webkit-inline-box;
-  border-radius: 20px;
-  transition: background 0.3s ease;
-  box-shadow: 0px 4px 5px rgba(0, 0, 0, 0.1);
-  justify-content: center;
-  height: 100%;
-  margin: 4px auto;
+  @extend %status-base;
+  background: #f8fafc;
+  color: #475569;
 }
 
 .invoiced-status {
-  background: linear-gradient(to bottom, mediumpurple 0%, mediumpurple 100%);
-  border: 1px solid mediumpurple;
-  color: #ffffff;
-  cursor: pointer;
-  font-size: 16px;
-  padding: 10px 20px;
-  text-align: center;
-  text-decoration: none;
-  display: -webkit-inline-box;
-  border-radius: 20px;
-  transition: background 0.3s ease;
-  box-shadow: 0px 4px 5px rgba(0, 0, 0, 0.1);
-  justify-content: center;
-  height: 100%;
-  margin: 4px auto;
+  @extend %status-base;
+  background: #faf5ff;
+  color: #7e22ce;
 }
 
 .complete-status {
-  background: linear-gradient(to bottom, gray 0%, gray 100%);
-  border: 1px solid gray;
-  color: #ffffff;
-  cursor: pointer;
-  font-size: 16px;
-  padding: 10px 20px;
-  text-align: center;
-  text-decoration: none;
-  display: -webkit-inline-box;
-  border-radius: 20px;
-  transition: background 0.3s ease;
-  box-shadow: 0px 4px 5px rgba(0, 0, 0, 0.1);
-  justify-content: center;
-  height: 100%;
-  margin: 4px auto;
+  @extend %status-base;
+  background: #f1f5f9;
+  color: #334155;
 }
 
 .finished-status {
-  background: linear-gradient(to bottom, olivedrab 0%, olivedrab 100%);
-  border: 1px solid olivedrab;
-  color: #ffffff;
-  cursor: pointer;
-  font-size: 16px;
-  padding: 10px 20px;
-  text-align: center;
-  text-decoration: none;
-  display: -webkit-inline-box;
-  border-radius: 20px;
-  transition: background 0.3s ease;
-  box-shadow: 0px 4px 5px rgba(0, 0, 0, 0.1);
-  justify-content: center;
-  height: 100%;
-  margin: 4px auto;
+  @extend %status-base;
+  background: #f0fdf4;
+  color: #166534;
 }
 
 .splited-status {
-  background: linear-gradient(to bottom, brown 0%, brown 100%);
-  border: 1px solid brown;
-  color: #ffffff;
-  cursor: pointer;
-  font-size: 16px;
-  padding: 10px 20px;
-  text-align: center;
-  text-decoration: none;
-  display: -webkit-inline-box;
-  border-radius: 20px;
-  transition: background 0.3s ease;
-  box-shadow: 0px 4px 5px rgba(0, 0, 0, 0.1);
-  justify-content: center;
-  height: 100%;
-  margin: 4px auto;
+  @extend %status-base;
+  background: #fef2f2;
+  color: #991b1b;
 }
 
 .invedi-status {
-  background: linear-gradient(to bottom, blue 0%, blue 100%);
-  border: 1px solid blue;
-  color: #ffffff;
-  cursor: pointer;
-  font-size: 16px;
-  padding: 10px 20px;
-  text-align: center;
-  text-decoration: none;
-  display: -webkit-inline-box;
-  border-radius: 20px;
-  transition: background 0.3s ease;
-  box-shadow: 0px 4px 5px rgba(0, 0, 0, 0.1);
-  justify-content: center;
-  height: 100%;
-  margin: 4px auto;
+  @extend %status-base;
+  background: #eef2ff;
+  color: #3730a3;
 }
 
 .acknowledged-status {
-  background: linear-gradient(to bottom, #0094ff 0%, #0094ff 100%);
-  border: 1px solid #0094ff;
-  color: #ffffff;
-  cursor: pointer;
-  font-size: 16px;
-  padding: 10px 20px;
-  text-align: center;
-  text-decoration: none;
-  display: -webkit-inline-box;
-  border-radius: 20px;
-  transition: background 0.3s ease;
-  box-shadow: 0px 4px 5px rgba(0, 0, 0, 0.1);
-  justify-content: center;
-  height: 100%;
-  margin: 4px auto;
+  @extend %status-base;
+  background: #eff6ff;
+  color: #1e40af;
 }

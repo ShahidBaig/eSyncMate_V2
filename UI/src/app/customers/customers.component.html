@@ -45,7 +45,7 @@
 
       &nbsp;
 
-      <button *ngIf="isAdminUser" mat-flat-button color="accent" (click)="openAddCustomerDialog()">
+      <button *ngIf="canAdd" mat-flat-button color="accent" (click)="openAddCustomerDialog()">
         <span>{{ 'addCustomer' | translate }}</span>
         <mat-spinner *ngIf="showSpinnerforSearch" diameter="20"></mat-spinner>
       </button>
@@ -55,6 +55,7 @@
   &nbsp;
   <mat-card>
     <mat-card-content>
+      <mat-progress-bar *ngIf="isLoading" mode="indeterminate" color="accent"></mat-progress-bar>
       <table mat-table [dataSource]="dataSource">
 
         <!-- ID Column -->
@@ -107,7 +108,7 @@
         </ng-container>
 
         <!--Edit-->
-        <ng-container *ngIf="isAdminUser">
+        <ng-container *ngIf="canEdit">
           <ng-container matColumnDef="Edit" >
             <th mat-header-cell *matHeaderCellDef> {{ 'actions' | translate }}</th>
             <td mat-cell *matCellDef="let element">

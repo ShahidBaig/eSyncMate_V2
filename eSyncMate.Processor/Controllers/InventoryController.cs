@@ -32,7 +32,7 @@ namespace eSyncMate.Processor.Controllers
 
         [HttpGet]
         [Route("getInventory/{ItemID}/{FromDate}/{ToDate}/{Status}/{CustomerID}/{RouteType}")]
-        public async Task<GetInventoryResponseModel> GetInventory(string ItemID = "", string FromDate = "", string ToDate = "", string Status = "", string CustomerID = "", string RouteType = "")
+        public async Task<GetInventoryResponseModel> GetInventory(string ItemID = "", string FromDate = "", string ToDate = "", string Status = "", string CustomerID = "", string RouteType = "", [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
             MethodBase l_Me = MethodBase.GetCurrentMethod();
             GetInventoryResponseModel l_Response = new GetInventoryResponseModel();
@@ -126,12 +126,14 @@ namespace eSyncMate.Processor.Controllers
                 this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Search criteria ready ({l_Criteria}).");
                 this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Staring Inventory search.");
 
-                l_Inventory.GetViewList(l_Criteria, string.Empty, ref l_Data, "StartDate DESC");
+                int totalCount = 0;
+                l_Inventory.GetViewListPaged(l_Criteria, string.Empty, ref l_Data, "StartDate DESC", pageNumber, pageSize, out totalCount);
 
-                this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - InventoryRow searched {{{l_Data.Rows.Count}}}.");
+                this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - InventoryRow searched {{{l_Data.Rows.Count}}} of {totalCount} total.");
                 this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Populating Inventory.");
 
                 l_Response.Inventory = l_Data;
+                l_Response.TotalCount = totalCount;
 
                 l_Response.Code = (int)ResponseCodes.Success;
                 l_Response.Message = "InventoryRow fetched successfully!";

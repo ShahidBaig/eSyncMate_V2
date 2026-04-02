@@ -15,10 +15,12 @@ export class CustomerProductCatalogService {
     return this.http.post<any>(this.apiUrl + 'api/CustomerProductCatalog/updateCustomerProductCatalog', connectorModel);
   }
 
-  getCustomerProductCatalog(searchOption: string, searchValue: string): Observable<any> {
+  getCustomerProductCatalog(searchOption: string, searchValue: string, pageNumber: number = 1, pageSize: number = 10): Observable<any> {
     const params = new HttpParams()
       .set('searchOption', searchOption)
-      .set('searchValue', searchValue);
+      .set('searchValue', searchValue)
+      .set('pageNumber', pageNumber.toString())
+      .set('pageSize', pageSize.toString());
 
     return this.http.get(`${this.apiUrl}api/CustomerProductCatalog/getCustomerProductCatalog`, { params });
   }
@@ -132,10 +134,12 @@ export class CustomerProductCatalogService {
   }
 
 
-  getSCSBulkUploadPrice(searchOption: string, searchValue: string): Observable<any> {
+  getSCSBulkUploadPrice(searchOption: string, searchValue: string, pageNumber: number = 1, pageSize: number = 10): Observable<any> {
     const params = new HttpParams()
       .set('searchOption', searchOption)
-      .set('searchValue', searchValue);
+      .set('searchValue', searchValue)
+      .set('pageNumber', pageNumber.toString())
+      .set('pageSize', pageSize.toString());
 
     return this.http.get(`${this.apiUrl}api/CustomerProductCatalog/getSCSBulkUploadPrice`, { params });
   }

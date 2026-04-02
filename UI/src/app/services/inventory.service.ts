@@ -12,8 +12,11 @@ export class InventoryService {
   apiUrl = environment.apiUrl;
   constructor(private http: HttpClient, private jwt: JwtHelperService) { }
 
-  getInventory(itemID: string, fromDate: string, toDate: string, status: string, customerID: string, routeType: string) {
-    return this.http.get<any>(this.apiUrl + 'api/v1/inventory/getInventory/' + itemID + '/' + fromDate + '/' + toDate + '/' + status + '/' + customerID + '/' + routeType);
+  getInventory(itemID: string, fromDate: string, toDate: string, status: string, customerID: string, routeType: string, pageNumber: number = 1, pageSize: number = 10) {
+    const params = new HttpParams()
+      .set('pageNumber', pageNumber.toString())
+      .set('pageSize', pageSize.toString());
+    return this.http.get<any>(this.apiUrl + 'api/v1/inventory/getInventory/' + itemID + '/' + fromDate + '/' + toDate + '/' + status + '/' + customerID + '/' + routeType, { params });
   }
 
   getInventoryFiles(customerId: string, itemId: string, batchId: string = '') {

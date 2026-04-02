@@ -15,6 +15,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialog } from '@angular/material/dialog';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { CommonModule } from '@angular/common';
 import { MatSelectChange, MatSelectModule } from '@angular/material/select';
 import {MatAutocompleteModule, MatAutocompleteSelectedEvent} from '@angular/material/autocomplete';
@@ -60,6 +61,7 @@ interface Customers {
     MatTooltipModule,
     MatIconModule,
     MatProgressSpinnerModule,
+    MatProgressBarModule,
     CommonModule,
     MatSelectModule,
     FormsModule,
@@ -69,6 +71,10 @@ interface Customers {
   ],
 })
 export class CustomerProductCatalogComponent {
+  isLoading: boolean = false;
+  totalCount: number = 0;
+  pageNumber: number = 1;
+  pageSize: number = 10;
   listOfCustomerProductCatalog: CustomerProductCatalog[] = [];
   customerProductCatalogToDisplay: CustomerProductCatalog[] = [];
   listofItemsPrepareData: PrepareItemData[] = [];
@@ -98,6 +104,10 @@ export class CustomerProductCatalogComponent {
   itemTypes: string = '';
   itemTypeName: string = '';
   isAdminUser: boolean = false;
+  canAdd = false;
+  canEdit = false;
+  canDelete = false;
+  panelsCollapsed = false;
   itemTypeFilter: string = '';
   userID: number = 0;
   isPrepareData: boolean = false;
@@ -124,11 +134,22 @@ export class CustomerProductCatalogComponent {
   ];
 
   constructor(private api: CustomerProductCatalogService, private fb: FormBuilder, private toast: NgToastService, private dialog: MatDialog, private userApi: ApiService, public languageService: LanguageService, private translate: TranslateService,) {
-    this.isAdminUser = ["ADMIN", "WRITER"].includes(this.userApi.getTokenUserInfo()?.userType || '');
+    const permissions = this.userApi.getMenuPermissions('edi/customerProductCatalog');
+    if (permissions) {
+      this.canAdd = permissions.canAdd;
+      this.canEdit = permissions.canEdit;
+      this.canDelete = permissions.canDelete;
+    } else {
+      const isAdmin = ["ADMIN", "WRITER"].includes(this.userApi.getTokenUserInfo()?.userType || '');
+      this.canAdd = isAdmin;
+      this.canEdit = isAdmin;
+      this.canDelete = isAdmin;
+      this.isAdminUser = isAdmin;
+    }
   }
 
   ngOnInit(): void {
-    if (!this.isAdminUser) {
+    if (!this.canEdit) {
       const editIndex = this.columns.indexOf('Edit');
       if (editIndex !== -1) {
         this.columns.splice(editIndex, 1);
@@ -273,14 +294,19 @@ export class CustomerProductCatalogComponent {
   }
 
   onPageChange(event: PageEvent) {
-    const startIndex = event.pageIndex * event.pageSize;
-    this.customerProductCatalogToDisplay = this.listOfCustomerProductCatalog.slice(startIndex, startIndex + event.pageSize);
+    this.pageNumber = event.pageIndex + 1;
+    this.pageSize = event.pageSize;
+    this.getCustomerProductCatalog();
   }
 
   getCustomerProductCatalog(resetPage: boolean = false) {
     this.showSpinnerforSearchData = true;
     let stringFromDate = '';
     let stringToDate = '';
+
+    if (resetPage) {
+      this.pageNumber = 1;
+    }
 
     if (this.selectedOption === 'Select Customer Product Catalog') {
       this.searchValue = 'ALL';
@@ -296,52 +322,37 @@ export class CustomerProductCatalogComponent {
       this.searchValue = stringFromDate + '/' + stringToDate;
     }
 
-    this.api.getCustomerProductCatalog(this.selectedOption, this.searchValue).subscribe({
+    this.isLoading = true;
+    this.api.getCustomerProductCatalog(this.selectedOption, this.searchValue, this.pageNumber, this.pageSize).subscribe({
       next: (res: any) => {
         this.msg = res.message;
         this.code = res.code;
 
-        const oldPageIndex = this.paginator?.pageIndex ?? 0;
-        const oldPageSize = this.paginator?.pageSize ?? 10;
-
         this.listOfCustomerProductCatalog = res.customerProductCatalogDatatable ?? [];
+        this.totalCount = res.totalCount ?? 0;
+        this.customerProductCatalogToDisplay = this.listOfCustomerProductCatalog;
 
-        if (this.listOfCustomerProductCatalog == null || this.listOfCustomerProductCatalog.length === 0) {
-          this.toast.info({ detail: "INFO", summary: this.languageService.getTranslation('noFilterDataMessage'), duration: 5000, /*sticky: true,*/ position: 'topRight' });
-          this.showSpinnerforSearchData = false;
-          this.customerProductCatalogToDisplay = [];
-          this.dataSource.data = [];
-
-          return;
-        }
-
-        this.dataSource.data = this.listOfCustomerProductCatalog;
-
-        if (resetPage) {
-          this.paginator?.firstPage();
-        } else {
-          const maxPageIndex = Math.max(Math.ceil(this.listOfCustomerProductCatalog.length / oldPageSize) - 1, 0);
-          this.paginator.pageIndex = Math.min(oldPageIndex, maxPageIndex);
-
-          this.paginator._changePageSize(this.paginator.pageSize);
+        if (this.listOfCustomerProductCatalog.length === 0 && this.pageNumber === 1) {
+          this.toast.info({ detail: "INFO", summary: this.languageService.getTranslation('noFilterDataMessage'), duration: 5000, position: 'topRight' });
         }
 
         if (this.code === 200) {
           this.showSpinnerforSearchData = false;
-        }
-        else if (this.code === 400) {
-          this.toast.error({ detail: "ERROR", summary: this.msg, duration: 5000, /*sticky: true,*/ position: 'topRight' });
+        } else if (this.code === 400) {
+          this.toast.error({ detail: "ERROR", summary: this.msg, duration: 5000, position: 'topRight' });
           this.showSpinnerforSearchData = false;
         } else {
-          this.toast.info({ detail: "INFO", summary: this.msg, duration: 5000, /*sticky: true,*/ position: 'topRight' });
+          this.toast.info({ detail: "INFO", summary: this.msg, duration: 5000, position: 'topRight' });
           this.showSpinnerforSearchData = false;
         }
 
         this.showSpinnerforSearchData = false;
+        this.isLoading = false;
       },
       error: (err: any) => {
         this.toast.error({ detail: "ERROR", summary: err.message, duration: 5000, /*sticky: true,*/ position: 'topRight' });
         this.showSpinnerforSearchData = false;
+        this.isLoading = false;
       },
     });
   }

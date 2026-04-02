@@ -15,6 +15,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialog } from '@angular/material/dialog';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { CommonModule } from '@angular/common';
 import { MatSelectChange, MatSelectModule } from '@angular/material/select';
 
@@ -25,9 +26,6 @@ import { LanguageService } from '../services/language.service';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { ApiService } from '../services/api.service';
 import * as XLSX from 'xlsx';
-import { MatTableDataSource } from '@angular/material/table';
-import { MatPaginator } from '@angular/material/paginator';
-import { ViewChild } from '@angular/core';
 
 interface ItemTypes {
   item_Type_Id: string;
@@ -58,6 +56,7 @@ interface Customers {
     MatTooltipModule,
     MatIconModule,
     MatProgressSpinnerModule,
+    MatProgressBarModule,
     CommonModule,
     MatSelectModule,
     FormsModule,
@@ -66,6 +65,7 @@ interface Customers {
   ],
 })
 export class ProductPricesComponent {
+  isLoading: boolean = false;
   listOfCustomerProductCatalog: CustomerProductCatalog[] = [];
   customerProductCatalogToDisplay: CustomerProductCatalog[] = [];
   msg: string = '';
@@ -90,11 +90,15 @@ export class ProductPricesComponent {
   itemTypes: string = '';
   itemTypeName: string = '';
   isAdminUser: boolean = false;
+  canAdd = false;
+  canEdit = false;
+  canDelete = false;
   itemTypeFilter: string = '';
   desc: string = '';
   showProcessProductPrices: boolean = false;
-  dataSource = new MatTableDataSource<CustomerProductCatalog>([]);
-  @ViewChild(MatPaginator) paginator!: MatPaginator;
+  totalCount: number = 0;
+  pageNumber: number = 1;
+  pageSize: number = 10;
 
   columns: string[] = [
     'ProductId',
@@ -108,11 +112,22 @@ export class ProductPricesComponent {
   ];
 
   constructor(private api: CustomerProductCatalogService, private fb: FormBuilder, private toast: NgToastService, private dialog: MatDialog, private userApi: ApiService, public languageService: LanguageService, private translate: TranslateService,) {
-    this.isAdminUser = ["ADMIN", "WRITER"].includes(this.userApi.getTokenUserInfo()?.userType || '');
+    const permissions = this.userApi.getMenuPermissions('edi/productPrices');
+    if (permissions) {
+      this.canAdd = permissions.canAdd;
+      this.canEdit = permissions.canEdit;
+      this.canDelete = permissions.canDelete;
+    } else {
+      const isAdmin = ["ADMIN", "WRITER"].includes(this.userApi.getTokenUserInfo()?.userType || '');
+      this.canAdd = isAdmin;
+      this.canEdit = isAdmin;
+      this.canDelete = isAdmin;
+      this.isAdminUser = isAdmin;
+    }
   }
 
   ngOnInit(): void {
-    if (!this.isAdminUser) {
+    if (!this.canEdit) {
       const editIndex = this.columns.indexOf('Edit');
       if (editIndex !== -1) {
         this.columns.splice(editIndex, 1);
@@ -126,8 +141,10 @@ export class ProductPricesComponent {
     this.getERPCustomer();
   }
 
-  ngAfterViewInit(): void {
-    this.dataSource.paginator = this.paginator;
+  onPageChange(event: PageEvent) {
+    this.pageNumber = event.pageIndex + 1;
+    this.pageSize = event.pageSize;
+    this.getCustomerProductCatalog();
   }
 
   getFilteredItemTypes(): any {
@@ -210,13 +227,11 @@ export class ProductPricesComponent {
     return year + '-' + month + '-' + day;
   }
 
-  onPageChange(event: PageEvent) {
-    const startIndex = event.pageIndex * event.pageSize;
-    this.customerProductCatalogToDisplay = this.listOfCustomerProductCatalog.slice(startIndex, startIndex + event.pageSize);
-  }
-
   getCustomerProductCatalog(resetPage: boolean = false) {
-    this.showSpinnerforSearchData = true;
+    if (resetPage) {
+      this.pageNumber = 1;
+    }
+
     let stringFromDate = '';
     let stringToDate = '';
 
@@ -234,52 +249,29 @@ export class ProductPricesComponent {
       this.searchValue = stringFromDate + '/' + stringToDate;
     }
 
-    this.api.getSCSBulkUploadPrice(this.selectedOption, this.searchValue).subscribe({
+    this.isLoading = true;
+    this.api.getSCSBulkUploadPrice(this.selectedOption, this.searchValue, this.pageNumber, this.pageSize).subscribe({
       next: (res: any) => {
         this.msg = res.message;
         this.code = res.code;
-        const oldPageIndex = this.paginator?.pageIndex ?? 0;
-        const oldPageSize = this.paginator?.pageSize ?? 10;
 
         this.listOfCustomerProductCatalog = res.customerProductCatalogDatatable ?? [];
+        this.totalCount = res.totalCount ?? 0;
+        this.customerProductCatalogToDisplay = this.listOfCustomerProductCatalog;
 
-        if (this.listOfCustomerProductCatalog == null || this.listOfCustomerProductCatalog.length === 0) {
-          this.toast.info({ detail: "INFO", summary: this.languageService.getTranslation('noFilterDataMessage'), duration: 5000, /*sticky: true,*/ position: 'topRight' });
-          this.showSpinnerforSearchData = false;
-          this.customerProductCatalogToDisplay = [];
-          this.dataSource.data = [];
-
-          return;
+        if (this.listOfCustomerProductCatalog.length === 0 && this.pageNumber === 1) {
+          this.toast.info({ detail: "INFO", summary: this.languageService.getTranslation('noFilterDataMessage'), duration: 5000, position: 'topRight' });
         }
 
-        this.dataSource.data = this.listOfCustomerProductCatalog;
-
-        if (resetPage) {
-          this.paginator?.firstPage();
-        } else {
-          const maxPageIndex = Math.max(Math.ceil(this.listOfCustomerProductCatalog.length / oldPageSize) - 1, 0);
-          this.paginator.pageIndex = Math.min(oldPageIndex, maxPageIndex);
-
-          this.paginator._changePageSize(this.paginator.pageSize);
+        if (this.code === 400) {
+          this.toast.error({ detail: "ERROR", summary: this.msg, duration: 5000, position: 'topRight' });
         }
 
-
-        if (this.code === 200) {
-          this.showSpinnerforSearchData = false;
-        }
-        else if (this.code === 400) {
-          this.toast.error({ detail: "ERROR", summary: this.msg, duration: 5000, /*sticky: true,*/ position: 'topRight' });
-          this.showSpinnerforSearchData = false;
-        } else {
-          this.toast.info({ detail: "INFO", summary: this.msg, duration: 5000, /*sticky: true,*/ position: 'topRight' });
-          this.showSpinnerforSearchData = false;
-        }
-
-        this.showSpinnerforSearchData = false;
+        this.isLoading = false;
       },
       error: (err: any) => {
-        this.toast.error({ detail: "ERROR", summary: err.message, duration: 5000, /*sticky: true,*/ position: 'topRight' });
-        this.showSpinnerforSearchData = false;
+        this.toast.error({ detail: "ERROR", summary: err.message, duration: 5000, position: 'topRight' });
+        this.isLoading = false;
       },
     });
   }

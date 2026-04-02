@@ -628,7 +628,7 @@ namespace eSyncMate.Processor.Controllers
 
         [HttpGet]
         [Route("getOrders/{OrderId}/{FromDate}/{ToDate}/{OrderNumber}/{Status}/{ExternalId}/{CustomerId}")]
-        public async Task<GetOrdersResponseModel> GetOrders(int? OrderId = 0, string FromDate = "", string ToDate = "", string OrderNumber = "", string Status = "", string ExternalId = "", string CustomerId = "")
+        public async Task<GetOrdersResponseModel> GetOrders(int? OrderId = 0, string FromDate = "", string ToDate = "", string OrderNumber = "", string Status = "", string ExternalId = "", string CustomerId = "", [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
             GetOrdersResponseModel l_Response = new GetOrdersResponseModel();
             MethodBase l_Me = MethodBase.GetCurrentMethod();
@@ -708,13 +708,15 @@ namespace eSyncMate.Processor.Controllers
                 this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Search criteria ready ({l_Criteria}).");
                 this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Staring order search.");
 
-                l_Order.GetViewList(l_Criteria, string.Empty, ref l_Data, "Id DESC");
+                int totalCount = 0;
+                l_Order.GetViewListPaged(l_Criteria, string.Empty, ref l_Data, "Id DESC", pageNumber, pageSize, out totalCount);
 
-                this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Orders searched {{{l_Data.Rows.Count}}}.");
+                this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Orders searched {{{l_Data.Rows.Count}}} of {totalCount} total.");
                 this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Populating orders.");
 
 
                 l_Response.OrdersData = l_Data;
+                l_Response.TotalCount = totalCount;
                 //l_Response.Orders = new List<OrderDataModel>();
                 //foreach (DataRow l_Row in l_Data.Rows)
                 //{

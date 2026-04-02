@@ -13,6 +13,7 @@ import { NgToastService } from 'ng-angular-popup';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { CommonModule } from '@angular/common';
 import { MatSelectChange, MatSelectModule } from '@angular/material/select';
 import { CarrierLoadTenderService } from '../services/carrierLoadTender.service';
@@ -46,14 +47,16 @@ import { environment } from 'src/environments/environment';
     MatTooltipModule,
     MatIconModule,
     MatProgressSpinnerModule,
+    MatProgressBarModule,
     CommonModule,
     MatSelectModule,
     MatPaginatorModule,
     TranslateModule,
-    FormsModule 
+    FormsModule
   ],
 })
 export class EdiFileCounterComponent {
+  isLoading: boolean = false;
   mydate = environment.date;
 
   ediCountFilesList: EdiCountFile[] = [];
@@ -187,6 +190,7 @@ export class EdiFileCounterComponent {
     this.total204Count = 0;
     this.total204Count = 0;
 
+    this.isLoading = true;
     this.api.getEdiFilesCounter(stringFromDate, stringToDate, customer, shipmentID, shipperNo).subscribe({
       next: (res: any) => {
         if (res && res.ediCounterData)
@@ -216,10 +220,12 @@ export class EdiFileCounterComponent {
         this.total204Count = this.ediCountFilesList.reduce((acc, curr) => acc + curr.counT_204, 0);
         this.total214Count = this.ediCountFilesList.reduce((acc, curr) => acc + curr.counT_214, 0);
         this.showSpinnerforSearch = false;
+        this.isLoading = false;
       },
       error: (err: any) => {
         this.toast.error({ detail: "ERROR", summary: err.message, duration: 5000, /*sticky: true,*/ position: 'topRight' });
         this.showSpinnerforSearch = false;
+        this.isLoading = false;
         this.ediCountFilesList= [];
         this.ediDataToDisplay = [];
       },

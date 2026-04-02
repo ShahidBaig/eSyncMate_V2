@@ -129,9 +129,10 @@ namespace eSyncMate.Processor.Controllers
                 this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Search criteria ready ({l_Criteria}).");
                 this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Staring PartnerGroup search.");
 
-                l_Routes.GetViewList(l_Criteria, string.Empty, ref l_Data, "Id ASC");
+                int totalCount = 0;
+                l_Routes.GetViewListPaged(l_Criteria, string.Empty, ref l_Data, "Id ASC", searchModel.PageNumber, searchModel.PageSize, out totalCount);
 
-                this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Routes searched {{{l_Data.Rows.Count}}}.");
+                this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Routes searched {{{l_Data.Rows.Count}}} of {totalCount} total.");
                 this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Populating Routes.");
 
                 l_Response.Routes = new List<RoutesDataModel>();
@@ -144,6 +145,7 @@ namespace eSyncMate.Processor.Controllers
                     l_Response.Routes.Add(l_RouteRow);
                 }
 
+                l_Response.TotalCount = totalCount;
                 l_Response.Code = (int)ResponseCodes.Success;
                 l_Response.Message = "Routes fetched successfully!";
 

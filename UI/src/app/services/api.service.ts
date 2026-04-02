@@ -2,7 +2,7 @@ import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { JwtHelperService } from '@auth0/angular-jwt';
 import { map } from 'rxjs/operators';
-import { Order, RouteLog, User, UserType } from '../models/models';
+import { Order, RouteLog, User, UserType, UserMenuResponse, UserMenuModule, Role, RoleMenu, MenuDef, ModuleDef } from '../models/models';
 import { Observable } from 'rxjs';
 import { environment } from 'src/environments/environment';
 
@@ -52,6 +52,92 @@ export class ApiService {
 
   deleteToken() {
     localStorage.removeItem('access_token');
+    localStorage.removeItem('user_menus');
+  }
+
+  saveUserMenus(menus: UserMenuResponse) {
+    localStorage.setItem('user_menus', JSON.stringify(menus));
+  }
+
+  getUserMenus(): UserMenuResponse | null {
+    const data = localStorage.getItem('user_menus');
+    if (!data) return null;
+    try {
+      return JSON.parse(data) as UserMenuResponse;
+    } catch {
+      return null;
+    }
+  }
+
+  clearUserMenus() {
+    localStorage.removeItem('user_menus');
+  }
+
+  isRouteAllowed(route: string): boolean {
+    const menus = this.getUserMenus();
+    if (!menus || !menus.modules) return false;
+    const normalizedRoute = route.replace(/^\//, '').split('?')[0].split('#')[0];
+    for (const mod of menus.modules) {
+      if (!mod.menuItems) continue;
+      for (const item of mod.menuItems) {
+        if (item.route === normalizedRoute && item.canView) return true;
+      }
+    }
+    return false;
+  }
+
+  getMenuPermissions(route: string): { canView: boolean, canAdd: boolean, canEdit: boolean, canDelete: boolean } | null {
+    const menus = this.getUserMenus();
+    if (!menus || !menus.modules) return null;
+    for (const mod of menus.modules) {
+      for (const item of mod.menuItems) {
+        if (item.route === route) {
+          return { canView: item.canView, canAdd: item.canAdd, canEdit: item.canEdit, canDelete: item.canDelete };
+        }
+      }
+    }
+    return null;
+  }
+
+  fetchUserMenusFromApi(userId: number): Observable<any> {
+    return this.http.get(`${this.apiUrl}api/Role/getUserMenus?userId=${userId}`);
+  }
+
+  // Role Management APIs
+  getRoles(): Observable<any> {
+    return this.http.get(`${this.apiUrl}api/Role/getRoles`);
+  }
+
+  saveRole(role: any): Observable<any> {
+    return this.http.post(`${this.apiUrl}api/Role/saveRole`, role);
+  }
+
+  deleteRole(role: any): Observable<any> {
+    return this.http.post(`${this.apiUrl}api/Role/deleteRole`, role);
+  }
+
+  getModules(): Observable<any> {
+    return this.http.get(`${this.apiUrl}api/Role/getModules`);
+  }
+
+  getMenusDef(): Observable<any> {
+    return this.http.get(`${this.apiUrl}api/Role/getMenus`);
+  }
+
+  getRoleMenus(roleId: number): Observable<any> {
+    return this.http.get(`${this.apiUrl}api/Role/getRoleMenus?roleId=${roleId}`);
+  }
+
+  saveRoleMenus(data: any): Observable<any> {
+    return this.http.post(`${this.apiUrl}api/Role/saveRoleMenus`, data);
+  }
+
+  getUserRole(userId: number): Observable<any> {
+    return this.http.get(`${this.apiUrl}api/Role/getUserRole?userId=${userId}`);
+  }
+
+  saveUserRole(data: any): Observable<any> {
+    return this.http.post(`${this.apiUrl}api/Role/saveUserRole`, data);
   }
 
   getTokenUserInfo(): User | null {
@@ -72,6 +158,7 @@ export class ApiService {
       company: token.company,
       isSetupMenu: token.isSetupAllowed,
       userID: token.userID,
+      roleName: token.roleName || '',
     };
     return user;
   }
@@ -112,16 +199,22 @@ export class ApiService {
     });
   }
 
-  getOrders(orderId: number, fromDate: string, toDate: string, orderNumber: string, status: string, ExternalId: string, CustomerId: string) {
-    return this.http.get<Order[]>(this.apiUrl + 'EDIProcessor/api/v1/orders/getOrders/' + orderId + '/' + fromDate + '/' + toDate + '/' + orderNumber + '/' + status + '/' + ExternalId + '/' + CustomerId);
+  getOrders(orderId: number, fromDate: string, toDate: string, orderNumber: string, status: string, ExternalId: string, CustomerId: string, pageNumber: number = 1, pageSize: number = 10) {
+    const params = new HttpParams()
+      .set('pageNumber', pageNumber.toString())
+      .set('pageSize', pageSize.toString());
+    return this.http.get<any>(this.apiUrl + 'EDIProcessor/api/v1/orders/getOrders/' + orderId + '/' + fromDate + '/' + toDate + '/' + orderNumber + '/' + status + '/' + ExternalId + '/' + CustomerId, { params });
   }
 
   getDashboardStats() {
     return this.http.get<any>(this.apiUrl + 'EDIProcessor/api/v1/orders/getDashboardStats');
   }
 
-  getRouteExceptions(name: string, message: string, fromDate: string, toDate: string, status: string) {
-    return this.http.get<RouteLog[]>(this.apiUrl + 'api/v1/routeExceptions/getRouteExceptions/' + name + '/' + message + '/' + fromDate + '/' + toDate + '/' + status);
+  getRouteExceptions(name: string, message: string, fromDate: string, toDate: string, status: string, pageNumber: number = 1, pageSize: number = 10) {
+    const params = new HttpParams()
+      .set('pageNumber', pageNumber.toString())
+      .set('pageSize', pageSize.toString());
+    return this.http.get<any>(this.apiUrl + 'api/v1/routeExceptions/getRouteExceptions/' + name + '/' + message + '/' + fromDate + '/' + toDate + '/' + status, { params });
   }
 
   uploadFile(file: File) {

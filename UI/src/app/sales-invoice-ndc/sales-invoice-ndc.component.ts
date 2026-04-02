@@ -15,6 +15,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialog } from '@angular/material/dialog';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { CommonModule } from '@angular/common';
 import { MatSelectModule } from '@angular/material/select';
 import { MatPaginatorModule } from '@angular/material/paginator';
@@ -48,6 +49,7 @@ import { DetailSalesInvoiceNdcComponent } from './detail-sales-invoice-ndc/detai
     MatTooltipModule,
     MatIconModule,
     MatProgressSpinnerModule,
+    MatProgressBarModule,
     CommonModule,
     MatSelectModule,
     MatPaginatorModule,
@@ -55,6 +57,7 @@ import { DetailSalesInvoiceNdcComponent } from './detail-sales-invoice-ndc/detai
   ],
 })
 export class SalesInvoiceNdcComponent {
+  isLoading: boolean = false;
   mydate = environment.date;
 
   salesInvoiceNDC: SalesInvoiceNDC[] = [];
@@ -213,6 +216,7 @@ export class SalesInvoiceNdcComponent {
       invoiceDate = '1999-01-01';
     }
 
+    this.isLoading = true;
     this.api.getInvoice(invoiceNo, invoiceDate, status, poNumber).subscribe({
       next: (res: any) => {
         this.salesInvoiceNDC = res.salesInvoiceNDC;
@@ -242,10 +246,12 @@ export class SalesInvoiceNdcComponent {
         }
 
         this.showSpinnerforSearch = false;
+        this.isLoading = false;
       },
       error: (err: any) => {
         this.toast.error({ detail: "ERROR", summary: err.message, duration: 5000, /*sticky: true,*/ position: 'topRight' });
         this.showSpinnerforSearch = false;
+        this.isLoading = false;
       },
     });
   }

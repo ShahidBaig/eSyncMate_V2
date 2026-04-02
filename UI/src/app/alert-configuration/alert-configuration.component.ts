@@ -16,6 +16,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { PopupComponent } from '../popup/popup.component';
 import { MatDialog } from '@angular/material/dialog';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { CommonModule } from '@angular/common';
 import { MatSelectModule } from '@angular/material/select';
 //import { AddConnectorDialogComponent } from './add-connector-dialog/add-connector-dialog.component';
@@ -56,6 +57,7 @@ interface Customers {
     MatTooltipModule,
     MatIconModule,
     MatProgressSpinnerModule,
+    MatProgressBarModule,
     CommonModule,
     MatSelectModule,
     FormsModule,
@@ -64,6 +66,7 @@ interface Customers {
   ],
 })
 export class AlertConfigurationComponent implements OnInit {
+  isLoading: boolean = false;
   listOfConnectors: AlertConfiguration[] = [];
   connectorsToDisplay: AlertConfiguration[] = [];
   msg: string = '';
@@ -77,6 +80,9 @@ export class AlertConfigurationComponent implements OnInit {
   endDate: string = '';
   showDataColumn: boolean = true;
   isAdminUser: boolean = false;
+  canAdd = false;
+  canEdit = false;
+  canDelete = false;
   dataSource = new MatTableDataSource<AlertConfiguration>([]);
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   customersOptions: Customers[] | undefined;
@@ -91,7 +97,18 @@ export class AlertConfigurationComponent implements OnInit {
   ];
 
   constructor(private alertsConfigurationApi: alertsConfigurationService, private fb: FormBuilder, private toast: NgToastService, private dialog: MatDialog, private api: ApiService, public languageService: LanguageService) {
-    this.isAdminUser = ["ADMIN"].includes(this.api.getTokenUserInfo()?.userType || '');
+    const permissions = this.api.getMenuPermissions('edi/alertConfiguration');
+    if (permissions) {
+      this.canAdd = permissions.canAdd;
+      this.canEdit = permissions.canEdit;
+      this.canDelete = permissions.canDelete;
+    } else {
+      const isAdmin = ["ADMIN", "WRITER"].includes(this.api.getTokenUserInfo()?.userType || '');
+      this.canAdd = isAdmin;
+      this.canEdit = isAdmin;
+      this.canDelete = isAdmin;
+      this.isAdminUser = isAdmin;
+    }
   }
 
   ngOnInit(): void {
@@ -188,6 +205,7 @@ export class AlertConfigurationComponent implements OnInit {
       this.searchValue = stringFromDate + '/' + stringToDate;
     }
 
+    this.isLoading = true;
     this.alertsConfigurationApi.getAlertsConfiguration(this.selectedOption, this.searchValue).subscribe({
       next: (res: any) => {
         this.listOfConnectors = res.alertsConfiguration;
@@ -219,10 +237,12 @@ export class AlertConfigurationComponent implements OnInit {
         }
 
         this.showSpinnerforSearch = false;
+        this.isLoading = false;
       },
       error: (err: any) => {
         this.toast.error({ detail: "ERROR", summary: err.message, duration: 5000, /*sticky: true,*/ position: 'topRight' });
         this.showSpinnerforSearch = false;
+        this.isLoading = false;
       },
     });
   }

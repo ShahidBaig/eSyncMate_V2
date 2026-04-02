@@ -1,28 +1,118 @@
-<mat-toolbar color="primary">
-  <button mat-icon-button (click)="menuClicked.emit()">
-    <mat-icon>menu</mat-icon>
-  </button>
-  <img *ngIf="isGeckotec" src="/assets/images/cropped-logo_small.png" style="height: 52px; width: 207px; margin-left: -620px; ">
+<header class="app-header">
+  <!-- Left: Logo -->
+  <div class="header-left">
+    <img src="/assets/images/Bizmate.png" alt="eSyncMate" class="header-logo">
+    <span class="header-logo-text">eSyncMate</span>
+  </div>
 
-  <img src="/assets/images/Bizmate.png" style="height:52px; width: 130px; cursor: pointer;" (click)="goHome()">
+  <!-- Center: Module Navigation -->
+  <nav class="header-nav">
+    <div *ngFor="let module of modules"
+         class="nav-module"
+         (mouseenter)="openModule = module.moduleId"
+         (mouseleave)="openModule = null">
 
-  <div class="user-info">
-    <!-- Notification Bell -->
-    <button mat-icon-button [matMenuTriggerFor]="notifMenu" class="notif-btn" *ngIf="isEsyncmate">
+      <button class="nav-module-btn" [class.active]="isModuleActive(module)">
+        <mat-icon class="nav-module-icon">{{ module.moduleIcon || 'folder' }}</mat-icon>
+        <span>{{ module.moduleTranslationKey | translate }}</span>
+        <mat-icon class="nav-chevron" *ngIf="module.menuItems?.length">expand_more</mat-icon>
+      </button>
+
+      <!-- Dropdown -->
+      <div class="nav-dropdown" *ngIf="openModule === module.moduleId && module.menuItems?.length">
+        <div class="nav-dropdown-inner">
+          <ng-container *ngFor="let menu of module.menuItems">
+            <a *ngIf="menu.canView"
+               class="dropdown-item"
+               [class.active]="isActive(menu.route)"
+               (click)="goToLink(menu.route, menu.isExternalLink, menu.externalUrl)">
+              <mat-icon class="dropdown-item-icon">{{ menu.menuIcon || 'chevron_right' }}</mat-icon>
+              <span>{{ menu.menuTranslationKey | translate }}</span>
+            </a>
+          </ng-container>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Right: Search + Notifications + Actions -->
+  <div class="header-right">
+    <!-- Search -->
+    <div class="header-search" [class.expanded]="searchOpen">
+      <button mat-icon-button class="search-toggle" (click)="toggleSearch()" *ngIf="!searchOpen">
+        <mat-icon>search</mat-icon>
+      </button>
+      <div class="search-box" *ngIf="searchOpen">
+        <mat-icon class="search-box-icon">search</mat-icon>
+        <input type="text"
+               class="search-input"
+               [placeholder]="'searchMenu' | translate"
+               [(ngModel)]="searchTerm"
+               (input)="onSearch()"
+               (blur)="onSearchBlur()"
+               #searchInput
+               autocomplete="off">
+        <button class="search-close" (click)="closeSearch()">
+          <mat-icon>close</mat-icon>
+        </button>
+
+        <!-- Search Results Dropdown -->
+        <div class="search-dropdown" *ngIf="searchTerm && filteredMenus.length > 0">
+          <a *ngFor="let item of filteredMenus"
+             class="dropdown-item"
+             (mousedown)="goToLink(item.route, item.isExternalLink, item.externalUrl)">
+            <mat-icon class="dropdown-item-icon">{{ item.menuIcon || 'arrow_forward' }}</mat-icon>
+            <div class="search-result-text">
+              <span>{{ item.menuTranslationKey | translate }}</span>
+              <small>{{ item.moduleName }}</small>
+            </div>
+          </a>
+        </div>
+        <div class="search-dropdown search-empty" *ngIf="searchTerm && filteredMenus.length === 0">
+          <span>{{ 'noResults' | translate }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Notification Bell (preserved from V2) -->
+    <button mat-icon-button [matMenuTriggerFor]="notifMenu" class="notif-btn" *ngIf="isEsyncmate" matTooltip="Notifications">
       <mat-icon>notifications</mat-icon>
       <span class="notif-badge" *ngIf="unreadCount > 0">{{ unreadCount > 9 ? '9+' : unreadCount }}</span>
     </button>
 
-    <span>
-      {{ 'hi' | translate }},
-      {{this.api.getTokenUserInfo()?.firstName | titlecase}}
-    </span>
-    <button mat-icon-button [matMenuTriggerFor]="userMenu">
-      <mat-icon>account_circle</mat-icon>
+    <!-- Language -->
+    <button mat-icon-button [matMenuTriggerFor]="langMenu" matTooltip="{{ 'language' | translate }}">
+      <mat-icon>language</mat-icon>
     </button>
+    <mat-menu #langMenu="matMenu">
+      <button mat-menu-item (click)="languageService.setLanguage('en')">English</button>
+      <button mat-menu-item (click)="languageService.setLanguage('es')">Español</button>
+    </mat-menu>
+
+    <!-- User -->
+    <div class="user-profile" [matMenuTriggerFor]="userMenu">
+      <div class="user-avatar">{{ getUserInitials() }}</div>
+      <span class="user-name">{{ api.getTokenUserInfo()?.firstName | titlecase }}</span>
+      <mat-icon class="dropdown-arrow">arrow_drop_down</mat-icon>
+    </div>
+    <mat-menu #userMenu="matMenu">
+      <button mat-menu-item routerLink="/change-password" *ngIf="isAdminUser">
+        <mat-icon>lock</mat-icon>
+        <span>{{ 'changePassword' | translate }}</span>
+      </button>
+      <button mat-menu-item routerLink="/register" *ngIf="isAdminUser">
+        <mat-icon>person_add</mat-icon>
+        <span>{{ 'addUser' | translate }}</span>
+      </button>
+      <mat-divider></mat-divider>
+      <button mat-menu-item (click)="logOut()" class="logout-item">
+        <mat-icon>logout</mat-icon>
+        <span>{{ 'logOut' | translate }}</span>
+      </button>
+    </mat-menu>
   </div>
 
-  <!-- Notification Dropdown -->
+  <!-- Notification Dropdown (preserved from V2) -->
   <mat-menu #notifMenu="matMenu" class="notif-menu-panel">
     <div class="notif-header" (click)="$event.stopPropagation()">
       <span class="notif-title">Notifications</span>
@@ -48,24 +138,5 @@
       </div>
     </div>
   </mat-menu>
+</header>
 
-  <!-- User Menu -->
-  <mat-menu #userMenu="matMenu">
-    <button mat-menu-item routerLink="/login" *ngIf="!api.getTokenUserInfo()?.firstName">
-      <mat-icon>login</mat-icon>
-      <span>{{ 'login' | translate }}</span>
-    </button>
-    <button mat-menu-item routerLink="/change-password" *ngIf="isAdminUser">
-      <mat-icon>person_add</mat-icon>
-      <span>{{ 'changePassword' | translate }}</span>
-    </button>
-    <button mat-menu-item routerLink="/register" *ngIf="isAdminUser">
-      <mat-icon>account_box</mat-icon>
-      <span>{{ 'addUser' | translate }}</span>
-    </button>
-    <button mat-menu-item (click)="logOut()">
-      <mat-icon>logout</mat-icon>
-      <span>{{ 'logOut' | translate }}</span>
-    </button>
-  </mat-menu>
-</mat-toolbar>

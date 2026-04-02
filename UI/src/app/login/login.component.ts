@@ -8,7 +8,6 @@ import { NgIf } from '@angular/common';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectChange, MatSelectModule } from '@angular/material/select';
-import { MatGridListModule } from '@angular/material/grid-list';
 import { CommonModule } from '@angular/common';
 import { LanguageService } from '../services/language.service';
 import { TranslateModule } from '@ngx-translate/core';
@@ -20,7 +19,6 @@ import { NgToastService } from 'ng-angular-popup';
     styleUrls: ['./login.component.scss'],
     standalone: true,
     imports: [
-        MatGridListModule,
         ReactiveFormsModule,
         MatFormFieldModule,
         MatInputModule,
@@ -60,7 +58,7 @@ export class LoginComponent {
 
       window.addEventListener('load', () => {
         if (this.message) {
-          this.toast.info({ detail: "INFO", summary: this.message, duration: 5000, /*sticky: true,*/ position: 'topRight' });
+          this.toast.info({ detail: "INFO", summary: this.message, duration: 5000, position: 'topRight' });
           this.message = '';
           localStorage.setItem('sessionExpiryMessage', '');
         }
@@ -75,21 +73,28 @@ export class LoginComponent {
       ]),
     });
 
-    if (this.api.getTokenUserInfo()?.firstName) {
-      this.redirectByCompany();
+    // Redirect to first menu from stored menus, fallback to company-based
+    const userMenus = this.api.getUserMenus();
+    if (userMenus && userMenus.modules && userMenus.modules.length > 0) {
+      for (const mod of userMenus.modules) {
+        if (mod.menuItems && mod.menuItems.length > 0) {
+          const firstMenu = mod.menuItems.find((m: any) => m.canView);
+          if (firstMenu && firstMenu.route) {
+            this.router.navigateByUrl('/' + firstMenu.route);
+            return;
+          }
+        }
+      }
     }
-  }
 
-  private redirectByCompany() {
-    const company = this.api.getTokenUserInfo()?.company?.toLocaleUpperCase();
-    if (company === 'ESYNCMATE' || company === 'REPAINTSTUDIOS') {
-      this.router.navigateByUrl('/edi/dashboard');
-    } else if (company === 'GECKOTECH') {
+    if (this.api.getTokenUserInfo()?.company.toLocaleUpperCase() === 'GECKOTECH') {
       this.router.navigateByUrl('/edi/carrier');
-    } else if (company === 'SURGIMAC') {
+    }
+    if (this.api.getTokenUserInfo()?.company.toLocaleUpperCase() === 'ESYNCMATE' || this.api.getTokenUserInfo()?.company.toLocaleUpperCase() === 'REPAINTSTUDIOS') {
+      this.router.navigateByUrl('/edi/all-orders');
+    }
+    if (this.api.getTokenUserInfo()?.company.toLocaleUpperCase() === 'SURGIMAC') {
       this.router.navigateByUrl('/edi/purchaseOrder');
-    } else {
-      this.router.navigateByUrl('/edi/dashboard');
     }
   }
 
@@ -108,11 +113,34 @@ export class LoginComponent {
         else {
           this.responseMsg = '';
           this.api.saveToken(res.token);
+
+          // Save user menus from login response
+          if (res.menus) {
+            this.api.saveUserMenus(res.menus);
+          }
+
           let isActive = this.api.getTokenUserInfo()?.status.toLocaleUpperCase() === 'ACTIVE' ? true : false;
           localStorage.setItem("email", this.api.getTokenUserInfo()?.email || "");
           if (isActive)
           {
-              this.redirectByCompany();
+            // Navigate to first available menu route from user's menus
+            const userMenus = this.api.getUserMenus();
+            let navigated = false;
+            if (userMenus && userMenus.modules && userMenus.modules.length > 0) {
+              for (const mod of userMenus.modules) {
+                if (mod.menuItems && mod.menuItems.length > 0) {
+                  const firstMenu = mod.menuItems.find((m: any) => m.canView);
+                  if (firstMenu && firstMenu.route) {
+                    this.router.navigateByUrl('/' + firstMenu.route);
+                    navigated = true;
+                    break;
+                  }
+                }
+              }
+            }
+            if (!navigated) {
+              this.navigateByCompany();
+            }
           }
 
           else {
@@ -128,6 +156,17 @@ export class LoginComponent {
     });
   }
 
+  navigateByCompany() {
+    if (this.api.getTokenUserInfo()?.company.toLocaleUpperCase() === 'GECKOTECH') {
+      this.router.navigateByUrl('/edi/carrier');
+    } else if (this.api.getTokenUserInfo()?.company.toLocaleUpperCase() === 'ESYNCMATE' ||
+      this.api.getTokenUserInfo()?.company.toLocaleUpperCase() === 'REPAINTSTUDIOS') {
+      this.router.navigateByUrl('/edi/all-orders');
+    } else if (this.api.getTokenUserInfo()?.company.toLocaleUpperCase() === 'SURGIMAC') {
+      this.router.navigateByUrl('/edi/purchaseOrder');
+    }
+  }
+
   handleKeyDown(event: KeyboardEvent) {
     if (event.key === 'Enter' && this.loginForm.valid) {
       this.login();
@@ -136,7 +175,6 @@ export class LoginComponent {
 
   getEmailErrors() {
     if (this.Email.hasError('required')) return this.languageService.getTranslation('emailError');
-   /* if (this.Email.hasError('email')) return 'Email is invalid.';*/
     return '';
   }
 

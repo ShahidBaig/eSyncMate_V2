@@ -15,6 +15,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialog } from '@angular/material/dialog';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { CommonModule } from '@angular/common';
 import { MatSelectModule } from '@angular/material/select';
 import { MatPaginatorModule } from '@angular/material/paginator';
@@ -26,9 +27,6 @@ import { InventorypopupComponent } from './inventory-popup/inventory-popup.compo
 import { TranslateService } from '@ngx-translate/core';
 import { environment } from 'src/environments/environment';
 import { InventoryBatchwiseComponent } from './inventory-batchwise/inventory-batchwise.component';
-import { MatTableDataSource } from '@angular/material/table';
-import { MatPaginator } from '@angular/material/paginator';
-import { ViewChild } from '@angular/core';
 
 interface Customers {
   erpCustomerID: string;
@@ -58,6 +56,7 @@ interface RouteTypes {
     MatTooltipModule,
     MatIconModule,
     MatProgressSpinnerModule,
+    MatProgressBarModule,
     CommonModule,
     MatSelectModule,
     MatPaginatorModule,
@@ -66,6 +65,7 @@ interface RouteTypes {
   ],
 })
 export class InventoryComponent implements OnInit {
+  isLoading: boolean = false;
   mydate = environment.date;
 
   listOfInventory: Inventory[] = [];
@@ -84,8 +84,9 @@ export class InventoryComponent implements OnInit {
   showSpinnerforSearch: boolean = false;
   showSpinner: boolean = false;
   statusOptions = ['Select Status', 'PROCESSING', 'COMPLETED','ERROR'];
-  dataSource = new MatTableDataSource<Inventory>([]);
-  @ViewChild(MatPaginator) paginator!: MatPaginator;
+  totalCount: number = 0;
+  pageNumber: number = 1;
+  pageSize: number = 10;
 
   columns: string[] = [
     'CustomerID',
@@ -122,8 +123,10 @@ export class InventoryComponent implements OnInit {
     this.getRouteTypes();
   }
 
-  ngAfterViewInit(): void {
-    this.dataSource.paginator = this.paginator;
+  onPageChange(event: PageEvent) {
+    this.pageNumber = event.pageIndex + 1;
+    this.pageSize = event.pageSize;
+    this.getInventory();
   }
 
   getERPCustomer() {
@@ -297,13 +300,7 @@ export class InventoryComponent implements OnInit {
     return year + '-' + month + '-' + day;
   }
 
-  onPageChange(event: PageEvent) {
-    const startIndex = event.pageIndex * event.pageSize;
-    this.inventoryToDisplay = this.listOfInventory.slice(startIndex, startIndex + event.pageSize);
-  }
-
   getInventory(resetPage: boolean = false) {
-    //let customerID = (this.InventoryForm.get('customerID') as FormControl).value;
     let itemID = (this.InventoryForm.get('itemID') as FormControl).value;
     let startDate = (this.InventoryForm.get('startDate') as FormControl).value;
     let finishDate = (this.InventoryForm.get('finishDate') as FormControl).value;
@@ -312,98 +309,58 @@ export class InventoryComponent implements OnInit {
     let routeType =  (this.InventoryForm.get('routeType') as FormControl).value;
     let stringFromDate = '';
     let stringToDate = '';
-    this.showSpinnerforSearch = true;
+
+    if (resetPage) {
+      this.pageNumber = 1;
+    }
 
     if (((startDate == '' || startDate == null) && (finishDate == '' || finishDate == undefined) && (itemID == '' || itemID == 'EMPTY') && (status == '' || status == 'Select Status') && (customerID == '' || customerID.toUpperCase().includes('SELECT')) && (routeType == '' || routeType.toUpperCase().includes('SELECT')))) {
-      this.toast.info({ detail: "inventory", summary: this.languageService.getTranslation('provideFieldMessage'), duration: 5000, /*sticky: true,*/ position: 'topRight' });
-      this.showSpinnerforSearch = false;
+      this.toast.info({ detail: "inventory", summary: this.languageService.getTranslation('provideFieldMessage'), duration: 5000, position: 'topRight' });
       return;
     }
 
-    if (itemID == '') {
-      itemID = 'EMPTY'
-    }
-
-    if (status == '' || status.toLocaleLowerCase() == 'select status') {
-      status = 'EMPTY'
-    }
-
-    if (customerID == '') {
-      customerID = 'EMPTY'
-    }
-
-    if (routeType == '') {
-      routeType = 'EMPTY'
-    }
+    if (itemID == '') { itemID = 'EMPTY' }
+    if (status == '' || status.toLocaleLowerCase() == 'select status') { status = 'EMPTY' }
+    if (customerID == '') { customerID = 'EMPTY' }
+    if (routeType == '') { routeType = 'EMPTY' }
 
     if (startDate !== null) {
       stringFromDate = startDate.toLocaleString();
-
-      if (stringFromDate.length > 10) {
-        stringFromDate = this.getFormattedDate(startDate);
-      }
+      if (stringFromDate.length > 10) { stringFromDate = this.getFormattedDate(startDate); }
     } else {
       stringFromDate = '1999-01-01';
     }
 
     if (finishDate !== null) {
       stringToDate = finishDate.toLocaleString();
-
-      if (stringToDate.length > 10) {
-        stringToDate = this.getFormattedDate(finishDate);
-      }
+      if (stringToDate.length > 10) { stringToDate = this.getFormattedDate(finishDate); }
     } else {
       stringToDate = '1999-01-01';
     }
 
-    this.api.getInventory(itemID, stringFromDate, stringToDate, status, customerID, routeType).subscribe({
+    this.isLoading = true;
+    this.api.getInventory(itemID, stringFromDate, stringToDate, status, customerID, routeType, this.pageNumber, this.pageSize).subscribe({
       next: (res: any) => {
-        
         this.msg = res.message;
         this.code = res.code;
 
-        const oldPageIndex = this.paginator?.pageIndex ?? 0;
-        const oldPageSize = this.paginator?.pageSize ?? 10;
-
         this.listOfInventory = res.inventory ?? [];
+        this.totalCount = res.totalCount ?? 0;
+        this.inventoryToDisplay = this.listOfInventory;
 
-        if (this.listOfInventory == null || this.listOfInventory.length === 0) {
-          this.toast.info({ detail: "INFO", summary: this.languageService.getTranslation('noFilterDataMessage'), duration: 5000, /*sticky: true,*/ position: 'topRight' });
-          this.showSpinnerforSearch = false;
-          this.inventoryToDisplay = [];
-          this.dataSource.data = [];
-
-          return;
+        if (this.listOfInventory.length === 0 && this.pageNumber === 1) {
+          this.toast.info({ detail: "INFO", summary: this.languageService.getTranslation('noFilterDataMessage'), duration: 5000, position: 'topRight' });
         }
 
-        this.dataSource.data = this.listOfInventory;
-
-        if (resetPage) {
-          this.paginator?.firstPage();
-        } else {
-          const maxPageIndex = Math.max(Math.ceil(this.listOfInventory.length / oldPageSize) - 1, 0);
-          this.paginator.pageIndex = Math.min(oldPageIndex, maxPageIndex);
-
-          this.paginator._changePageSize(this.paginator.pageSize);
+        if (this.code === 400) {
+          this.toast.error({ detail: "ERROR", summary: this.msg, duration: 5000, position: 'topRight' });
         }
 
-        if (this.code === 200) {
-          //this.toast.success({ detail: "SUCCESS", summary: this.msg, duration: 5000, position: 'topRight' });
-          this.showSpinnerforSearch = false;
-        }
-        else if (this.code === 400) {
-          this.toast.error({ detail: "ERROR", summary: this.msg, duration: 5000, /*sticky: true,*/ position: 'topRight' });
-          this.showSpinnerforSearch = false;
-        } else {
-          this.toast.info({ detail: "INFO", summary: this.msg, duration: 5000, /*sticky: true,*/ position: 'topRight' });
-          this.showSpinnerforSearch = false;
-        }
-
-        this.showSpinnerforSearch = false;
+        this.isLoading = false;
       },
       error: (err: any) => {
-        this.toast.error({ detail: "ERROR", summary: err.message, duration: 5000, /*sticky: true,*/ position: 'topRight' });
-        this.showSpinnerforSearch = false;
+        this.toast.error({ detail: "ERROR", summary: err.message, duration: 5000, position: 'topRight' });
+        this.isLoading = false;
       },
     });
   }

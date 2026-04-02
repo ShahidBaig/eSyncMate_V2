@@ -14,6 +14,9 @@ export class UserService {
     return this.http.post<any>(this.apiUrl + 'api/User/updateUser', connectorModel);
   }
 
+  deleteUser(id: number): Observable<any> {
+    return this.http.post<any>(this.apiUrl + 'api/User/deleteUser', { id });
+  }
 
   getUsers(searchOption: string, searchValue: string): Observable<any> {
     const params = new HttpParams()

@@ -47,6 +47,7 @@
   &nbsp;
   <mat-card>
     <mat-card-content>
+      <mat-progress-bar *ngIf="isLoading" mode="indeterminate" color="accent"></mat-progress-bar>
       <table mat-table [dataSource]="inventoryToDisplay">
 
         <ng-container matColumnDef="ShipmentID">

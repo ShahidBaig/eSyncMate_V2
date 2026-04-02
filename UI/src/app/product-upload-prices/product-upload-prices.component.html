@@ -1,6 +1,6 @@
 <h2 class="page-title"><mat-icon>upload_file</mat-icon><span class="title-text">{{ 'nav.productUploadPrices' | translate }}</span></h2>
 <div class="mat-table-container">
-  <mat-card *ngIf="isAdminUser">
+  <mat-card *ngIf="canAdd">
     <mat-card-content>
       <mat-form-field class="form-field">
         <mat-label>{{ 'erpCustomerID' | translate }}</mat-label>
@@ -98,7 +98,8 @@
   &nbsp;
   <mat-card>
     <mat-card-content>
-      <table mat-table [dataSource]="dataSource">
+      <mat-progress-bar *ngIf="isLoading" mode="indeterminate" color="accent"></mat-progress-bar>
+      <table mat-table [dataSource]="productUploadPricesToDisplay">
 
         <ng-container matColumnDef="id">
           <th mat-header-cell *matHeaderCellDef>{{ 'id' | translate }}</th>
@@ -179,10 +180,8 @@
 
       </table>
 
-      <mat-paginator 
-                     [pageSize]="10"
-                     [pageSizeOptions]="[5, 10, 25, 100]"
-                     showFirstLastButtons>
+      <mat-paginator [length]="totalCount" [pageSize]="pageSize" [pageSizeOptions]="[5, 10, 25, 100]"
+        (page)="onPageChange($event)" showFirstLastButtons>
       </mat-paginator>
 
     </mat-card-content>

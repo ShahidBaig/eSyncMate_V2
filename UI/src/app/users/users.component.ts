@@ -14,12 +14,11 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialog } from '@angular/material/dialog';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { CommonModule } from '@angular/common';
 import { MatSelectModule } from '@angular/material/select';
 import { RouteTypesService } from '../services/route-types.service';
 import { RouteType, User } from '../models/models';
-//import { AddRouteTypesDialogComponent } from './add-route-types-dialog/add-route-types-dialog.component';
-//import { EditRouteTypesDialogComponent } from './edit-route-types-dialog/edit-route-types-dialog.component';
 import { MatPaginatorModule } from '@angular/material/paginator';
 import { PageEvent } from '@angular/material/paginator';
 import { LanguageService } from '../services/language.service';
@@ -29,10 +28,8 @@ import { HttpClientModule, HttpClient } from '@angular/common/http';
 import { ApiService } from '../services/api.service';
 import { UserService } from '../services/user.service';
 import { EditUsersDialogComponent } from './edit-users-dialog/edit-users-dialog.component';
+import { DeleteUserDialogComponent } from './delete-user-dialog/delete-user-dialog.component';
 import { RouterLink } from '@angular/router';
-import { MatTableDataSource } from '@angular/material/table';
-import { MatPaginator } from '@angular/material/paginator';
-import { ViewChild } from '@angular/core';
 
 @Component({
   selector: 'users',
@@ -55,6 +52,7 @@ import { ViewChild } from '@angular/core';
     MatTooltipModule,
     MatIconModule,
     MatProgressSpinnerModule,
+    MatProgressBarModule,
     CommonModule,
     MatSelectModule,
     FormsModule,
@@ -64,39 +62,51 @@ import { ViewChild } from '@angular/core';
   ],
 })
 export class UsersComponent {
+  isLoading: boolean = false;
   listOfUsers: User[] = [];
   UserToDisplay: User[] = [];
   msg: string = '';
   code: number = 0;
   showSpinnerforSearch: boolean = false;
   showSpinner: boolean = false;
-  options = ['Select Users', 'Id', 'User ID', 'First Name', 'Email','Status','UserType', 'Created Date'];
+  options = ['Select Users', 'Id', 'User ID', 'First Name', 'Email','Status', 'Created Date'];
   selectedOption: string = 'Select Users';
   searchValue: string = '';
   startDate: string = '';
   endDate: string = '';
   showDataColumn: boolean = true;
   isAdminUser: boolean = false;
-  dataSource = new MatTableDataSource<User>([]);
-  @ViewChild(MatPaginator) paginator!: MatPaginator;
+  canAdd = false;
+  canEdit = false;
+  canDelete = false;
 
   columns: string[] = [
     'id',
     'UserID',
     'FirstName',
+    'Role',
     'Email',
     'Status',
-    'UserType',
     'CreatedDate',
     'Edit',
   ];
 
   constructor(private api: UserService, private fb: FormBuilder, private toast: NgToastService, private dialog: MatDialog, private userApi: ApiService, public languageService: LanguageService) {
-    this.isAdminUser = ["ADMIN"].includes(this.userApi.getTokenUserInfo()?.userType || '');
+    const permissions = this.userApi.getMenuPermissions('edi/users');
+    if (permissions) {
+      this.canAdd = permissions.canAdd;
+      this.canEdit = permissions.canEdit;
+      this.canDelete = permissions.canDelete;
+    } else {
+      this.isAdminUser = ["ADMIN"].includes(this.userApi.getTokenUserInfo()?.userType || '');
+      this.canAdd = this.isAdminUser;
+      this.canEdit = this.isAdminUser;
+      this.canDelete = this.isAdminUser;
+    }
   }
 
   ngOnInit(): void {
-    if (!this.isAdminUser)
+    if (!this.canEdit)
     {
       const editIndex = this.columns.indexOf('Edit');
       if (editIndex !== -1) {
@@ -110,6 +120,39 @@ export class UsersComponent {
   }
 
 
+
+  confirmDeleteUser(user: any) {
+    const dialogRef = this.dialog.open(DeleteUserDialogComponent, {
+      width: '400px',
+      disableClose: true,
+      data: user
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result === true) {
+        this.deleteUser(user.id);
+      }
+    });
+  }
+
+  deleteUser(id: number) {
+    this.showSpinner = true;
+    this.api.deleteUser(id).subscribe({
+      next: (res: any) => {
+        this.showSpinner = false;
+        if (res.code === 200) {
+          this.toast.success({ detail: "SUCCESS", summary: "User deleted successfully!", duration: 5000, position: 'topRight' });
+          this.getUsers();
+        } else {
+          this.toast.error({ detail: "ERROR", summary: res.message, duration: 5000, position: 'topRight' });
+        }
+      },
+      error: (err: any) => {
+        this.showSpinner = false;
+        this.toast.error({ detail: "ERROR", summary: err.message, duration: 5000, position: 'topRight' });
+      }
+    });
+  }
 
   openEditDialog(connectorData: any) {
     const dialogRef = this.dialog.open(EditUsersDialogComponent, {
@@ -166,6 +209,7 @@ export class UsersComponent {
       this.searchValue = stringFromDate + '/' + stringToDate;
     }
 
+    this.isLoading = true;
     this.api.getUsers(this.selectedOption, this.searchValue).subscribe({
       next: (res: any) => {
         this.listOfUsers = res.user;
@@ -173,36 +217,32 @@ export class UsersComponent {
         this.code = res.code;
 
         if (this.listOfUsers == null || this.listOfUsers.length === 0) {
-          this.toast.info({ detail: "INFO", summary: this.languageService.getTranslation('noFilterDataMessage'), duration: 5000, /*sticky: true,*/ position: 'topRight' });
+          this.toast.info({ detail: "INFO", summary: this.languageService.getTranslation('noFilterDataMessage'), duration: 5000, position: 'topRight' });
           this.showSpinnerforSearch = false;
           this.UserToDisplay = [];
           return;
         }
 
-        //this.UserToDisplay = this.listOfUsers.slice(0, 10);
-
-        this.dataSource.data = this.listOfUsers;  // set full list
-
-        setTimeout(() => {
-          this.dataSource.paginator = this.paginator;
-        }, 0); // ensures paginator initializes
+        this.UserToDisplay = this.listOfUsers.slice(0, 10);
 
         if (this.code === 200) {
           this.showSpinnerforSearch = false;
         }
         else if (this.code === 400) {
-          this.toast.error({ detail: "ERROR", summary: this.msg, duration: 5000, /*sticky: true,*/ position: 'topRight' });
+          this.toast.error({ detail: "ERROR", summary: this.msg, duration: 5000, position: 'topRight' });
           this.showSpinnerforSearch = false;
         } else {
-          this.toast.info({ detail: "INFO", summary: this.msg, duration: 5000, /*sticky: true,*/ position: 'topRight' });
+          this.toast.info({ detail: "INFO", summary: this.msg, duration: 5000, position: 'topRight' });
           this.showSpinnerforSearch = false;
         }
 
         this.showSpinnerforSearch = false;
+        this.isLoading = false;
       },
       error: (err: any) => {
-        this.toast.error({ detail: "ERROR", summary: err.message, duration: 5000, /*sticky: true,*/ position: 'topRight' });
+        this.toast.error({ detail: "ERROR", summary: err.message, duration: 5000, position: 'topRight' });
         this.showSpinnerforSearch = false;
+        this.isLoading = false;
       },
     });
   }

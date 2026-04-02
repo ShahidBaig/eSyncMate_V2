@@ -79,7 +79,8 @@
   &nbsp;
   <mat-card>
     <mat-card-content>
-      <table mat-table [dataSource]="dataSource">
+      <mat-progress-bar *ngIf="isLoading" mode="indeterminate" color="accent"></mat-progress-bar>
+      <table mat-table [dataSource]="ordersToDisplay">
 
         <ng-container matColumnDef="id">
           <th mat-header-cell *matHeaderCellDef>{{ 'eSyncMateID' | translate }}</th>
@@ -185,8 +186,8 @@
 
       </table>
 
-      <mat-paginator [length]="listOfOrders.length" [pageSize]="10" [pageSizeOptions]="[5, 10, 25, 100]"
-        showFirstLastButtons>
+      <mat-paginator [length]="totalCount" [pageSize]="pageSize" [pageSizeOptions]="[5, 10, 25, 100]"
+        (page)="onPageChange($event)" showFirstLastButtons>
       </mat-paginator>
 
     </mat-card-content>

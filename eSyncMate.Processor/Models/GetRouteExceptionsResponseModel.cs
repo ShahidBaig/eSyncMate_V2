@@ -6,6 +6,6 @@ namespace eSyncMate.Processor.Models
     {
         public List<RouteLogDataModel> RouteExceptions { get; set; }
         public DataTable RouteExceptionsData { get; set; }
-
+        public int TotalCount { get; set; }
     }
 }

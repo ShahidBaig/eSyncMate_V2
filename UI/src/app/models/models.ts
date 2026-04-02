@@ -26,7 +26,80 @@ export interface User {
   customerName: string;
   isSetupMenu: string;
   userID: string;
+  roleName: string;
 }
+
+// RBAC Models
+export interface UserMenuItem {
+  menuId: number;
+  menuName: string;
+  menuTranslationKey: string;
+  route: string;
+  menuIcon: string;
+  isExternalLink: boolean;
+  externalUrl: string;
+  menuSortOrder: number;
+  canView: boolean;
+  canAdd: boolean;
+  canEdit: boolean;
+  canDelete: boolean;
+}
+
+export interface UserMenuModule {
+  moduleId: number;
+  moduleName: string;
+  moduleTranslationKey: string;
+  moduleIcon: string;
+  moduleSortOrder: number;
+  menuItems: UserMenuItem[];
+}
+
+export interface UserMenuResponse {
+  roleName: string;
+  modules: UserMenuModule[];
+}
+
+export interface Role {
+  id: number;
+  name: string;
+  description: string;
+  isActive: boolean;
+  createdDate: string;
+  createdBy: number;
+}
+
+export interface RoleMenu {
+  id: number;
+  roleId: number;
+  menuId: number;
+  canView: boolean;
+  canAdd: boolean;
+  canEdit: boolean;
+  canDelete: boolean;
+}
+
+export interface MenuDef {
+  id: number;
+  moduleId: number;
+  name: string;
+  translationKey: string;
+  route: string;
+  icon: string;
+  isExternalLink: boolean;
+  externalUrl: string;
+  sortOrder: number;
+  isActive: boolean;
+}
+
+export interface ModuleDef {
+  id: number;
+  name: string;
+  translationKey: string;
+  icon: string;
+  sortOrder: number;
+  isActive: boolean;
+}
+
 export interface RouteLog {
   Id: number,
   RouteId: number,

@@ -11,7 +11,7 @@ mat-card {
     h1 {
       letter-spacing: 2px;
       font-weight: bold;
-      color: $light-accent-400;
+      color: $accent;
     }
   }
   mat-card-content {
@@ -25,7 +25,7 @@ mat-card {
       }
 
       .mat-column-name {
-        border-right: 1px solid $light-accent-400;
+        border-right: 1px solid $accent;
       }
 
       .mat-mdc-cell {

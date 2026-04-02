@@ -23,6 +23,7 @@ namespace eSyncMate.Processor.Models
         public string UserID { get; set; }
         public DateTime CreatedDate { get; set; }
         public int CreatedBy { get; set; }
+        public string RoleName { get; set; } = string.Empty;
     }
 
     public class UpdateUserDataModel

@@ -12,6 +12,10 @@ import { LanguageService } from './services/language.service';
 export class AppComponent implements OnInit {
   @ViewChild('sideNav') sideNav: MatSidenav | undefined;
 
+  get isLoggedIn(): boolean {
+    return this.api.isLoggedIn();
+  }
+
   constructor(
     public api: ApiService,
     private languageService: LanguageService,

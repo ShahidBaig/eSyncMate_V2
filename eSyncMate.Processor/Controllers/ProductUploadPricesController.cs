@@ -138,9 +138,10 @@ namespace eSyncMate.Processor.Controllers
                 this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Search criteria ready ({l_Criteria}).");
                 this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Staring PartnerGroup search.");
 
-                l_ProductUploadPrices.GetViewList(l_Criteria, string.Empty, ref l_Data, "Id DESC");
+                int totalCount = 0;
+                l_ProductUploadPrices.GetViewListPaged(l_Criteria, string.Empty, ref l_Data, "Id DESC", searchModel.PageNumber, searchModel.PageSize, out totalCount);
 
-                this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - ProductUploadPrices searched {{{l_Data.Rows.Count}}}.");
+                this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - ProductUploadPrices searched {{{l_Data.Rows.Count}}} of {totalCount} total.");
                 this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Populating ProductUploadPrices.");
 
                 l_Response.ProductUploadPrices = new List<ProductUploadPricesDataModel>();
@@ -153,6 +154,7 @@ namespace eSyncMate.Processor.Controllers
                     l_Response.ProductUploadPrices.Add(l_ProductUploadPricesRow);
                 }
 
+                l_Response.TotalCount = totalCount;
                 l_Response.Code = (int)ResponseCodes.Success;
                 l_Response.Message = "ProductUploadPrices fetched successfully!";
 

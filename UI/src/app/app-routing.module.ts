@@ -32,6 +32,7 @@ import { PurchaseOrdersTrackingComponent } from './purchase-orders-tracking/purc
 import { AlertConfigurationComponent } from './alert-configuration/alert-configuration.component';
 import { FlowsComponent } from './flows/flows.component';
 import { DashboardComponent } from './dashboard/dashboard.component';
+import { RoleManagementComponent } from './role-management/role-management.component';
 
 const routes: Routes = [
   {
@@ -180,6 +181,11 @@ const routes: Routes = [
   {
     path: 'edi/flows',
     component: FlowsComponent,
+    canActivate: [AuthorizationGuard],
+  },
+  {
+    path: 'edi/roles',
+    component: RoleManagementComponent,
     canActivate: [AuthorizationGuard],
   },
   {

@@ -16,6 +16,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialog } from '@angular/material/dialog';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { CommonModule } from '@angular/common';
 import { MatSelectModule } from '@angular/material/select';
 import { AddRoutesDialogComponent } from './add-routes-dialog/add-routes-dialog.component';
@@ -28,9 +29,6 @@ import { PageEvent } from '@angular/material/paginator';
 import { LanguageService } from '../services/language.service';
 import { TranslateModule } from '@ngx-translate/core';
 import { InventoryService } from '../services/inventory.service';
-import { MatTableDataSource } from '@angular/material/table';
-import { MatPaginator } from '@angular/material/paginator';
-import { ViewChild } from '@angular/core';
 interface Customers {
   erpCustomerID: string;
 }
@@ -55,6 +53,7 @@ interface Customers {
     MatTooltipModule,
     MatIconModule,
     MatProgressSpinnerModule,
+    MatProgressBarModule,
     CommonModule,
     MatSelectModule,
     FormsModule,
@@ -64,6 +63,7 @@ interface Customers {
   ],
 })
 export class RoutesComponent {
+  isLoading: boolean = false;
   listOfRoutes: Routes[] = [];
   routesToDisplay: Routes[] = [];
   msg: string = '';
@@ -78,10 +78,13 @@ export class RoutesComponent {
   endDate: string = '';
   showDataColumn: boolean = true;
   isAdminUser: boolean = false;
+  canAdd = false;
+  canEdit = false;
+  canDelete = false;
   customersOptions: Customers[] | undefined;
-
-  dataSource = new MatTableDataSource<Routes>([]);
-  @ViewChild(MatPaginator) paginator!: MatPaginator;
+  totalCount: number = 0;
+  pageNumber: number = 1;
+  pageSize: number = 10;
 
 
   columns: string[] = [
@@ -105,9 +108,20 @@ export class RoutesComponent {
     this.selectedOption = 'Select Route'; // Set default selected option
     this.getRoutes(true);
     this.getERPCustomer();
-    this.isAdminUser = ["ADMIN", "WRITER"].includes(this.token.getTokenUserInfo()?.userType || '');
+    const permissions = this.token.getMenuPermissions('edi/routes');
+    if (permissions) {
+      this.canAdd = permissions.canAdd;
+      this.canEdit = permissions.canEdit;
+      this.canDelete = permissions.canDelete;
+    } else {
+      const isAdmin = ["ADMIN", "WRITER"].includes(this.token.getTokenUserInfo()?.userType || '');
+      this.canAdd = isAdmin;
+      this.canEdit = isAdmin;
+      this.canDelete = isAdmin;
+      this.isAdminUser = isAdmin;
+    }
 
-    if (!this.isAdminUser) {
+    if (!this.canEdit) {
       const editIndex = this.columns.indexOf('Edit');
       if (editIndex !== -1) {
         this.columns.splice(editIndex, 1);
@@ -118,8 +132,10 @@ export class RoutesComponent {
     }
   }
 
-  ngAfterViewInit(): void {
-    this.dataSource.paginator = this.paginator;
+  onPageChange(event: PageEvent) {
+    this.pageNumber = event.pageIndex + 1;
+    this.pageSize = event.pageSize;
+    this.getRoutes();
   }
 
   openAddRouteDialog(): void {
@@ -174,7 +190,9 @@ export class RoutesComponent {
   }
 
   getRoutes(resetPage: boolean = false) {
-    this.showSpinnerforSearch = true;
+    if (resetPage) {
+      this.pageNumber = 1;
+    }
 
     let stringFromDate = '';
     let stringToDate = '';
@@ -193,40 +211,25 @@ export class RoutesComponent {
       this.searchValue = stringFromDate + '/' + stringToDate;
     }
 
-    this.api.getRoutes(this.selectedOption, this.searchValue).subscribe({
+    this.isLoading = true;
+    this.api.getRoutes(this.selectedOption, this.searchValue, this.pageNumber, this.pageSize).subscribe({
       next: (res: any) => {
         this.msg = res.message;
         this.code = res.code;
 
-        const oldPageIndex = this.paginator?.pageIndex ?? 0;
-        const oldPageSize = this.paginator?.pageSize ?? 10;
-
         this.listOfRoutes = res.routes ?? [];
+        this.totalCount = res.totalCount ?? 0;
+        this.routesToDisplay = this.listOfRoutes;
 
-        if (this.listOfRoutes == null || this.listOfRoutes.length === 0) {
+        if (this.listOfRoutes.length === 0 && this.pageNumber === 1) {
           this.toast.info({ detail: "INFO", summary: this.languageService.getTranslation('noFilterDataMessage'), duration: 5000, position: 'topRight' });
-          this.showSpinnerforSearch = false;
-          this.routesToDisplay = [];
-
-          return;
         }
 
-        this.dataSource.data = this.listOfRoutes;
-
-        if (resetPage) {
-          this.paginator?.firstPage();
-        } else {
-          const maxPageIndex = Math.max(Math.ceil(this.listOfRoutes.length / oldPageSize) - 1, 0);
-          this.paginator.pageIndex = Math.min(oldPageIndex, maxPageIndex);
-
-          this.paginator._changePageSize(this.paginator.pageSize);
-        }
-
-        this.showSpinnerforSearch = false;
+        this.isLoading = false;
       },
       error: (err: any) => {
         this.toast.error({ detail: "ERROR", summary: err.message, duration: 5000, position: 'topRight' });
-        this.showSpinnerforSearch = false;
+        this.isLoading = false;
       },
     });
   }
@@ -254,10 +257,6 @@ export class RoutesComponent {
     });
   }
 
-  onPageChange(event: PageEvent) {
-    const startIndex = event.pageIndex * event.pageSize;
-    this.routesToDisplay = this.listOfRoutes.slice(startIndex, startIndex + event.pageSize);
-  }
 
   showRouteLog(connectorData: any) {
     this.openRouteLogDialog(connectorData.id, connectorData.name);

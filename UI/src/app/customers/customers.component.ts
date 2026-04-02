@@ -15,6 +15,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialog } from '@angular/material/dialog';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { CommonModule } from '@angular/common';
 import { MatSelectModule } from '@angular/material/select';
 import { AddCustomerDialogComponent } from './add-customer-dialog/add-customer-dialog.component';
@@ -51,6 +52,7 @@ import { CustomerAlertsDialogComponent } from './customer-alerts-dialog/customer
     MatTooltipModule,
     MatIconModule,
     MatProgressSpinnerModule,
+    MatProgressBarModule,
     CommonModule,
     MatSelectModule,
     FormsModule,
@@ -59,6 +61,7 @@ import { CustomerAlertsDialogComponent } from './customer-alerts-dialog/customer
   ],
 })
 export class CustomersComponent implements OnInit {
+  isLoading: boolean = false;
   listOfCustomers: Customer[] = [];
   customersToDisplay: Customer[] = [];
   msg: string = '';
@@ -71,6 +74,9 @@ export class CustomersComponent implements OnInit {
   startDate: string = '';
   endDate: string = '';
   isAdminUser: boolean = false;
+  canAdd = false;
+  canEdit = false;
+  canDelete = false;
   dataSource = new MatTableDataSource<Customer>([]);
   @ViewChild(MatPaginator) paginator!: MatPaginator;
 
@@ -84,12 +90,23 @@ export class CustomersComponent implements OnInit {
   ];
 
   constructor(private customersApi: CustomersService, private fb: FormBuilder, private toast: NgToastService, private dialog: MatDialog, private Userapi: ApiService, public languageService: LanguageService) {
-    this.isAdminUser = ["ADMIN"].includes(this.Userapi.getTokenUserInfo()?.userType || '');
+    const permissions = this.Userapi.getMenuPermissions('edi/customers');
+    if (permissions) {
+      this.canAdd = permissions.canAdd;
+      this.canEdit = permissions.canEdit;
+      this.canDelete = permissions.canDelete;
+    } else {
+      const isAdmin = ["ADMIN", "WRITER"].includes(this.Userapi.getTokenUserInfo()?.userType || '');
+      this.canAdd = isAdmin;
+      this.canEdit = isAdmin;
+      this.canDelete = isAdmin;
+      this.isAdminUser = isAdmin;
+    }
   }
 
   ngOnInit(): void {
 
-    if (!this.isAdminUser) {
+    if (!this.canEdit) {
       const editIndex = this.columns.indexOf('Edit');
       if (editIndex !== -1) {
         this.columns.splice(editIndex, 1);
@@ -193,6 +210,7 @@ export class CustomersComponent implements OnInit {
       this.searchValue = stringFromDate + '/' + stringToDate;
     }
 
+    this.isLoading = true;
     this.customersApi.getCustomers(this.selectedOption, this.searchValue).subscribe({
       next: (res: any) => {
         this.msg = res.message;
@@ -241,10 +259,12 @@ export class CustomersComponent implements OnInit {
           this.showSpinnerforSearch = false;
         }
         this.showSpinnerforSearch = false;
+        this.isLoading = false;
       },
       error: (err: any) => {
         this.toast.error({ detail: "ERROR", summary: err.message, duration: 5000, position: 'topRight' });
         this.showSpinnerforSearch = false;
+        this.isLoading = false;
       },
     });
   }

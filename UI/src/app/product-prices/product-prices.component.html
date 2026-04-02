@@ -2,7 +2,7 @@
 <div class="mat-table-container">
 
 
-  <mat-card *ngIf="isAdminUser">
+  <mat-card *ngIf="canAdd">
     <mat-card-content>
       <mat-form-field class="form-field">
         <mat-label>ERP CustomerID</mat-label>
@@ -15,11 +15,9 @@
       &nbsp;
 
       <button mat-flat-button color="accent" [disabled]="isButtonDisabled" (click)="downloadSampleFile(erpCustomerID)">
-        <span>
-          Sample download
-        </span>
+        <span>Sample download</span>
       </button>
-      &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;
+      &nbsp; &nbsp;
       <input class="file-input" type="file" (change)="onFileSelected($event)" accept=".csv,.xls,.xlsx">
       &nbsp;
       <button mat-icon-button color="accent" matTooltip="Clear File" matTooltipPosition="above" (click)="clearFile()">
@@ -27,10 +25,7 @@
       </button>
       &nbsp;
       <button mat-flat-button color="accent" [disabled]="isButtonDisabled" (click)="uploadCustomerProductCatalogFile()">
-        <span>
-          Process
-        </span>
-
+        <span>Process</span>
       </button>
 
     </mat-card-content>
@@ -48,7 +43,7 @@
             </mat-option>
           </mat-select>
         </mat-form-field>
-        <!--&nbsp;-->
+
         <ng-container *ngIf="selectedOption === 'ERP CustomerID' else defaultField">
           <mat-form-field appearance="fill" color="accent">
             <mat-label>Select ERP Customer ID</mat-label>
@@ -82,18 +77,12 @@
           </mat-form-field>
         </ng-template>
 
-        <!--&nbsp;-->
-        <button mat-flat-button color="accent" (click)="getCustomerProductCatalog()">
-          <span>Search </span>
-          <mat-spinner *ngIf="showSpinnerforSearchData" diameter="20"></mat-spinner>
+        <button mat-flat-button color="accent" (click)="getCustomerProductCatalog(true)">
+          <span>Search</span>
         </button>
         <button mat-flat-button color="primary" (click)="processCustomerProductPrices(erpCustomerID)">
-          <span>Process Product Prices </span>
-          <mat-spinner *ngIf="showSpinnerforSearchData" diameter="20"></mat-spinner>
+          <span>Process Product Prices</span>
         </button>
-
-        
-
       </div>
     </mat-card-content>
 
@@ -104,34 +93,30 @@
       <div style="display: flex; justify-content: flex-end; margin-bottom: 10px;">
         <button mat-flat-button color="primary" (click)="exportToExcel()">Export to Excel</button>
       </div>
-      <table mat-table [dataSource]="dataSource">
+      <mat-progress-bar *ngIf="isLoading" mode="indeterminate" color="accent"></mat-progress-bar>
+      <table mat-table [dataSource]="customerProductCatalogToDisplay">
 
         <ng-container matColumnDef="ProductId">
           <th mat-header-cell *matHeaderCellDef>{{ 'id' | translate }} </th>
           <td mat-cell *matCellDef="let element"> {{element.productId}} </td>
         </ng-container>
-        <!----ID Column-->
+
         <ng-container matColumnDef="CustomerID">
           <th mat-header-cell *matHeaderCellDef>{{ 'erpCustomerID' | translate }}</th>
           <td mat-cell *matCellDef="let element"> {{element.customerID}} </td>
         </ng-container>
 
-        <!--ItemID-->
         <ng-container matColumnDef="ItemID">
           <th mat-header-cell *matHeaderCellDef>{{ 'erpItemID' | translate }}</th>
-          <td mat-cell *matCellDef="let element">
-            {{element.itemID}}
-          </td>
+          <td mat-cell *matCellDef="let element"> {{element.itemID}} </td>
         </ng-container>
 
         <ng-container matColumnDef="Status">
           <th mat-header-cell *matHeaderCellDef>{{ 'status' | translate }}</th>
-          <td mat-cell *matCellDef="let element" [ngClass]="getStatusClass(element.syncStatus)"
-              [matTooltip]="getTooltipWithTranslation(element)" matTooltipPosition="right">
-            {{element.syncStatus}}
+          <td mat-cell *matCellDef="let element" [matTooltip]="getTooltipWithTranslation(element)" matTooltipPosition="right">
+            <span [ngClass]="getStatusClass(element.syncStatus)">{{element.syncStatus}}</span>
           </td>
         </ng-container>
-
 
         <ng-container matColumnDef="ListPrice">
           <th mat-header-cell *matHeaderCellDef>{{ 'listPrice' | translate }}</th>
@@ -158,10 +143,8 @@
 
       </table>
 
-      <mat-paginator 
-                     [pageSize]="10"
-                     [pageSizeOptions]="[5, 10, 25, 100]"
-                     showFirstLastButtons>
+      <mat-paginator [length]="totalCount" [pageSize]="pageSize" [pageSizeOptions]="[5, 10, 25, 100]"
+        (page)="onPageChange($event)" showFirstLastButtons>
       </mat-paginator>
 
     </mat-card-content>

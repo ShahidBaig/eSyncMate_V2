@@ -30,10 +30,12 @@ namespace eSyncMate.Processor.Controllers
     public class AuthenticationController : Controller
     {
         private readonly IConfiguration _config;
+        private readonly ILogger<AuthenticationController> _logger;
 
-        public AuthenticationController(IConfiguration config)
+        public AuthenticationController(IConfiguration config, ILogger<AuthenticationController> logger)
         {
             _config = config;
+            _logger = logger;
         }
 
         private string GenerateJSONWebToken(LoginModel user)
@@ -112,13 +114,89 @@ namespace eSyncMate.Processor.Controllers
             {
                 var tokenString = GenerateJSONWebToken(user);
                 Declarations.g_UserNo = user.Id;
-                response = Ok(new { Token = tokenString, Message = "Success" });
+
+                // Fetch user menus based on role, filtered by company
+                var userMenus = GetUserMenuTree(user.Id, user.Company);
+
+                response = Ok(new { Token = tokenString, Message = "Success", Menus = userMenus });
             }
             else
             {
                 response = Ok(new { Token = "Invalid", Message = "Either you dont have permission or Invalid Credentials!" });
             }
             return response;
+        }
+
+        private GetUserMenusResponseModel GetUserMenuTree(int userId, string company)
+        {
+            GetUserMenusResponseModel l_Response = new GetUserMenusResponseModel();
+            DataTable l_Data = new DataTable();
+
+            try
+            {
+                RoleMenus l_Entity = new RoleMenus();
+                l_Entity.UseConnection(CommonUtils.ConnectionString);
+
+                // Filter by company: show menus where Company is NULL/empty (shared) or contains the user's company
+                string criteria = $"UserId = {userId}";
+                if (!string.IsNullOrEmpty(company))
+                {
+                    criteria += $" AND (Company IS NULL OR Company = '' OR Company LIKE '%{company}%')";
+                }
+                l_Entity.GetViewList(criteria, string.Empty, ref l_Data, "ModuleSortOrder ASC, MenuSortOrder ASC");
+
+                var moduleDict = new Dictionary<int, UserMenuModuleModel>();
+
+                foreach (DataRow l_Row in l_Data.Rows)
+                {
+                    int moduleId = Convert.ToInt32(l_Row["ModuleId"]);
+                    string roleName = l_Row["RoleName"]?.ToString() ?? "";
+
+                    if (string.IsNullOrEmpty(l_Response.RoleName))
+                        l_Response.RoleName = roleName;
+
+                    if (!moduleDict.ContainsKey(moduleId))
+                    {
+                        moduleDict[moduleId] = new UserMenuModuleModel
+                        {
+                            ModuleId = moduleId,
+                            ModuleName = l_Row["ModuleName"]?.ToString() ?? "",
+                            ModuleTranslationKey = l_Row["ModuleTranslationKey"]?.ToString() ?? "",
+                            ModuleIcon = l_Row["ModuleIcon"]?.ToString() ?? "",
+                            ModuleSortOrder = Convert.ToInt32(l_Row["ModuleSortOrder"]),
+                            MenuItems = new List<UserMenuItemModel>()
+                        };
+                    }
+
+                    moduleDict[moduleId].MenuItems.Add(new UserMenuItemModel
+                    {
+                        MenuId = Convert.ToInt32(l_Row["MenuId"]),
+                        MenuName = l_Row["MenuName"]?.ToString() ?? "",
+                        MenuTranslationKey = l_Row["MenuTranslationKey"]?.ToString() ?? "",
+                        Route = l_Row["Route"]?.ToString() ?? "",
+                        MenuIcon = l_Row["MenuIcon"]?.ToString() ?? "",
+                        IsExternalLink = Convert.ToBoolean(l_Row["IsExternalLink"]),
+                        ExternalUrl = l_Row["ExternalUrl"] != DBNull.Value ? l_Row["ExternalUrl"]?.ToString() ?? "" : "",
+                        MenuSortOrder = Convert.ToInt32(l_Row["MenuSortOrder"]),
+                        CanView = Convert.ToBoolean(l_Row["CanView"]),
+                        CanAdd = Convert.ToBoolean(l_Row["CanAdd"]),
+                        CanEdit = Convert.ToBoolean(l_Row["CanEdit"]),
+                        CanDelete = Convert.ToBoolean(l_Row["CanDelete"])
+                    });
+                }
+
+                l_Response.Modules = moduleDict.Values.OrderBy(m => m.ModuleSortOrder).ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"[AuthenticationController.GetUserMenuTree] userId={userId}, company={company} - {ex}");
+            }
+            finally
+            {
+                l_Data.Dispose();
+            }
+
+            return l_Response;
         }
 
         [HttpPost]
@@ -173,6 +251,26 @@ namespace eSyncMate.Processor.Controllers
 						l_Response.Code = l_Result.Code;
 						l_Response.Message = l_Result.Description;
 						l_Response.Description = $"User {l_Users.UserID} has been register successfully!";
+						l_Response.NewUserId = l_Users.Id;
+
+						// Assign role to new user if roleId provided
+						if (User.RoleId > 0)
+						{
+							try
+							{
+								UserRoles l_UserRole = new UserRoles();
+								l_UserRole.UseConnection(CommonUtils.ConnectionString);
+								l_UserRole.UserId = l_Users.Id;
+								l_UserRole.RoleId = User.RoleId;
+								l_UserRole.CreatedDate = DateTime.Now;
+								l_UserRole.CreatedBy = Declarations.g_UserNo;
+								l_UserRole.SaveNew();
+							}
+							catch (Exception ex)
+							{
+								_logger.LogError($"[RegisterUser] Role assignment failed for UserId={l_Users.Id}, RoleId={User.RoleId} - {ex}");
+							}
+						}
 					}
 					else
 					{

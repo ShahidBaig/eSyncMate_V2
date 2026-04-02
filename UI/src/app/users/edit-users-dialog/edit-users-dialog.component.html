@@ -8,7 +8,7 @@
       <input matInput formControlName="id">
     </mat-form-field>
 
-    <!-- Row 1: Route Types Name -->
+    <!-- Row 1: User Info -->
     <div class="form-row">
       <mat-form-field class="form-field">
         <mat-label>{{ 'userID' | translate }}</mat-label>
@@ -32,12 +32,11 @@
       </mat-form-field>
     </div>
 
-    <!-- Row 2: Description -->
+    <!-- Row 2: Password -->
     <div class="form-row">
       <mat-form-field class="form-field">
         <mat-label>{{ 'phoneNo' | translate }}</mat-label>
         <input matInput formControlName="mobile">
-        <!--<mat-error *ngIf="this.LastName.invalid">{{getLastNameErrors()}}</mat-error>-->
       </mat-form-field>
 
       <mat-form-field class="form-field">
@@ -61,13 +60,15 @@
       </mat-form-field>
     </div>
 
+    <!-- Row 3: Role, Status, Customer -->
     <div class="form-row">
       <mat-form-field class="form-field">
-        <mat-label>{{ 'userType' | translate }}</mat-label>
-        <mat-select formControlName="userType">
-          <mat-option [value]="'ADMIN'">ADMIN</mat-option>
-          <mat-option [value]="'READER'">READER</mat-option>
-          <mat-option [value]="'WRITER'">WRITER</mat-option>
+        <mat-label>{{ 'role' | translate }}</mat-label>
+        <mat-select [(ngModel)]="selectedRoleId" [ngModelOptions]="{standalone: true}" required>
+          <mat-option [value]="0">-- {{ 'selectRole' | translate }} --</mat-option>
+          <mat-option *ngFor="let role of roles" [value]="role.id">
+            {{ role.name }}
+          </mat-option>
         </mat-select>
       </mat-form-field>
 
@@ -91,6 +92,17 @@
         </mat-error>
       </mat-form-field>
     </div>
+
+    <!-- Hidden userType field -->
+    <mat-form-field class="form-field" [ngStyle]="{'display': 'none'}">
+      <mat-label>{{ 'userType' | translate }}</mat-label>
+      <mat-select formControlName="userType">
+        <mat-option [value]="'ADMIN'">ADMIN</mat-option>
+        <mat-option [value]="'READER'">READER</mat-option>
+        <mat-option [value]="'WRITER'">WRITER</mat-option>
+      </mat-select>
+    </mat-form-field>
+
     <div class="form-row" *ngIf="updateUserForm.get('userType')?.value === 'WRITER' && updateUserForm.get('userType')?.value !== ''">
     <div class="form-field">
       <mat-checkbox formControlName="isSetupMenu">{{ 'showSetupMenu' | translate }}</mat-checkbox>
@@ -101,6 +113,5 @@
 
 <div mat-dialog-actions class="dialog-actions">
   <button mat-button class="cancel-button" (click)="onCancel()">{{ 'cancel' | translate }}</button>
-  <button mat-raised-button color="primary" [disabled]="!updateUserForm.valid" (click)="updateUsers()">{{ 'update' | translate }}</button>
+  <button mat-raised-button color="primary" [disabled]="!updateUserForm.valid || selectedRoleId === 0" (click)="updateUsers()">{{ 'update' | translate }}</button>
 </div>
-
