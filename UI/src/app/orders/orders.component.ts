@@ -83,7 +83,7 @@ export class OrdersComponent implements OnInit {
   showSpinnerforSearch: boolean = false;
   showSpinner: boolean = false;
   listOfStoresOrder: Order[] = [];
-  statusOptions = ['Select Status', 'ACKNOWLEDGED', 'ASNGEN', 'ASNMARK', 'COMPLETE', 'FINISHED', 'INVEDI', 'INVOICED', 'NEW', 'PROCESSED', 'SYNCERROR', 'SYNCED', 'SPLITED', 'CANCELLED', 'SHIPPED', 'ERROR', 'ASNERROR','INPROGRESS'];
+  statusOptions = ['Select Status', 'ACKNOWLEDGED', 'ASNGEN', 'ASNMARK', 'COMPLETE', 'FINISHED', 'INVEDI', 'INVOICED', 'NEW', 'PROCESSED', 'SYNCERROR', 'SYNCED', 'SPLITED', 'CANCELLED', 'SHIPPED', 'Partially Shipped', 'Partially Cancelled', 'ERROR', 'ASNERROR','INPROGRESS'];
   isAdminUser: boolean = false;
   isCompany: string | undefined = '';
   customerOptions: Customers[] | undefined;
@@ -161,14 +161,20 @@ export class OrdersComponent implements OnInit {
     switch (status) {
       case 'NEW':
         return { key: 'OrderStatusNew', params: { customerName: customerName.toUpperCase() } };
+      case 'Shipped':
       case 'SHIPPED':
         return { key: 'OrderStatusShipped', params: { customerName: customerName.toUpperCase() } };
       case 'SYNCED':
         return { key: 'OrderStatusSynced' };
       case 'INVOICED':
         return { key: 'OrderStatusInvoiced', params: { customerName: customerName.toUpperCase() } };
+      case 'Cancelled':
       case 'CANCELLED':
         return { key: 'OrderStatusCancelled' };
+      case 'Partially Shipped':
+        return { key: 'OrderStatusPartiallyShipped', params: {} };
+      case 'Partially Cancelled':
+        return { key: 'OrderStatusPartiallyCancelled', params: {} };
       case 'ERROR':
         return { key: 'OrderStatusError' };
       case 'ASNERROR':
@@ -187,11 +193,13 @@ export class OrdersComponent implements OnInit {
   }
 
   getTooltipWithTranslation(element: any): string {
-    const tooltipData = this.getStatusTooltip(element.status.toUpperCase(), element.customerName);
+    const displayStatus = element.displayStatus || element.status;
+    const tooltipData = this.getStatusTooltip(displayStatus, element.customerName);
     return this.translate.instant(tooltipData.key, tooltipData.params);
   }
 
   getStatusClass(status: string): string {
+    if (!status) return '';
     if (status.toUpperCase() === 'NEW') {
       return 'new-status';
     } else if (status.toUpperCase() === 'SYNCERROR') {
@@ -220,6 +228,10 @@ export class OrdersComponent implements OnInit {
       return 'splited-status';
     } else if (status.toUpperCase() === 'SHIPPED') {
       return 'finished-status';
+    } else if (status.toUpperCase() === 'PARTIALLY SHIPPED') {
+      return 'acknowledged-status';
+    } else if (status.toUpperCase() === 'PARTIALLY CANCELLED') {
+      return 'syncerror-status';
     } else if (status.toUpperCase() === 'ERROR') {
       return 'syncerror-status';
     } else if (status.toUpperCase() === 'DUPLICATE') {
