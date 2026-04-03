@@ -681,7 +681,7 @@ namespace eSyncMate.Processor.Controllers
 
                 if (!string.IsNullOrEmpty(Status))
                 {
-                    l_Criteria += $" AND Status LIKE '%{Status}%'";
+                    l_Criteria += $" AND (Status LIKE '%{Status}%' OR DisplayStatus LIKE '%{Status}%')";
                 }
 
                 if (!string.IsNullOrEmpty(FromDate))
