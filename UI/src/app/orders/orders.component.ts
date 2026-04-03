@@ -158,22 +158,22 @@ export class OrdersComponent implements OnInit {
   }
 
   getStatusTooltip(status: string, customerName: string): any {
-    switch (status) {
+    const s = (status || '').toUpperCase();
+    const cn = (customerName || '').toUpperCase();
+    switch (s) {
       case 'NEW':
-        return { key: 'OrderStatusNew', params: { customerName: customerName.toUpperCase() } };
-      case 'Shipped':
+        return { key: 'OrderStatusNew', params: { customerName: cn } };
       case 'SHIPPED':
-        return { key: 'OrderStatusShipped', params: { customerName: customerName.toUpperCase() } };
+        return { key: 'OrderStatusShipped', params: { customerName: cn } };
       case 'SYNCED':
         return { key: 'OrderStatusSynced' };
       case 'INVOICED':
-        return { key: 'OrderStatusInvoiced', params: { customerName: customerName.toUpperCase() } };
-      case 'Cancelled':
+        return { key: 'OrderStatusInvoiced', params: { customerName: cn } };
       case 'CANCELLED':
         return { key: 'OrderStatusCancelled' };
-      case 'Partially Shipped':
+      case 'PARTIALLY SHIPPED':
         return { key: 'OrderStatusPartiallyShipped', params: {} };
-      case 'Partially Cancelled':
+      case 'PARTIALLY CANCELLED':
         return { key: 'OrderStatusPartiallyCancelled', params: {} };
       case 'ERROR':
         return { key: 'OrderStatusError' };
@@ -193,8 +193,9 @@ export class OrdersComponent implements OnInit {
   }
 
   getTooltipWithTranslation(element: any): string {
-    const displayStatus = element.displayStatus || element.status;
-    const tooltipData = this.getStatusTooltip(displayStatus, element.customerName);
+    const displayStatus = element.displayStatus || element.status || '';
+    const tooltipData = this.getStatusTooltip(displayStatus, element.customerName || '');
+    if (!tooltipData || !tooltipData.key) return '';
     return this.translate.instant(tooltipData.key, tooltipData.params);
   }
 
