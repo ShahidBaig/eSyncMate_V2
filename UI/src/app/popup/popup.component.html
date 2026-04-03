@@ -25,7 +25,7 @@
               <!-- <mat-icon>{{ typeMap[element.type].icon }}</mat-icon> -->
             </div>
             <div>
-              {{ typeMap[element?.type].name }}
+              {{ (typeMap[element?.type] && typeMap[element?.type].name) ? typeMap[element?.type].name : element?.type }}
             </div>
           </div>
         </td>
