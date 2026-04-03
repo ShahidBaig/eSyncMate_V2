@@ -239,98 +239,95 @@ namespace eSyncMate.Processor.Managers
         private static void ProcessOrder(MacysOrder order, Routes route, Customers customer, ConnectorDataModel sourceConnector, ConnectorDataModel destinationConnector, int userNo)
         {
             RestResponse sourceResponse = new RestResponse();
-            Addresses addresses = new Addresses();
             Orders l_Orders = new Orders();
             OrderData l_Data = null;
             string jsonString = string.Empty;
-            MacysOrderAcceptInputModel l_MacysOrderAcceptInputModel = new MacysOrderAcceptInputModel();
+            string ackBody = string.Empty;
+            string ackResponse = string.Empty;
+            string orderGetUrl = string.Empty;
+            string orderGetResponse = string.Empty;
             l_Orders.UseConnection(destinationConnector.ConnectionString);
-            //jsonString = JsonConvert.SerializeObject(order);
             MacysGetOrderResponseModel OrdersList = new MacysGetOrderResponseModel();
 
             try
             {
+                // ===== STEP 1: SEND ORDER ACCEPT (ACK) — Mirakl requires ACK first =====
+                MacysOrderAcceptInputModel l_MacysOrderAcceptInputModel = new MacysOrderAcceptInputModel();
+
+                if (order.order_lines != null)
+                {
+                    foreach (var orderLine in order.order_lines)
+                    {
+                        var l_MacysAcceptedOrder_Lines = new MacysOrderAcceptInputModel.MacysAcceptedOrder_Lines
+                        {
+                            accepted = true,
+                            id = orderLine.order_line_id
+                        };
+
+                        l_MacysOrderAcceptInputModel.order_lines.Add(l_MacysAcceptedOrder_Lines);
+                    }
+                }
+
+                ackBody = JsonConvert.SerializeObject(l_MacysOrderAcceptInputModel);
+
                 sourceConnector.Url = sourceConnector.BaseUrl + $"/api/orders/{order.order_id}/accept";
                 sourceConnector.Method = "PUT";
 
-                foreach (var orderLine in order.order_lines)
-                {
-                    var l_MacysAcceptedOrder_Lines = new MacysOrderAcceptInputModel.MacysAcceptedOrder_Lines
-                    {
-                        accepted = true,
-                        id = orderLine.order_line_id
-                    };
-
-                    l_MacysOrderAcceptInputModel.order_lines.Add(l_MacysAcceptedOrder_Lines);
-                }
-
-                string Body = JsonConvert.SerializeObject(l_MacysOrderAcceptInputModel);
-
                 route.SaveData("JSON-SNT", 0, sourceConnector.Url, userNo);
 
-                l_Data = new OrderData();
+                sourceResponse = RestConnector.Execute(sourceConnector, ackBody).GetAwaiter().GetResult();
+                ackResponse = sourceResponse.Content ?? string.Empty;
 
-                l_Data.UseConnection(string.Empty, l_Orders.Connection);
-                l_Data.DeleteWithType(l_Orders.Id, "API-ACK-SNT");
-
-                l_Data.Type = "API-ACK-SNT";
-                l_Data.Data = Body;
-                l_Data.CreatedBy = userNo;
-                l_Data.CreatedDate = DateTime.Now;
-                l_Data.OrderId = l_Orders.Id;
-                l_Data.OrderNumber = order.order_id;
-
-                l_Data.SaveNew();
-
-                sourceResponse = RestConnector.Execute(sourceConnector, Body).GetAwaiter().GetResult();
-
-                l_Data = new OrderData();
-
-                l_Data.UseConnection(string.Empty, l_Orders.Connection);
-                l_Data.DeleteWithType(l_Orders.Id, "API-ACK");
-
-                l_Data.Type = "API-ACK";
-                l_Data.Data = sourceResponse.Content;
-                l_Data.CreatedBy = userNo;
-                l_Data.CreatedDate = DateTime.Now;
-                l_Data.OrderId = l_Orders.Id;
-                l_Data.OrderNumber = order.order_id;
-
-                l_Data.SaveNew();
+                if (!sourceResponse.IsSuccessful)
+                {
+                    route.SaveLog(LogTypeEnum.Error, $"ACK failed for Order [{order.order_id}]. HTTP {(int)sourceResponse.StatusCode}", ackResponse, userNo);
+                }
 
                 Thread.Sleep(500);
 
-                sourceConnector.Url = sourceConnector.BaseUrl + $"/api/orders?order_ids={order.order_id}";
+                // ===== STEP 2: GET FULL ORDER DATA =====
+                orderGetUrl = sourceConnector.BaseUrl + $"/api/orders?order_ids={order.order_id}";
+                sourceConnector.Url = orderGetUrl;
                 sourceConnector.Method = "GET";
 
                 sourceResponse = RestConnector.Execute(sourceConnector, "").GetAwaiter().GetResult();
+                orderGetResponse = sourceResponse.Content;
 
-                route.SaveData("JSON-SNT", 0, sourceConnector.Url, userNo);
+                route.SaveData("JSON-SNT", 0, orderGetUrl, userNo);
 
-                if (sourceResponse.Content != null)
+                if (!string.IsNullOrEmpty(orderGetResponse))
+                    route.SaveData("JSON-RVD", 0, orderGetResponse, userNo);
+
+                if (!string.IsNullOrEmpty(orderGetResponse))
                 {
-                    OrdersList = JsonConvert.DeserializeObject<MacysGetOrderResponseModel>(sourceResponse.Content);
-                    route.SaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
+                    OrdersList = JsonConvert.DeserializeObject<MacysGetOrderResponseModel>(orderGetResponse);
 
-                    order = new MacysOrder();
-                    order = OrdersList.orders[0];
+                    if (OrdersList?.orders != null && OrdersList.orders.Count > 0)
+                    {
+                        order = OrdersList.orders[0];
+                        jsonString = JsonConvert.SerializeObject(order);
 
-                    jsonString = JsonConvert.SerializeObject(order);
-
-                    l_Orders.Status = order.customer.shipping_address == null ? "ERROR" : "New";
-                    l_Orders.CustomerId = customer.Id;
-                    l_Orders.OrderDate = order.created_date;
-                    l_Orders.OrderNumber = order.order_id;
-                    l_Orders.ShipToName = $"{order.customer.shipping_address?.firstname ?? ""} {order.customer.shipping_address?.lastname ?? ""}";
-                    l_Orders.ShipToAddress1 = order.customer.shipping_address?.street_1 ?? "";
-                    l_Orders.ShipToAddress2 = order.customer.shipping_address?.street_2 ?? "";
-                    l_Orders.ShipToCity = order.customer.shipping_address?.city ?? "";
-                    l_Orders.ShipToState = order.customer.shipping_address?.state ?? "";
-                    l_Orders.ShipToZip = order.customer.shipping_address?.zip_code ?? "";
-                    l_Orders.ShipToCountry = order.customer.shipping_address?.country ?? "";
-                    l_Orders.IsStoreOrder = false;
-                    l_Orders.CreatedBy = userNo;
-                    l_Orders.CreatedDate = DateTime.Now;
+                        l_Orders.Status = order.customer?.shipping_address == null ? "ERROR" : "New";
+                        l_Orders.CustomerId = customer.Id;
+                        l_Orders.OrderDate = order.created_date;
+                        l_Orders.OrderNumber = order.order_id;
+                        l_Orders.ShipToName = $"{order.customer?.shipping_address?.firstname ?? ""} {order.customer?.shipping_address?.lastname ?? ""}";
+                        l_Orders.ShipToAddress1 = order.customer?.shipping_address?.street_1 ?? "";
+                        l_Orders.ShipToAddress2 = order.customer?.shipping_address?.street_2 ?? "";
+                        l_Orders.ShipToCompanyName = Convert.ToString(order.customer?.shipping_address?.company) ?? "";
+                        l_Orders.ShipToCity = order.customer?.shipping_address?.city ?? "";
+                        l_Orders.ShipToState = order.customer?.shipping_address?.state ?? "";
+                        l_Orders.ShipToZip = order.customer?.shipping_address?.zip_code ?? "";
+                        l_Orders.ShipToCountry = order.customer?.shipping_address?.country ?? "";
+                        l_Orders.IsStoreOrder = false;
+                        l_Orders.CreatedBy = userNo;
+                        l_Orders.CreatedDate = DateTime.Now;
+                    }
+                    else
+                    {
+                        route.SaveLog(LogTypeEnum.Error, $"GET returned empty orders list for [{order.order_id}]", orderGetResponse, userNo);
+                        return;
+                    }
                 }
                 else
                 {
@@ -350,26 +347,91 @@ namespace eSyncMate.Processor.Managers
                     l_Orders.CreatedDate = DateTime.Now;
                 }
 
-                if (l_Orders.SaveNew().IsSuccess)
+                // ===== STEP 3: SAVE ORDER TO DB =====
+                if (!l_Orders.SaveNew().IsSuccess)
+                {
+                    route.SaveLog(LogTypeEnum.Error, $"Failed to save Order [{order.order_id}]", string.Empty, userNo);
+                    return;
+                }
+
+                // ===== STEP 4: SAVE ALL OrderData WITH CORRECT OrderId =====
+
+                // 4a. JSON-SNT (Order GET request URL)
+                l_Data = new OrderData();
+                l_Data.UseConnection(string.Empty, l_Orders.Connection);
+                l_Data.DeleteWithType(l_Orders.Id, "JSON-SNT");
+                l_Data.Type = "JSON-SNT";
+                l_Data.Data = orderGetUrl;
+                l_Data.CreatedBy = userNo;
+                l_Data.CreatedDate = DateTime.Now;
+                l_Data.OrderId = l_Orders.Id;
+                l_Data.OrderNumber = l_Orders.OrderNumber;
+                l_Data.SaveNew();
+
+                // 4b. JSON-RVD (Order GET response)
+                if (!string.IsNullOrEmpty(orderGetResponse))
                 {
                     l_Data = new OrderData();
+                    l_Data.UseConnection(string.Empty, l_Orders.Connection);
+                    l_Data.DeleteWithType(l_Orders.Id, "JSON-RVD");
+                    l_Data.Type = "JSON-RVD";
+                    l_Data.Data = orderGetResponse;
+                    l_Data.CreatedBy = userNo;
+                    l_Data.CreatedDate = DateTime.Now;
+                    l_Data.OrderId = l_Orders.Id;
+                    l_Data.OrderNumber = l_Orders.OrderNumber;
+                    l_Data.SaveNew();
+                }
 
+                // 4c. API-ACK-SNT (accept request body)
+                l_Data = new OrderData();
+                l_Data.UseConnection(string.Empty, l_Orders.Connection);
+                l_Data.DeleteWithType(l_Orders.Id, "API-ACK-SNT");
+                l_Data.Type = "API-ACK-SNT";
+                l_Data.Data = ackBody;
+                l_Data.CreatedBy = userNo;
+                l_Data.CreatedDate = DateTime.Now;
+                l_Data.OrderId = l_Orders.Id;
+                l_Data.OrderNumber = l_Orders.OrderNumber;
+                l_Data.SaveNew();
+
+                // 4d. API-ACK (accept response)
+                if (!string.IsNullOrEmpty(ackResponse))
+                {
+                    l_Data = new OrderData();
+                    l_Data.UseConnection(string.Empty, l_Orders.Connection);
+                    l_Data.DeleteWithType(l_Orders.Id, "API-ACK");
+                    l_Data.Type = "API-ACK";
+                    l_Data.Data = ackResponse;
+                    l_Data.CreatedBy = userNo;
+                    l_Data.CreatedDate = DateTime.Now;
+                    l_Data.OrderId = l_Orders.Id;
+                    l_Data.OrderNumber = l_Orders.OrderNumber;
+                    l_Data.SaveNew();
+                }
+
+                // 4e. API-JSON (parsed order JSON)
+                if (!string.IsNullOrEmpty(jsonString))
+                {
+                    l_Data = new OrderData();
                     l_Data.UseConnection(string.Empty, l_Orders.Connection);
                     l_Data.DeleteWithType(l_Orders.Id, "API-JSON");
-
                     l_Data.Type = "API-JSON";
                     l_Data.Data = jsonString;
                     l_Data.CreatedBy = userNo;
                     l_Data.CreatedDate = DateTime.Now;
                     l_Data.OrderId = l_Orders.Id;
                     l_Data.OrderNumber = l_Orders.OrderNumber;
-
                     l_Data.SaveNew();
-
-                    l_Data.UpdateOrderDataOrderID(l_Data.OrderNumber, l_Data.OrderId);
                 }
 
-                foreach (var orderLine in order.order_lines)
+                // ===== STEP 5: SAVE ORDER LINES =====
+                if (order.order_lines == null || order.order_lines.Count == 0)
+                {
+                    route.SaveLog(LogTypeEnum.Error, $"No order lines found for Order [{l_Orders.OrderNumber}]", string.Empty, userNo);
+                }
+
+                foreach (var orderLine in order.order_lines ?? new List<MacysGetOrderResponseModel.Order_Lines>())
                 {
                     OrderDetail l_OrderDetail = new OrderDetail();
 
@@ -391,7 +453,6 @@ namespace eSyncMate.Processor.Managers
                     }
                 }
 
-                route.SaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
                 route.SaveLog(LogTypeEnum.Debug, $"Processed Order [{l_Orders.OrderNumber}]", string.Empty, userNo);
             }
             catch (Exception ex)

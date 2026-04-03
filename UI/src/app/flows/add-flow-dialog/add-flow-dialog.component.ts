@@ -108,6 +108,7 @@ export class AddFlowDialogComponent implements OnInit {
             title: ['', Validators.required],
             description: [''],
             status: ['Active', Validators.required],
+            sequenceNo: [0],
             flowDetails: this.fb.array([])
         });
     }
@@ -572,6 +573,7 @@ export class AddFlowDialogComponent implements OnInit {
             title: this.newFlowForm.get('title')?.value,
             description: this.newFlowForm.get('description')?.value,
             status: details.some(d => d.status === 'Active') ? 'Active' : (details.length > 0 ? 'In-Active' : 'Active'),
+            sequenceNo: this.newFlowForm.get('sequenceNo')?.value || 0,
             flowDetails: details
         };
 

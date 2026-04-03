@@ -173,7 +173,7 @@ namespace eSyncMate.Processor.Controllers
 
                 this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Search criteria ready ({l_Criteria}).");
                 this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Starting Flow search.");
-                l_Flow.GetList(l_Criteria, string.Empty, ref l_Data, "Id DESC");
+                l_Flow.GetList(l_Criteria, string.Empty, ref l_Data, "SequenceNo ASC, Id DESC");
                 this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Flows searched {{{l_Data.Rows.Count}}}.");
                 this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Populating Flows.");
                 l_Response.Flows = new List<FlowResponseModel>();

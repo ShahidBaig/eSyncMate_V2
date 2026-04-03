@@ -58,6 +58,14 @@
                                     <mat-hint>Applies to all routes</mat-hint>
                                 </mat-form-field>
 
+                                <mat-form-field class="form-field" appearance="outline">
+                                    <mat-label>Sequence No</mat-label>
+                                    <input type="number" formControlName="sequenceNo" matInput placeholder="Enter sequence number">
+                                    <mat-icon matPrefix class="field-icon">sort</mat-icon>
+                                </mat-form-field>
+                            </div>
+
+                            <div class="form-row">
                                 <mat-form-field class="form-field description-field" appearance="outline">
                                     <mat-label>Description</mat-label>
                                     <textarea formControlName="description" matInput placeholder="Describe the purpose of this flow..." rows="3"></textarea>

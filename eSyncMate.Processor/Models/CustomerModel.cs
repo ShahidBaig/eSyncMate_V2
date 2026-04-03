@@ -90,6 +90,7 @@
         public string Title { get; set; }
         public string Description { get; set; }
         public string Status { get; set; }
+        public int SequenceNo { get; set; }
         public DateTime? CreatedDate { get; set; }
         public int? CreatedBy { get; set; }
         public List<SaveFlowDetailsDataModel> FlowDetails { get; set; } = new();
@@ -115,6 +116,7 @@
         public string Title { get; set; } = string.Empty;
         public string? Description { get; set; }
         public string? Status { get; set; }
+        public int SequenceNo { get; set; }
         public DateTime? CreatedDate { get; set; }
         public int? CreatedBy { get; set; }
         public DateTime? ModifiedDate { get; set; }
@@ -128,6 +130,7 @@
         public string Title { get; set; }
         public string Description { get; set; }
         public string Status { get; set; }
+        public int SequenceNo { get; set; }
         public DateTime? CreatedDate { get; set; }
         public int? CreatedBy { get; set; }
         public DateTime? ModifiedDate { get; set; }

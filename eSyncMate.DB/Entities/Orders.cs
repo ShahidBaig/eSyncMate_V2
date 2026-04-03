@@ -34,6 +34,7 @@ namespace eSyncMate.DB.Entities
         public string ShipToName { get; set; }
         public string ShipToAddress1 { get; set; }
         public string ShipToAddress2 { get; set; }
+        public string ShipToCompanyName { get; set; }
         public string ShipToCity { get; set; }
         public string ShipToState { get; set; }
         public string ShipToZip { get; set; }
@@ -560,7 +561,7 @@ namespace eSyncMate.DB.Entities
             return Connection.GetData(l_Query, ref p_Data);
         }
 
-        public Result UpdateShippingInfo(int orderId, string address1, string address2, string city, string state, string postalCode, string country,string ShipToName)
+        public Result UpdateShippingInfo(int orderId, string address1, string address2, string city, string state, string postalCode, string country, string ShipToName, string ShipToCompanyName = "")
         {
             Result l_Result = new Result();
             bool l_Trans = false;
@@ -630,6 +631,7 @@ namespace eSyncMate.DB.Entities
                             {
                                 // For JSON with 'postalAddress'
                                 orderJson["customer"]["shipping_address"]["firstname"] = ShipToName;
+                                orderJson["customer"]["shipping_address"]["company"] = ShipToCompanyName;
                                 orderJson["customer"]["shipping_address"]["street_1"] = address1;
                                 orderJson["customer"]["shipping_address"]["street_2"] = address2;
                                 orderJson["customer"]["shipping_address"]["city"] = city;
@@ -641,6 +643,7 @@ namespace eSyncMate.DB.Entities
                             {
                                 // For JSON with 'postalAddress'
                                 orderJson["OrderAddress"]["payload"]["ShippingAddress"]["Name"] = ShipToName;
+                                orderJson["OrderAddress"]["payload"]["ShippingAddress"]["CompanyName"] = ShipToCompanyName;
                                 orderJson["OrderAddress"]["payload"]["ShippingAddress"]["AddressLine1"] = address1;
                                 orderJson["OrderAddress"]["payload"]["ShippingAddress"]["AddressLine2"] = address2;
                                 orderJson["OrderAddress"]["payload"]["ShippingAddress"]["City"] = city;
@@ -725,7 +728,7 @@ namespace eSyncMate.DB.Entities
         }
 
         //public Result UpdateShippingAddress(int orderId, string address1, string address2, string city, string state, string postalCode, string country,string ShipToName,string ShipViaCode)
-        public Result UpdateShippingAddress(int orderId, string address1, string address2, string city, string state, string postalCode, string country, string ShipToName)
+        public Result UpdateShippingAddress(int orderId, string address1, string address2, string city, string state, string postalCode, string country, string ShipToName, string ShipToCompanyName = "")
 
         {
             Result l_Result = Result.GetFailureResult();
@@ -744,6 +747,9 @@ namespace eSyncMate.DB.Entities
                 if (!string.IsNullOrWhiteSpace(address2))
                     updates.Add($"ShipToAddress2 = '{address2}'");
 
+                if (!string.IsNullOrWhiteSpace(ShipToCompanyName))
+                    updates.Add($"ShipToCompanyName = '{ShipToCompanyName}'");
+
                 if (!string.IsNullOrWhiteSpace(city))
                     updates.Add($"ShipToCity = '{city}'");
 
@@ -758,9 +764,6 @@ namespace eSyncMate.DB.Entities
 
                 if (!string.IsNullOrWhiteSpace(ShipToName))
                     updates.Add($"ShipToName = '{ShipToName}'");
-
-                //if (!string.IsNullOrWhiteSpace(ShipViaCode))
-                //    updates.Add($"ShipViaCode = '{ShipViaCode}'");
 
                 if (updates.Count > 0)
                 {

@@ -616,6 +616,31 @@ namespace eSyncMate.DB.Entities
             return this.Connection.Execute(DeleteQuery);
         }
 
+        /// <summary>
+        /// Marks product as DELETED only if inventory was uploaded via TargetPlusInventoryFeedWHSWise.
+        /// Returns true if the product was marked DELETED, false if inventory not yet uploaded.
+        /// </summary>
+        public bool DeleteIfInventorySynced(string p_ItemID, string CustomerID)
+        {
+            try
+            {
+                DataTable dt = new DataTable();
+                string l_Query = $"EXEC Sp_DeleteProductCatalogIfInventorySynced '{p_ItemID.Replace("'", "''")}', '{CustomerID.Replace("'", "''")}'";
+                this.Connection.GetData(l_Query, ref dt);
+
+                if (dt.Rows.Count > 0)
+                {
+                    return Convert.ToInt32(dt.Rows[0]["Deleted"]) == 1;
+                }
+
+                return false;
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+
         public bool CustomerProductCatalogPrices(string CustomerID,string p_ItemID,string ProductID,string Status)
         {
             try

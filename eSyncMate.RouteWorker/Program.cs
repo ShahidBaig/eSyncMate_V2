@@ -196,6 +196,22 @@ namespace eSyncMate.RouteWorker
                 {
                     KnotCancellationRoute.Execute(config, route);
                 }
+                else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.KnotWHSWInventoryUpload))
+                {
+                    KnotStockImportRoute.Execute(config, route);
+                }
+                else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.KnotWHSWInventoryStatus))
+                {
+                    KnotStockImportStatusRoute.Execute(config, route);
+                }
+                else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.KnotPriceImport))
+                {
+                    KnotPriceImportRoute.Execute(config, route);
+                }
+                else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.KnotPriceImportStatus))
+                {
+                    KnotPriceImportStatusRoute.Execute(config, route);
+                }
                 // Macys Routes
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.MacysInventoryUpload))
                 {

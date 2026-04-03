@@ -89,6 +89,7 @@ namespace eSyncMate.Processor.Models
         public string? Status { get; set; }
         public string? ShipToAddress1 { get; set; }
         public string? ShipToAddress2 { get; set; }
+        public string? ShipToCompanyName { get; set; }
         public string? ShipToCity { get; set; }
         public string? ShipToState { get; set; }
         public string? ShipToZip { get; set; }

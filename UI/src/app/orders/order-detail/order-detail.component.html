@@ -53,6 +53,13 @@
 
           <div class="form-row">
             <mat-form-field appearance="fill" style="width:100%">
+              <mat-label>Ship To Company</mat-label>
+              <input [readonly]="isReadonly()" type="text" formControlName="shipToCompanyName" matInput placeholder="Enter Company Name">
+            </mat-form-field>
+          </div>
+
+          <div class="form-row">
+            <mat-form-field appearance="fill" style="width:100%">
               <mat-label>{{ 'addressLine1' | translate }}</mat-label>
               <input [readonly]="isReadonly()" type="text" formControlName="shipToAddress1" matInput placeholder="Enter Address Line 1">
             </mat-form-field>

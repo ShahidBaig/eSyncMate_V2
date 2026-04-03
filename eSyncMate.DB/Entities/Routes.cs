@@ -319,6 +319,10 @@ namespace eSyncMate.DB.Entities
 
             try
             {
+                // Reset statics that Modify() may have changed
+                Routes.EndingPropertyName = "CreatedBy";
+                Routes.DBProperties = new List<PropertyInfo>(this.GetType().GetProperties());
+
                 l_Trans = this.Connection.BeginTransaction();
 
                 this.Id = this.GetMax();

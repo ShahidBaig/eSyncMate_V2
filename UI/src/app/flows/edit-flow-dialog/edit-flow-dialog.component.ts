@@ -110,6 +110,7 @@ export class EditFlowDialogComponent implements OnInit {
             title: [data.title, Validators.required],
             description: [data.description],
             status: [data.status, Validators.required],
+            sequenceNo: [data.sequenceNo || 0],
             flowDetails: this.fb.array([])
         });
     }
@@ -609,6 +610,7 @@ export class EditFlowDialogComponent implements OnInit {
             title: this.editFlowForm.get('title')?.value,
             description: this.editFlowForm.get('description')?.value,
             status: details.some(d => d.status === 'Active') ? 'Active' : (details.length > 0 ? 'In-Active' : 'Active'),
+            sequenceNo: this.editFlowForm.get('sequenceNo')?.value || 0,
             flowDetails: details
         };
 

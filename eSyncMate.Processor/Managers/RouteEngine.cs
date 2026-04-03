@@ -480,6 +480,22 @@ namespace eSyncMate.Processor.Managers
                 {
                     KnotCancellationRoute.Execute(_config, route);
                 }
+                else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.KnotWHSWInventoryUpload))
+                {
+                    KnotStockImportRoute.Execute(_config, route);
+                }
+                else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.KnotWHSWInventoryStatus))
+                {
+                    KnotStockImportStatusRoute.Execute(_config, route);
+                }
+                else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.KnotPriceImport))
+                {
+                    KnotPriceImportRoute.Execute(_config, route);
+                }
+                else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.KnotPriceImportStatus))
+                {
+                    KnotPriceImportStatusRoute.Execute(_config, route);
+                }
 
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.MichealInventoryUpload))
                 {

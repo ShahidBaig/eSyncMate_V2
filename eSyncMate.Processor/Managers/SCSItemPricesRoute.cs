@@ -164,39 +164,51 @@ namespace eSyncMate.Processor.Managers
         {
             try
             {
-                var data = new
-                {
-                    list_price = row["ListPrice"],
-                    offer_price = row["OffPrice"],
-                    map_price = row["MapPrice"]
-                };
-
                 this.route.UseConnection(this.sourceConnector.ConnectionString);
+                string syncStatus = (Convert.ToString(row["SyncStatus"]) ?? "").ToUpper();
 
-                string Body = JsonConvert.SerializeObject(data);
-                route.RouteSaveData("JSON-SNT", 0, Body, userNo);
+                CustomerProductCatalog l_CustomerProductCatalog = new CustomerProductCatalog();
+                l_CustomerProductCatalog.UseConnection(this.sourceConnector.ConnectionString);
 
-                this.destinationConnector.Url = this.destinationConnector.BaseUrl + row["id"];
-                RestResponse sourceResponse = RestConnector.Execute(this.destinationConnector, Body).GetAwaiter().GetResult();
-
-                if (sourceResponse.StatusCode == System.Net.HttpStatusCode.OK)
+                // APPROVED → call price API + mark APPROVED_PR + try delete
+                // APPROVED_PR → price already uploaded, only try delete
+                if (syncStatus == "APPROVED")
                 {
-                    route.SaveLog(LogTypeEnum.Debug, $"ItemPrices updated for item [{row["id"]}].", string.Empty, userNo);
+                    var data = new
+                    {
+                        list_price = row["ListPrice"],
+                        offer_price = row["OffPrice"],
+                        map_price = row["MapPrice"]
+                    };
 
-                    CustomerProductCatalog l_CustomerProductCatalog = new CustomerProductCatalog();
+                    string Body = JsonConvert.SerializeObject(data);
+                    route.RouteSaveData("JSON-SNT", 0, Body, userNo);
 
-                    l_CustomerProductCatalog.UseConnection(this.sourceConnector.ConnectionString);
-                    l_CustomerProductCatalog.UpdateStatus(Convert.ToString(row["ItemID"]), Convert.ToString(row["VariationType"]), "APPROVED_PR", row["id"].ToString(), this.sourceConnector.CustomerID);
-                    l_CustomerProductCatalog.CustomerProductCatalogPrices(this.destinationConnector.CustomerID, Convert.ToString(row["ItemID"]), Convert.ToString(row["id"]), "APPROVED");
+                    this.destinationConnector.Url = this.destinationConnector.BaseUrl + row["id"];
+                    RestResponse sourceResponse = RestConnector.Execute(this.destinationConnector, Body).GetAwaiter().GetResult();
 
-                    l_CustomerProductCatalog.DeleteCustomerProductCatalog(Convert.ToString(row["ItemID"]), Convert.ToString(row["VariationType"]), this.sourceConnector.CustomerID);
+                    route.RouteSaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
+
+                    if (sourceResponse.StatusCode == System.Net.HttpStatusCode.OK)
+                    {
+                        route.SaveLog(LogTypeEnum.Debug, $"ItemPrices updated for item [{row["id"]}].", string.Empty, userNo);
+
+                        l_CustomerProductCatalog.UpdateStatus(Convert.ToString(row["ItemID"]), Convert.ToString(row["VariationType"]), "APPROVED_PR", row["id"].ToString(), this.sourceConnector.CustomerID);
+                        l_CustomerProductCatalog.CustomerProductCatalogPrices(this.destinationConnector.CustomerID, Convert.ToString(row["ItemID"]), Convert.ToString(row["id"]), "APPROVED");
+                    }
+                    else
+                    {
+                        route.SaveLog(LogTypeEnum.Error, $"Unable to update ItemPrices for item [{row["id"]}]. HTTP {(int)sourceResponse.StatusCode} {sourceResponse.StatusCode}.", sourceResponse.Content ?? sourceResponse.ErrorMessage, userNo);
+                        return;
+                    }
                 }
-                else
+
+                // Both APPROVED (after price upload above) and APPROVED_PR → try delete if inventory synced
+                bool deleted = l_CustomerProductCatalog.DeleteIfInventorySynced(Convert.ToString(row["ItemID"]), this.sourceConnector.CustomerID);
+                if (!deleted)
                 {
-                    route.SaveLog(LogTypeEnum.Error, $"Unable to update ItemPrices for item [{row["id"]}]. HTTP {(int)sourceResponse.StatusCode} {sourceResponse.StatusCode}.", sourceResponse.Content ?? sourceResponse.ErrorMessage, userNo);
+                    route.SaveLog(LogTypeEnum.Debug, $"Item [{row["ItemID"]}] kept as APPROVED_PR — inventory not yet uploaded via TargetPlusInventoryFeedWHSWise.", string.Empty, userNo);
                 }
-
-                route.RouteSaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
             }
             catch (Exception ex)
             {

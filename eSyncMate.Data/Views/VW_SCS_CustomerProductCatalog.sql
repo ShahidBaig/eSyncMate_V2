@@ -17,8 +17,11 @@ AS
 	ISNULL(C.ModifiedDate,C.CreatedDate) CreatedDate,
 	C.CreatedBy,
 	C.ModifiedBy,
-	CASE 
-        WHEN C.SyncStatus = 'DELETED' THEN 'SYNCED'
+	CASE
+        WHEN C.SyncStatus = 'DELETED' THEN 'Published'
+        WHEN C.SyncStatus = 'SYNCED' THEN 'Published'
+        WHEN C.SyncStatus = 'APPROVED_PR' THEN 'Approved'
+        WHEN C.SyncStatus = 'APPROVED' THEN 'Approved'
         ELSE C.SyncStatus
     END AS SyncStatus
 	FROM [SCS_CustomerProductCatalog] C WITH (NOLOCK)

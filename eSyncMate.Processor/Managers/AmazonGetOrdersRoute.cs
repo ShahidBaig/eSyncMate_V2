@@ -309,6 +309,7 @@ namespace eSyncMate.Processor.Managers
             l_Orders.ShipToName = $"{order.OrderAddress.payload.ShippingAddress.Name ?? ""}";
             l_Orders.ShipToAddress1 = order.OrderAddress.payload.ShippingAddress.AddressLine1 ?? "";
             l_Orders.ShipToAddress2 = order.OrderAddress.payload.ShippingAddress.AddressLine2 ?? "";
+            l_Orders.ShipToCompanyName = order.OrderAddress.payload.ShippingAddress.Name ?? "";
             l_Orders.ShipToCity = order.OrderAddress.payload.ShippingAddress.City;
             l_Orders.ShipToState = order.OrderAddress.payload.ShippingAddress.StateOrRegion;
             l_Orders.ShipToZip = order.OrderAddress.payload.ShippingAddress.PostalCode;
