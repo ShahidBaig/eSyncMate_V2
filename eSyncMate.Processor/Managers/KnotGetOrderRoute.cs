@@ -67,6 +67,7 @@ namespace eSyncMate.Processor.Managers
                     foreach (var status in orderStatuses)
                     {
                         ProcessOrdersByStatus(status, formattedStartDate, route, l_SourceConnector, l_DestinationConnector, userNo);
+                        Thread.Sleep(5000);
                     }
                 }
 
@@ -100,6 +101,13 @@ namespace eSyncMate.Processor.Managers
                 sourceResponse = RestConnector.Execute(sourceConnector, string.Empty).GetAwaiter().GetResult();
 
                 route.SaveData("JSON-SNT", 0, url, userNo);
+
+                if (string.IsNullOrEmpty(sourceResponse.Content))
+                {
+                    route.SaveLog(LogTypeEnum.Error, $"Empty response from Knot API for status: {statusCode}. HTTP {(int)sourceResponse.StatusCode}", sourceResponse.ErrorMessage ?? "", userNo);
+                    return;
+                }
+
                 route.SaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
 
                 ordersList = JsonConvert.DeserializeObject<KnotGetOrderResponseModel>(sourceResponse.Content);
@@ -223,76 +231,62 @@ namespace eSyncMate.Processor.Managers
 
                 route.SaveData("JSON-SNT", 0, sourceConnector.Url, userNo);
 
-                if (sourceResponse.Content != null)
+                if (string.IsNullOrEmpty(sourceResponse.Content))
                 {
-                    OrdersList = JsonConvert.DeserializeObject<KnotGetOrderResponseModel>(sourceResponse.Content);
-                    route.SaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
-
-                    order = new KnotOrder();
-                    order = OrdersList.orders[0];
-
-                    if (order?.customer?.shipping_address == null)
-                    {
-                        route.SaveLog(LogTypeEnum.Error, $"Order {order.order_id} missing shipping address", sourceResponse.Content, userNo);
-
-                        return;
-                    }
-
-
-                    foreach (var orderLine in order.order_lines)
-                    {
-                        var sku = orderLine?.offer_sku?.Trim();
-
-                        DataRow row = p_SCSInventoryFeed.Select($"CustomerItemCode = '{sku}'").FirstOrDefault();
-
-                        if (row != null)
-                        {
-                            orderLine.ItemID = !string.IsNullOrWhiteSpace(Convert.ToString(row["ItemID"])) ? Convert.ToString(row["ItemID"]) : (sku ?? string.Empty);
-
-                        }
-                        else
-                        {
-                            orderLine.ItemID = orderLine.offer_sku;
-                        }
-                    }
-
-                    jsonString = JsonConvert.SerializeObject(order);
-
-                    l_Orders.Status = order.customer.shipping_address == null ? "ERROR" : "New";
-                    l_Orders.CustomerId = customer.Id;
-                    l_Orders.OrderDate = order.created_date;
-                    l_Orders.OrderNumber = order.order_id;
-                    l_Orders.ShipToName = $"{order.customer.shipping_address?.firstname ?? ""} {order.customer.shipping_address?.lastname ?? ""}";
-                    l_Orders.ShipToAddress1 = order.customer.shipping_address?.street_1 ?? "";
-                    l_Orders.ShipToAddress2 = order.customer.shipping_address?.street_2 ?? "";
-                    l_Orders.ShipToCompanyName = Convert.ToString(order.customer?.shipping_address?.company) ?? "";
-                    l_Orders.ShipToCity = order.customer.shipping_address?.city ?? "";
-                    l_Orders.ShipToState = order.customer.shipping_address?.state ?? "";
-                    l_Orders.ShipToZip = order.customer.shipping_address?.zip_code ?? "";
-                    l_Orders.ShipToCountry = order.customer.shipping_address?.country ?? "";
-                    l_Orders.IsStoreOrder = false;
-                    l_Orders.CreatedBy = userNo;
-                    l_Orders.CreatedDate = DateTime.Now;
-
-                    
+                    route.SaveLog(LogTypeEnum.Error, $"Empty response for GET Order [{order.order_id}]. HTTP {(int)sourceResponse.StatusCode}. Will retry next run.", sourceResponse.ErrorMessage ?? "", userNo);
+                    return;
                 }
-                else
+
+                OrdersList = JsonConvert.DeserializeObject<KnotGetOrderResponseModel>(sourceResponse.Content);
+                route.SaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
+
+                if (OrdersList?.orders == null || OrdersList.orders.Count == 0)
                 {
-                    l_Orders.Status = "ERROR";
-                    l_Orders.CustomerId = customer.Id;
-                    l_Orders.OrderDate = order.created_date;
-                    l_Orders.OrderNumber = order.order_id;
-                    l_Orders.ShipToName = "";
-                    l_Orders.ShipToAddress1 = "";
-                    l_Orders.ShipToAddress2 = "";
-                    l_Orders.ShipToCity = "";
-                    l_Orders.ShipToState = "";
-                    l_Orders.ShipToZip = "";
-                    l_Orders.ShipToCountry = "";
-                    l_Orders.IsStoreOrder = false;
-                    l_Orders.CreatedBy = userNo;
-                    l_Orders.CreatedDate = DateTime.Now;
+                    route.SaveLog(LogTypeEnum.Error, $"GET returned empty orders list for [{order.order_id}]. Will retry next run.", sourceResponse.Content, userNo);
+                    return;
                 }
+
+                order = OrdersList.orders[0];
+
+                if (order?.customer?.shipping_address == null)
+                {
+                    route.SaveLog(LogTypeEnum.Error, $"Order {order.order_id} missing shipping address", sourceResponse.Content, userNo);
+                    return;
+                }
+
+                foreach (var orderLine in order.order_lines)
+                {
+                    var sku = orderLine?.offer_sku?.Trim();
+
+                    DataRow row = p_SCSInventoryFeed.Select($"CustomerItemCode = '{sku}'").FirstOrDefault();
+
+                    if (row != null)
+                    {
+                        orderLine.ItemID = !string.IsNullOrWhiteSpace(Convert.ToString(row["ItemID"])) ? Convert.ToString(row["ItemID"]) : (sku ?? string.Empty);
+                    }
+                    else
+                    {
+                        orderLine.ItemID = orderLine.offer_sku;
+                    }
+                }
+
+                jsonString = JsonConvert.SerializeObject(order);
+
+                l_Orders.Status = "New";
+                l_Orders.CustomerId = customer.Id;
+                l_Orders.OrderDate = order.created_date;
+                l_Orders.OrderNumber = order.order_id;
+                l_Orders.ShipToName = $"{order.customer.shipping_address?.firstname ?? ""} {order.customer.shipping_address?.lastname ?? ""}";
+                l_Orders.ShipToAddress1 = order.customer.shipping_address?.street_1 ?? "";
+                l_Orders.ShipToAddress2 = order.customer.shipping_address?.street_2 ?? "";
+                l_Orders.ShipToCompanyName = Convert.ToString(order.customer?.shipping_address?.company) ?? "";
+                l_Orders.ShipToCity = order.customer.shipping_address?.city ?? "";
+                l_Orders.ShipToState = order.customer.shipping_address?.state ?? "";
+                l_Orders.ShipToZip = order.customer.shipping_address?.zip_code ?? "";
+                l_Orders.ShipToCountry = order.customer.shipping_address?.country ?? "";
+                l_Orders.IsStoreOrder = false;
+                l_Orders.CreatedBy = userNo;
+                l_Orders.CreatedDate = DateTime.Now;
 
                 if (l_Orders.GetViewList($"OrderNumber ='{order.order_id}'", string.Empty, ref l_OrderData))
                 {
