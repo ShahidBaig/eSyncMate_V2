@@ -16,6 +16,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { PopupComponent } from '../popup/popup.component';
 import { MatDialog } from '@angular/material/dialog';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { CommonModule } from '@angular/common';
 import { MatSelectModule } from '@angular/material/select';
 import { AddConnectorDialogComponent } from './add-connector-dialog/add-connector-dialog.component';
@@ -26,9 +27,6 @@ import { PageEvent } from '@angular/material/paginator';
 import { LanguageService } from '../services/language.service';
 import { TranslateModule } from '@ngx-translate/core'; 
 import { ApiService } from '../services/api.service';
-import { MatTableDataSource } from '@angular/material/table';
-import { MatPaginator } from '@angular/material/paginator';
-import { ViewChild } from '@angular/core';
 
 @Component({
   selector: 'connectors',
@@ -50,6 +48,7 @@ import { ViewChild } from '@angular/core';
     MatTooltipModule,
     MatIconModule,
     MatProgressSpinnerModule,
+    MatProgressBarModule,
     CommonModule,
     MatSelectModule,
     FormsModule,
@@ -58,6 +57,7 @@ import { ViewChild } from '@angular/core';
   ],
 })
 export class ConnectorsComponent implements OnInit {
+  isLoading: boolean = false;
   listOfConnectors: Connector[] = [];
   connectorsToDisplay: Connector[] = [];
   msg: string = '';
@@ -71,8 +71,12 @@ export class ConnectorsComponent implements OnInit {
   endDate: string = '';
   showDataColumn: boolean = true;
   isAdminUser: boolean = false;
-  dataSource = new MatTableDataSource<Connector>([]);
-  @ViewChild(MatPaginator) paginator!: MatPaginator;
+  canAdd = false;
+  canEdit = false;
+  canDelete = false;
+  totalCount: number = 0;
+  pageNumber: number = 1;
+  pageSize: number = 10;
 
   columns: string[] = [
     'id',
@@ -84,11 +88,22 @@ export class ConnectorsComponent implements OnInit {
   ];
 
     constructor(private ConnectorsApi: ConnectorsService, private fb: FormBuilder, private toast: NgToastService, private dialog: MatDialog, private api: ApiService, public languageService: LanguageService) {
-    this.isAdminUser = ["ADMIN"].includes(this.api.getTokenUserInfo()?.userType || ''); 
+    const permissions = this.api.getMenuPermissions('edi/connectors');
+    if (permissions) {
+      this.canAdd = permissions.canAdd;
+      this.canEdit = permissions.canEdit;
+      this.canDelete = permissions.canDelete;
+    } else {
+      const isAdmin = ["ADMIN", "WRITER"].includes(this.api.getTokenUserInfo()?.userType || '');
+      this.canAdd = isAdmin;
+      this.canEdit = isAdmin;
+      this.canDelete = isAdmin;
+      this.isAdminUser = isAdmin;
+    }
   }
 
   ngOnInit(): void {
-    if (!this.isAdminUser) {
+    if (!this.canEdit) {
       const editIndex = this.columns.indexOf('Edit');
       if (editIndex !== -1) {
         this.columns.splice(editIndex, 1);
@@ -128,12 +143,9 @@ export class ConnectorsComponent implements OnInit {
   }
 
   onPageChange(event: PageEvent) {
-    const startIndex = event.pageIndex * event.pageSize;
-    this.connectorsToDisplay = this.listOfConnectors.slice(startIndex, startIndex + event.pageSize);
-  }
-
-  ngAfterViewInit(): void {
-    this.dataSource.paginator = this.paginator;
+    this.pageNumber = event.pageIndex + 1;
+    this.pageSize = event.pageSize;
+    this.getConnectors();
   }
 
   get label(): string {
@@ -153,7 +165,10 @@ export class ConnectorsComponent implements OnInit {
   }
 
   getConnectors(resetPage: boolean = false) {
-    this.showSpinnerforSearch = false;
+    if (resetPage) {
+      this.pageNumber = 1;
+    }
+
     let stringFromDate = '';
     let stringToDate = '';
 
@@ -171,56 +186,29 @@ export class ConnectorsComponent implements OnInit {
       this.searchValue = stringFromDate + '/' + stringToDate;
     }
 
-    this.ConnectorsApi.getConnectors(this.selectedOption, this.searchValue).subscribe({
+    this.isLoading = true;
+    this.ConnectorsApi.getConnectors(this.selectedOption, this.searchValue, this.pageNumber, this.pageSize).subscribe({
       next: (res: any) => {
         this.msg = res.message;
         this.code = res.code;
 
-        // ✅ old page info BEFORE updating data
-        const oldPageIndex = this.paginator?.pageIndex ?? 0;
-        const oldPageSize = this.paginator?.pageSize ?? 10;
-
         this.listOfConnectors = res.connectors ?? [];
+        this.totalCount = res.totalCount ?? 0;
+        this.connectorsToDisplay = this.listOfConnectors;
 
-
-        if (this.listOfConnectors == null || this.listOfConnectors.length === 0) {
-          this.toast.info({ detail: "INFO", summary: this.languageService.getTranslation('noFilterDataMessage'), duration: 5000, /*sticky: true,*/ position: 'topRight' });
-          this.showSpinnerforSearch = false;
-          this.connectorsToDisplay = [];
-          this.dataSource.data = [];
-
-          return;
+        if (this.listOfConnectors.length === 0 && this.pageNumber === 1) {
+          this.toast.info({ detail: "INFO", summary: this.languageService.getTranslation('noFilterDataMessage'), duration: 5000, position: 'topRight' });
         }
 
-        this.dataSource.data = this.listOfConnectors;
-
-        // ✅ resetPage ? first page : keep old page
-        if (resetPage) {
-          this.paginator?.firstPage();
-        } else {
-          const maxPageIndex = Math.max(Math.ceil(this.listOfConnectors.length / oldPageSize) - 1, 0);
-          this.paginator.pageIndex = Math.min(oldPageIndex, maxPageIndex);
-
-          // force re-render on same page
-          this.paginator._changePageSize(this.paginator.pageSize);
+        if (this.code === 400) {
+          this.toast.error({ detail: "ERROR", summary: this.msg, duration: 5000, position: 'topRight' });
         }
 
-        if (this.code === 200) {
-          this.showSpinnerforSearch = false;
-        }
-        else if (this.code === 400) {
-          this.toast.error({ detail: "ERROR", summary: this.msg, duration: 5000, /*sticky: true,*/ position: 'topRight' });
-          this.showSpinnerforSearch = false;
-        } else {
-          this.toast.info({ detail: "INFO", summary: this.msg, duration: 5000, /*sticky: true,*/ position: 'topRight' });
-          this.showSpinnerforSearch = false;
-        }
-
-        this.showSpinnerforSearch = false;
+        this.isLoading = false;
       },
       error: (err: any) => {
-        this.toast.error({ detail: "ERROR", summary: err.message, duration: 5000, /*sticky: true,*/ position: 'topRight' });
-        this.showSpinnerforSearch = false;
+        this.toast.error({ detail: "ERROR", summary: err.message, duration: 5000, position: 'topRight' });
+        this.isLoading = false;
       },
     });
   }

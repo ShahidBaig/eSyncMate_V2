@@ -15,6 +15,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialog } from '@angular/material/dialog';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
 import { MatPaginatorModule, MatPaginator, PageEvent } from '@angular/material/paginator';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
@@ -63,6 +64,7 @@ interface Customers {
     MatTooltipModule,
     MatIconModule,
     MatProgressSpinnerModule,
+    MatProgressBarModule,
     CommonModule,
     MatSelectModule,
     FormsModule,
@@ -71,6 +73,7 @@ interface Customers {
   ],
 })
 export class FlowsComponent implements OnInit {
+  isLoading: boolean = false;
   listOfFlows: Flows[] = [];
   flowsToDisplay: Flows[] = [];
   msg: string = '';
@@ -80,6 +83,9 @@ export class FlowsComponent implements OnInit {
   selectedCustomer: string = 'EMPTY';
   showDataColumn: boolean = true;
   isAdminUser: boolean = false;
+  canAdd = false;
+  canEdit = false;
+  canDelete = false;
   customerOptions: Customers[] | undefined;
   filteredCustomerOptions: Customers[] = [];
   customerSearchText: string = '';
@@ -107,9 +113,20 @@ export class FlowsComponent implements OnInit {
 
   ngOnInit(): void {
     this.getERPCustomer();
-    this.isAdminUser = ["ADMIN", "WRITER"].includes(this.token.getTokenUserInfo()?.userType || '');
+    const permissions = this.token.getMenuPermissions('edi/flows');
+    if (permissions) {
+      this.canAdd = permissions.canAdd;
+      this.canEdit = permissions.canEdit;
+      this.canDelete = permissions.canDelete;
+    } else {
+      const isAdmin = ["ADMIN", "WRITER"].includes(this.token.getTokenUserInfo()?.userType || '');
+      this.canAdd = isAdmin;
+      this.canEdit = isAdmin;
+      this.canDelete = isAdmin;
+      this.isAdminUser = isAdmin;
+    }
 
-    if (!this.isAdminUser) {
+    if (!this.canEdit) {
       const editIndex = this.columns.indexOf('Edit');
       if (editIndex !== -1) {
         this.columns.splice(editIndex, 1);
@@ -211,6 +228,7 @@ export class FlowsComponent implements OnInit {
     let searchOption = 'Customer ID';
     let searchValue = this.selectedCustomer;
 
+    this.isLoading = true;
     this.flowsApi.getFlows(searchOption, searchValue).subscribe({
       next: (res: any) => {
         this.msg = res.message;
@@ -240,10 +258,12 @@ export class FlowsComponent implements OnInit {
         }
 
         this.showSpinnerforSearch = false;
+        this.isLoading = false;
       },
       error: (err: any) => {
         this.toast.error({ detail: "ERROR", summary: err.message, duration: 5000, position: 'topRight' });
         this.showSpinnerforSearch = false;
+        this.isLoading = false;
       },
     });
   }

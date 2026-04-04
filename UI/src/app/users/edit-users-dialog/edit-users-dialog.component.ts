@@ -19,10 +19,11 @@ import { MatSelectModule } from '@angular/material/select';
 import { RouteTypesService } from '../../services/route-types.service';
 import { LanguageService } from '../../services/language.service';
 import { TranslateModule } from '@ngx-translate/core';
-import { User } from '../../models/models';
+import { User, Role } from '../../models/models';
 import { MatGridListModule } from '@angular/material/grid-list';
 import { UserService } from '../../services/user.service';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { ApiService } from '../../services/api.service';
 
 interface Customers {
   erpCustomerID: string;
@@ -61,12 +62,15 @@ export class EditUsersDialogComponent implements OnInit {
   updateUserForm: FormGroup | any;
   routeTypesOptions: User[] | undefined;
   customerOptions: Customers[] | undefined;
+  roles: Role[] = [];
+  selectedRoleId: number = 0;
   hide = true;
   hideConfirm = true;
   constructor(
     public dialogRef: MatDialogRef<EditUsersDialogComponent>,
     private formBuilder: FormBuilder,
     private userApi: UserService,
+    private api: ApiService,
     private toast: NgToastService,
     public languageService: LanguageService,
     private fb: FormBuilder,
@@ -77,6 +81,8 @@ export class EditUsersDialogComponent implements OnInit {
   ngOnInit() {
     this.initializeForm();
     this.getERPCustomer();
+    this.loadRoles();
+    this.loadUserRole();
   }
 
   getERPCustomer() {
@@ -102,7 +108,7 @@ export class EditUsersDialogComponent implements OnInit {
           Validators.maxLength(15),
         ]),
         rpassword: this.fb.control(this.data.password),
-        userType: [this.data.userType, Validators.required],
+        userType: [this.data.userType],
         status: [this.data.status, Validators.required],
         customerName: [this.data.customerName ? this.data.customerName.split(',') : [], Validators.required],
         isSetupMenu: [this.data.isSetupAllowed]
@@ -165,16 +171,39 @@ export class EditUsersDialogComponent implements OnInit {
     return this.updateUserForm.get('customerName') as FormControl;
   }
 
+  loadRoles(): void {
+    this.api.getRoles().subscribe({
+      next: (res: any) => {
+        if (res.code === 200) {
+          this.roles = (res.roles || []).filter((r: Role) => r.isActive);
+        }
+      }
+    });
+  }
+
+  loadUserRole(): void {
+    if (this.data.id) {
+      this.api.getUserRole(this.data.id).subscribe({
+        next: (res: any) => {
+          if (res.code === 200 && res.userRoles && res.userRoles.length > 0) {
+            this.selectedRoleId = res.userRoles[0].roleId;
+          }
+        }
+      });
+    }
+  }
+
   updateUsers(): void {
     const userModel = {
       id: this.updateUserForm.get('id')?.value,
       firstName: this.updateUserForm.get('firstName')?.value,
-      lastName: this.updateUserForm.get('lastName')?.value, // Add this line
-      email: this.updateUserForm.get('email')?.value, // Add this line
-      mobile: this.updateUserForm.get('mobile')?.value, // Add this line
-      password: this.updateUserForm.get('password')?.value, // Add this line
-      userType: this.updateUserForm.get('userType')?.value, // Add this line
-      status: this.updateUserForm.get('status')?.value, // Add this line
+      lastName: this.updateUserForm.get('lastName')?.value,
+      email: this.updateUserForm.get('email')?.value,
+      mobile: this.updateUserForm.get('mobile')?.value,
+      password: this.updateUserForm.get('password')?.value,
+      userType: this.updateUserForm.get('userType')?.value,
+      status: this.updateUserForm.get('status')?.value,
+      company: this.data.company,
       customerName: '',
       isSetupAllowed: this.updateUserForm.get('isSetupMenu')?.value,
       createdDate: this.data.createdDate,
@@ -189,18 +218,23 @@ export class EditUsersDialogComponent implements OnInit {
         next: (res) => {
           if (res.code === 100) {
             this.toast.success({ detail: "SUCCESS", summary: res.description, duration: 5000, position: 'topRight' });
+
+            // Save user role assignment
+            if (this.selectedRoleId > 0) {
+              this.api.saveUserRole({ userId: userModel.id, roleId: this.selectedRoleId }).subscribe();
+            }
           } else if (res.code === 400) {
-            this.toast.error({ detail: "ERROR", summary: res.message, duration: 5000, /*sticky: true,*/ position: 'topRight' });
+            this.toast.error({ detail: "ERROR", summary: res.message, duration: 5000, position: 'topRight' });
           } else if (res.code === 401) {
-            this.toast.warning({ detail: "WARNING", summary: res.description, duration: 5000, /*sticky: true,*/ position: 'topRight' });
+            this.toast.warning({ detail: "WARNING", summary: res.description, duration: 5000, position: 'topRight' });
           } else {
-            this.toast.info({ detail: "INFO", summary: res.message, duration: 5000, /*sticky: true,*/ position: 'topRight' });
+            this.toast.info({ detail: "INFO", summary: res.message, duration: 5000, position: 'topRight' });
           }
 
           this.dialogRef.close('updated');
         },
         error: (err) => {
-          this.toast.error({ detail: "ERROR", summary: err.message, duration: 5000, /*sticky: true,*/ position: 'topRight' });
+          this.toast.error({ detail: "ERROR", summary: err.message, duration: 5000, position: 'topRight' });
         }
       });
     }

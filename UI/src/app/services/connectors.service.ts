@@ -19,10 +19,12 @@ export class ConnectorsService {
     return this.http.post<any>(this.apiUrl + 'api/Connectors/updateConnector', connectorModel);
   }
 
-  getConnectors(searchOption: string, searchValue: string): Observable<any> {
+  getConnectors(searchOption: string, searchValue: string, pageNumber: number = 1, pageSize: number = 10): Observable<any> {
     const params = new HttpParams()
       .set('searchOption', searchOption)
-      .set('searchValue', searchValue);
+      .set('searchValue', searchValue)
+      .set('pageNumber', pageNumber.toString())
+      .set('pageSize', pageSize.toString());
 
     return this.http.get(`${this.apiUrl}api/Connectors/getConnectors`, { params });
   }

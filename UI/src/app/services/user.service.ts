@@ -14,11 +14,16 @@ export class UserService {
     return this.http.post<any>(this.apiUrl + 'api/User/updateUser', connectorModel);
   }
 
+  deleteUser(id: number): Observable<any> {
+    return this.http.post<any>(this.apiUrl + 'api/User/deleteUser', { id });
+  }
 
-  getUsers(searchOption: string, searchValue: string): Observable<any> {
+  getUsers(searchOption: string, searchValue: string, pageNumber: number = 1, pageSize: number = 10): Observable<any> {
     const params = new HttpParams()
       .set('searchOption', searchOption)
-      .set('searchValue', searchValue);
+      .set('searchValue', searchValue)
+      .set('pageNumber', pageNumber.toString())
+      .set('pageSize', pageSize.toString());
 
     return this.http.get(`${this.apiUrl}api/User/getUser`, { params });
   }

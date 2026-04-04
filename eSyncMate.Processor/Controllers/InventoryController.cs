@@ -32,7 +32,7 @@ namespace eSyncMate.Processor.Controllers
 
         [HttpGet]
         [Route("getInventory/{ItemID}/{FromDate}/{ToDate}/{Status}/{CustomerID}/{RouteType}")]
-        public async Task<GetInventoryResponseModel> GetInventory(string ItemID = "", string FromDate = "", string ToDate = "", string Status = "", string CustomerID = "", string RouteType = "")
+        public async Task<GetInventoryResponseModel> GetInventory(string ItemID = "", string FromDate = "", string ToDate = "", string Status = "", string CustomerID = "", string RouteType = "", [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
             MethodBase l_Me = MethodBase.GetCurrentMethod();
             GetInventoryResponseModel l_Response = new GetInventoryResponseModel();
@@ -126,12 +126,14 @@ namespace eSyncMate.Processor.Controllers
                 this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Search criteria ready ({l_Criteria}).");
                 this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Staring Inventory search.");
 
-                l_Inventory.GetViewList(l_Criteria, string.Empty, ref l_Data, "StartDate DESC");
+                int totalCount = 0;
+                l_Inventory.GetViewListPaged(l_Criteria, string.Empty, ref l_Data, "StartDate DESC", pageNumber, pageSize, out totalCount);
 
-                this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - InventoryRow searched {{{l_Data.Rows.Count}}}.");
+                this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - InventoryRow searched {{{l_Data.Rows.Count}}} of {totalCount} total.");
                 this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Populating Inventory.");
 
                 l_Response.Inventory = l_Data;
+                l_Response.TotalCount = totalCount;
 
                 l_Response.Code = (int)ResponseCodes.Success;
                 l_Response.Message = "InventoryRow fetched successfully!";
@@ -220,7 +222,7 @@ namespace eSyncMate.Processor.Controllers
 
         [HttpGet]
         [Route("getBatchData/{BatchID}")]
-        public async Task<GetInventoryResponseModel> GetBatchData(string BatchID)
+        public async Task<GetInventoryResponseModel> GetBatchData(string BatchID, [FromQuery] string itemID = "", [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
             MethodBase l_Me = MethodBase.GetCurrentMethod();
             GetInventoryResponseModel l_Response = new GetInventoryResponseModel();
@@ -238,9 +240,17 @@ namespace eSyncMate.Processor.Controllers
 
                 l_Inventory.UseConnection(CommonUtils.ConnectionString);
 
-                l_Inventory.GetBatchWiseData($"BatchID = '{BatchID}'", ref l_Data);
+                string l_BWCriteria = $"BatchID = '{BatchID}'";
+                if (!string.IsNullOrEmpty(itemID))
+                {
+                    l_BWCriteria += $" AND ItemId LIKE '%{itemID}%'";
+                }
+
+                int totalCount = 0;
+                l_Inventory.GetBatchWiseDataPaged(l_BWCriteria, ref l_Data, pageNumber, pageSize, out totalCount);
 
                 l_Response.BatchWiseInventory = l_Data;
+                l_Response.TotalCount = totalCount;
                 l_Response.Code = (int)ResponseCodes.Success;
                 l_Response.Message = "Batch Wise Inventory fetched successfully!";
 

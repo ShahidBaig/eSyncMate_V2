@@ -15,6 +15,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialog } from '@angular/material/dialog';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { CommonModule } from '@angular/common';
 import { MatSelectModule } from '@angular/material/select';
 import { MatPaginatorModule } from '@angular/material/paginator';
@@ -45,6 +46,7 @@ import { PurchaseOrdersTrackingService } from '../services/purchaseOrdersTrackin
     MatTooltipModule,
     MatIconModule,
     MatProgressSpinnerModule,
+    MatProgressBarModule,
     CommonModule,
     MatSelectModule,
     MatPaginatorModule,
@@ -52,6 +54,7 @@ import { PurchaseOrdersTrackingService } from '../services/purchaseOrdersTrackin
   ],
 })
 export class PurchaseOrdersTrackingComponent {
+  isLoading: boolean = false;
   mydate = environment.date;
 
   listOfPurchaseOrdersTracking: PurchaseOrdersTracking[] = [];
@@ -148,6 +151,7 @@ export class PurchaseOrdersTrackingComponent {
       stringFromDate = '1999-01-01';
     }
 
+    this.isLoading = true;
     this.api.getPurchaseOrdersTracking(purchaseOrderNo, stringFromDate, sku, poNumber).subscribe({
       next: (res: any) => {
         this.listOfPurchaseOrdersTracking = res.purchaseOrdersTracking;
@@ -178,10 +182,12 @@ export class PurchaseOrdersTrackingComponent {
         }
 
         this.showSpinnerforSearch = false;
+        this.isLoading = false;
       },
       error: (err: any) => {
         this.toast.error({ detail: "ERROR", summary: err.message, duration: 5000, /*sticky: true,*/ position: 'topRight' });
         this.showSpinnerforSearch = false;
+        this.isLoading = false;
       },
     });
   }

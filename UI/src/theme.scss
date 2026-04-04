@@ -1,8 +1,79 @@
 @use "@angular/material" as mat;
 @include mat.core();
 
-$light-primary: mat.define-palette(mat.$purple-palette);
-$light-accent: mat.define-palette(mat.$green-palette, A200, A100, A400);
+// ============================================================
+// eSyncMate Modern Light Theme (2026 SaaS Standard)
+// Clean Blue + Light Gray
+// ============================================================
+
+$esync-blue: (
+  50:  #eff6ff,
+  100: #dbeafe,
+  200: #bfdbfe,
+  300: #93c5fd,
+  400: #60a5fa,
+  500: #3b82f6,
+  600: #2563eb,
+  700: #1d4ed8,
+  800: #1e40af,
+  900: #1e3a5f,
+  A100: #82b1ff,
+  A200: #448aff,
+  A400: #2979ff,
+  A700: #2962ff,
+  contrast: (
+    50:  #1e293b,
+    100: #1e293b,
+    200: #1e293b,
+    300: #1e293b,
+    400: #ffffff,
+    500: #ffffff,
+    600: #ffffff,
+    700: #ffffff,
+    800: #ffffff,
+    900: #ffffff,
+    A100: #1e293b,
+    A200: #ffffff,
+    A400: #ffffff,
+    A700: #ffffff,
+  )
+);
+
+$esync-accent: (
+  50:  #ecfdf5,
+  100: #d1fae5,
+  200: #a7f3d0,
+  300: #6ee7b7,
+  400: #34d399,
+  500: #10b981,
+  600: #059669,
+  700: #047857,
+  800: #065f46,
+  900: #064e3b,
+  A100: #a7f3d0,
+  A200: #6ee7b7,
+  A400: #34d399,
+  A700: #10b981,
+  contrast: (
+    50:  #1e293b,
+    100: #1e293b,
+    200: #1e293b,
+    300: #1e293b,
+    400: #ffffff,
+    500: #ffffff,
+    600: #ffffff,
+    700: #ffffff,
+    800: #ffffff,
+    900: #ffffff,
+    A100: #1e293b,
+    A200: #1e293b,
+    A400: #ffffff,
+    A700: #ffffff,
+  )
+);
+
+$light-primary: mat.define-palette($esync-blue, 600, 400, 800);
+$light-accent: mat.define-palette($esync-accent, 600, 400, 700);
 $light-warn: mat.define-palette(mat.$red-palette);
 
 $light-theme: mat.define-light-theme(
@@ -12,42 +83,76 @@ $light-theme: mat.define-light-theme(
       accent: $light-accent,
       warn: $light-warn,
     ),
+    typography: mat.define-typography-config(
+      $font-family: 'Poppins, sans-serif',
+    ),
   )
 );
 
-// Primary
-$light-primary-50: mat.get-color-from-palette($light-primary, 50);
-$light-primary-100: mat.get-color-from-palette($light-primary, 100);
-$light-primary-200: mat.get-color-from-palette($light-primary, 200);
-$light-primary-300: mat.get-color-from-palette($light-primary, 300);
-$light-primary-400: mat.get-color-from-palette($light-primary, 400);
-$light-primary-500: mat.get-color-from-palette($light-primary, 500);
-$light-primary-600: mat.get-color-from-palette($light-primary, 600);
-$light-primary-700: mat.get-color-from-palette($light-primary, 700);
-$light-primary-800: mat.get-color-from-palette($light-primary, 800);
-$light-primary-900: mat.get-color-from-palette($light-primary, 900);
+@include mat.all-component-themes($light-theme);
+
+// ============================================================
+// Design Tokens
+// ============================================================
+
+// Brand
+$primary:          #2563eb;
+$primary-hover:    #1d4ed8;
+$primary-light:    #eff6ff;
+$primary-soft:     rgba(37, 99, 235, 0.08);
+$primary-border:   rgba(37, 99, 235, 0.2);
 
 // Accent
-$light-accent-50: mat.get-color-from-palette($light-accent, 50);
-$light-accent-100: mat.get-color-from-palette($light-accent, 100);
-$light-accent-200: mat.get-color-from-palette($light-accent, 200);
-$light-accent-300: mat.get-color-from-palette($light-accent, 300);
-$light-accent-400: mat.get-color-from-palette($light-accent, 400);
-$light-accent-500: mat.get-color-from-palette($light-accent, 500);
-$light-accent-600: mat.get-color-from-palette($light-accent, 600);
-$light-accent-700: mat.get-color-from-palette($light-accent, 700);
-$light-accent-800: mat.get-color-from-palette($light-accent, 800);
-$light-accent-900: mat.get-color-from-palette($light-accent, 900);
-$light-accent-A200: mat.get-color-from-palette($light-accent, A200);
+$accent:           #059669;
+$accent-light:     #ecfdf5;
 
-// Warn
-$light-warn-50: mat.get-color-from-palette($light-warn, 50);
-$light-warn-100: mat.get-color-from-palette($light-warn, 100);
-$light-warn-200: mat.get-color-from-palette($light-warn, 200);
-$light-warn-300: mat.get-color-from-palette($light-warn, 300);
-$light-warn-400: mat.get-color-from-palette($light-warn, 400);
-$light-warn-500: mat.get-color-from-palette($light-warn, 500);
-$light-warn-600: mat.get-color-from-palette($light-warn, 600);
-$light-warn-700: mat.get-color-from-palette($light-warn, 700);
-$light-warn-800: mat.get-color-from-palette($light-warn, 800);
-$light-warn-900: mat.get-color-from-palette($light-warn, 900);
+// Semantic
+$success:          #16a34a;
+$success-bg:       #f0fdf4;
+$warning:          #ea580c;
+$warning-bg:       #fff7ed;
+$error:            #dc2626;
+$error-bg:         #fef2f2;
+$info:             #2563eb;
+$info-bg:          #eff6ff;
+
+// Neutrals (Slate scale - modern & professional)
+$white:            #ffffff;
+$gray-50:          #f8fafc;
+$gray-100:         #f1f5f9;
+$gray-200:         #e2e8f0;
+$gray-300:         #cbd5e1;
+$gray-400:         #94a3b8;
+$gray-500:         #64748b;
+$gray-600:         #475569;
+$gray-700:         #334155;
+$gray-800:         #1e293b;
+$gray-900:         #0f172a;
+
+// Semantic aliases
+$bg-page:          $gray-50;
+$bg-card:          $white;
+$bg-sidebar:       $white;
+$bg-table-stripe:  $gray-50;
+$bg-hover:         $gray-100;
+$bg-selected:      $primary-light;
+
+$text-primary:     $gray-800;
+$text-secondary:   $gray-500;
+$text-muted:       $gray-400;
+
+$border-color:     $gray-200;
+$border-light:     $gray-100;
+
+// Shadows (Soft, layered)
+$shadow-xs:        0 1px 2px rgba(0, 0, 0, 0.04);
+$shadow-sm:        0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+$shadow-md:        0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+$shadow-lg:        0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+
+// Radius
+$radius-sm:        6px;
+$radius-md:        10px;
+$radius-lg:        14px;
+$radius-xl:        20px;
+$radius-full:      9999px;

@@ -1,0 +1,10 @@
+<div mat-dialog-content class="dialog-content">
+  <div class="dialog-title">{{ 'deleteUser' | translate }}</div>
+  <p class="confirm-message">{{ 'deleteUserConfirm' | translate }}</p>
+  <p class="user-name">{{ userName }}</p>
+</div>
+
+<div mat-dialog-actions class="dialog-actions">
+  <button mat-button class="cancel-button" (click)="onCancel()">{{ 'Cancel' | translate }}</button>
+  <button mat-raised-button color="warn" (click)="onConfirm()">{{ 'deleteUser' | translate }}</button>
+</div>

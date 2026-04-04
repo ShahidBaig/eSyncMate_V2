@@ -15,6 +15,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialog } from '@angular/material/dialog';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { CommonModule } from '@angular/common';
 import { MatSelectModule } from '@angular/material/select';
 import { AddCustomerDialogComponent } from './add-customer-dialog/add-customer-dialog.component';
@@ -25,9 +26,6 @@ import { PageEvent } from '@angular/material/paginator';
 import { ApiService } from '../services/api.service';
 import { LanguageService } from '../services/language.service';
 import { TranslateModule } from '@ngx-translate/core';
-import { MatTableDataSource } from '@angular/material/table';
-import { MatPaginator } from '@angular/material/paginator';
-import { ViewChild } from '@angular/core';
 import { CustomerAlertsDialogComponent } from './customer-alerts-dialog/customer-alerts-dialog.component';
 
 
@@ -51,6 +49,7 @@ import { CustomerAlertsDialogComponent } from './customer-alerts-dialog/customer
     MatTooltipModule,
     MatIconModule,
     MatProgressSpinnerModule,
+    MatProgressBarModule,
     CommonModule,
     MatSelectModule,
     FormsModule,
@@ -59,6 +58,7 @@ import { CustomerAlertsDialogComponent } from './customer-alerts-dialog/customer
   ],
 })
 export class CustomersComponent implements OnInit {
+  isLoading: boolean = false;
   listOfCustomers: Customer[] = [];
   customersToDisplay: Customer[] = [];
   msg: string = '';
@@ -71,8 +71,12 @@ export class CustomersComponent implements OnInit {
   startDate: string = '';
   endDate: string = '';
   isAdminUser: boolean = false;
-  dataSource = new MatTableDataSource<Customer>([]);
-  @ViewChild(MatPaginator) paginator!: MatPaginator;
+  canAdd = false;
+  canEdit = false;
+  canDelete = false;
+  totalCount: number = 0;
+  pageNumber: number = 1;
+  pageSize: number = 10;
 
   columns: string[] = [
     'id',
@@ -84,12 +88,23 @@ export class CustomersComponent implements OnInit {
   ];
 
   constructor(private customersApi: CustomersService, private fb: FormBuilder, private toast: NgToastService, private dialog: MatDialog, private Userapi: ApiService, public languageService: LanguageService) {
-    this.isAdminUser = ["ADMIN"].includes(this.Userapi.getTokenUserInfo()?.userType || '');
+    const permissions = this.Userapi.getMenuPermissions('edi/customers');
+    if (permissions) {
+      this.canAdd = permissions.canAdd;
+      this.canEdit = permissions.canEdit;
+      this.canDelete = permissions.canDelete;
+    } else {
+      const isAdmin = ["ADMIN", "WRITER"].includes(this.Userapi.getTokenUserInfo()?.userType || '');
+      this.canAdd = isAdmin;
+      this.canEdit = isAdmin;
+      this.canDelete = isAdmin;
+      this.isAdminUser = isAdmin;
+    }
   }
 
   ngOnInit(): void {
 
-    if (!this.isAdminUser) {
+    if (!this.canEdit) {
       const editIndex = this.columns.indexOf('Edit');
       if (editIndex !== -1) {
         this.columns.splice(editIndex, 1);
@@ -102,8 +117,10 @@ export class CustomersComponent implements OnInit {
     }
   }
 
-  ngAfterViewInit(): void {
-    this.dataSource.paginator = this.paginator;
+  onPageChange(event: PageEvent) {
+    this.pageNumber = event.pageIndex + 1;
+    this.pageSize = event.pageSize;
+    this.getCustomers();
   }
 
   openAddCustomerDialog(): void {
@@ -169,13 +186,11 @@ export class CustomersComponent implements OnInit {
     return year + '-' + month + '-' + day;
   }
 
-  onPageChange(event: PageEvent) {
-    const startIndex = event.pageIndex * event.pageSize;
-    this.customersToDisplay = this.listOfCustomers.slice(startIndex, startIndex + event.pageSize);
-  }
-
   getCustomers(resetPage: boolean = false) {
-    this.showSpinnerforSearch = false;
+    if (resetPage) {
+      this.pageNumber = 1;
+    }
+
     let stringFromDate = '';
     let stringToDate = '';
 
@@ -193,58 +208,29 @@ export class CustomersComponent implements OnInit {
       this.searchValue = stringFromDate + '/' + stringToDate;
     }
 
-    this.customersApi.getCustomers(this.selectedOption, this.searchValue).subscribe({
+    this.isLoading = true;
+    this.customersApi.getCustomers(this.selectedOption, this.searchValue, this.pageNumber, this.pageSize).subscribe({
       next: (res: any) => {
         this.msg = res.message;
         this.code = res.code;
 
-        // ✅ old page info BEFORE updating data
-        const oldPageIndex = this.paginator?.pageIndex ?? 0;
-        const oldPageSize = this.paginator?.pageSize ?? 10;
-
         this.listOfCustomers = res.customers ?? [];
+        this.totalCount = res.totalCount ?? 0;
+        this.customersToDisplay = this.listOfCustomers;
 
-        if (this.listOfCustomers.length === 0) {
-          this.toast.info({
-            detail: "INFO",
-            summary: this.languageService.getTranslation('noFilterDataMessage'),
-            duration: 5000,
-            position: 'topRight'
-          });
-          this.dataSource.data = [];
-          this.customersToDisplay = [];
-          this.showSpinnerforSearch = false;
-          return;
+        if (this.listOfCustomers.length === 0 && this.pageNumber === 1) {
+          this.toast.info({ detail: "INFO", summary: this.languageService.getTranslation('noFilterDataMessage'), duration: 5000, position: 'topRight' });
         }
 
-        // ✅ set data once
-        this.dataSource.data = this.listOfCustomers;
-
-        // ✅ resetPage ? first page : keep old page
-        if (resetPage) {
-          this.paginator?.firstPage();
-        } else {
-          const maxPageIndex = Math.max(Math.ceil(this.listOfCustomers.length / oldPageSize) - 1, 0);
-          this.paginator.pageIndex = Math.min(oldPageIndex, maxPageIndex);
-
-          // force re-render on same page
-          this.paginator._changePageSize(this.paginator.pageSize);
-        }
-
-        if (this.code === 200) {
-          this.showSpinnerforSearch = false;
-        } else if (this.code === 400) {
+        if (this.code === 400) {
           this.toast.error({ detail: "ERROR", summary: this.msg, duration: 5000, position: 'topRight' });
-          this.showSpinnerforSearch = false;
-        } else {
-          this.toast.info({ detail: "INFO", summary: this.msg, duration: 5000, position: 'topRight' });
-          this.showSpinnerforSearch = false;
         }
-        this.showSpinnerforSearch = false;
+
+        this.isLoading = false;
       },
       error: (err: any) => {
         this.toast.error({ detail: "ERROR", summary: err.message, duration: 5000, position: 'topRight' });
-        this.showSpinnerforSearch = false;
+        this.isLoading = false;
       },
     });
   }

@@ -78,9 +78,10 @@ namespace eSyncMate.Processor.Controllers
                 this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Search criteria ready ({l_Criteria}).");
                 this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Staring Map search.");
 
-                l_Map.GetViewList(l_Criteria, string.Empty, ref l_Data, "Id DESC");
+                int totalCount = 0;
+                l_Map.GetViewListPaged(l_Criteria, string.Empty, ref l_Data, "Id DESC", searchModel.PageNumber, searchModel.PageSize, out totalCount);
 
-                this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Maps searched {{{l_Data.Rows.Count}}}.");
+                this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Maps searched {{{l_Data.Rows.Count}}} of {totalCount} total.");
                 this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Populating Maps.");
 
                 l_Response.Maps = new List<MapDataModel>();
@@ -93,6 +94,7 @@ namespace eSyncMate.Processor.Controllers
                     l_Response.Maps.Add(l_MapRow);
                 }
 
+                l_Response.TotalCount = totalCount;
                 l_Response.Code = (int)ResponseCodes.Success;
                 l_Response.Message = "Maps fetched successfully!";
 

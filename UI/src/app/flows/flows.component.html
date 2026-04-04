@@ -32,7 +32,7 @@
 
             &nbsp;
 
-            <button mat-flat-button color="accent" (click)="openAddFlowDialog()" *ngIf="isAdminUser">
+            <button mat-flat-button color="accent" (click)="openAddFlowDialog()" *ngIf="canAdd">
                 <span>{{ 'Add Partner Flow' | translate }}</span>
             </button>
         </mat-card-content>
@@ -42,6 +42,7 @@
     &nbsp;
     <mat-card>
         <mat-card-content>
+            <mat-progress-bar [style.visibility]="isLoading ? 'visible' : 'hidden'" mode="indeterminate" color="accent"></mat-progress-bar>
             <table mat-table [dataSource]="dataSource">
 
                 <ng-container matColumnDef="CustomerID">
@@ -69,7 +70,7 @@
                     </td>
                 </ng-container>
 
-                <ng-container *ngIf="isAdminUser">
+                <ng-container *ngIf="canEdit">
                     <ng-container matColumnDef="Edit">
                         <th mat-header-cell *matHeaderCellDef> {{ 'Actions' | translate }}</th>
                         <td mat-cell *matCellDef="let element">

@@ -5,5 +5,6 @@ namespace eSyncMate.Processor.Models
     public class GetProductUploadPrices : ResponseModel
     {
         public List<ProductUploadPricesDataModel> ProductUploadPrices { get; set; }
+        public int TotalCount { get; set; }
     }
 }

@@ -138,12 +138,14 @@ namespace eSyncMate.Processor.Controllers
                 this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Search criteria ready ({l_Criteria}).");
                 this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Staring PartnerGroup search.");
 
-                l_CustomerProductCatalog.GetViewList(l_Criteria, string.Empty, ref l_Data, "Id DESC");
+                int totalCount = 0;
+                l_CustomerProductCatalog.GetViewListPaged(l_Criteria, string.Empty, ref l_Data, "Id DESC", searchModel.PageNumber, searchModel.PageSize, out totalCount);
 
-                this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - CustomerProductCatalog searched {{{l_Data.Rows.Count}}}.");
+                this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - CustomerProductCatalog searched {{{l_Data.Rows.Count}}} of {totalCount} total.");
                 this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Populating CustomerProductCatalog.");
 
                 l_Response.CustomerProductCatalogDatatable = l_Data;
+                l_Response.TotalCount = totalCount;
 
                 l_Response.Code = (int)ResponseCodes.Success;
                 l_Response.Message = "CustomerProductCatalog fetched successfully!";
@@ -245,12 +247,14 @@ namespace eSyncMate.Processor.Controllers
                 this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Search criteria ready ({l_Criteria}).");
                 this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Staring ProductPrices search.");
 
-                l_CustomerProductCatalog.GetProductViewList(l_Criteria, string.Empty, ref l_Data, "Id DESC");
+                int totalCount = 0;
+                l_CustomerProductCatalog.GetProductViewListPaged(l_Criteria, string.Empty, ref l_Data, "Id DESC", searchModel.PageNumber, searchModel.PageSize, out totalCount);
 
-                this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - ProductPrices searched {{{l_Data.Rows.Count}}}.");
+                this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - ProductPrices searched {{{l_Data.Rows.Count}}} of {totalCount} total.");
                 this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Populating ProductPrices.");
 
                 l_Response.CustomerProductCatalogDatatable = l_Data;
+                l_Response.TotalCount = totalCount;
 
                 l_Response.Code = (int)ResponseCodes.Success;
                 l_Response.Message = "ProductPrices fetched successfully!";

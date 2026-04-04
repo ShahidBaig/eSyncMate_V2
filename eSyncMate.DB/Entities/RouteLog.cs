@@ -162,6 +162,37 @@ namespace eSyncMate.DB.Entities
             return Connection.GetData(l_Query, ref p_Data);
         }
 
+        public bool GetViewListPaged(string p_Criteria, string p_Fields, ref DataTable p_Data, string p_OrderBy, int pageNumber, int pageSize, out int totalCount)
+        {
+            totalCount = 0;
+
+            string l_CountQuery = "SELECT COUNT(*) FROM [" + RouteLog.ViewName + "]";
+            if (!string.IsNullOrEmpty(p_Criteria))
+                l_CountQuery += " WHERE " + p_Criteria;
+
+            var l_CountData = new DataTable();
+            Connection.GetData(l_CountQuery, ref l_CountData);
+            if (l_CountData.Rows.Count > 0)
+                totalCount = Convert.ToInt32(l_CountData.Rows[0][0]);
+            l_CountData.Dispose();
+
+            string l_Query = string.IsNullOrEmpty(p_Fields)
+                ? "SELECT * FROM [" + RouteLog.ViewName + "]"
+                : "SELECT " + p_Fields + " FROM [" + RouteLog.ViewName + "]";
+
+            if (!string.IsNullOrEmpty(p_Criteria))
+                l_Query += " WHERE " + p_Criteria;
+
+            l_Query += !string.IsNullOrEmpty(p_OrderBy)
+                ? " ORDER BY " + p_OrderBy
+                : " ORDER BY Id DESC";
+
+            int offset = (pageNumber - 1) * pageSize;
+            l_Query += $" OFFSET {offset} ROWS FETCH NEXT {pageSize} ROWS ONLY";
+
+            return Connection.GetData(l_Query, ref p_Data);
+        }
+
         public bool GetViewResult(string p_Criteria, string p_Fields, ref DataTable p_Data, string p_OrderBy = "")
         {
             string l_Query = string.Empty;

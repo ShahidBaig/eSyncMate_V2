@@ -43,7 +43,7 @@
 
       &nbsp;
 
-      <button mat-flat-button color="accent" (click)="openAddMapDialog()" *ngIf="isAdminUser">
+      <button mat-flat-button color="accent" (click)="openAddMapDialog()" *ngIf="canAdd">
         <span>{{ 'addMap' | translate }}</span>
         <mat-spinner *ngIf="showSpinnerforSearch" diameter="20"></mat-spinner>
       </button>
@@ -54,7 +54,8 @@
   &nbsp;
   <mat-card>
     <mat-card-content>
-      <table mat-table [dataSource]="dataSource">
+      <mat-progress-bar [style.visibility]="isLoading ? 'visible' : 'hidden'" mode="indeterminate" color="accent"></mat-progress-bar>
+      <table mat-table [dataSource]="mapsToDisplay">
 
         <!-- ID Column -->
         <ng-container matColumnDef="id">
@@ -89,7 +90,7 @@
         </ng-container>
 
         <!--Edit-->
-        <ng-container matColumnDef="Edit" *ngIf="isAdminUser">
+        <ng-container matColumnDef="Edit" *ngIf="canEdit">
           <th mat-header-cell *matHeaderCellDef> {{ 'actions' | translate }}</th>
           <td mat-cell *matCellDef="let element">
             <button mat-icon-button aria-label="normal button" (click)="openEditDialog(element)" color="accent" matTooltip="Edit Map" matTooltipPosition="above">
@@ -103,10 +104,8 @@
 
       </table>
 
-      <mat-paginator [length]="listOfMaps.length"
-                     [pageSize]="10"
-                     [pageSizeOptions]="[5, 10, 25, 100]"
-                     showFirstLastButtons>
+      <mat-paginator [length]="totalCount" [pageSize]="pageSize" [pageSizeOptions]="[5, 10, 25, 100]"
+        (page)="onPageChange($event)" showFirstLastButtons>
       </mat-paginator>
 
     </mat-card-content>

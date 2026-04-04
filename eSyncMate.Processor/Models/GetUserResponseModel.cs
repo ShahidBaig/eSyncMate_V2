@@ -3,5 +3,6 @@
     public class GetUserResponseModel : ResponseModel
     {
         public List<LoginModel> User { get; set; }
+        public int NewUserId { get; set; }
     }
 }

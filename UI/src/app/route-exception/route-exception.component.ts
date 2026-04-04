@@ -16,6 +16,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialog } from '@angular/material/dialog';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { CommonModule } from '@angular/common';
 import { MatSelectModule } from '@angular/material/select';
 import { MatPaginatorModule } from '@angular/material/paginator';
@@ -26,9 +27,6 @@ import { FileContentViewerDialogComponent } from '../file-content-viewer-dialog/
 import { LanguageService } from '../services/language.service';
 import { TranslateModule } from '@ngx-translate/core';
 import { environment } from 'src/environments/environment';
-import { MatTableDataSource } from '@angular/material/table';
-import { MatPaginator } from '@angular/material/paginator';
-import { ViewChild } from '@angular/core';
 
 @Component({
   selector: 'route-exception',
@@ -50,6 +48,7 @@ import { ViewChild } from '@angular/core';
     MatTooltipModule,
     MatIconModule,
     MatProgressSpinnerModule,
+    MatProgressBarModule,
     CommonModule,
     MatSelectModule,
     MatPaginatorModule,
@@ -58,6 +57,7 @@ import { ViewChild } from '@angular/core';
   ],
 })
 export class RouteExceptionComponent implements OnInit {
+  isLoadingData: boolean = false;
   mydate = environment.date;
   listOfRouteExceptions: RouteLog[] = [];
   routeExceptionsToDisplay: RouteLog[] = [];
@@ -72,8 +72,12 @@ export class RouteExceptionComponent implements OnInit {
   routeSearchText = '';
   loadingStates = new Map<number, boolean>();
   isAdminUser: boolean = false;
-  dataSource = new MatTableDataSource<RouteLog>([]);
-  @ViewChild(MatPaginator) paginator!: MatPaginator;
+  canAdd = false;
+  canEdit = false;
+  canDelete = false;
+  totalCount: number = 0;
+  pageNumber: number = 1;
+  pageSize: number = 10;
 
   columns: string[] = [
     'name',
@@ -90,7 +94,18 @@ export class RouteExceptionComponent implements OnInit {
     const today = new Date();
     today.setDate(today.getDate() + this.mydate);
 
-    this.isAdminUser = ["ADMIN", "WRITER","READER"].includes(this.userApi.getTokenUserInfo()?.userType || '');
+    const permissions = this.userApi.getMenuPermissions('edi/routeExceptions');
+    if (permissions) {
+      this.canAdd = permissions.canAdd;
+      this.canEdit = permissions.canEdit;
+      this.canDelete = permissions.canDelete;
+    } else {
+      const isAdmin = ["ADMIN", "WRITER", "READER"].includes(this.userApi.getTokenUserInfo()?.userType || '');
+      this.canAdd = isAdmin;
+      this.canEdit = isAdmin;
+      this.canDelete = isAdmin;
+      this.isAdminUser = isAdmin;
+    }
 
     this.RouteLogForm = this.fb.group({
       name: fb.control(''),
@@ -103,7 +118,7 @@ export class RouteExceptionComponent implements OnInit {
 
   ngOnInit(): void {
 
-    if (!this.isAdminUser) {
+    if (!this.canEdit) {
       const editIndex = this.columns.indexOf('DownloadFile');
       if (editIndex !== -1) {
         this.columns.splice(editIndex, 1);
@@ -140,8 +155,9 @@ export class RouteExceptionComponent implements OnInit {
   }
 
   onPageChange(event: PageEvent) {
-    const startIndex = event.pageIndex * event.pageSize;
-    this.routeExceptionsToDisplay = this.listOfRouteExceptions.slice(startIndex, startIndex + event.pageSize);
+    this.pageNumber = event.pageIndex + 1;
+    this.pageSize = event.pageSize;
+    this.getRouteExceptions();
   }
 
   getStatusClass(status: string): string {
@@ -163,7 +179,11 @@ export class RouteExceptionComponent implements OnInit {
   }
 
 
-  getRouteExceptions() {
+  getRouteExceptions(resetPage: boolean = false) {
+    if (resetPage) {
+      this.pageNumber = 1;
+    }
+
     let routeName = (this.RouteLogForm.get('name') as FormControl).value;
     let fromDate = (this.RouteLogForm.get('fromDate') as FormControl).value;
     let toDate = (this.RouteLogForm.get('toDate') as FormControl).value;
@@ -171,73 +191,49 @@ export class RouteExceptionComponent implements OnInit {
     let status = (this.RouteLogForm.get('status') as FormControl).value;
     let stringFromDate = '';
     let stringToDate = '';
-    this.showSpinnerforSearch = true;
     let name = routeName.name;
 
     if (((fromDate == '' || fromDate == undefined) && (toDate == '' || toDate == undefined) && (message == '' || message == 'EMPTY') && (name == '' || name == 'EMPTY' || name == 'Select Route Name') && (status == '' || status == 'Select Status'))) {
-      this.toast.info({ detail: "Name", summary: this.languageService.getTranslation('provideFieldMessage'), duration: 5000, /*sticky: true,*/ position: 'topRight' });
-      this.showSpinnerforSearch = false;
+      this.toast.info({ detail: "Name", summary: this.languageService.getTranslation('provideFieldMessage'), duration: 5000, position: 'topRight' });
       return;
     }
 
-    if (name == '' || name == undefined || name == 'Select Route Name') {
-      name = 'EMPTY'
-    }
-
-    if (message == '') {
-      message = 'EMPTY'
-    }
-
-    if (status == '') {
-      status = 'Select Status'
-    }
+    if (name == '' || name == undefined || name == 'Select Route Name') { name = 'EMPTY' }
+    if (message == '') { message = 'EMPTY' }
+    if (status == '') { status = 'Select Status' }
 
     if (fromDate !== null) {
       stringFromDate = fromDate.toLocaleString();
-
-      if (stringFromDate.length > 10) {
-        stringFromDate = this.getFormattedDate(fromDate);
-      }
+      if (stringFromDate.length > 10) { stringFromDate = this.getFormattedDate(fromDate); }
     } else {
       stringFromDate = '1999-01-01';
     }
 
     if (toDate !== null) {
       stringToDate = toDate.toLocaleString();
-
-      if (stringToDate.length > 10) {
-        stringToDate = this.getFormattedDate(toDate);
-      }
+      if (stringToDate.length > 10) { stringToDate = this.getFormattedDate(toDate); }
     } else {
       stringToDate = '1999-01-01';
     }
 
-    this.api.getRouteExceptions(name, message, stringFromDate, stringToDate, status).subscribe({
+    this.isLoadingData = true;
+    this.api.getRouteExceptions(name, message, stringFromDate, stringToDate, status, this.pageNumber, this.pageSize).subscribe({
       next: (res: any) => {
-        this.listOfRouteExceptions = res.routeExceptionsData;
+        this.listOfRouteExceptions = res.routeExceptionsData ?? [];
+        this.totalCount = res.totalCount ?? 0;
+        this.routeExceptionsToDisplay = this.listOfRouteExceptions;
         this.msg = res.message;
         this.code = res.code;
 
-        if (this.listOfRouteExceptions == null || this.listOfRouteExceptions.length === 0) {
-          this.showSpinnerforSearch = false;
-          this.routeExceptionsToDisplay = [];
-
-          return;
+        if (this.listOfRouteExceptions.length === 0 && this.pageNumber === 1) {
+          this.toast.info({ detail: "INFO", summary: this.languageService.getTranslation('noFilterDataMessage'), duration: 5000, position: 'topRight' });
         }
 
-        //this.routeExceptionsToDisplay = this.listOfRouteExceptions.slice(0, 10);
-
-        this.dataSource.data = this.listOfRouteExceptions;  // set full list
-
-        setTimeout(() => {
-          this.dataSource.paginator = this.paginator;
-        }, 0); // ensures paginator initializes
-
-        this.showSpinnerforSearch = false;
+        this.isLoadingData = false;
       },
       error: (err: any) => {
-        this.toast.error({ detail: "ERROR", summary: err.message, duration: 5000, /*sticky: true,*/ position: 'topRight' });
-        this.showSpinnerforSearch = false;
+        this.toast.error({ detail: "ERROR", summary: err.message, duration: 5000, position: 'topRight' });
+        this.isLoadingData = false;
       },
     });
   }

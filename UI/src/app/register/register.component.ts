@@ -1,6 +1,6 @@
 import { Component } from '@angular/core';
-import { AbstractControl, AbstractControlOptions, FormBuilder, FormControl, FormGroup, ValidationErrors, ValidatorFn, Validators, ReactiveFormsModule } from '@angular/forms';
-import { User, UserType } from '../models/models';
+import { AbstractControl, AbstractControlOptions, FormBuilder, FormControl, FormGroup, ValidationErrors, ValidatorFn, Validators, ReactiveFormsModule, FormsModule } from '@angular/forms';
+import { User, UserType, Role } from '../models/models';
 import { ApiService } from '../services/api.service';
 import { Router, RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
@@ -37,7 +37,8 @@ interface Customers {
     RouterLink,
     MatSelectModule,
     TranslateModule,
-    MatCheckboxModule
+    MatCheckboxModule,
+    FormsModule
   ],
 })
 export class RegisterComponent {
@@ -47,6 +48,8 @@ export class RegisterComponent {
   userTypeOptions = ['Admin', 'Reader'];
   statusOptions = ['Active', 'Blocked'];
   customerOptions: Customers[] | undefined;
+  roles: Role[] = [];
+  selectedRoleId: number = 0;
 
   constructor(private fb: FormBuilder, private api: ApiService,
     private toast: NgToastService,
@@ -66,7 +69,7 @@ export class RegisterComponent {
           Validators.maxLength(15),
         ]),
         rpassword: fb.control(''),
-        userType: ['', Validators.required],
+        userType: [''],
         status: ['', Validators.required],
         customerName: ['', Validators.required],
         isSetupMenu: false,
@@ -80,6 +83,17 @@ export class RegisterComponent {
 
   ngOnInit(): void {
     this.getERPCustomer();
+    this.loadRoles();
+  }
+
+  loadRoles(): void {
+    this.api.getRoles().subscribe({
+      next: (res: any) => {
+        if (res.code === 200) {
+          this.roles = (res.roles || []).filter((r: Role) => r.isActive);
+        }
+      }
+    });
   }
 
   getERPCustomer() {
@@ -90,7 +104,7 @@ export class RegisterComponent {
     });
   }
   register() {
-    const user = {
+    const user: any = {
       id: 0,
       firstName: this.registerForm.get('firstName')?.value,
       lastName: this.registerForm.get('lastName')?.value,
@@ -102,6 +116,7 @@ export class RegisterComponent {
       customerName: '',
       isSetupAllowed: this.registerForm.get('isSetupMenu')?.value,
       userID: this.registerForm.get('userID')?.value,
+      roleId: this.selectedRoleId,
     };
 
     let values = this.registerForm.get('customerName')?.value;
@@ -113,13 +128,8 @@ export class RegisterComponent {
 
           if (res.code == 100) {
             this.toast.success({ detail: "SUCCESS", summary: res.description, duration: 5000, position: 'topRight' });
-            if (environment.productName === 'SURGIMAC') {
-              this.route.navigate(['edi/purchaseOrder']);
-            } else {
-              this.route.navigate(['edi/all-orders']);
-            }
-          }
-          else {
+            this.navigateAfterRegister();
+          } else {
             this.toast.info({ detail: "", summary: res.description, duration: 5000, position: 'topRight' });
           }
         },
@@ -130,6 +140,14 @@ export class RegisterComponent {
       });
     }
   }
+  navigateAfterRegister() {
+    if (environment.productName === 'SURGIMAC') {
+      this.route.navigate(['edi/purchaseOrder']);
+    } else {
+      this.route.navigate(['edi/all-orders']);
+    }
+  }
+
   getUserIDErrors() {
     if (this.FirstName.hasError('required')) return this.languageService.getTranslation('fieldRequiredMsg');
     return '';

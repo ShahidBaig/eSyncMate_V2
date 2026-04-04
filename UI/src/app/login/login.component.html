@@ -1,48 +1,128 @@
-<div class="login-container">
-  <div class="login-box">
-    <h1>{{ 'login' | translate }}</h1>
+<div class="login-page">
+  <!-- Left Column: Login Form -->
+  <div class="login-column">
+    <div class="login-card">
+      <!-- Logo -->
+      <div class="login-logo">
+        <img src="/assets/images/Bizmate.png" alt="eSyncMate">
+        <span class="logo-caption">eSyncMate</span>
+      </div>
 
-    <h2 [ngStyle]="redTextStyle">{{responseMsg}}</h2>
+      <!-- Title -->
+      <h1 class="login-title">{{ 'login' | translate }}</h1>
 
-    <form [formGroup]="loginForm" (keydown)="handleKeyDown($event)">
-      <mat-grid-list cols="2" rowHeight="100px" gutterSize="10px">
-        <mat-grid-tile colspan="2">
-          <mat-form-field appearance="fill" color="accent">
-            <mat-label>{{ 'userID' | translate }}</mat-label>
-            <input matInput formControlName="userID">
-            <!--<mat-error >{{getEmailErrors()}}</mat-error>-->
+      <!-- Error Message -->
+      <div class="login-error" *ngIf="responseMsg">
+        <mat-icon class="error-icon">error_outline</mat-icon>
+        <span>{{responseMsg}}</span>
+      </div>
+
+      <!-- Form -->
+      <form [formGroup]="loginForm" (keydown)="handleKeyDown($event)" class="login-form">
+        <!-- User ID -->
+        <div class="field-group">
+          <label class="field-label">{{ 'userID' | translate }}</label>
+          <mat-form-field appearance="outline" class="login-field">
+            <input matInput formControlName="userID" autocomplete="username">
+            <mat-icon matPrefix class="field-icon">person_outline</mat-icon>
           </mat-form-field>
-        </mat-grid-tile>
+        </div>
 
-        <mat-grid-tile colspan="2">
-          <mat-form-field appearance="fill" color="accent">
-            <mat-label>{{ 'password' | translate }}</mat-label>
-            <input matInput type="password" formControlName="password" autocomplete="new-password">
-            <mat-error *ngIf="this.Password.invalid" style="font-size: 10px;">{{getPasswordErrors()}}</mat-error>
+        <!-- Password -->
+        <div class="field-group">
+          <label class="field-label">{{ 'password' | translate }}</label>
+          <mat-form-field appearance="outline" class="login-field">
+            <input matInput type="password" formControlName="password" autocomplete="current-password">
+            <mat-icon matPrefix class="field-icon">lock_outline</mat-icon>
+            <mat-error *ngIf="this.Password.invalid" style="font-size: 11px;">{{getPasswordErrors()}}</mat-error>
           </mat-form-field>
-        </mat-grid-tile>
+        </div>
 
-        <mat-grid-tile colspan="2">
-          <mat-form-field class="form-field">
-            <mat-label>{{ 'language' | translate }}</mat-label>
+        <!-- Language -->
+        <div class="field-group">
+          <label class="field-label">{{ 'language' | translate }}</label>
+          <mat-form-field appearance="outline" class="login-field">
+            <mat-icon matPrefix class="field-icon">language</mat-icon>
             <mat-select (selectionChange)="languageService.setLanguage($event.value)" [value]="languageService.currentLanguage">
               <mat-option [value]="'en'">English</mat-option>
               <mat-option [value]="'es'">Español</mat-option>
             </mat-select>
           </mat-form-field>
-        </mat-grid-tile>
+        </div>
 
-        <mat-grid-tile colspan="2" class="login">
-          <button mat-flat-button color="warn" class="cancel-btn" (click)="cancel()">{{ 'Cancel' | translate }}</button>
-          <button mat-flat-button color="accent" class="login-btn" [disabled]="loginForm.invalid" (click)="login()">{{ 'login' | translate }}</button>
-        </mat-grid-tile>
-      </mat-grid-list>
-    </form>
+        <!-- Login Button -->
+        <mat-progress-bar *ngIf="isLoading" mode="indeterminate" color="accent" class="login-progress"></mat-progress-bar>
+        <button class="login-submit-btn" [disabled]="loginForm.invalid || isLoading" (click)="login()" type="button">
+          <mat-icon class="btn-icon">lock_open</mat-icon>
+          <span>{{ 'login' | translate }}</span>
+        </button>
 
-    <!--<div class="login-link">
-    <span>Don't have an account?</span>
-    <button mat-stroked-button color="accent" routerLink="/register">Create Account</button>
-  </div>-->
+        <!-- Cancel Button -->
+        <button class="login-submit-btn login-cancel-btn" (click)="cancel()" type="button">
+          <mat-icon class="btn-icon">refresh</mat-icon>
+          <span>Clear</span>
+        </button>
+      </form>
 
+      <!-- Terms -->
+      <p class="login-terms">
+        By clicking on the Log In button, you understand and agree to
+        <a routerLink="/terms-of-use" target="_blank">Terms of Use</a> and <a routerLink="/privacy-policy" target="_blank">Privacy Policy</a>
+      </p>
+
+      <!-- Footer -->
+      <div class="login-footer">
+        <span>Powered by <strong>eSyncMate</strong></span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Right Column: Promo Cards -->
+  <div class="promo-column">
+    <!-- Card 1: Main Feature -->
+    <div class="promo-card promo-card-primary">
+      <div class="promo-card-content">
+        <h2 class="promo-title">Seamless API Integration</h2>
+        <div class="promo-features">
+          <div class="promo-feature">
+            <div class="promo-feature-icon">
+              <mat-icon>sync_alt</mat-icon>
+            </div>
+            <span>Real-time data sync</span>
+          </div>
+          <div class="promo-feature">
+            <div class="promo-feature-icon">
+              <mat-icon>inventory_2</mat-icon>
+            </div>
+            <span>Inventory management</span>
+          </div>
+          <div class="promo-feature">
+            <div class="promo-feature-icon">
+              <mat-icon>local_shipping</mat-icon>
+            </div>
+            <span>Order & shipment tracking</span>
+          </div>
+        </div>
+      </div>
+      <div class="promo-card-graphic">
+        <div class="graphic-circle">
+          <mat-icon class="graphic-icon">hub</mat-icon>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 2: Secondary Feature -->
+    <div class="promo-card promo-card-secondary">
+      <div class="promo-card-content">
+        <h2 class="promo-title">Multi-Platform Support</h2>
+        <p class="promo-desc">
+          Connect with ShipStation, Amazon, and other platforms for unified order processing and inventory control.
+        </p>
+      </div>
+      <div class="promo-card-badge">
+        <mat-icon class="badge-icon">cloud_done</mat-icon>
+      </div>
+    </div>
   </div>
 </div>

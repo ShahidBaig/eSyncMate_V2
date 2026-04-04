@@ -1,14 +1,20 @@
-import { Component } from '@angular/core';
-import { SideNavItem } from '../models/models';
+import { Component, OnInit } from '@angular/core';
+import { UserMenuModule, UserMenuItem } from '../models/models';
 import { RouterLinkActive, RouterLink } from '@angular/router';
 import { NgFor, TitleCasePipe, CommonModule } from '@angular/common';
 import { MatListModule } from '@angular/material/list';
-import { MatIconModule } from '@angular/material/icon';
-import { Router } from '@angular/router';
+import { Router, NavigationEnd } from '@angular/router';
 import { environment } from '../../environments/environment';
 import { ApiService } from '../services/api.service';
-import { TranslateModule } from '@ngx-translate/core';
-import { MatExpansionModule } from '@angular/material/expansion'; // Import MatExpansionModule
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { MatExpansionModule } from '@angular/material/expansion';
+import { MatIconModule } from '@angular/material/icon';
+import { FormsModule } from '@angular/forms';
+import { filter } from 'rxjs/operators';
+
+interface SearchResult extends UserMenuItem {
+  moduleName: string;
+}
 
 @Component({
   selector: 'side-nav',
@@ -24,147 +30,110 @@ import { MatExpansionModule } from '@angular/material/expansion'; // Import MatE
     CommonModule,
     TranslateModule,
     MatExpansionModule,
-    MatIconModule
+    MatIconModule,
+    FormsModule
   ],
 })
-export class SideNavComponent {
-  constructor(public api: ApiService, private router: Router) { }
+export class SideNavComponent implements OnInit {
+  constructor(
+    public api: ApiService,
+    private router: Router,
+    private translate: TranslateService
+  ) {}
+
   apiUrl = environment.apiUrl;
-  company = this.api.getTokenUserInfo()?.company;
-  isSetupMenu = this.api.getTokenUserInfo()?.isSetupMenu.toLocaleUpperCase() === 'TRUE' || this.api.getTokenUserInfo()?.userType.toLocaleUpperCase() === 'ADMIN';
-  isEsyncmate = ['ESYNCMATE', 'REPAINTSTUDIOS'].includes(this.api.getTokenUserInfo()?.company?.toUpperCase() || '');
+  modules: UserMenuModule[] = [];
+  expandedModules = new Set<number>();
+  currentRoute = '';
+  searchTerm = '';
+  filteredMenus: SearchResult[] = [];
 
-  sideNavContent: SideNavItem[] = [
-    {
-      title: 'nav.carrierLoadTender',
-      link: 'edi/carrier',
-      visible: this.api.getTokenUserInfo()?.company.toLocaleUpperCase() === 'GECKOTECH' ? true : false
-    },
-    {
-      title: 'nav.orders',
-      link: 'edi/all-orders',
-      visible: this.api.getTokenUserInfo()?.company.toLocaleUpperCase() === 'ESYNCMATE' || this.api.getTokenUserInfo()?.company.toLocaleUpperCase() === 'REPAINTSTUDIOS' ? true : false
-    },
-    {
-      title: 'nav.customers',
-      link: 'edi/customers',
-      visible: true
-    },
-    {
-      title: 'nav.connectors',
-      link: 'edi/connectors',
-      visible: this.api.getTokenUserInfo()?.company.toLocaleUpperCase() === 'GECKOTECH' ? this.api.getTokenUserInfo()?.userType.toLocaleUpperCase() === 'ADMIN' ? true : false : true,
-    },
-    {
-      title: 'nav.maps',
-      link: 'edi/maps',
-      visible: this.api.getTokenUserInfo()?.company.toLocaleUpperCase() === 'GECKOTECH' ? this.api.getTokenUserInfo()?.userType.toLocaleUpperCase() === 'ADMIN' ? true : false : true,
-    },
+  ngOnInit(): void {
+    this.loadMenus();
+    this.currentRoute = this.router.url;
+    this.expandActiveModule();
 
-    {
-      title: 'nav.partnerGroups',
-      link: 'edi/partnergroups',
-      visible: this.api.getTokenUserInfo()?.company.toLocaleUpperCase() === 'GECKOTECH' ? this.api.getTokenUserInfo()?.userType.toLocaleUpperCase() === 'ADMIN' ? true : false : true,
-    },
-    {
-      title: 'nav.routes',
-      link: 'edi/routes',
-      visible: true
-    },
+    this.router.events.pipe(
+      filter(event => event instanceof NavigationEnd)
+    ).subscribe((event: any) => {
+      this.currentRoute = event.urlAfterRedirects || event.url;
+    });
+  }
 
-    {
-      title: 'nav.customerProductCatalog',
-      link: 'edi/customerProductCatalog',
-      visible: this.api.getTokenUserInfo()?.company.toLocaleUpperCase() === 'ESYNCMATE' ? true : false
-    },
-    {
-      title: 'nav.productUploadPrices',
-      link: 'edi/productuploadprices',
-      visible: this.api.getTokenUserInfo()?.company.toLocaleUpperCase() === 'ESYNCMATE' ? true : false
-    },
-    {
-      title: 'nav.productPrices',
-      link: 'edi/productPrices',
-      visible: this.api.getTokenUserInfo()?.company.toLocaleUpperCase() === 'ESYNCMATE' ? true : false
-    },
-    {
-      title: 'nav.routeTypes',
-      link: 'edi/routeTypes',
-      visible: this.api.getTokenUserInfo()?.company.toLocaleUpperCase() === 'GECKOTECH' ? this.api.getTokenUserInfo()?.userType.toLocaleUpperCase() === 'ADMIN' ? true : false : true,
-    },
-    {
-      title: 'nav.routeExceptions',
-      link: 'edi/routeExceptions',
-      visible: this.api.getTokenUserInfo()?.company.toLocaleUpperCase() === 'GECKOTECH' ? this.api.getTokenUserInfo()?.userType.toLocaleUpperCase() === 'ADMIN' ? true : false : true,
-    },
-    {
-      title: 'nav.userManagement',
-      link: 'edi/users',
-      visible: this.api.getTokenUserInfo()?.userType.toLocaleUpperCase() === 'ADMIN' ? true : false
-    },
-    {
-      title: 'nav.ediFileCounter',
-      link: 'edi/ediFileCounter',
-      visible: this.api.getTokenUserInfo()?.company.toLocaleUpperCase() === 'GECKOTECH'
-    },
-    {
-      title: 'nav.inventory',
-      link: 'edi/inventory',
-      visible: this.api.getTokenUserInfo()?.company.toLocaleUpperCase() === 'ESYNCMATE' ? true : false
-    },
-    {
-      title: 'nav.invFeedFromNDC',
-      link: 'edi/invFeedFromNDC',
-      visible: this.api.getTokenUserInfo()?.company.toUpperCase() === 'SURGIMAC' ? true : false
-    },
-    {
-      title: 'nav.purchaseOrder',
-      link: 'edi/purchaseOrder',
-      visible: this.api.getTokenUserInfo()?.company.toUpperCase() === 'SURGIMAC' ? true : false
-    },
-    {
-      title: 'nav.sipmentFromNdc',
-      link: 'edi/sipmentFromNdc',
-      visible: this.api.getTokenUserInfo()?.company.toUpperCase() === 'SURGIMAC' ? true : false
-    },
-    {
-      title: 'nav.salesInvoiceNdc',
-      link: 'edi/salesInvoiceNdc',
-      visible: this.api.getTokenUserInfo()?.company.toUpperCase() === 'SURGIMAC' ? true : false
-    },
-    {
-      title: 'nav.purchaseOrdersTracking',
-      link: 'edi/purchaseOrdersTracking',
-      visible: this.api.getTokenUserInfo()?.company.toUpperCase() === 'SURGIMAC' ? true : false
-    },
-    {
-      title: 'nav.alertConfiguration',
-      link: 'edi/alertConfiguration',
-      visible: this.api.getTokenUserInfo()?.company.toLocaleUpperCase() === 'ESYNCMATE' ? true : false
-    },
-    {
-      title: 'nav.flows',
-      link: 'edi/flows',
-      visible: true
-    },
-    {
-      title: 'nav.hangfireDashboard',
-      link: 'hangfire/dashboard',
-      visible: this.api.getTokenUserInfo()?.company.toLocaleUpperCase() === 'GECKOTECH' ? this.api.getTokenUserInfo()?.userType.toLocaleUpperCase() === 'ADMIN' ? true : false : true,
-    },
-  ];
-
-  goToLink(option: SideNavItem) {
-    if (option.title.toLowerCase() === 'nav.hangfiredashboard') {
-      window.open(this.apiUrl + 'dashboard', '_blank');
-    } else {
-      this.router.navigate([option.link]);
+  loadMenus(): void {
+    const userMenus = this.api.getUserMenus();
+    if (userMenus && userMenus.modules) {
+      this.modules = userMenus.modules;
     }
   }
 
-  isSectionVisible(links: string[]): boolean {
-
-    return this.sideNavContent.some(option => option.link && option.visible);
+  toggleModule(moduleId: number): void {
+    if (this.expandedModules.has(moduleId)) {
+      this.expandedModules.delete(moduleId);
+    } else {
+      this.expandedModules.add(moduleId);
+    }
   }
 
+  isActive(route: string): boolean {
+    if (!route) return false;
+    const normalizedRoute = route.startsWith('/') ? route : '/' + route;
+    return this.currentRoute === normalizedRoute;
+  }
+
+  goToLink(route: string, isExternalLink: boolean, externalUrl: string) {
+    if (isExternalLink) {
+      const url = externalUrl || this.apiUrl + 'dashboard';
+      window.open(url, '_blank');
+    } else {
+      this.router.navigate([route]);
+    }
+    // Clear search after navigation
+    if (this.searchTerm) {
+      this.clearSearch();
+    }
+  }
+
+  onSearch(): void {
+    const term = this.searchTerm.trim().toLowerCase();
+    if (!term) {
+      this.filteredMenus = [];
+      return;
+    }
+
+    this.filteredMenus = [];
+    for (const mod of this.modules) {
+      const moduleName = this.translate.instant(mod.moduleTranslationKey) || mod.moduleName;
+      for (const menu of (mod.menuItems || [])) {
+        if (!menu.canView) continue;
+        const menuLabel = this.translate.instant(menu.menuTranslationKey) || menu.menuName;
+        if (
+          menuLabel.toLowerCase().includes(term) ||
+          moduleName.toLowerCase().includes(term) ||
+          (menu.route && menu.route.toLowerCase().includes(term))
+        ) {
+          this.filteredMenus.push({ ...menu, moduleName });
+        }
+      }
+    }
+  }
+
+  clearSearch(): void {
+    this.searchTerm = '';
+    this.filteredMenus = [];
+  }
+
+  private expandActiveModule(): void {
+    for (const mod of this.modules) {
+      for (const item of (mod.menuItems || [])) {
+        if (this.isActive(item.route)) {
+          this.expandedModules.add(mod.moduleId);
+          return;
+        }
+      }
+    }
+    if (this.modules.length > 0) {
+      this.expandedModules.add(this.modules[0].moduleId);
+    }
+  }
 }

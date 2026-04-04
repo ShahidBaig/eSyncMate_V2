@@ -64,7 +64,9 @@
       "WebFetch(domain:ssl.re-in.de)",
       "WebFetch(domain:help.mirakl.com)",
       "WebFetch(domain:seller.lowes.com)",
-      "WebFetch(domain:help.beezup.com)"
+      "WebFetch(domain:help.beezup.com)",
+      "mcp__mssql__query",
+      "Bash(where pandoc:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

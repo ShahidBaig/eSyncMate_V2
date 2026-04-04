@@ -1,4 +1,12 @@
 ﻿ALTER VIEW [dbo].[VW_Users]
-	AS SELECT [Id], [FirstName], [LastName], [Email], [Mobile], [Password], [Status], [CreatedDate], [CreatedBy], [UserType],[Company], [CustomerName], [IsSetupAllowed], [USERID]
-	FROM Users WITH (NOLOCK)
+  AS
+  SELECT
+      U.[Id], U.[FirstName], U.[LastName], U.[Email], U.[Mobile], U.[Password],
+      U.[Status], U.[CreatedDate], U.[CreatedBy], U.[UserType], U.[Company],
+      U.[CustomerName], U.[IsSetupAllowed], U.[USERID],
+      ISNULL(R.[Name], '') AS RoleName
+  FROM Users U WITH (NOLOCK)
+  LEFT JOIN UserRoles UR WITH (NOLOCK) ON U.Id = UR.UserId
+  LEFT JOIN Roles R WITH (NOLOCK) ON UR.RoleId = R.Id
+  WHERE U.[Status] != 'DELETED'
 GO

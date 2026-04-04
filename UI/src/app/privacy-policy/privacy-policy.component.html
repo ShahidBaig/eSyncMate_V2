@@ -1,0 +1,145 @@
+<div class="policy-page">
+  <div class="policy-card">
+    <div class="policy-header">
+      <a routerLink="/login" class="back-link">
+        <mat-icon>arrow_back</mat-icon>
+        <span>Back to Login</span>
+      </a>
+      <h1>Privacy Policy</h1>
+      <p class="last-updated">Last Updated: {{ lastUpdated }}</p>
+    </div>
+
+    <div class="policy-content">
+      <section>
+        <h2>1. Introduction</h2>
+        <p>This Privacy Policy describes how eSyncMate ("we", "us", "our") collects, uses, stores, and protects information when you use our Electronic Data Interchange (EDI) platform. We are committed to safeguarding the privacy and security of your business data.</p>
+      </section>
+
+      <section>
+        <h2>2. Information We Collect</h2>
+
+        <h3>2.1 Account Information</h3>
+        <p>When your administrator creates your account, we collect:</p>
+        <ul>
+          <li>User ID and name (first name, last name)</li>
+          <li>Email address and phone number</li>
+          <li>Company/organization affiliation</li>
+          <li>Assigned role and access permissions</li>
+          <li>Password (stored in encrypted form)</li>
+        </ul>
+
+        <h3>2.2 Business & Transactional Data</h3>
+        <p>Through your use of the platform, we process:</p>
+        <ul>
+          <li>EDI documents — purchase orders (850), advance ship notices (856), invoices (810)</li>
+          <li>Product catalog information — SKUs, pricing, descriptions, UPC codes</li>
+          <li>Inventory data — stock levels, warehouse locations, batch information</li>
+          <li>Customer and trading partner information — names, addresses, ERP IDs</li>
+          <li>Order and shipment tracking data</li>
+          <li>Uploaded files (CSV, Excel) for bulk data imports</li>
+        </ul>
+
+        <h3>2.3 System & Usage Data</h3>
+        <p>We automatically collect:</p>
+        <ul>
+          <li>Login timestamps and session duration</li>
+          <li>Actions performed within the platform (audit trail)</li>
+          <li>Error logs and exception reports</li>
+          <li>Route execution logs and data processing history</li>
+          <li>Notification and alert history</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>3. How We Use Your Information</h2>
+        <p>We use the collected information to:</p>
+        <ul>
+          <li><strong>Operate the Service</strong> — Process EDI transactions, manage orders, track inventory, and execute data routes</li>
+          <li><strong>Authenticate & Authorize</strong> — Verify your identity, enforce role-based access control, and maintain session security</li>
+          <li><strong>Send Notifications</strong> — Deliver real-time alerts about order status changes, processing errors, and system events</li>
+          <li><strong>Generate Reports</strong> — Produce business reports, export data, and support analytics</li>
+          <li><strong>Maintain Security</strong> — Detect unauthorized access, monitor for anomalies, and maintain audit trails</li>
+          <li><strong>Improve the Service</strong> — Analyze usage patterns to enhance performance and user experience</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>4. Data Storage & Security</h2>
+        <p>We implement industry-standard security measures to protect your data:</p>
+        <ul>
+          <li><strong>Encryption</strong> — Passwords are encrypted using industry-standard algorithms. Data in transit is protected via HTTPS/TLS</li>
+          <li><strong>Access Control</strong> — Role-based access control (RBAC) ensures users can only access data and functions authorized by their role</li>
+          <li><strong>Session Management</strong> — Sessions automatically expire after 120 minutes of inactivity. JWT tokens are used for secure authentication</li>
+          <li><strong>Audit Logging</strong> — All data modifications are logged with user identity, timestamp, and change details</li>
+          <li><strong>Database Security</strong> — Data is stored in secured SQL Server databases with restricted access</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>5. Data Sharing & Third Parties</h2>
+        <p>We share your data only as necessary to provide the Service:</p>
+        <ul>
+          <li><strong>Trading Partners</strong> — EDI documents are exchanged with your designated trading partners as configured in your data routes</li>
+          <li><strong>Platform Integrations</strong> — Data is shared with integrated platforms (e.g., ShipStation, Amazon) as configured by your administrator</li>
+          <li><strong>Service Providers</strong> — We may use third-party infrastructure providers for hosting, but they do not have access to your business data</li>
+        </ul>
+        <p>We do <strong>not</strong> sell, rent, or trade your personal or business data to third parties for marketing purposes.</p>
+      </section>
+
+      <section>
+        <h2>6. Data Retention</h2>
+        <p>We retain your data as follows:</p>
+        <ul>
+          <li><strong>Account data</strong> — Retained while your account is active. Deleted accounts are soft-deleted (status set to "DELETED") and data is retained per your organization's retention policy</li>
+          <li><strong>Transaction data</strong> — EDI documents, orders, and processing logs are retained according to your business requirements and applicable regulations</li>
+          <li><strong>Audit logs</strong> — Maintained for security and compliance purposes</li>
+          <li><strong>Uploaded files</strong> — Processed and stored as part of the product catalog and inventory records</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>7. Your Rights</h2>
+        <p>Depending on your jurisdiction, you may have the right to:</p>
+        <ul>
+          <li>Access the personal data we hold about you</li>
+          <li>Request correction of inaccurate data</li>
+          <li>Request deletion of your account (subject to data retention obligations)</li>
+          <li>Receive a copy of your data in a portable format</li>
+          <li>Object to certain processing of your data</li>
+        </ul>
+        <p>To exercise these rights, contact your system administrator.</p>
+      </section>
+
+      <section>
+        <h2>8. Cookies & Local Storage</h2>
+        <p>eSyncMate uses browser local storage to maintain:</p>
+        <ul>
+          <li>Authentication tokens (JWT) for session management</li>
+          <li>User menu preferences and role-based navigation data</li>
+          <li>Language preference (English or Spanish)</li>
+        </ul>
+        <p>We do not use tracking cookies or third-party analytics cookies. Local storage data is cleared when you log out.</p>
+      </section>
+
+      <section>
+        <h2>9. Multi-Language Support</h2>
+        <p>eSyncMate supports English and Spanish. Your language preference is stored locally and does not involve any additional data collection.</p>
+      </section>
+
+      <section>
+        <h2>10. Children's Privacy</h2>
+        <p>eSyncMate is a business-to-business platform and is not intended for use by individuals under the age of 18. We do not knowingly collect data from minors.</p>
+      </section>
+
+      <section>
+        <h2>11. Changes to This Policy</h2>
+        <p>We may update this Privacy Policy from time to time. Changes will be reflected on this page with an updated "Last Updated" date. Your continued use of the Service after changes constitutes acceptance of the updated policy.</p>
+      </section>
+
+      <section>
+        <h2>12. Contact</h2>
+        <p>For privacy-related inquiries or to exercise your data rights, please contact your system administrator or reach out to eSyncMate support.</p>
+      </section>
+    </div>
+  </div>
+</div>

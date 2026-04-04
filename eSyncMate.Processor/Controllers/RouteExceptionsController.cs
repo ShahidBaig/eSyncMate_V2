@@ -28,7 +28,7 @@ namespace eSyncMate.Processor.Controllers
 
         [HttpGet]
         [Route("getRouteExceptions/{Name}/{Message}/{FromDate}/{ToDate}/{Status}")]
-        public async Task<GetRouteExceptionsResponseModel> GetRouteExceptions(string Name = "", string Message = "", string FromDate = "", string ToDate = "", string Status = "")
+        public async Task<GetRouteExceptionsResponseModel> GetRouteExceptions(string Name = "", string Message = "", string FromDate = "", string ToDate = "", string Status = "", [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
             MethodBase l_Me = MethodBase.GetCurrentMethod();
             GetRouteExceptionsResponseModel l_Response = new GetRouteExceptionsResponseModel();
@@ -98,12 +98,14 @@ namespace eSyncMate.Processor.Controllers
                 this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Search criteria ready ({l_Criteria}).");
                 this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Staring Route Exceptions search.");
 
-                l_RouteLog.GetViewList(l_Criteria, string.Empty, ref l_Data, "Id DESC");
+                int totalCount = 0;
+                l_RouteLog.GetViewListPaged(l_Criteria, string.Empty, ref l_Data, "Id DESC", pageNumber, pageSize, out totalCount);
 
-                this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Route Exceptions searched {{{l_Data.Rows.Count}}}.");
+                this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Route Exceptions searched {{{l_Data.Rows.Count}}} of {totalCount} total.");
                 this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Populating Route Exceptions.");
 
                 l_Response.RouteExceptionsData = l_Data;
+                l_Response.TotalCount = totalCount;
                 //l_Response.RouteExceptions = new List<RouteLogDataModel>();
                 //foreach (DataRow l_Row in l_Data.Rows)
                 //{

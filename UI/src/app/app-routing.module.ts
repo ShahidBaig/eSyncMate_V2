@@ -32,8 +32,19 @@ import { PurchaseOrdersTrackingComponent } from './purchase-orders-tracking/purc
 import { AlertConfigurationComponent } from './alert-configuration/alert-configuration.component';
 import { FlowsComponent } from './flows/flows.component';
 import { DashboardComponent } from './dashboard/dashboard.component';
+import { RoleManagementComponent } from './role-management/role-management.component';
+import { TermsOfUseComponent } from './terms-of-use/terms-of-use.component';
+import { PrivacyPolicyComponent } from './privacy-policy/privacy-policy.component';
 
 const routes: Routes = [
+  {
+    path: 'terms-of-use',
+    component: TermsOfUseComponent,
+  },
+  {
+    path: 'privacy-policy',
+    component: PrivacyPolicyComponent,
+  },
   {
     path: 'edi/dashboard',
     component: DashboardComponent,
@@ -180,6 +191,11 @@ const routes: Routes = [
   {
     path: 'edi/flows',
     component: FlowsComponent,
+    canActivate: [AuthorizationGuard],
+  },
+  {
+    path: 'edi/roles',
+    component: RoleManagementComponent,
     canActivate: [AuthorizationGuard],
   },
   {

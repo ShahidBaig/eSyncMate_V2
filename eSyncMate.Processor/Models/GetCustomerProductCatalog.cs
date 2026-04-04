@@ -8,5 +8,6 @@ namespace eSyncMate.Processor.Models
         public List<CustomerProductCatalogDataModel> CustomerProductCatalog { get; set; }
 
         public DataTable CustomerProductCatalogDatatable { get; set; }
+        public int TotalCount { get; set; }
     }
 }

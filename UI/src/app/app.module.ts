@@ -59,6 +59,7 @@ export function HttpLoaderFactory(http: HttpClient) {
 import { ProductDataComponent } from './customer-product-catalog/product-data/product-data.component';
 import { UsersComponent } from './users/users.component';
 import { EditUsersDialogComponent } from './users/edit-users-dialog/edit-users-dialog.component';
+import { DeleteUserDialogComponent } from './users/delete-user-dialog/delete-user-dialog.component';
 import { EdiFileCounterComponent } from './edi-file-counter/edi-file-counter.component';
 import { InventoryComponent } from './inventory/inventory.component';
 import { InventorypopupComponent } from './inventory/inventory-popup/inventory-popup.component';
@@ -79,6 +80,9 @@ import { PurchaseOrdersTrackingComponent } from './purchase-orders-tracking/purc
 import { SalesInvoiceNdcComponent } from './sales-invoice-ndc/sales-invoice-ndc.component';
 import { AlertConfigurationComponent } from './alert-configuration/alert-configuration.component';
 import { AddAlertConfigurationDialogComponent } from './alert-configuration/add-alert-configuration-dialog/add-alert-configuration-dialog.component';
+import { RoleManagementComponent } from './role-management/role-management.component';
+import { TermsOfUseComponent } from './terms-of-use/terms-of-use.component';
+import { PrivacyPolicyComponent } from './privacy-policy/privacy-policy.component';
 
 @NgModule({
   declarations: [AppComponent],
@@ -142,6 +146,7 @@ import { AddAlertConfigurationDialogComponent } from './alert-configuration/add-
     ProductUploadPricesComponent,
     UsersComponent,
     EditUsersDialogComponent,
+    DeleteUserDialogComponent,
     EdiFileCounterComponent,
     InventoryComponent,
     InventorypopupComponent,
@@ -160,6 +165,9 @@ import { AddAlertConfigurationDialogComponent } from './alert-configuration/add-
     PurchaseOrdersTrackingComponent,
     AlertConfigurationComponent,
     AddAlertConfigurationDialogComponent,
+    RoleManagementComponent,
+    TermsOfUseComponent,
+    PrivacyPolicyComponent,
     TranslateModule.forRoot({
       loader: {
         provide: TranslateLoader,

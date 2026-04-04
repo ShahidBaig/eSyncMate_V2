@@ -17,6 +17,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { PopupComponent } from '../popup/popup.component';
 import { MatDialog } from '@angular/material/dialog';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { CommonModule } from '@angular/common';
 import { MatSelectModule } from '@angular/material/select';
 import { AddMapDialogComponent } from './add-map-dialog/add-map-dialog.component';
@@ -25,9 +26,6 @@ import { MatPaginatorModule } from '@angular/material/paginator';
 import { PageEvent } from '@angular/material/paginator';
 import { LanguageService } from '../services/language.service';
 import { TranslateModule } from '@ngx-translate/core'; 
-import { MatTableDataSource } from '@angular/material/table';
-import { MatPaginator } from '@angular/material/paginator';
-import { ViewChild } from '@angular/core';
 
 @Component({
   selector: 'maps',
@@ -49,6 +47,7 @@ import { ViewChild } from '@angular/core';
     MatTooltipModule,
     MatIconModule,
     MatProgressSpinnerModule,
+    MatProgressBarModule,
     CommonModule,
     MatSelectModule,
     FormsModule,
@@ -57,6 +56,7 @@ import { ViewChild } from '@angular/core';
   ],
 })
 export class MapsComponent implements OnInit {
+  isLoading: boolean = false;
   listOfMaps: Map[] = [];
   mapsToDisplay: Map[] = [];
   msg: string = '';
@@ -70,8 +70,12 @@ export class MapsComponent implements OnInit {
   endDate: string = '';
   showDataColumn: boolean = true;
   isAdminUser: boolean = false;
-  dataSource = new MatTableDataSource<Map>([]);
-  @ViewChild(MatPaginator) paginator!: MatPaginator;
+  canAdd = false;
+  canEdit = false;
+  canDelete = false;
+  totalCount: number = 0;
+  pageNumber: number = 1;
+  pageSize: number = 10;
 
   columns: string[] = [
     'id',
@@ -84,11 +88,22 @@ export class MapsComponent implements OnInit {
 
     constructor(private api: ApiService, private fb: FormBuilder, private toast: NgToastService, private dialog: MatDialog, public languageService: LanguageService) {
 
-    this.isAdminUser = ["ADMIN"].includes(this.api.getTokenUserInfo()?.userType || '');
+    const permissions = this.api.getMenuPermissions('edi/maps');
+    if (permissions) {
+      this.canAdd = permissions.canAdd;
+      this.canEdit = permissions.canEdit;
+      this.canDelete = permissions.canDelete;
+    } else {
+      const isAdmin = ["ADMIN", "WRITER"].includes(this.api.getTokenUserInfo()?.userType || '');
+      this.canAdd = isAdmin;
+      this.canEdit = isAdmin;
+      this.canDelete = isAdmin;
+      this.isAdminUser = isAdmin;
+    }
   }
 
   ngOnInit(): void {
-    if (!this.isAdminUser) {
+    if (!this.canEdit) {
       const editIndex = this.columns.indexOf('Edit');
       if (editIndex !== -1) {
         this.columns.splice(editIndex, 1);
@@ -143,12 +158,16 @@ export class MapsComponent implements OnInit {
     return year + '-' + month + '-' + day;
   }
   onPageChange(event: PageEvent) {
-    const startIndex = event.pageIndex * event.pageSize;
-    this.mapsToDisplay = this.listOfMaps.slice(startIndex, startIndex + event.pageSize);
+    this.pageNumber = event.pageIndex + 1;
+    this.pageSize = event.pageSize;
+    this.getMaps();
   }
 
-  getMaps() {
-    this.showSpinnerforSearch = false;
+  getMaps(resetPage: boolean = false) {
+    if (resetPage) {
+      this.pageNumber = 1;
+    }
+
     let stringFromDate = '';
     let stringToDate = '';
 
@@ -166,45 +185,28 @@ export class MapsComponent implements OnInit {
       this.searchValue = stringFromDate + '/' + stringToDate;
     }
 
-    this.api.getMaps(this.selectedOption, this.searchValue).subscribe({
+    this.isLoading = true;
+    this.api.getMaps(this.selectedOption, this.searchValue, this.pageNumber, this.pageSize).subscribe({
       next: (res: any) => {
-        this.listOfMaps = res.maps;
+        this.listOfMaps = res.maps ?? [];
+        this.totalCount = res.totalCount ?? 0;
+        this.mapsToDisplay = this.listOfMaps;
         this.msg = res.message;
         this.code = res.code;
 
-        if (this.listOfMaps == null || this.listOfMaps.length === 0) {
-          this.toast.info({ detail: "INFO", summary: this.languageService.getTranslation('noFilterDataMessage'), duration: 5000, /*sticky: true,*/ position: 'topRight' });
-          this.showSpinnerforSearch = false;
-          this.mapsToDisplay = [];
-
-          return;
+        if (this.listOfMaps.length === 0 && this.pageNumber === 1) {
+          this.toast.info({ detail: "INFO", summary: this.languageService.getTranslation('noFilterDataMessage'), duration: 5000, position: 'topRight' });
         }
 
-        //this.mapsToDisplay = this.listOfMaps.slice(0, 10);
-
-        this.dataSource.data = this.listOfMaps;  // set full list
-
-        setTimeout(() => {
-          this.dataSource.paginator = this.paginator;
-        }, 0); // ensures paginator initializes
-
-
-        if (this.code === 200) {
-          this.showSpinnerforSearch = false;
-        }
-        else if (this.code === 400) {
-          this.toast.error({ detail: "ERROR", summary: this.msg, duration: 5000, /*sticky: true,*/ position: 'topRight' });
-          this.showSpinnerforSearch = false;
-        } else {
-          this.toast.info({ detail: "INFO", summary: this.msg, duration: 5000, /*sticky: true,*/ position: 'topRight' });
-          this.showSpinnerforSearch = false;
+        if (this.code === 400) {
+          this.toast.error({ detail: "ERROR", summary: this.msg, duration: 5000, position: 'topRight' });
         }
 
-        this.showSpinnerforSearch = false;
+        this.isLoading = false;
       },
       error: (err: any) => {
-        this.toast.error({ detail: "ERROR", summary: err.message, duration: 5000, /*sticky: true,*/ position: 'topRight' });
-        this.showSpinnerforSearch = false;
+        this.toast.error({ detail: "ERROR", summary: err.message, duration: 5000, position: 'topRight' });
+        this.isLoading = false;
       },
     });
   }
