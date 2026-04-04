@@ -767,7 +767,7 @@ namespace eSyncMate.Processor.Controllers
                 this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Search criteria ready ({l_Criteria}).");
                 this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Staring order files search.");
 
-                l_OrderData.GetViewList(l_Criteria, string.Empty, ref l_Data, "Id");
+                l_OrderData.GetViewList(l_Criteria, string.Empty, ref l_Data, "TypeSortOrder, Id");
 
                 this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Order files searched {{{l_Data.Rows.Count}}}.");
                 this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Populating order files.");
