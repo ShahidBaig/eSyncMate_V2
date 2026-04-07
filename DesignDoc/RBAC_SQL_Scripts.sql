@@ -263,23 +263,23 @@ VALUES
 
     -- Order Management (ModuleId=2)
     (2,  2, 'Orders',          'nav.orders',          'edi/all-orders',    'list_alt',     0, NULL, 1, 'ESYNCMATE', 0, 1, GETDATE(), 0),
-    (3,  2, 'Customers',       'nav.customers',       'edi/customers',     'people',       0, NULL, 2, 'ESYNCMATE', 0, 1, GETDATE(), 0),
 
     -- Product Management (ModuleId=3)
-    (4,  3, 'Customer Product Catalog', 'nav.customerProductCatalog', 'edi/customerProductCatalog', 'category',      0, NULL, 1, 'ESYNCMATE', 0, 1, GETDATE(), 0),
-    (5,  3, 'Product Upload Prices',    'nav.productUploadPrices',    'edi/productuploadprices',    'upload',        0, NULL, 2, 'ESYNCMATE', 0, 1, GETDATE(), 0),
-    (6,  3, 'Product Prices',           'nav.productPrices',          'edi/productPrices',          'attach_money',  0, NULL, 3, 'ESYNCMATE', 0, 1, GETDATE(), 0),
-    (7,  3, 'Inventory Feed Summary',   'nav.inventory',              'edi/inventory',              'inventory',     0, NULL, 4, 'ESYNCMATE', 0, 1, GETDATE(), 0),
+    (3,  3, 'Customer Product Catalog', 'nav.customerProductCatalog', 'edi/customerProductCatalog', 'category',      0, NULL, 1, 'ESYNCMATE', 0, 1, GETDATE(), 0),
+    (4,  3, 'Product Upload Prices',    'nav.productUploadPrices',    'edi/productuploadprices',    'upload',        0, NULL, 2, 'ESYNCMATE', 0, 1, GETDATE(), 0),
+    (5,  3, 'Product Prices',           'nav.productPrices',          'edi/productPrices',          'attach_money',  0, NULL, 3, 'ESYNCMATE', 0, 1, GETDATE(), 0),
+    (6,  3, 'Inventory Feed Summary',   'nav.inventory',              'edi/inventory',              'inventory',     0, NULL, 4, 'ESYNCMATE', 0, 1, GETDATE(), 0),
 
-    -- Setup (ModuleId=4) — Most setup menus hidden by default, only Flows visible
-    (8,  4, 'Connectors',          'nav.connectors',        'edi/connectors',    'power',        0, NULL, 1, 'ESYNCMATE', 1, 1, GETDATE(), 0),
-    (9,  4, 'Maps',                'nav.maps',              'edi/maps',          'map',          0, NULL, 2, 'ESYNCMATE', 1, 1, GETDATE(), 0),
-    (10, 4, 'Partner Groups',      'nav.partnerGroups',     'edi/partnergroups', 'group_work',   0, NULL, 3, 'ESYNCMATE', 1, 1, GETDATE(), 0),
-    (11, 4, 'Routes',              'nav.routes',            'edi/routes',        'alt_route',    0, NULL, 4, 'ESYNCMATE', 1, 1, GETDATE(), 0),
-    (12, 4, 'Route Types',         'nav.routeTypes',        'edi/routeTypes',    'merge_type',   0, NULL, 5, 'ESYNCMATE', 1, 1, GETDATE(), 0),
-    (13, 4, 'Flows',               'nav.flows',             'edi/flows',         'account_tree', 0, NULL, 6, 'ESYNCMATE', 0, 1, GETDATE(), 0),
-    (14, 4, 'Hangfire Dashboard',  'nav.hangfireDashboard', 'hangfire/dashboard','dashboard',    1, NULL, 7, 'ESYNCMATE', 1, 1, GETDATE(), 0),
-    (15, 4, 'Alert Configuration', 'nav.alertConfiguration', 'edi/alertConfiguration', 'notifications_active', 0, NULL, 8, 'ESYNCMATE', 0, 1, GETDATE(), 0),
+    -- Setup (ModuleId=4) — Most setup menus hidden by default; Flows, Alerts, Customers visible
+    (7,  4, 'Customers',           'nav.customers',         'edi/customers',     'people',       0, NULL, 1, 'ESYNCMATE', 0, 1, GETDATE(), 0),
+    (8,  4, 'Connectors',          'nav.connectors',        'edi/connectors',    'power',        0, NULL, 2, 'ESYNCMATE', 1, 1, GETDATE(), 0),
+    (9,  4, 'Maps',                'nav.maps',              'edi/maps',          'map',          0, NULL, 3, 'ESYNCMATE', 1, 1, GETDATE(), 0),
+    (10, 4, 'Partner Groups',      'nav.partnerGroups',     'edi/partnergroups', 'group_work',   0, NULL, 4, 'ESYNCMATE', 1, 1, GETDATE(), 0),
+    (11, 4, 'Routes',              'nav.routes',            'edi/routes',        'alt_route',    0, NULL, 5, 'ESYNCMATE', 1, 1, GETDATE(), 0),
+    (12, 4, 'Route Types',         'nav.routeTypes',        'edi/routeTypes',    'merge_type',   0, NULL, 6, 'ESYNCMATE', 1, 1, GETDATE(), 0),
+    (13, 4, 'Flows',               'nav.flows',             'edi/flows',         'account_tree', 0, NULL, 7, 'ESYNCMATE', 0, 1, GETDATE(), 0),
+    (14, 4, 'Hangfire Dashboard',  'nav.hangfireDashboard', 'hangfire/dashboard','dashboard',    1, NULL, 8, 'ESYNCMATE', 1, 1, GETDATE(), 0),
+    (15, 4, 'Alerts',              'nav.alertConfiguration', 'edi/alertConfiguration', 'notifications_active', 0, NULL, 8, 'ESYNCMATE', 0, 1, GETDATE(), 0),
 
     -- Exceptions (ModuleId=5)
     (16, 5, 'Exceptions', 'nav.routeExceptions', 'edi/routeExceptions', 'warning', 0, NULL, 1, 'ESYNCMATE', 0, 1, GETDATE(), 0),
@@ -316,7 +316,7 @@ SELECT @RMId + ROW_NUMBER() OVER (ORDER BY Id) - 1, 2, Id, 1, 1, 1, 1, GETDATE()
 
 SELECT @RMId = MAX(Id) + 1 FROM [dbo].[RoleMenus];
 
--- Operator: operational menus only (Dashboard, Orders, Products, Exceptions, Alerts — no Setup, no Admin)
+-- Operator: operational menus only (Dashboard, Orders, Products, Exceptions — no Setup, no Admin)
 INSERT INTO [dbo].[RoleMenus] ([Id], [RoleId], [MenuId], [CanView], [CanAdd], [CanEdit], [CanDelete], [CreatedDate], [CreatedBy])
 SELECT @RMId + ROW_NUMBER() OVER (ORDER BY Id) - 1, 3, Id, 1, 1, 1, 0, GETDATE(), 0 FROM [dbo].[Menus] WHERE ModuleId IN (1,2,3,5,7);
 
@@ -429,7 +429,7 @@ GO
 --SELECT * FROM UserMenus
 
 
-
+GO
 ALTER VIEW [dbo].[VW_BatchWiseInventory] AS
 SELECT  DISTINCT INV.*, [Data].BatchID, [Data].Id
 FROM SCSInventoryFeed INV WITH (NOLOCK)
