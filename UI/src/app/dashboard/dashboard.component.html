@@ -12,6 +12,54 @@
       </div>
     </div>
     <div class="dashboard-actions">
+      <!-- Customer Filter -->
+      <div class="cust-filter">
+        <button class="cust-trigger" (click)="customerDropdownOpen = !customerDropdownOpen">
+          <mat-icon class="cust-trigger-icon">storefront</mat-icon>
+          <span class="cust-trigger-text">{{ selectedCustomerIDs.length > 0 ? selectedCustomerIDs.length + ' Selected' : 'All Customers' }}</span>
+          <mat-icon class="cust-trigger-arrow" [class.rotated]="customerDropdownOpen">expand_more</mat-icon>
+        </button>
+
+        <!-- Dropdown Panel -->
+        <div class="cust-dropdown" *ngIf="customerDropdownOpen" (click)="$event.stopPropagation()">
+          <!-- Search -->
+          <div class="cust-dropdown-search">
+            <mat-icon class="cust-search-icon">search</mat-icon>
+            <input class="cust-search-input" placeholder="Search customers..." [(ngModel)]="customerSearchText" (input)="filterCustomerOptions()" (keydown)="$event.stopPropagation()">
+            <mat-icon class="cust-search-clear" *ngIf="customerSearchText" (click)="customerSearchText = ''; filterCustomerOptions()">close</mat-icon>
+          </div>
+
+          <!-- Selected Chips inside dropdown -->
+          <div class="cust-dropdown-chips" *ngIf="selectedCustomerIDs.length > 0">
+            <div class="cust-chip" *ngFor="let id of selectedCustomerIDs">
+              <span class="cust-chip-text">{{ id }}</span>
+              <mat-icon class="cust-chip-x" (click)="removeCustomer(id); $event.stopPropagation()">close</mat-icon>
+            </div>
+            <button class="cust-clear-all" (click)="clearAllCustomers(); $event.stopPropagation()" matTooltip="Clear all">
+              <mat-icon>delete_sweep</mat-icon>
+              <span>Clear All</span>
+            </button>
+          </div>
+
+          <!-- Customer List -->
+          <div class="cust-dropdown-list">
+            <div class="cust-dropdown-item" *ngFor="let customer of filteredCustomerOptions"
+                 [class.selected]="isCustomerSelected(customer.erpCustomerID)"
+                 (click)="toggleCustomer(customer.erpCustomerID)">
+              <div class="cust-item-check">
+                <mat-icon *ngIf="isCustomerSelected(customer.erpCustomerID)">check_circle</mat-icon>
+                <mat-icon *ngIf="!isCustomerSelected(customer.erpCustomerID)" class="unchecked">radio_button_unchecked</mat-icon>
+              </div>
+              <span class="cust-item-text">{{ customer.erpCustomerID }}</span>
+            </div>
+            <div class="cust-dropdown-empty" *ngIf="filteredCustomerOptions.length === 0">
+              No customers found
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="cust-backdrop" *ngIf="customerDropdownOpen" (click)="customerDropdownOpen = false"></div>
+
       <!-- Quick Presets -->
       <div class="preset-chips">
         <button class="preset-chip" [class.active]="activePreset === '24h'" (click)="setPreset('24h')">24H</button>

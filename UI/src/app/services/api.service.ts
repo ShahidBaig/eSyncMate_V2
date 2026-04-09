@@ -223,10 +223,11 @@ export class ApiService {
     return this.http.post(this.apiUrl + 'VerifyMFA', data);
   }
 
-  getDashboardStats(fromDate: string = '', toDate: string = '') {
+  getDashboardStats(fromDate: string = '', toDate: string = '', erpCustomerID: string = '') {
     let params = new HttpParams();
     if (fromDate) params = params.append('fromDate', fromDate);
     if (toDate) params = params.append('toDate', toDate);
+    if (erpCustomerID) params = params.append('erpCustomerID', erpCustomerID);
     return this.http.get<any>(this.apiUrl + 'EDIProcessor/api/v1/orders/getDashboardStats', { params });
   }
 

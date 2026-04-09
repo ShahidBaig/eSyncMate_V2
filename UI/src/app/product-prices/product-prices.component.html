@@ -143,6 +143,11 @@
                       (click)="processCustomerProductPrices(actionsErpCustomerID)">
                 <mat-icon>sync</mat-icon> Process Prices
               </button>
+              <button mat-flat-button class="btn-discrepancies" [disabled]="!actionsErpCustomerID"
+                      matTooltip="Download data discrepancies"
+                      (click)="priceDescripencies(actionsErpCustomerID)">
+                <mat-icon>download</mat-icon> Discrepancies
+              </button>
             </div>
           </div>
         </div>

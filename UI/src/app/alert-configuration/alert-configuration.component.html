@@ -51,7 +51,8 @@
           <mat-spinner *ngIf="showSpinnerforSearch" diameter="20"></mat-spinner>
         </button>
 
-        <button mat-flat-button color="accent" (click)="openAddCustomerDialog()" *ngIf="canAdd">
+        <button mat-flat-button class="btn-add" (click)="openAddCustomerDialog()" *ngIf="canAdd">
+          <mat-icon>add</mat-icon>
           <span>Add</span>
         </button>
       </div>

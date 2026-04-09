@@ -12,9 +12,15 @@ import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
 import { ApiService } from '../services/api.service';
 import { InventoryService } from '../services/inventory.service';
+import { CustomerProductCatalogService } from '../services/customerProductCatalogDialog.service';
 import { TranslateModule } from '@ngx-translate/core';
+
+interface CustomerOption {
+  erpCustomerID: string;
+}
 
 interface CustomerStat {
   customerName: string;
@@ -55,6 +61,7 @@ interface InventoryCustomerStat {
     MatNativeDateModule,
     MatFormFieldModule,
     MatInputModule,
+    MatSelectModule,
     TranslateModule
   ],
 })
@@ -72,6 +79,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
   statusStats: StatusStat[] = [];
   loading = true;
   private refreshInterval: any;
+
+  // Customer filter
+  selectedCustomerIDs: string[] = [];
+  customersOptions: CustomerOption[] = [];
+  filteredCustomerOptions: CustomerOption[] = [];
+  customerSearchText: string = '';
+  customerDropdownOpen: boolean = false;
 
   // Status config for cards
   statusConfig: { [key: string]: { icon: string; color: string; bg: string } } = {
@@ -108,15 +122,67 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   customerColumns = ['customerName', 'erpCustomerID', 'orderCount'];
 
-  constructor(private api: ApiService, private inventoryApi: InventoryService) {}
+  constructor(private api: ApiService, private inventoryApi: InventoryService, private customerApi: CustomerProductCatalogService) {}
 
   ngOnInit(): void {
+    this.loadCustomers();
     this.loadStats();
     this.loadInventoryStats();
     this.refreshInterval = setInterval(() => {
       this.loadStats();
       this.loadInventoryStats();
     }, 900000); // 15 minutes
+  }
+
+  loadCustomers(): void {
+    this.customerApi.getERPCustomers().subscribe({
+      next: (res: any) => {
+        this.customersOptions = res.customers || [];
+        this.filteredCustomerOptions = this.customersOptions;
+      }
+    });
+  }
+
+  filterCustomerOptions(): void {
+    const search = (this.customerSearchText || '').toLowerCase();
+    this.filteredCustomerOptions = this.customersOptions.filter(c =>
+      c.erpCustomerID.toLowerCase().includes(search)
+    );
+  }
+
+  onCustomerSelectOpened(opened: boolean): void {
+    if (opened) {
+      this.customerSearchText = '';
+      this.filteredCustomerOptions = this.customersOptions;
+    }
+  }
+
+  onCustomerFilterChange(): void {
+    this.applyDateFilter();
+  }
+
+  toggleCustomer(id: string): void {
+    const idx = this.selectedCustomerIDs.indexOf(id);
+    if (idx >= 0) {
+      this.selectedCustomerIDs = this.selectedCustomerIDs.filter(c => c !== id);
+    } else {
+      this.selectedCustomerIDs = [...this.selectedCustomerIDs, id];
+    }
+    this.applyDateFilter();
+  }
+
+  isCustomerSelected(id: string): boolean {
+    return this.selectedCustomerIDs.includes(id);
+  }
+
+  removeCustomer(id: string): void {
+    this.selectedCustomerIDs = this.selectedCustomerIDs.filter(c => c !== id);
+    this.applyDateFilter();
+  }
+
+  clearAllCustomers(): void {
+    this.selectedCustomerIDs = [];
+    this.applyDateFilter();
   }
 
   manualRefresh(): void {
@@ -134,7 +200,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.loading = true;
     const from = this.formatDate(this.filterFrom);
     const to = this.formatDate(this.filterTo);
-    this.api.getDashboardStats(from, to).subscribe({
+    const customerFilter = this.selectedCustomerIDs.length > 0 ? this.selectedCustomerIDs.join(',') : '';
+    this.api.getDashboardStats(from, to, customerFilter).subscribe({
       next: (res: any) => {
         if (res.code === 200) {
           this.totalOrders = res.totalOrders || 0;

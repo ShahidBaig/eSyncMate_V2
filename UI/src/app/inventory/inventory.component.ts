@@ -91,10 +91,8 @@ export class InventoryComponent implements OnInit {
   columns: string[] = [
     'CustomerID',
     'Status',
-    'ItemCount',
     'StartDate',
     'FinishDate',
-    'PageCount',
     'Type',
     'File',
   ];
@@ -118,9 +116,7 @@ export class InventoryComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.getInventory();
     this.getERPCustomer();
-    this.getRouteTypes();
   }
 
   onPageChange(event: PageEvent) {
@@ -138,13 +134,21 @@ export class InventoryComponent implements OnInit {
     });
   }
 
-  getRouteTypes() {
-    this.api.getRouteTypes().subscribe({
+  getRouteTypes(customerID: string = '') {
+    this.api.getRouteTypes(customerID).subscribe({
       next: (res: any) => {
         this.routeTypeOptions = res.routeType;
         this.filteredRouteTypeOptions = this.routeTypeOptions || [];
       },
     });
+  }
+
+  onCustomerChanged() {
+    const customerID = this.InventoryForm.get('customerID')?.value || '';
+    // Reset route type when customer changes
+    this.InventoryForm.get('routeType')?.setValue('');
+    // Reload route types filtered by selected customer
+    this.getRouteTypes(customerID);
   }
 
   filterCustomerOptions() {
@@ -260,6 +264,7 @@ export class InventoryComponent implements OnInit {
         itemID: itemID ?? null,
         batchStatus: element.status ?? '',
         routeType: element.routeType ?? '',
+        customerID: element.customerID ?? '',
       },
     });
 
@@ -290,8 +295,9 @@ export class InventoryComponent implements OnInit {
       this.pageNumber = 1;
     }
 
-    if (((startDate == '' || startDate == null) && (finishDate == '' || finishDate == undefined) && (itemID == '' || itemID == 'EMPTY') && (status == '' || status == 'Select Status') && (customerID == '' || customerID.toUpperCase().includes('SELECT')) && (routeType == '' || routeType.toUpperCase().includes('SELECT')))) {
-      this.toast.info({ detail: "inventory", summary: this.languageService.getTranslation('provideFieldMessage'), duration: 5000, position: 'topRight' });
+    // Customer is mandatory
+    if (!customerID || customerID === '') {
+      this.toast.warning({ detail: "INFO", summary: 'Please select a Customer', duration: 5000, position: 'topRight' });
       return;
     }
 

@@ -23,7 +23,7 @@ table {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  align-items: flex-start;
+  align-items: center;
 }
 
 .search-field {
@@ -40,14 +40,15 @@ table {
 }
 
 .route-name-field {
-  min-width: 320px;
+  min-width: 320px !important;
+  max-width: 400px !important;
   flex: 2;
 }
 
 .exception-field {
-  min-width: 350px;
-  max-width: 400px;
-  flex: 2;
+  min-width: 350px !important;
+  max-width: none !important;
+  flex: 3;
 }
 
 .search-btn {

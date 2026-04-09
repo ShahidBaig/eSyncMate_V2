@@ -21,6 +21,7 @@ import { CommonModule } from '@angular/common';
 import { MatSelectChange, MatSelectModule } from '@angular/material/select';
 
 import { CustomerProductCatalogService } from '../services/customerProductCatalogDialog.service';
+import { ProductUploadPricesService } from '../services/ProductUploadPrices.service';
 import { MatPaginatorModule } from '@angular/material/paginator';
 import { PageEvent } from '@angular/material/paginator';
 import { LanguageService } from '../services/language.service';
@@ -118,7 +119,7 @@ export class ProductPricesComponent {
     'ActivityDate',
   ];
 
-  constructor(private api: CustomerProductCatalogService, private fb: FormBuilder, private toast: NgToastService, private dialog: MatDialog, private userApi: ApiService, public languageService: LanguageService, private translate: TranslateService,) {
+  constructor(private api: CustomerProductCatalogService, private uploadApi: ProductUploadPricesService, private fb: FormBuilder, private toast: NgToastService, private dialog: MatDialog, private userApi: ApiService, public languageService: LanguageService, private translate: TranslateService,) {
     const permissions = this.userApi.getMenuPermissions('edi/productPrices');
     if (permissions) {
       this.canAdd = permissions.canAdd;
@@ -310,6 +311,30 @@ export class ProductPricesComponent {
 
   openHelp(): void {
     this.dialog.open(ProductPricesHelpDialogComponent, { width: '90%', maxWidth: '1200px', maxHeight: '90vh' });
+  }
+
+  priceDescripencies(customerID: string) {
+    if (!customerID) {
+      this.toast.warning({ detail: "INFO", summary: 'Please select a Customer ID', duration: 5000, position: 'topRight' });
+      return;
+    }
+
+    this.uploadApi.priceDescripencies(customerID).subscribe({
+      next: (data: any) => {
+        const filename = "PriceDescripencies.csv";
+        const contentType = data.headers.get('content-type');
+        const blob = new Blob([data.body], { type: contentType });
+        const url = window.URL.createObjectURL(blob);
+        const linkElement = document.createElement('a');
+        linkElement.setAttribute('href', url);
+        linkElement.setAttribute('download', filename);
+        linkElement.click();
+        window.URL.revokeObjectURL(url);
+      },
+      error: (err: any) => {
+        this.toast.error({ detail: "Error", summary: 'Failed to download discrepancies', duration: 5000, position: 'topRight' });
+      }
+    });
   }
 
   processCustomerProductPrices(erpCustomerID: string) {

@@ -571,7 +571,7 @@ namespace eSyncMate.Processor.Controllers
 
         [HttpGet]
         [Route("getDashboardStats")]
-        public Task<object> GetDashboardStats([FromQuery] string fromDate = "", [FromQuery] string toDate = "")
+        public Task<object> GetDashboardStats([FromQuery] string fromDate = "", [FromQuery] string toDate = "", [FromQuery] string erpCustomerID = "")
         {
             try
             {
@@ -586,6 +586,13 @@ namespace eSyncMate.Processor.Controllers
                 string l_CustomerFilter = "";
                 if (userData.UserType?.ToUpper() != "ADMIN" && !string.IsNullOrEmpty(userData.Customers))
                     l_CustomerFilter = $" AND ERPCustomerID IN ({userData.Customers})";
+
+                // Filter by specific customer(s) if provided
+                if (!string.IsNullOrEmpty(erpCustomerID))
+                {
+                    var customerIds = erpCustomerID.Split(',').Select(c => $"'{c.Trim()}'");
+                    l_CustomerFilter += $" AND ERPCustomerID IN ({string.Join(",", customerIds)})";
+                }
 
                 // Date filter — defaults to last 24 hours if not provided
                 string l_DateFilter;

@@ -118,6 +118,7 @@
 .btn-upload { @extend %action-btn-base; background: #059669 !important; color: white !important; &:hover { background: #047857 !important; } }
 .btn-process-prices { @extend %action-btn-base; background: #7c3aed !important; color: white !important; &:hover { background: #6d28d9 !important; } }
 .btn-export { @extend %action-btn-base; background: #0d9488 !important; color: white !important; &:hover { background: #0f766e !important; } }
+.btn-discrepancies { @extend %action-btn-base; background: #dc2626 !important; color: white !important; &:hover { background: #b91c1c !important; } }
 .btn-clear-file { color: #94a3b8; &:hover { color: #dc2626; } }
 
 // Grid toolbar — right-aligned above table

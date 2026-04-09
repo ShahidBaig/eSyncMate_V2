@@ -11,7 +11,7 @@
 .search-header-title { font-size: 13px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; -webkit-font-smoothing: antialiased; }
 
 .search-row {
-  display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-start;
+  display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
 }
 
 .search-field {
@@ -33,6 +33,14 @@
   display: flex; align-items: center; gap: 6px; white-space: nowrap; letter-spacing: 0.2px;
   box-shadow: 0 1px 3px rgba(232, 131, 74, 0.3); transition: all 0.15s ease;
   &:hover { background: #d4722e !important; box-shadow: 0 2px 6px rgba(232, 131, 74, 0.4); }
+  mat-icon { font-size: 18px; width: 18px; height: 18px; }
+}
+
+.btn-add {
+  height: 38px; padding: 0 16px !important; background: #059669 !important; color: #fff !important;
+  font-size: 13px !important; font-weight: 700 !important; border-radius: 10px !important;
+  display: flex; align-items: center; gap: 6px; white-space: nowrap;
+  &:hover { background: #047857 !important; }
   mat-icon { font-size: 18px; width: 18px; height: 18px; }
 }
 

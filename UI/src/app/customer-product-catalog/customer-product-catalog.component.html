@@ -1,184 +1,238 @@
-<h2 class="page-title">
-  <mat-icon>menu_book</mat-icon>
-  <span class="title-text">{{ 'nav.customerProductCatalog' | translate }}</span>
-  <button mat-icon-button class="collapse-toggle" (click)="panelsCollapsed = !panelsCollapsed"
-          [matTooltip]="panelsCollapsed ? 'Show Filters' : 'Hide Filters'" matTooltipPosition="right">
-    <mat-icon>{{ panelsCollapsed ? 'expand_more' : 'expand_less' }}</mat-icon>
-  </button>
-</h2>
+<div class="page-title-row">
+  <h2 class="page-title">
+    <mat-icon>menu_book</mat-icon>
+    <span class="title-text">{{ 'nav.customerProductCatalog' | translate }}</span>
+    <button mat-icon-button class="help-btn" matTooltip="Help Guide" (click)="openHelp()">
+      <mat-icon>help_outline</mat-icon>
+    </button>
+  </h2>
+  <div class="mode-toggle">
+    <button mat-flat-button class="mode-btn" [class.mode-outlined]="activeMode !== 'upload'" [class.mode-filled]="activeMode === 'upload'" (click)="activeMode = 'upload'">
+      <mat-icon>cloud_upload</mat-icon> Upload
+    </button>
+    <button mat-flat-button class="mode-btn" [class.mode-outlined]="activeMode !== 'download'" [class.mode-filled]="activeMode === 'download'" (click)="activeMode = 'download'">
+      <mat-icon>file_download</mat-icon> Download
+    </button>
+  </div>
+</div>
 <div class="mat-table-container">
 
-  <!-- Card 1: Upload Section -->
-  <mat-card *ngIf="canAdd && !panelsCollapsed" class="section-card">
+  <!-- ============ UPLOAD MODE ============ -->
+  <mat-card class="section-card" *ngIf="activeMode === 'upload'">
+    <mat-card-content>
+      <div class="controls-grid">
+
+        <!-- Section 1: Search & Filter -->
+        <div class="control-section">
+          <div class="section-header">
+            <mat-icon class="section-icon">filter_list</mat-icon>
+            <span class="section-title">Search & Filter</span>
+          </div>
+          <div class="control-body">
+            <div class="control-row">
+              <mat-form-field appearance="outline" class="search-field">
+                <mat-label>Search by</mat-label>
+                <mat-icon matPrefix>badge</mat-icon>
+                <mat-select [(ngModel)]="selectedOption" (selectionChange)="onSelectionChange()">
+                  <mat-option *ngFor="let option of options" [value]="option">{{ option }}</mat-option>
+                </mat-select>
+              </mat-form-field>
+
+              <ng-container *ngIf="selectedOption === 'ERP CustomerID' else defaultField">
+                <mat-form-field appearance="outline" class="search-field">
+                  <mat-label>Select Customer</mat-label>
+                  <mat-icon matPrefix>inventory_2</mat-icon>
+                  <mat-select [(ngModel)]="searchValue">
+                    <mat-option *ngFor="let customer of customersOptions" [value]="customer.erpCustomerID">
+                      {{ customer.erpCustomerID }}
+                    </mat-option>
+                  </mat-select>
+                </mat-form-field>
+              </ng-container>
+
+              <ng-template #defaultField>
+                <ng-container *ngIf="selectedOption !== 'Created Date' else dateRangeField">
+                  <mat-form-field appearance="outline" class="search-field">
+                    <mat-label>{{ label }}</mat-label>
+                    <mat-icon matPrefix>flag</mat-icon>
+                    <input matInput [(ngModel)]="searchValue" />
+                  </mat-form-field>
+                </ng-container>
+              </ng-template>
+
+              <ng-template #dateRangeField>
+                <mat-form-field appearance="outline" class="search-field">
+                  <mat-label>{{ label }}</mat-label>
+                  <mat-icon matPrefix>date_range</mat-icon>
+                  <mat-date-range-input [rangePicker]="picker">
+                    <input matStartDate [(ngModel)]="startDate" placeholder="Start">
+                    <input matEndDate [(ngModel)]="endDate" placeholder="End">
+                  </mat-date-range-input>
+                  <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+                  <mat-date-range-picker #picker></mat-date-range-picker>
+                </mat-form-field>
+              </ng-template>
+            </div>
+            <div class="btn-row">
+              <button mat-flat-button class="search-btn" (click)="getCustomerProductCatalog(true)">
+                <mat-icon>search</mat-icon> Search
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 2: Upload -->
+        <div class="control-section" *ngIf="canAdd">
+          <div class="section-header">
+            <mat-icon class="section-icon">cloud_upload</mat-icon>
+            <span class="section-title">Upload</span>
+          </div>
+          <div class="control-body">
+            <div class="control-row">
+              <mat-form-field appearance="outline" class="search-field">
+                <mat-label>ERP Customer ID</mat-label>
+                <mat-select [(ngModel)]="erpCustomerID" (selectionChange)="onCustomerSelectionChange($event)">
+                  <mat-option *ngFor="let customers of customersOptions" [value]="customers.erpCustomerID">
+                    {{ customers.erpCustomerID }}
+                  </mat-option>
+                </mat-select>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="search-field">
+                <mat-label>Item Type</mat-label>
+                <input matInput [(ngModel)]="itemTypeFilter" [matAutocomplete]="uploadAuto" placeholder="Filter Item Types">
+                <mat-autocomplete #uploadAuto="matAutocomplete" (optionSelected)="onItemTypesChange($event)" [displayWith]="displayItemType">
+                  <mat-option *ngFor="let itemType of getFilteredItemTypes()" [value]="itemType">
+                    {{ itemType.item_Type }} - {{ itemType.brand }} - {{ itemType.item_Type_Id }}
+                  </mat-option>
+                </mat-autocomplete>
+              </mat-form-field>
+            </div>
+            <div class="file-upload-row">
+              <div class="file-drop-zone" (click)="fileInput.click()">
+                <input #fileInput type="file" class="file-hidden" (change)="onFileSelected($event)" accept=".csv,.xls,.xlsx">
+                <mat-icon class="drop-icon">description</mat-icon>
+                <span class="drop-text" *ngIf="!selectedFile">Choose CSV file</span>
+                <span class="drop-file" *ngIf="selectedFile">{{ selectedFile.name }}</span>
+              </div>
+              <button mat-icon-button class="btn-clear-file" *ngIf="selectedFile" matTooltip="Remove file" (click)="clearFile(); $event.stopPropagation()">
+                <mat-icon>close</mat-icon>
+              </button>
+              <button mat-flat-button class="btn-upload" [disabled]="isButtonDisabled"
+                      matTooltip="Upload file"
+                      (click)="uploadCustomerProductCatalogFile()">
+                <mat-icon>cloud_upload</mat-icon> Upload
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 3: Actions -->
+        <div class="control-section">
+          <div class="section-header">
+            <mat-icon class="section-icon">build</mat-icon>
+            <span class="section-title">Actions</span>
+          </div>
+          <div class="control-body">
+            <div class="control-row">
+              <mat-form-field appearance="outline" class="search-field">
+                <mat-label>ERP Customer ID</mat-label>
+                <mat-select [(ngModel)]="actionsErpCustomerID" (selectionChange)="onActionsCustomerChange($event)">
+                  <mat-option *ngFor="let customers of customersOptions" [value]="customers.erpCustomerID">
+                    {{ customers.erpCustomerID }}
+                  </mat-option>
+                </mat-select>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="search-field">
+                <mat-label>Item Type</mat-label>
+                <input matInput [(ngModel)]="actionsItemTypeFilter" [matAutocomplete]="actionsAuto" placeholder="Filter Item Types">
+                <mat-autocomplete #actionsAuto="matAutocomplete" (optionSelected)="onActionsItemTypeChange($event)" [displayWith]="displayItemType">
+                  <mat-option *ngFor="let itemType of getFilteredActionsItemTypes()" [value]="itemType">
+                    {{ itemType.item_Type }} - {{ itemType.brand }} - {{ itemType.item_Type_Id }}
+                  </mat-option>
+                </mat-autocomplete>
+              </mat-form-field>
+            </div>
+            <div class="btn-row">
+              <button mat-flat-button class="btn-sample"
+                      matTooltip="Download sample file"
+                      (click)="downloadSampleFile(actionsErpCustomerID || erpCustomerID, actionsItemTypes || itemTypes)">
+                <mat-icon>file_download</mat-icon> Sample
+              </button>
+              <button mat-flat-button class="btn-rejected"
+                      matTooltip="Download rejected CSV"
+                      (click)="downloadRejectProductCSV(actionsErpCustomerID || erpCustomerID)">
+                <mat-icon>block</mat-icon> Rejected
+              </button>
+              <button mat-flat-button class="btn-clear-errors"
+                      matTooltip="Clear error statuses"
+                      (click)="processErrorResolve()">
+                <mat-icon>error_outline</mat-icon> Clear Errors
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- ============ DOWNLOAD MODE ============ -->
+  <mat-card class="section-card" *ngIf="activeMode === 'download'">
     <mat-card-content>
       <div class="section-header">
-        <mat-icon class="section-icon">upload_file</mat-icon>
-        <span class="section-title">Upload Product Catalog</span>
+        <mat-icon class="section-icon">file_download</mat-icon>
+        <span class="section-title">Download Product Data</span>
       </div>
-      <div class="upload-row">
-        <mat-form-field class="form-field" appearance="fill" color="accent">
-          <mat-label>ERP CustomerID</mat-label>
-          <mat-select [(ngModel)]="erpCustomerID" (selectionChange)="onCustomerSelectionChange($event)">
+      <div class="download-controls">
+        <mat-form-field appearance="outline" class="download-field">
+          <mat-label>ERP Customer ID</mat-label>
+          <mat-select [(ngModel)]="downloadErpCustomerID" (selectionChange)="onDownloadCustomerChange($event)">
             <mat-option *ngFor="let customers of customersOptions" [value]="customers.erpCustomerID">
               {{ customers.erpCustomerID }}
             </mat-option>
           </mat-select>
         </mat-form-field>
 
-        <mat-form-field class="form-field custom-width" appearance="fill" color="accent">
-          <mat-label>Item Types</mat-label>
-          <input type="text"
-                 placeholder="Filter Item Types"
-                 aria-label="Filter Item Types"
-                 matInput
-                 [(ngModel)]="itemTypeFilter"
-                 [matAutocomplete]="auto" />
-          <mat-autocomplete #auto="matAutocomplete"
-                            (optionSelected)="onItemTypesChange($event)"
-                            [displayWith]="displayItemType">
-            <mat-option *ngFor="let itemType of getFilteredItemTypes()" [value]="itemType">
+        <mat-form-field appearance="outline" class="download-field">
+          <mat-label>Item Type</mat-label>
+          <input matInput [(ngModel)]="downloadItemTypeFilter" [matAutocomplete]="downloadAuto" placeholder="Filter Item Types">
+          <mat-autocomplete #downloadAuto="matAutocomplete" (optionSelected)="onDownloadItemTypeChange($event)" [displayWith]="displayItemType">
+            <mat-option *ngFor="let itemType of getFilteredDownloadItemTypes()" [value]="itemType">
               {{ itemType.item_Type }} - {{ itemType.brand }} - {{ itemType.item_Type_Id }}
             </mat-option>
           </mat-autocomplete>
         </mat-form-field>
 
-        <button mat-flat-button color="accent" [disabled]="isButtonDisabled" (click)="downloadSampleFile(erpCustomerID,itemTypes)">
-          <mat-icon>file_download</mat-icon>
-          <span>Sample Download</span>
-        </button>
-
-        <div class="file-upload-group">
-          <input class="file-input" type="file" (change)="onFileSelected($event)" accept=".csv,.xls,.xlsx">
-          <button mat-icon-button color="accent" matTooltip="Clear File" matTooltipPosition="above" (click)="clearFile()">
-            <mat-icon>clear</mat-icon>
-          </button>
-        </div>
-        <button mat-flat-button color="accent" [disabled]="isButtonDisabled" (click)="uploadCustomerProductCatalogFile()">
-          <mat-icon>cloud_upload</mat-icon>
-          <span>Upload File</span>
-        </button>
-        <button mat-flat-button color="accent" (click)="downloadRejectProductCSV(erpCustomerID)">
-          <mat-icon>download</mat-icon>
-          <span>Rejected CSV</span>
+        <button mat-flat-button class="btn-download-csv"
+                matTooltip="Download items data as CSV"
+                (click)="downloadItemsDataCSV(downloadErpCustomerID, downloadItemTypes)">
+          <mat-icon>file_download</mat-icon> Download CSV
         </button>
       </div>
     </mat-card-content>
   </mat-card>
 
-  <!-- Card 2: Search & Actions -->
-  <mat-card class="section-card" *ngIf="!panelsCollapsed">
-    <mat-card-content>
-      <div class="search-actions-wrapper">
-        <!-- Left: Search -->
-        <div class="search-side">
-          <div class="section-header">
-            <mat-icon class="section-icon">search</mat-icon>
-            <span class="section-title">Search Products</span>
-          </div>
-          <div class="search-row">
-            <mat-form-field appearance="fill" color="accent">
-              <mat-label>Search by:</mat-label>
-              <mat-select id="myComboBox" [(ngModel)]="selectedOption" (selectionChange)="onSelectionChange()">
-                <mat-option *ngFor="let option of options" [value]="option">
-                  {{ option }}
-                </mat-option>
-              </mat-select>
-            </mat-form-field>
-
-            <ng-container *ngIf="selectedOption === 'ERP CustomerID' else defaultField">
-              <mat-form-field appearance="fill" color="accent">
-                <mat-label>Select ERP Customer ID</mat-label>
-                <mat-select [(ngModel)]="searchValue">
-                  <mat-option *ngFor="let customer of customersOptions" [value]="customer.erpCustomerID">
-                    {{ customer.erpCustomerID }}
-                  </mat-option>
-                </mat-select>
-              </mat-form-field>
-            </ng-container>
-
-            <ng-template #defaultField>
-              <ng-container *ngIf="selectedOption !== 'Created Date' else dateRangeField">
-                <mat-form-field appearance="fill" color="accent">
-                  <mat-label>{{ label }}</mat-label>
-                  <input matInput [(ngModel)]="searchValue" />
-                </mat-form-field>
-              </ng-container>
-            </ng-template>
-
-            <ng-template #dateRangeField>
-              <mat-form-field appearance="fill" color="accent">
-                <mat-label>{{ label }}</mat-label>
-                <mat-date-range-input [rangePicker]="picker">
-                  <input matStartDate [(ngModel)]="startDate" placeholder="Start date">
-                  <input matEndDate [(ngModel)]="endDate" placeholder="End date">
-                </mat-date-range-input>
-                <mat-hint>MM/DD/YYYY – MM/DD/YYYY</mat-hint>
-                <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
-                <mat-date-range-picker #picker></mat-date-range-picker>
-              </mat-form-field>
-            </ng-template>
-
-            <button mat-flat-button color="accent" (click)="getCustomerProductCatalog()">
-              <mat-icon>search</mat-icon>
-              <span>Search</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- Right: Actions -->
-        <div class="actions-side" *ngIf="canEdit">
-          <div class="section-header">
-            <mat-icon class="section-icon">build</mat-icon>
-            <span class="section-title">Actions</span>
-          </div>
-          <div class="search-row">
-            <mat-form-field appearance="fill" color="accent">
-              <mat-label>{{ 'erpCustomerID' | translate }}</mat-label>
-              <input matInput [(ngModel)]="erpCustomerID" readonly>
-            </mat-form-field>
-            <mat-form-field appearance="fill" color="accent">
-              <mat-label>{{ 'itemTypes' | translate }}</mat-label>
-              <input matInput [(ngModel)]="itemTypeName" readonly>
-            </mat-form-field>
-            <button mat-flat-button color="accent" matTooltip="Download Items Data"
-                    (click)="downloadItemsDataCSV(erpCustomerID,itemTypes)">
-              <mat-icon>download</mat-icon>
-              <span>Download</span>
-            </button>
-            <button mat-flat-button color="primary" (click)="processErrorResolve()">
-              <mat-icon>error_outline</mat-icon>
-              <span>Clear Errors</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    </mat-card-content>
-  </mat-card>
-
-  <!-- Card 4: Data Grid -->
-  <mat-card>
+  <!-- Data Grid (Upload mode only) -->
+  <mat-card *ngIf="activeMode === 'upload'">
     <mat-card-content>
       <mat-progress-bar [style.visibility]="isLoading ? 'visible' : 'hidden'" mode="indeterminate" color="accent"></mat-progress-bar>
       <table mat-table [dataSource]="customerProductCatalogToDisplay">
 
-        <ng-container matColumnDef="ProductId">
-          <th mat-header-cell *matHeaderCellDef>{{ 'id' | translate }} </th>
-          <td mat-cell *matCellDef="let element"> {{element.productId}} </td>
-        </ng-container>
-
         <ng-container matColumnDef="CustomerID">
           <th mat-header-cell *matHeaderCellDef>{{ 'erpCustomerID' | translate }}</th>
-          <td mat-cell *matCellDef="let element"> {{element.customerID}} </td>
+          <td mat-cell *matCellDef="let element">{{element.customerID}}</td>
         </ng-container>
 
         <ng-container matColumnDef="ItemID">
           <th mat-header-cell *matHeaderCellDef>{{ 'erpItemID' | translate }}</th>
-          <td mat-cell *matCellDef="let element"> {{element.itemID}} </td>
+          <td mat-cell *matCellDef="let element">{{element.itemID}}</td>
         </ng-container>
 
         <ng-container matColumnDef="UPC">
           <th mat-header-cell *matHeaderCellDef>UPC</th>
-          <td mat-cell *matCellDef="let element"> {{element.upc}} </td>
+          <td mat-cell *matCellDef="let element">{{element.upc}}</td>
         </ng-container>
 
         <ng-container matColumnDef="Status">
@@ -190,51 +244,50 @@
 
         <ng-container matColumnDef="itemTypeName">
           <th mat-header-cell *matHeaderCellDef>{{ 'itemTypeName' | translate }}</th>
-          <td mat-cell *matCellDef="let element"> {{element.itemTypeName}} </td>
+          <td mat-cell *matCellDef="let element">{{element.itemTypeName}}</td>
         </ng-container>
 
         <ng-container matColumnDef="ParentID">
           <th mat-header-cell *matHeaderCellDef>{{ 'parentID' | translate }}</th>
-          <td mat-cell *matCellDef="let element"> {{element.parentID}} </td>
+          <td mat-cell *matCellDef="let element">{{element.parentID}}</td>
         </ng-container>
 
         <ng-container matColumnDef="ListPrice">
           <th mat-header-cell *matHeaderCellDef>{{ 'listPrice' | translate }}</th>
-          <td mat-cell *matCellDef="let element"> {{element.listPrice}} </td>
+          <td mat-cell *matCellDef="let element">{{ element.listPrice ? '$' + element.listPrice : '' }}</td>
         </ng-container>
 
         <ng-container matColumnDef="MapPrice">
           <th mat-header-cell *matHeaderCellDef>{{ 'mapPrice' | translate }}</th>
-          <td mat-cell *matCellDef="let element"> {{element.mapPrice}} </td>
+          <td mat-cell *matCellDef="let element">{{ element.mapPrice ? '$' + element.mapPrice : '' }}</td>
         </ng-container>
 
         <ng-container matColumnDef="CreatedDate">
-          <th mat-header-cell *matHeaderCellDef>{{ 'modifiedDate' | translate }}</th>
-          <td mat-cell *matCellDef="let element"> {{element.createdDate | date:'MMM-dd-yyyy HH:mm:ss'}} </td>
+          <th mat-header-cell *matHeaderCellDef>Upload Date</th>
+          <td mat-cell *matCellDef="let element">{{ element.createdDate | date:'MM/dd/yyyy hh:mm a' }}</td>
         </ng-container>
 
         <ng-container matColumnDef="Edit" *ngIf="canEdit">
-          <th mat-header-cell *matHeaderCellDef> {{ 'actions' | translate }}</th>
-          <td mat-cell *matCellDef="let element" style="display: flex">
-            <button mat-icon-button aria-label="normal button" (click)="openEditDialog(element)" color="accent" matTooltip="Edit Customer Product Catalog" matTooltipPosition="above">
-              <mat-icon>edit</mat-icon>
-            </button>
-            <button mat-icon-button aria-label="normal button" (click)="showProductsData(element)" color="accent"
-                    matTooltip="Product Data" matTooltipPosition="above" style="display:flex; justify-content:end">
-              <mat-icon>read_more</mat-icon>
-            </button>
+          <th mat-header-cell *matHeaderCellDef>{{ 'actions' | translate }}</th>
+          <td mat-cell *matCellDef="let element">
+            <div class="action-buttons">
+              <button mat-icon-button (click)="openEditDialog(element)" matTooltip="Edit" matTooltipPosition="above" class="action-edit">
+                <mat-icon>edit</mat-icon>
+              </button>
+              <button mat-icon-button (click)="showProductsData(element)" matTooltip="Product Data" matTooltipPosition="above" class="action-data">
+                <mat-icon>read_more</mat-icon>
+              </button>
+            </div>
           </td>
         </ng-container>
 
         <tr mat-header-row *matHeaderRowDef="columns"></tr>
         <tr mat-row *matRowDef="let row; columns: columns"></tr>
-
       </table>
 
       <mat-paginator [length]="totalCount" [pageSize]="pageSize" [pageSizeOptions]="[5, 10, 25, 100]"
         (page)="onPageChange($event)" showFirstLastButtons>
       </mat-paginator>
-
     </mat-card-content>
   </mat-card>
 </div>

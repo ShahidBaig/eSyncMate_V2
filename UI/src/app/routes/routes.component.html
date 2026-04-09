@@ -1,69 +1,73 @@
 <h2 class="page-title"><mat-icon>alt_route</mat-icon><span class="title-text">{{ 'nav.routes' | translate }}</span></h2>
 <div class="mat-table-container">
 
-  <mat-card>
+  <mat-card class="search-card">
     <mat-card-content>
-      <mat-form-field appearance="fill" color="accent">
-        <mat-label>{{ 'searchBy' | translate }}:</mat-label>
-        <mat-select id="myComboBox" [(ngModel)]="selectedOption" (click)="onSelectionChange()">
-          <mat-option *ngFor="let option of options" [value]="option">
-            {{ option }}
-          </mat-option>
-        </mat-select>
-      </mat-form-field>
-
-      &nbsp;
-      <ng-container *ngIf="selectedOption === 'ERP CustomerID' else defaultField">
-        <mat-form-field appearance="fill" color="accent">
-          <mat-label>Select ERP Customer ID</mat-label>
-          <mat-select [(ngModel)]="searchValue">
-            <mat-option *ngFor="let customer of customersOptions" [value]="customer.erpCustomerID">
-              {{ customer.erpCustomerID }}
+      <div class="search-header">
+        <div class="search-header-left">
+          <mat-icon class="search-header-icon">filter_list</mat-icon>
+          <span class="search-header-title">Search & Filter</span>
+        </div>
+      </div>
+      <div class="search-row">
+        <mat-form-field appearance="outline" color="accent" class="search-field">
+          <mat-icon matPrefix>tag</mat-icon>
+          <mat-label>{{ 'searchBy' | translate }}:</mat-label>
+          <mat-select id="myComboBox" [(ngModel)]="selectedOption" (selectionChange)="onSelectionChange()">
+            <mat-option *ngFor="let option of options" [value]="option">
+              {{ option }}
             </mat-option>
           </mat-select>
         </mat-form-field>
-      </ng-container>
-      &nbsp;
 
-      <ng-template #defaultField>
-        <ng-container *ngIf="selectedOption !== 'Created Date' else dateRangeField">
-          <mat-form-field appearance="fill" color="accent">
-            <mat-label>{{ label }}</mat-label>
-            <input matInput [(ngModel)]="searchValue" />
+        <ng-container *ngIf="selectedOption === 'ERP CustomerID' else defaultField">
+          <mat-form-field appearance="outline" color="accent" class="search-field">
+            <mat-icon matPrefix>people</mat-icon>
+            <mat-label>Select ERP Customer ID</mat-label>
+            <mat-select [(ngModel)]="searchValue">
+              <mat-option *ngFor="let customer of customersOptions" [value]="customer.erpCustomerID">
+                {{ customer.erpCustomerID }}
+              </mat-option>
+            </mat-select>
           </mat-form-field>
         </ng-container>
-      </ng-template>
 
-      <ng-template #dateRangeField>
-        <mat-form-field appearance="fill" color="accent">
-          <mat-label>{{ label }}</mat-label>
-          <mat-date-range-input [rangePicker]="picker">
-            <input matStartDate [(ngModel)]="startDate" placeholder="Start date">
-            <input matEndDate [(ngModel)]="endDate" placeholder="End date">
-          </mat-date-range-input>
-          <mat-hint>MM/DD/YYYY – MM/DD/YYYY</mat-hint>
-          <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
-          <mat-date-range-picker #picker></mat-date-range-picker>
-        </mat-form-field>
-      </ng-template>
+        <ng-template #defaultField>
+          <ng-container *ngIf="selectedOption !== 'Created Date' else dateRangeField">
+            <mat-form-field appearance="outline" color="accent" class="search-field">
+              <mat-icon matPrefix>alt_route</mat-icon>
+              <mat-label>{{ label }}</mat-label>
+              <input matInput [(ngModel)]="searchValue" />
+            </mat-form-field>
+          </ng-container>
+        </ng-template>
 
-      &nbsp;
-      <button mat-flat-button color="accent" (click)="getRoutes()">
-        <span>{{ 'search' | translate }} </span>
-        <mat-spinner *ngIf="showSpinnerforSearch" diameter="20"></mat-spinner>
-      </button>
+        <ng-template #dateRangeField>
+          <mat-form-field appearance="outline" color="accent" class="search-field">
+            <mat-icon matPrefix>date_range</mat-icon>
+            <mat-label>{{ label }}</mat-label>
+            <mat-date-range-input [rangePicker]="picker">
+              <input matStartDate [(ngModel)]="startDate" placeholder="Start date">
+              <input matEndDate [(ngModel)]="endDate" placeholder="End date">
+            </mat-date-range-input>
+            <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+            <mat-date-range-picker #picker></mat-date-range-picker>
+          </mat-form-field>
+        </ng-template>
 
-      &nbsp;
+        <button mat-flat-button class="search-btn" (click)="getRoutes()">
+          <mat-icon>search</mat-icon>
+          <span>Search</span>
+        </button>
 
-      <button  mat-flat-button color="accent" (click)="openAddRouteDialog()" *ngIf="canAdd">
-        <span>{{ 'addRoute' | translate }}</span>
-        <mat-spinner *ngIf="showSpinnerforSearch" diameter="20"></mat-spinner>
-      </button>
+        <button mat-flat-button class="btn-add" (click)="openAddRouteDialog()" *ngIf="canAdd">
+          <mat-icon>add</mat-icon>
+          <span>Add</span>
+        </button>
+      </div>
     </mat-card-content>
   </mat-card>
 
-
-  &nbsp;
   <mat-card>
     <mat-card-content>
       <mat-progress-bar [style.visibility]="isLoading ? 'visible' : 'hidden'" mode="indeterminate" color="accent"></mat-progress-bar>
@@ -137,7 +141,7 @@
         <!--Created Date-->
         <ng-container matColumnDef="CreatedDate">
           <th mat-header-cell *matHeaderCellDef>{{ 'createdDate' | translate }}</th>
-          <td mat-cell *matCellDef="let element"> {{element.createdDate | date:'MMM-dd-yyyy HH:mm:ss'}} </td>
+          <td mat-cell *matCellDef="let element"> {{element.createdDate | date:'MM/dd/yyyy hh:mm a'}} </td>
         </ng-container>
 
         <!--Edit-->

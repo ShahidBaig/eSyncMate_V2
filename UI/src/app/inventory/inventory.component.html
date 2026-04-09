@@ -2,18 +2,26 @@
 <h2 class="page-title"><mat-icon>inventory_2</mat-icon><span class="title-text">{{ 'nav.inventory' | translate }}</span></h2>
 <div class="mat-table-container">
 
-  <mat-card>
+  <mat-card class="search-card">
     <mat-card-content>
-      <form [formGroup]="InventoryForm" class="search-form">
+      <div class="search-header">
+        <div class="search-header-left">
+          <mat-icon class="search-header-icon">filter_list</mat-icon>
+          <span class="search-header-title">Search & Filter</span>
+        </div>
+      </div>
+      <form [formGroup]="InventoryForm">
         <div class="search-row">
-          <mat-form-field appearance="fill" color="accent" class="search-field">
+          <mat-form-field appearance="outline" class="search-field">
+            <mat-icon matPrefix>badge</mat-icon>
             <mat-label>{{ 'itemID' | translate }}</mat-label>
             <input matInput formControlName="itemID">
           </mat-form-field>
 
-          <mat-form-field appearance="fill" color="accent" class="search-field">
+          <mat-form-field appearance="outline" class="search-field">
+            <mat-icon matPrefix>people</mat-icon>
             <mat-label>{{ 'erpCustomerID' | translate }}</mat-label>
-            <mat-select formControlName="customerID" (openedChange)="onCustomerSelectOpened($event)">
+            <mat-select formControlName="customerID" (selectionChange)="onCustomerChanged()" (openedChange)="onCustomerSelectOpened($event)">
               <div class="select-search-container">
                 <input matInput
                        class="select-search-input"
@@ -30,7 +38,8 @@
             </mat-select>
           </mat-form-field>
 
-          <mat-form-field appearance="fill" color="accent" class="search-field route-type-field">
+          <mat-form-field appearance="outline" class="search-field route-type-field">
+            <mat-icon matPrefix>alt_route</mat-icon>
             <mat-label>{{ 'routeType' | translate }}</mat-label>
             <mat-select formControlName="routeType" (openedChange)="onRouteTypeSelectOpened($event)">
               <div class="select-search-container">
@@ -49,23 +58,24 @@
             </mat-select>
           </mat-form-field>
 
-          <mat-form-field color="accent" class="search-field">
+          <mat-form-field appearance="outline" class="search-field">
+            <mat-icon matPrefix>date_range</mat-icon>
             <mat-label>{{ 'start_Date' | translate }}</mat-label>
             <input formControlName="startDate" matInput [matDatepicker]="startDate">
-            <mat-hint>MM/DD/YYYY</mat-hint>
-            <mat-datepicker-toggle matIconSuffix [for]="startDate"></mat-datepicker-toggle>
+            <mat-datepicker-toggle matSuffix [for]="startDate"></mat-datepicker-toggle>
             <mat-datepicker #startDate></mat-datepicker>
           </mat-form-field>
 
-          <mat-form-field color="accent" class="search-field">
+          <mat-form-field appearance="outline" class="search-field">
+            <mat-icon matPrefix>date_range</mat-icon>
             <mat-label>{{ 'finish_Date' | translate }}</mat-label>
             <input formControlName="finishDate" matInput [matDatepicker]="finishDate">
-            <mat-hint>MM/DD/YYYY</mat-hint>
-            <mat-datepicker-toggle matIconSuffix [for]="finishDate"></mat-datepicker-toggle>
+            <mat-datepicker-toggle matSuffix [for]="finishDate"></mat-datepicker-toggle>
             <mat-datepicker #finishDate></mat-datepicker>
           </mat-form-field>
 
-          <mat-form-field appearance="fill" color="accent" class="search-field">
+          <mat-form-field appearance="outline" class="search-field">
+            <mat-icon matPrefix>flag</mat-icon>
             <mat-label>{{ 'status' | translate }}</mat-label>
             <mat-select formControlName="status">
               <mat-option *ngFor="let status of statusOptions" [value]="status">
@@ -74,25 +84,23 @@
             </mat-select>
           </mat-form-field>
 
-          <button mat-flat-button color="accent" (click)="getInventory()" class="search-btn">
-            <span *ngIf="!showSpinnerforSearch">{{ 'searchInventory' | translate }}</span>
-            <mat-spinner *ngIf="showSpinnerforSearch" diameter="20"></mat-spinner>
+          <button mat-flat-button class="search-btn" (click)="getInventory(true)">
+            <mat-icon>search</mat-icon>
+            <span>Search</span>
           </button>
         </div>
       </form>
     </mat-card-content>
   </mat-card>
 
-
-  &nbsp;
   <mat-card>
     <mat-card-content>
       <mat-progress-bar [style.visibility]="isLoading ? 'visible' : 'hidden'" mode="indeterminate" color="accent"></mat-progress-bar>
       <table mat-table [dataSource]="inventoryToDisplay">
 
-        <ng-container matColumnDef="ItemCount">
-          <th mat-header-cell *matHeaderCellDef>{{ 'itemCount' | translate }}</th>
-          <td mat-cell *matCellDef="let element">{{ element.itemCount }}</td>
+        <ng-container matColumnDef="CustomerID">
+          <th mat-header-cell *matHeaderCellDef>{{ 'customerID' | translate }}</th>
+          <td mat-cell *matCellDef="let element">{{ element.customerID }}</td>
         </ng-container>
 
         <ng-container matColumnDef="Status">
@@ -104,17 +112,12 @@
 
         <ng-container matColumnDef="StartDate">
           <th mat-header-cell *matHeaderCellDef>{{ 'start_Date' | translate }}</th>
-          <td mat-cell *matCellDef="let element">{{ element.startDate | date:'MMM-dd-yyyy HH:mm:ss' }}</td>
+          <td mat-cell *matCellDef="let element">{{ element.startDate | date:'MM/dd/yyyy hh:mm a' }}</td>
         </ng-container>
 
         <ng-container matColumnDef="FinishDate">
           <th mat-header-cell *matHeaderCellDef>{{ 'finish_Date' | translate }}</th>
-          <td mat-cell *matCellDef="let element">{{ element.finishDate | date:'MMM-dd-yyyy HH:mm:ss' }}</td>
-        </ng-container>
-
-        <ng-container matColumnDef="PageCount">
-          <th mat-header-cell *matHeaderCellDef>{{ 'pageCount' | translate }}</th>
-          <td mat-cell *matCellDef="let element">{{ element.pageCount }}</td>
+          <td mat-cell *matCellDef="let element">{{ element.finishDate | date:'MM/dd/yyyy hh:mm a' }}</td>
         </ng-container>
 
         <ng-container matColumnDef="Type">
@@ -124,16 +127,10 @@
           </td>
         </ng-container>
 
-        <ng-container matColumnDef="CustomerID">
-          <th mat-header-cell *matHeaderCellDef>{{ 'customerID' | translate }}</th>
-          <td mat-cell *matCellDef="let element">{{ element.customerID }}</td>
-        </ng-container>
-
-        <!--GetInventoryFiles-->
         <ng-container matColumnDef="File">
-          <th mat-header-cell *matHeaderCellDef></th>
+          <th mat-header-cell *matHeaderCellDef>{{ 'actions' | translate }}</th>
           <td mat-cell *matCellDef="let element">
-            <button mat-icon-button aria-label="normal button" color="accent" matTooltip="Get Batch Wise Inventory" matTooltipPosition="above"
+            <button mat-icon-button aria-label="normal button" color="accent" matTooltip="Show Inventory" matTooltipPosition="above"
                     (click)="getBatchiWiseInventory(element)">
               <mat-icon>read_more</mat-icon>
             </button>

@@ -67,11 +67,6 @@
               <button mat-flat-button class="search-btn" (click)="getCustomerProductCatalog(true)">
                 <mat-icon>search</mat-icon> Search
               </button>
-              <button mat-flat-button class="btn-discrepancies" [disabled]="!erpCustomerID"
-                      matTooltip="Download data discrepancies"
-                      (click)="priceDescripencies(erpCustomerID)">
-                <mat-icon>download</mat-icon> Discrepancies
-              </button>
             </div>
           </div>
         </div>
@@ -142,6 +137,11 @@
                       matTooltip="Download sample file"
                       (click)="downloadSampleFile()">
                 <mat-icon>file_download</mat-icon> Sample
+              </button>
+              <button mat-flat-button class="btn-discrepancies" [disabled]="!actionsErpCustomerID"
+                      matTooltip="Download data discrepancies"
+                      (click)="priceDescripencies(actionsErpCustomerID)">
+                <mat-icon>download</mat-icon> Discrepancies
               </button>
             </div>
           </div>

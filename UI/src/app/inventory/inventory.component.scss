@@ -150,7 +150,7 @@ table {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  align-items: flex-start;
+  align-items: center;
 }
 
 .search-field {
@@ -168,8 +168,9 @@ table {
 
 /* Route Type dropdown wider */
 .route-type-field {
-  min-width: 300px;
-  flex: 2;
+  min-width: 320px !important;
+  max-width: none !important;
+  flex: 3;
 }
 
 .search-btn {
