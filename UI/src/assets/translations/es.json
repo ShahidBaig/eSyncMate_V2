@@ -275,7 +275,7 @@
     "sipmentFromNdc": "Envío desde NDC",
     "salesInvoiceNdc": "Factura de Ventas NDC",
     "purchaseOrdersTracking": "Seguimiento de Órdenes",
-    "alertConfiguration": "Configuración de alerta",
+    "alertConfiguration": "Alertas",
     "flows": "Flujos"
   },
   "module": {

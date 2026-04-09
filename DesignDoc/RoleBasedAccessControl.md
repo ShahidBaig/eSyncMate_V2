@@ -160,7 +160,7 @@ All tables use manual ID generation via the ORM's `GetMax()` method. This is the
 |-------|-----------|--------|---------|
 | `edi/dashboard` | Dashboard | Dashboard | ESYNCMATE,REPAINTSTUDIOS |
 | `edi/all-orders` | Orders | Orders | ESYNCMATE,REPAINTSTUDIOS |
-| `edi/customers` | Customers | Orders / Carrier Load | ESYNCMATE,REPAINTSTUDIOS / GECKOTECH |
+| `edi/customers` | Customers | Setup | ESYNCMATE,REPAINTSTUDIOS / GECKOTECH |
 | `edi/purchaseOrder` | Purchase Orders | Purchases | SURGIMAC |
 | `edi/carrier` | Carrier Load Tender | Carrier Load Management | GECKOTECH |
 | `edi/ediFileCounter` | EDI File Counter | Carrier Load Management | GECKOTECH |
@@ -181,7 +181,7 @@ All tables use manual ID generation via the ORM's `GetMax()` method. This is the
 | `edi/routeExceptions` | Exceptions | Logs | Shared |
 | `edi/users` | User Management | Admin | Shared |
 | `edi/roles` | Role Management | Admin | Shared |
-| `edi/alertConfiguration` | Alert Configuration | Setup | Shared |
+| `edi/alertConfiguration` | Alerts | Setup | Shared |
 
 ---
 

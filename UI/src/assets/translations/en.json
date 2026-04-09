@@ -285,7 +285,7 @@
     "sipmentFromNdc": "Shipment From NDC",
     "salesInvoiceNdc": "Sales Invoice NDC",
     "purchaseOrdersTracking": "Purchase Orders Tracking",
-    "alertConfiguration": "Alert Configuration",
+    "alertConfiguration": "Alerts",
     "flows": "Flows"
   },
   "module": {
