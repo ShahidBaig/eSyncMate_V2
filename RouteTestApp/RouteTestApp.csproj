@@ -17,7 +17,9 @@
 
   <ItemGroup>
     <ProjectReference Include="..\eSyncMate.DB\eSyncMate.DB.csproj" />
-    <ProjectReference Include="..\eSyncMate.Processor\eSyncMate.Processor.csproj" />
+    <ProjectReference Include="..\eSyncMate.Processor\eSyncMate.Processor.csproj">
+      <ExcludeAssets>contentFiles</ExcludeAssets>
+    </ProjectReference>
   </ItemGroup>
 
   <ItemGroup>
@@ -25,6 +27,11 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
+
+  <!-- Fix duplicate appsettings.json on publish -->
+  <PropertyGroup>
+    <ErrorOnDuplicatePublishOutputFiles>false</ErrorOnDuplicatePublishOutputFiles>
+  </PropertyGroup>
 
   <!-- Define RouteWorker project path relative to this project -->
   <PropertyGroup>

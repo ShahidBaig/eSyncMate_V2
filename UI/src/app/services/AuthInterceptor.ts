@@ -8,7 +8,12 @@ export class AuthInterceptor implements HttpInterceptor {
   constructor(private router: Router){}
 
   intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
-    const token = String(localStorage.getItem('access_token'));
+    // Skip auth for login and MFA endpoints (user has no JWT yet)
+    if (req.url.includes('Login') || req.url.includes('VerifyMFA')) {
+      return next.handle(req);
+    }
+
+    const token = localStorage.getItem('access_token');
 
     if (!token) {
       return next.handle(req);

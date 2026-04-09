@@ -15,6 +15,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatIconModule } from '@angular/material/icon';
 import { PopupComponent } from '../popup/popup.component';
 import { MatDialog } from '@angular/material/dialog';
+import { AlertConfigHelpDialogComponent } from './alert-config-help-dialog/alert-config-help-dialog.component';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { CommonModule } from '@angular/common';
@@ -124,6 +125,10 @@ export class AlertConfigurationComponent implements OnInit {
         this.customersOptions = res.customers;
       },
     });
+  }
+
+  openHelp(): void {
+    this.dialog.open(AlertConfigHelpDialogComponent, { width: '90%', maxWidth: '1200px', maxHeight: '90vh' });
   }
 
   openAddCustomerDialog(): void {

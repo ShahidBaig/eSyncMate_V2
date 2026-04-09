@@ -15,6 +15,7 @@ import { NgToastService } from 'ng-angular-popup';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialog } from '@angular/material/dialog';
+import { RoutesHelpDialogComponent } from './routes-help-dialog/routes-help-dialog.component';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { CommonModule } from '@angular/common';
@@ -136,6 +137,10 @@ export class RoutesComponent {
     this.pageNumber = event.pageIndex + 1;
     this.pageSize = event.pageSize;
     this.getRoutes();
+  }
+
+  openHelp(): void {
+    this.dialog.open(RoutesHelpDialogComponent, { width: '90%', maxWidth: '1200px', maxHeight: '90vh' });
   }
 
   openAddRouteDialog(): void {

@@ -26,6 +26,7 @@ import { AddFlowDialogComponent } from './add-flow-dialog/add-flow-dialog.compon
 import { EditFlowDialogComponent } from './edit-flow-dialog/edit-flow-dialog.component';
 import { ViewFlowDialogComponent } from './view-flow-dialog/view-flow-dialog.component';
 import { ConfirmDeleteDialogComponent } from './confirm-delete-dialog/confirm-delete-dialog.component';
+import { FlowsHelpDialogComponent } from './flows-help-dialog/flows-help-dialog.component';
 
 export interface Flows {
   id: number;
@@ -170,6 +171,14 @@ export class FlowsComponent implements OnInit {
       disableClose: true,
       data: flowData,
       panelClass: 'view-flow-dialog-panel'
+    });
+  }
+
+  openHelp(): void {
+    this.dialog.open(FlowsHelpDialogComponent, {
+      width: '90%',
+      maxWidth: '1200px',
+      maxHeight: '90vh'
     });
   }
 

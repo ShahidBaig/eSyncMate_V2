@@ -15,6 +15,8 @@ namespace eSyncMate.Processor.Models
         public string Company { get; set; } = string.Empty;
         public string CustomerName { get; set; } = string.Empty;
         public bool IsSetupAllowed { get; set; }
+        public bool MFAEnabled { get; set; }
+        public string MFASecret { get; set; } = string.Empty;
         public string UserID { get; set; }
         public DateTime CreatedDate { get; set; }
         public int CreatedBy { get; set; }

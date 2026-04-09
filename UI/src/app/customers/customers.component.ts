@@ -14,6 +14,7 @@ import { NgToastService } from 'ng-angular-popup';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialog } from '@angular/material/dialog';
+import { CustomersHelpDialogComponent } from './customers-help-dialog/customers-help-dialog.component';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { CommonModule } from '@angular/common';
@@ -24,6 +25,7 @@ import { EditCustomerPopupComponent } from './edit-customer-popup/edit-customer-
 import { MatPaginatorModule } from '@angular/material/paginator';
 import { PageEvent } from '@angular/material/paginator';
 import { ApiService } from '../services/api.service';
+import { CustomerProductCatalogService } from '../services/customerProductCatalogDialog.service';
 import { LanguageService } from '../services/language.service';
 import { TranslateModule } from '@ngx-translate/core';
 import { CustomerAlertsDialogComponent } from './customer-alerts-dialog/customer-alerts-dialog.component';
@@ -70,6 +72,9 @@ export class CustomersComponent implements OnInit {
   searchValue: string = '';
   startDate: string = '';
   endDate: string = '';
+  customerSearchText: string = '';
+  filteredCustomerOptions: any[] = [];
+  allCustomersList: any[] = [];
   isAdminUser: boolean = false;
   canAdd = false;
   canEdit = false;
@@ -79,7 +84,6 @@ export class CustomersComponent implements OnInit {
   pageSize: number = 10;
 
   columns: string[] = [
-    'id',
     'Name',
     'ERPCustomerID',
     'Marketplace',
@@ -87,7 +91,7 @@ export class CustomersComponent implements OnInit {
     'Edit',
   ];
 
-  constructor(private customersApi: CustomersService, private fb: FormBuilder, private toast: NgToastService, private dialog: MatDialog, private Userapi: ApiService, public languageService: LanguageService) {
+  constructor(private customersApi: CustomersService, private fb: FormBuilder, private toast: NgToastService, private dialog: MatDialog, private Userapi: ApiService, public languageService: LanguageService, private erpApi: CustomerProductCatalogService) {
     const permissions = this.Userapi.getMenuPermissions('edi/customers');
     if (permissions) {
       this.canAdd = permissions.canAdd;
@@ -113,14 +117,41 @@ export class CustomersComponent implements OnInit {
 
     if (this.selectedOption === 'Select Customer') {
       this.getCustomers(true);
-
     }
+
+    this.erpApi.getERPCustomers().subscribe({
+      next: (res: any) => {
+        this.allCustomersList = res.customers ?? [];
+        this.filteredCustomerOptions = this.allCustomersList;
+      },
+      error: (err: any) => {
+        console.error('Failed to load ERP customers:', err);
+      }
+    });
   }
 
   onPageChange(event: PageEvent) {
     this.pageNumber = event.pageIndex + 1;
     this.pageSize = event.pageSize;
     this.getCustomers();
+  }
+
+  openHelp(): void {
+    this.dialog.open(CustomersHelpDialogComponent, { width: '90%', maxWidth: '1200px', maxHeight: '90vh' });
+  }
+
+  onCustomerSelectOpened(opened: boolean): void {
+    if (opened) {
+      this.customerSearchText = '';
+      this.filteredCustomerOptions = this.allCustomersList || [];
+    }
+  }
+
+  filterCustomerOptions(): void {
+    const search = (this.customerSearchText || '').toLowerCase();
+    this.filteredCustomerOptions = (this.allCustomersList || []).filter((c: any) =>
+      (c.erpCustomerID || '').toLowerCase().includes(search) || (c.name || '').toLowerCase().includes(search)
+    );
   }
 
   openAddCustomerDialog(): void {

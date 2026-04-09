@@ -96,6 +96,10 @@ export class ChangePasswordComponent implements OnInit {
 
   ngOnInit(): void {}
 
+  onClose(): void {
+    this.router.navigate(['/dashboard']);
+  }
+
   onSubmit(): void {
     if (this.changePasswordForm.valid) {
       const oldPassword = this.changePasswordForm.get('oldPassword')?.value;
@@ -111,7 +115,7 @@ export class ChangePasswordComponent implements OnInit {
           next: (res: any) => {
             if (res.code === 100) {
               this.toast.success({ detail: "SUCCESS", summary: res.message, duration: 5000, position: 'topRight' });
-              this.router.navigateByUrl('/edi/all-orders');
+              this.router.navigate(['/dashboard']);
             } else if (res.code === 400) {
               this.toast.error({ detail: "ERROR", summary: res.message, duration: 5000, /*sticky: true,*/ position: 'topRight' });
             } else if (res.code === 401) {

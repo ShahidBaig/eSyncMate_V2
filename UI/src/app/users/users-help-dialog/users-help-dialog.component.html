@@ -1,0 +1,242 @@
+<div class="help-container">
+  <!-- Header -->
+  <div class="help-header">
+    <div class="header-left">
+      <mat-icon class="header-icon">manage_accounts</mat-icon>
+      <div>
+        <h2 class="header-title">Users — Help Guide</h2>
+        <span class="header-subtitle">Everything you need to know about managing user accounts</span>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button mat-icon-button class="download-btn" matTooltip="Download Help Guide" (click)="downloadHelp()"><mat-icon>download</mat-icon></button>
+      <button mat-icon-button class="close-btn" (click)="close()">
+      <mat-icon>close</mat-icon>
+        </button>
+    </div>
+  </div>
+
+  <mat-dialog-content #helpContent class="help-content">
+
+    <!-- How User Management Works — Visual Flow Diagram -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>route</mat-icon> How User Management Works</h3>
+      <p class="help-text">Every user follows this journey from account creation to system access:</p>
+      <div class="flow-diagram">
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#2563eb;"><mat-icon>person_add</mat-icon></div>
+          <span class="flow-label">Admin Creates User</span>
+          <span class="flow-desc">New account setup</span>
+        </div>
+        <div class="flow-arrow"><mat-icon>arrow_forward</mat-icon></div>
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#7c3aed;"><mat-icon>badge</mat-icon></div>
+          <span class="flow-label">Assign Role</span>
+          <span class="flow-desc">Set permissions</span>
+        </div>
+        <div class="flow-arrow"><mat-icon>arrow_forward</mat-icon></div>
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#E8834A;"><mat-icon>group_work</mat-icon></div>
+          <span class="flow-label">Assign Customers</span>
+          <span class="flow-desc">Link to partners</span>
+        </div>
+        <div class="flow-arrow"><mat-icon>arrow_forward</mat-icon></div>
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#059669;"><mat-icon>login</mat-icon></div>
+          <span class="flow-label">User Logs In</span>
+          <span class="flow-desc">Credentials verified</span>
+        </div>
+        <div class="flow-arrow"><mat-icon>arrow_forward</mat-icon></div>
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#0891b2;"><mat-icon>verified_user</mat-icon></div>
+          <span class="flow-label">Access Granted</span>
+          <span class="flow-desc">Role-based menus</span>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Finding Users -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>search</mat-icon> Finding Users</h3>
+      <p class="help-text">Use any of these filters to quickly find the user you are looking for:</p>
+      <div class="card-grid">
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#eff6ff;"><mat-icon style="color:#2563eb;">badge</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">User ID</span>
+            <span class="info-card-desc">Search by the unique login ID assigned to the user</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#fff7ed;"><mat-icon style="color:#E8834A;">person</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Name</span>
+            <span class="info-card-desc">Search by the user's first name</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#f5f3ff;"><mat-icon style="color:#7c3aed;">email</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Email</span>
+            <span class="info-card-desc">Search by the user's email address</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#ecfdf5;"><mat-icon style="color:#059669;">flag</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Status</span>
+            <span class="info-card-desc">Filter by account status (Active or Blocked)</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#f0fdfa;"><mat-icon style="color:#0891b2;">date_range</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Created Date</span>
+            <span class="info-card-desc">Filter users by when their account was created (From / To dates)</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Understanding User Statuses -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>label</mat-icon> Understanding User Statuses</h3>
+      <p class="help-text">Each user account has a status that controls their ability to access the system:</p>
+      <div class="status-card-grid">
+        <div class="status-card status-card-green">
+          <div class="sc-header"><mat-icon>check_circle</mat-icon><span>ACTIVE</span></div>
+          <p>User can log in and access the system. They will see menus and data based on their assigned role and customers.</p>
+        </div>
+        <div class="status-card status-card-red">
+          <div class="sc-header"><mat-icon>block</mat-icon><span>BLOCKED</span></div>
+          <p>User cannot log in until an admin reactivates their account. Use this to temporarily suspend access without deleting the user.</p>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- What You Can Do -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>touch_app</mat-icon> What You Can Do</h3>
+      <p class="help-text">These are the actions available for managing user accounts:</p>
+      <div class="action-card-grid">
+        <div class="action-card">
+          <div class="ac-icon" style="background:#eff6ff;"><mat-icon style="color:#2563eb;">person_add</mat-icon></div>
+          <div class="ac-body">
+            <span class="ac-title">Add User</span>
+            <p class="ac-desc">Creates a new user account. You will set their login ID, name, email, password, role, and assign them to one or more customers.</p>
+          </div>
+        </div>
+        <div class="action-card">
+          <div class="ac-icon" style="background:#ecfdf5;"><mat-icon style="color:#059669;">edit</mat-icon></div>
+          <div class="ac-body">
+            <span class="ac-title">Edit User</span>
+            <p class="ac-desc">Modify an existing user's details, change their role, update their password, or reassign the customers they can access.</p>
+          </div>
+        </div>
+        <div class="action-card">
+          <div class="ac-icon" style="background:#fef2f2;"><mat-icon style="color:#dc2626;">delete</mat-icon></div>
+          <div class="ac-body">
+            <span class="ac-title">Delete User</span>
+            <p class="ac-desc">Permanently removes the user account from the system. This action cannot be undone, so use it carefully.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Creating a New User -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>playlist_add_check</mat-icon> Creating a New User</h3>
+      <p class="help-text">Follow these steps when adding a new user to the system:</p>
+      <div class="log-timeline">
+        <div class="log-step">
+          <div class="log-num">1</div>
+          <div class="log-body">
+            <span class="log-title">Enter User ID</span>
+            <span class="log-desc">Choose a unique login ID for the user. This is what they will use to sign in.</span>
+          </div>
+        </div>
+        <div class="log-step">
+          <div class="log-num">2</div>
+          <div class="log-body">
+            <span class="log-title">Enter First and Last Name</span>
+            <span class="log-desc">Provide the user's full name so they can be easily identified in the system.</span>
+          </div>
+        </div>
+        <div class="log-step">
+          <div class="log-num">3</div>
+          <div class="log-body">
+            <span class="log-title">Enter Email and Phone</span>
+            <span class="log-desc">Add contact information. The email is used for notifications and password recovery.</span>
+          </div>
+        </div>
+        <div class="log-step">
+          <div class="log-num">4</div>
+          <div class="log-body">
+            <span class="log-title">Set Password</span>
+            <span class="log-desc">Create a secure password between 8 and 15 characters long.</span>
+          </div>
+        </div>
+        <div class="log-step">
+          <div class="log-num">5</div>
+          <div class="log-body">
+            <span class="log-title">Select Role</span>
+            <span class="log-desc">Choose a role that determines what menus and actions the user can access.</span>
+          </div>
+        </div>
+        <div class="log-step">
+          <div class="log-num">6</div>
+          <div class="log-body">
+            <span class="log-title">Set Status</span>
+            <span class="log-desc">Set the account to Active so the user can log in right away, or Blocked to keep the account on hold.</span>
+          </div>
+        </div>
+        <div class="log-step">
+          <div class="log-num">7</div>
+          <div class="log-body">
+            <span class="log-title">Assign Customers</span>
+            <span class="log-desc">Select one or more customers (retail partners) the user should have access to.</span>
+          </div>
+        </div>
+      </div>
+      <div class="tip-box" style="margin-top: 12px;">
+        <mat-icon>lightbulb</mat-icon>
+        <span>The <strong>User ID</strong> must be unique across the system. <strong>Passwords</strong> must be between 8 and 15 characters long.</span>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- User Roles -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>admin_panel_settings</mat-icon> User Roles</h3>
+      <p class="help-text">Each user is assigned a role that controls what they can see and do in the system:</p>
+      <div class="status-card-grid">
+        <div class="status-card status-card-purple">
+          <div class="sc-header"><mat-icon>security</mat-icon><span>SuperAdmin</span></div>
+          <p>Full access to every feature in the system, including role management, system settings, and all customer data.</p>
+        </div>
+        <div class="status-card status-card-blue">
+          <div class="sc-header"><mat-icon>admin_panel_settings</mat-icon><span>Admin</span></div>
+          <p>Access to all menus and features except role management. Can manage users, customers, orders, and products.</p>
+        </div>
+        <div class="status-card status-card-amber">
+          <div class="sc-header"><mat-icon>engineering</mat-icon><span>Operator</span></div>
+          <p>Can view and work with orders and products. Limited to add and edit actions only — no delete permissions.</p>
+        </div>
+        <div class="status-card status-card-gray">
+          <div class="sc-header"><mat-icon>visibility</mat-icon><span>Viewer</span></div>
+          <p>Read-only access to the system. Can view orders, products, and reports but cannot make any changes.</p>
+        </div>
+      </div>
+    </section>
+
+  </mat-dialog-content>
+</div>

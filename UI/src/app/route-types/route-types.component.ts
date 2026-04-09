@@ -13,6 +13,7 @@ import { NgToastService } from 'ng-angular-popup';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialog } from '@angular/material/dialog';
+import { RouteTypesHelpDialogComponent } from './route-types-help-dialog/route-types-help-dialog.component';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { CommonModule } from '@angular/common';
@@ -115,6 +116,10 @@ export class RouteTypesComponent {
     if (this.selectedOption === 'Select Route Types') {
       this.getRouteTypes();
     }
+  }
+
+  openHelp(): void {
+    this.dialog.open(RouteTypesHelpDialogComponent, { width: '90%', maxWidth: '1200px', maxHeight: '90vh' });
   }
 
   openAddRouteTypeDialog(): void {

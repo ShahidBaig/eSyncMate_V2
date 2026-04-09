@@ -103,6 +103,10 @@ export class RegisterComponent {
       },
     });
   }
+  onCancel(): void {
+    this.route.navigate(['/dashboard']);
+  }
+
   register() {
     const user: any = {
       id: 0,

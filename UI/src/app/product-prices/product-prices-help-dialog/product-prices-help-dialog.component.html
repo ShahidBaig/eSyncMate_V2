@@ -1,0 +1,357 @@
+<div class="help-container">
+  <div class="help-header">
+    <div class="header-left">
+      <mat-icon class="header-icon">sell</mat-icon>
+      <div>
+        <h2 class="header-title">Product Prices — Help Guide</h2>
+        <span class="header-subtitle">Manage and sync product pricing for your marketplace partners in eSyncMate</span>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button mat-icon-button class="download-btn" matTooltip="Download Help Guide" (click)="downloadHelp()"><mat-icon>download</mat-icon></button>
+      <button mat-icon-button class="close-btn" (click)="close()"><mat-icon>close</mat-icon></button>
+    </div>
+  </div>
+
+  <mat-dialog-content #helpContent class="help-content">
+
+    <!-- How It Works -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>route</mat-icon> How Product Pricing Works in eSyncMate</h3>
+      <p class="help-text">eSyncMate manages your product prices from upload to marketplace sync:</p>
+      <div class="flow-diagram">
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#2563eb;"><mat-icon>cloud_upload</mat-icon></div>
+          <span class="flow-label">Upload Prices</span>
+          <span class="flow-desc">CSV file to eSyncMate</span>
+        </div>
+        <div class="flow-arrow"><mat-icon>arrow_forward</mat-icon></div>
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#E8834A;"><mat-icon>fact_check</mat-icon></div>
+          <span class="flow-label">Validated</span>
+          <span class="flow-desc">eSyncMate checks data</span>
+        </div>
+        <div class="flow-arrow"><mat-icon>arrow_forward</mat-icon></div>
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#059669;"><mat-icon>check_circle</mat-icon></div>
+          <span class="flow-label">Approved</span>
+          <span class="flow-desc">Product data published</span>
+        </div>
+        <div class="flow-arrow"><mat-icon>arrow_forward</mat-icon></div>
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#7c3aed;"><mat-icon>play_circle</mat-icon></div>
+          <span class="flow-label">Process Prices</span>
+          <span class="flow-desc">Pricing synced</span>
+        </div>
+        <div class="flow-arrow"><mat-icon>arrow_forward</mat-icon></div>
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#0891b2;"><mat-icon>storefront</mat-icon></div>
+          <span class="flow-label">Synced</span>
+          <span class="flow-desc">Live on marketplace</span>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Page Layout -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>dashboard</mat-icon> Page Layout</h3>
+      <p class="help-text">The Product Prices page has three sections side by side:</p>
+      <div class="tab-preview" style="grid-template-columns: 1fr 1fr 1fr;">
+        <div class="tab-card">
+          <div class="tab-card-header">
+            <mat-icon>filter_list</mat-icon>
+            <span>Search & Filter</span>
+          </div>
+          <div class="tab-card-body">
+            <p>Find existing price records in the data grid.</p>
+            <p>Choose a <strong>Search By</strong> option from the dropdown, enter your value, and click <strong>Search</strong>.</p>
+          </div>
+        </div>
+        <div class="tab-card">
+          <div class="tab-card-header">
+            <mat-icon>cloud_upload</mat-icon>
+            <span>Upload</span>
+          </div>
+          <div class="tab-card-body">
+            <p>Upload new pricing data:</p>
+            <p>1. Select <strong>ERP Customer ID</strong></p>
+            <p>2. Choose your <strong>CSV file</strong></p>
+            <p>3. Click <strong>Upload</strong></p>
+            <p>eSyncMate validates and imports the prices.</p>
+            <p><em>Only visible if you have Add permission.</em></p>
+          </div>
+        </div>
+        <div class="tab-card">
+          <div class="tab-card-header">
+            <mat-icon>build</mat-icon>
+            <span>Actions</span>
+          </div>
+          <div class="tab-card-body">
+            <p>Has its own <strong>independent</strong> Customer ID.</p>
+            <p><strong>Sample</strong> — Download CSV template.</p>
+            <p><strong>Process Prices</strong> — Send prices to marketplace.</p>
+          </div>
+        </div>
+      </div>
+      <div class="tip-box" style="margin-top:12px;">
+        <mat-icon>lightbulb</mat-icon>
+        <span>Upload and Actions have <strong>independent</strong> Customer ID selections. Selecting a customer in Upload does not affect Actions, and vice versa. Only <strong>CSV files</strong> are accepted for upload.</span>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Finding Prices -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>search</mat-icon> Finding Prices</h3>
+      <p class="help-text">Use the Search & Filter section to find pricing records. Choose a <strong>Search By</strong> option from the dropdown:</p>
+      <div class="card-grid">
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#eff6ff;"><mat-icon style="color:#2563eb;">badge</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">ERP Customer ID</span>
+            <span class="info-card-desc">Filter prices by marketplace partner (dropdown selection)</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#fff7ed;"><mat-icon style="color:#E8834A;">inventory_2</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Item ID</span>
+            <span class="info-card-desc">Search by ERP item number</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#f5f3ff;"><mat-icon style="color:#7c3aed;">tag</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Product ID</span>
+            <span class="info-card-desc">Search by product identifier</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#ecfdf5;"><mat-icon style="color:#059669;">qr_code</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">UPC</span>
+            <span class="info-card-desc">Search by Universal Product Code</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#fef9c3;"><mat-icon style="color:#ca8a04;">category</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Item Type Name</span>
+            <span class="info-card-desc">Search by product item type</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#fce7f3;"><mat-icon style="color:#db2777;">account_tree</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Parent ID</span>
+            <span class="info-card-desc">Search by parent product identifier</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#fef2f2;"><mat-icon style="color:#dc2626;">flag</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Status</span>
+            <span class="info-card-desc">Filter by pricing status (e.g., NEW, APPROVED, SYNCED)</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#eff6ff;"><mat-icon style="color:#2563eb;">date_range</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Created Date</span>
+            <span class="info-card-desc">Filter by date range when prices were uploaded</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- What You Can Do -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>touch_app</mat-icon> What You Can Do</h3>
+      <p class="help-text">These actions are available on the Product Prices page:</p>
+      <div class="action-card-grid">
+        <div class="action-card">
+          <div class="ac-icon" style="background:#ecfdf5;"><mat-icon style="color:#059669;">cloud_upload</mat-icon></div>
+          <div class="ac-body">
+            <span class="ac-title">Upload Prices</span>
+            <p class="ac-desc">In the <strong>Upload</strong> section, select a customer, choose your CSV file, and click Upload. eSyncMate validates each row and imports the pricing data. Only visible if you have Add permission.</p>
+          </div>
+        </div>
+        <div class="action-card">
+          <div class="ac-icon" style="background:#eff6ff;"><mat-icon style="color:#2563eb;">file_download</mat-icon></div>
+          <div class="ac-body">
+            <span class="ac-title">Download Sample Template</span>
+            <p class="ac-desc">In the <strong>Actions</strong> section, select a customer and click <strong>Sample</strong> to download a CSV template with the correct column headers for pricing data.</p>
+          </div>
+        </div>
+        <div class="action-card">
+          <div class="ac-icon" style="background:#f5f3ff;"><mat-icon style="color:#7c3aed;">sync</mat-icon></div>
+          <div class="ac-body">
+            <span class="ac-title">Process Prices</span>
+            <p class="ac-desc">In the <strong>Actions</strong> section, select a customer and click <strong>Process Prices</strong>. eSyncMate triggers the price sync to send the pricing data to the marketplace partner.</p>
+          </div>
+        </div>
+        <div class="action-card">
+          <div class="ac-icon" style="background:#f0fdfa;"><mat-icon style="color:#0d9488;">table_chart</mat-icon></div>
+          <div class="ac-body">
+            <span class="ac-title">Export Excel</span>
+            <p class="ac-desc">Click the <strong>Export Excel</strong> button above the data grid to download the current grid data as an Excel file for offline review or reporting.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Upload Steps -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>format_list_numbered</mat-icon> Step-by-Step Upload Process</h3>
+      <p class="help-text">Follow these steps to upload pricing data:</p>
+      <div class="log-timeline">
+        <div class="log-step">
+          <div class="log-num">1</div>
+          <div class="log-body">
+            <span class="log-title">Download Template</span>
+            <span class="log-desc">In the <strong>Actions</strong> section, select the customer and click <strong>Sample</strong> to download the CSV template with the correct column headers</span>
+          </div>
+        </div>
+        <div class="log-step">
+          <div class="log-num">2</div>
+          <div class="log-body">
+            <span class="log-title">Fill In Your Prices</span>
+            <span class="log-desc">Open the downloaded template in Excel, fill in the pricing data for your items, and save as CSV</span>
+          </div>
+        </div>
+        <div class="log-step">
+          <div class="log-num">3</div>
+          <div class="log-body">
+            <span class="log-title">Upload File</span>
+            <span class="log-desc">In the <strong>Upload</strong> section, select the same customer, choose your completed CSV file, and click <strong>Upload</strong></span>
+          </div>
+        </div>
+        <div class="log-step">
+          <div class="log-num">4</div>
+          <div class="log-body">
+            <span class="log-title">Verify Upload</span>
+            <span class="log-desc">After a successful upload, the grid refreshes automatically. Your uploaded prices will appear with status <strong>NEW</strong></span>
+          </div>
+        </div>
+        <div class="log-step">
+          <div class="log-num">5</div>
+          <div class="log-body">
+            <span class="log-title">Process & Sync</span>
+            <span class="log-desc">In the <strong>Actions</strong> section, select the customer and click <strong>Process Prices</strong> to send pricing to the marketplace</span>
+          </div>
+        </div>
+      </div>
+      <div class="tip-box" style="margin-top:14px;">
+        <mat-icon>lightbulb</mat-icon>
+        <span>Always download a <strong>fresh template</strong> before uploading to ensure you have the latest column format. Make sure Item IDs exist in your product catalog before uploading prices.</span>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Grid Columns -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>view_list</mat-icon> Grid Columns</h3>
+      <p class="help-text">The data grid shows these columns for each pricing record:</p>
+      <div class="card-grid">
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#eff6ff;"><mat-icon style="color:#2563eb;">badge</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">ERP Customer ID</span>
+            <span class="info-card-desc">The marketplace partner this pricing record belongs to</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#fff7ed;"><mat-icon style="color:#E8834A;">tag</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">ERP Item ID</span>
+            <span class="info-card-desc">The product item number for this pricing record</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#ecfdf5;"><mat-icon style="color:#059669;">flag</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Status</span>
+            <span class="info-card-desc">Color-coded status — hover over it to see a tooltip explaining what it means</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#f5f3ff;"><mat-icon style="color:#7c3aed;">attach_money</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">List Price</span>
+            <span class="info-card-desc">The standard retail price for the product</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#fef9c3;"><mat-icon style="color:#ca8a04;">attach_money</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">MAP Price</span>
+            <span class="info-card-desc">Minimum Advertised Price — the lowest price allowed for advertising</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#fce7f3;"><mat-icon style="color:#db2777;">attach_money</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Offer Price</span>
+            <span class="info-card-desc">The actual selling price offered to the marketplace</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#fef2f2;"><mat-icon style="color:#dc2626;">event</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Upload Date</span>
+            <span class="info-card-desc">When the price was uploaded to eSyncMate (MM/DD/YYYY format). Dates before 1900 are hidden</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Pricing Statuses -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>label</mat-icon> Pricing Statuses</h3>
+      <p class="help-text">Each pricing record has a color-coded status that tracks its progress through the pricing lifecycle. Hover over any status in the grid to see a tooltip with more details.</p>
+      <div class="status-card-grid">
+        <div class="status-card status-card-blue">
+          <div class="sc-header"><mat-icon>fiber_new</mat-icon><span>NEW</span></div>
+          <p><strong>When set:</strong> Immediately after a price is uploaded via CSV file.</p>
+          <p><strong>What it means:</strong> The product price has been uploaded and saved in eSyncMate, but has not yet been published or sent to the marketplace.</p>
+        </div>
+        <div class="status-card status-card-green">
+          <div class="sc-header"><mat-icon>check_circle</mat-icon><span>APPROVED</span></div>
+          <p><strong>When set:</strong> After the product data has been validated and published.</p>
+          <p><strong>What it means:</strong> The product data is published and the pricing is ready to be processed and sent to the marketplace.</p>
+        </div>
+        <div class="status-card status-card-purple">
+          <div class="sc-header"><mat-icon>price_check</mat-icon><span>APPROVED_PR</span></div>
+          <p><strong>When set:</strong> After the pricing information has been specifically processed and synced.</p>
+          <p><strong>What it means:</strong> The product pricing information has been synced. This is an intermediate step between APPROVED and SYNCED, confirming that pricing data was successfully transmitted.</p>
+        </div>
+        <div class="status-card status-card-teal">
+          <div class="sc-header"><mat-icon>cloud_done</mat-icon><span>SYNCED</span></div>
+          <p><strong>When set:</strong> After the complete product and pricing data has been successfully sent to the marketplace partner.</p>
+          <p><strong>What it means:</strong> The product is fully synced with the marketplace. The retailer now has the latest pricing. Hover the status to see which marketplace partner it was synced with.</p>
+        </div>
+        <div class="status-card status-card-amber">
+          <div class="sc-header"><mat-icon>update</mat-icon><span>UPDATED</span></div>
+          <p><strong>When set:</strong> When an existing price record is modified with new pricing values.</p>
+          <p><strong>What it means:</strong> The pricing has been changed since the last sync. The updated price will need to be processed again to push the changes to the marketplace.</p>
+        </div>
+        <div class="status-card status-card-gray">
+          <div class="sc-header"><mat-icon>delete_outline</mat-icon><span>DELETED</span></div>
+          <p><strong>When set:</strong> When a pricing record has been marked for removal.</p>
+          <p><strong>What it means:</strong> The pricing record is no longer active. It has been removed from the sync process and will not be sent to the marketplace.</p>
+        </div>
+      </div>
+    </section>
+
+  </mat-dialog-content>
+</div>

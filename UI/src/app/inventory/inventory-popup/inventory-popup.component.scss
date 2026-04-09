@@ -1,74 +1,128 @@
-.close-button {
-  position: absolute;
-  top: 0;
-  right: 0;
-}
-
 :host {
-  display: unset;
-  justify-content: center;
-  align-items: center;
+  display: flex;
+  flex-direction: column;
   height: 100%;
 }
 
-.button-container {
+.dialog-container {
+  font-family: 'Poppins', sans-serif;
   display: flex;
-  justify-content: space-between;
-  margin: 16px; /* Adds space around the container */
+  flex-direction: column;
+  height: 100%;
 }
 
-.header {
+/* ===== Header ===== */
+.dialog-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  background-color: #f0f0f0;
-  border-bottom: 1px solid #ccc;
-}
-
-.body {
-  padding: 20px;
-}
-
-.mat-table-container {
-  max-height: 450px;
-  overflow-y: auto;
-  cursor: pointer;
-  margin: 16px;
-}
-
-.mat-table-container::-webkit-scrollbar {
-  width: 8px;
-}
-
-.mat-table-container::-webkit-scrollbar-thumb {
-  background-color: #ccc;
-  border-radius: 4px;
-}
-
-.mat-table-container::-webkit-scrollbar-track {
-  background-color: #f0f0f0;
-}
-.dialog-actions {
-  display: flex;
   justify-content: space-between;
-  padding: 16px 24px 24px;
-  border-top: 1px solid #eee;
+  padding: 18px 24px;
+  background: #ffffff;
+  border-bottom: 2px solid #e2e8f0;
+  flex-shrink: 0;
 }
-mat-form-field {
+
+.header-left { display: flex; align-items: center; gap: 14px; }
+
+.header-icon-wrap {
+  width: 42px; height: 42px; border-radius: 12px; background: #eff6ff;
+  display: flex; align-items: center; justify-content: center;
+  mat-icon { font-size: 22px; width: 22px; height: 22px; color: #2563eb; }
+}
+
+.header-info { display: flex; flex-direction: column; gap: 1px; }
+.dialog-header-title { margin: 0; font-size: 18px; font-weight: 800; color: #1e293b; }
+.header-subtitle { font-size: 12px; font-weight: 500; color: #94a3b8; }
+.dialog-close-btn { color: #94a3b8; &:hover { color: #1e293b; background: #f1f5f9; border-radius: 50%; } }
+
+/* ===== Body ===== */
+.dialog-body {
+  padding: 16px 24px 24px !important;
+  flex: 1; overflow: hidden;
+  display: flex; flex-direction: column;
+}
+
+.table-scroll {
+  flex: 1; overflow: auto;
+  border: 1px solid #e2e8f0; border-radius: 10px;
+  &::-webkit-scrollbar { width: 6px; height: 6px; }
+  &::-webkit-scrollbar-track { background: #f1f5f9; }
+  &::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+}
+
+/* ===== Table ===== */
+.files-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+
+// Header
+::ng-deep .files-table th.mat-mdc-header-cell {
+  background: #e8eef6 !important;
+  font-weight: 600 !important;
+  font-size: 12px !important;
+  color: #334155 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 12px 20px !important;
+  border-bottom: 2px solid #c9d5e3 !important;
+  white-space: nowrap;
+  vertical-align: middle !important;
+}
+
+// Rows
+::ng-deep .files-table td.mat-mdc-cell {
+  font-size: 14px !important;
+  color: #1e293b !important;
+  padding: 14px 20px !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+  white-space: nowrap;
+  line-height: 1.5;
+  vertical-align: middle !important;
+}
+
+::ng-deep .files-table tr.mat-mdc-row { height: 56px !important; }
+::ng-deep .files-table tr.mat-mdc-row:nth-child(even) { background: #f8fafc; }
+::ng-deep .files-table tr.mat-mdc-row:hover { background: #eff6ff !important; }
+
+/* ===== Cell helpers ===== */
+::ng-deep .files-table .cell-bold { font-weight: 700 !important; color: #1a1a2e !important; }
+::ng-deep .files-table .cell-date { color: #475569 !important; font-variant-numeric: tabular-nums; }
+
+/* ===== Action column ===== */
+::ng-deep .files-table th.mat-mdc-header-cell.mat-column-DownloadFile,
+::ng-deep .files-table td.mat-mdc-cell.mat-column-DownloadFile {
+  width: 90px !important;
+  min-width: 90px !important;
+  max-width: 90px !important;
+  padding: 0 !important;
+  text-align: center !important;
+  vertical-align: middle !important;
+}
+
+.action-btns {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
   width: 100%;
 }
 
+.action-btn {
+  width: 30px !important;
+  height: 30px !important;
+  min-width: 30px !important;
+  padding: 0 !important;
+  line-height: 30px !important;
+  border-radius: 6px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
 
-.form-row {
-  display: flex;
-  gap: 20px;
-  flex-wrap: wrap; /* Allows fields to wrap on smaller screens */
+  mat-icon { font-size: 18px; width: 18px; height: 18px; }
 }
 
-.form-field {
-  flex: 1; /* Each field takes equal space */
-  max-width: 500px; /* Increase max-width as needed */
-}
-.cdk-column-CustomerId,.cdk-column-ItemId,.cdk-column-type,.cdk-column-createdDate{
- min-width: 150px !important
-}
+.action-download { color: #2563eb; &:hover { background: #eff6ff; } }
+.action-view { color: #059669; &:hover { background: #ecfdf5; } }
+
+/* ===== Data columns ===== */
+::ng-deep .files-table .mat-column-CustomerId { min-width: 160px; }
+::ng-deep .files-table .mat-column-ItemId { min-width: 160px; }
+::ng-deep .files-table .mat-column-createdDate { min-width: 140px; }

@@ -1,75 +1,92 @@
-<div class="login-container">
-  <div class="login-box">
-    <h1>{{ 'signUp' | translate }}</h1>
+<div class="register-container">
+  <div class="register-card">
+    <!-- Header -->
+    <div class="register-header">
+      <div class="header-left">
+        <div class="header-icon-wrap">
+          <mat-icon>person_add</mat-icon>
+        </div>
+        <div>
+          <h2 class="register-title">{{ 'signUp' | translate }}</h2>
+          <span class="register-subtitle">Create a new user account</span>
+        </div>
+      </div>
+      <button mat-icon-button class="header-close-btn" matTooltip="Cancel" (click)="onCancel()">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
 
-    <h2>{{responseMsg}}</h2>
+    <h2 class="response-msg" *ngIf="responseMsg">{{ responseMsg }}</h2>
 
-    <mat-grid-list cols="2" rowHeight="100px" gutterSize="10px" [formGroup]="registerForm">
-      <mat-grid-tile>
-        <mat-form-field appearance="fill" color="accent">
+    <!-- Form -->
+    <form [formGroup]="registerForm" class="register-form">
+
+      <!-- Row 1: User ID, First Name -->
+      <div class="form-row">
+        <mat-form-field appearance="outline">
           <mat-label>{{ 'userID' | translate }}</mat-label>
           <input matInput formControlName="userID">
-          <mat-error *ngIf="this.UserID.invalid">{{getUserIDErrors()}}</mat-error>
+          <mat-icon matPrefix>badge</mat-icon>
+          <mat-error *ngIf="this.UserID.invalid">{{ getUserIDErrors() }}</mat-error>
         </mat-form-field>
-      </mat-grid-tile>
 
-      <mat-grid-tile>
-        <mat-form-field appearance="fill" color="accent">
+        <mat-form-field appearance="outline">
           <mat-label>{{ 'firstName' | translate }}</mat-label>
           <input matInput formControlName="firstName">
-          <mat-error *ngIf="this.FirstName.invalid">{{getFirstNameErrors()}}</mat-error>
+          <mat-icon matPrefix>person</mat-icon>
+          <mat-error *ngIf="this.FirstName.invalid">{{ getFirstNameErrors() }}</mat-error>
         </mat-form-field>
-      </mat-grid-tile>
+      </div>
 
-      <mat-grid-tile>
-        <mat-form-field appearance="fill" color="accent">
+      <!-- Row 2: Last Name, Email -->
+      <div class="form-row">
+        <mat-form-field appearance="outline">
           <mat-label>{{ 'lastName' | translate }}</mat-label>
           <input matInput formControlName="lastName">
-          <mat-error *ngIf="this.LastName.invalid">{{getLastNameErrors()}}</mat-error>
+          <mat-icon matPrefix>person_outline</mat-icon>
+          <mat-error *ngIf="this.LastName.invalid">{{ getLastNameErrors() }}</mat-error>
         </mat-form-field>
-      </mat-grid-tile>
 
-      <mat-grid-tile>
-        <mat-form-field appearance="fill" color="accent">
+        <mat-form-field appearance="outline">
           <mat-label>{{ 'email' | translate }}</mat-label>
           <input matInput formControlName="email">
-          <mat-error *ngIf="this.Email.invalid">{{getEmailErrors()}}</mat-error>
+          <mat-icon matPrefix>email</mat-icon>
+          <mat-error *ngIf="this.Email.invalid">{{ getEmailErrors() }}</mat-error>
         </mat-form-field>
-      </mat-grid-tile>
+      </div>
 
-      <mat-grid-tile>
-        <mat-form-field appearance="fill" color="accent">
+      <!-- Row 3: Phone, Password -->
+      <div class="form-row">
+        <mat-form-field appearance="outline">
           <mat-label>{{ 'phoneNo' | translate }}</mat-label>
           <input matInput formControlName="mobile">
+          <mat-icon matPrefix>phone</mat-icon>
         </mat-form-field>
-      </mat-grid-tile>
 
-      <mat-grid-tile>
-        <mat-form-field appearance="fill" color="accent">
+        <mat-form-field appearance="outline">
           <mat-label>{{ 'password' | translate }}</mat-label>
           <input matInput [type]="hide ? 'password' : 'text'" formControlName="password">
+          <mat-icon matPrefix>lock</mat-icon>
           <button mat-icon-button matSuffix (click)="hide = !hide">
-            <mat-icon>{{hide ? 'visibility_off' : 'visibility'}}</mat-icon>
+            <mat-icon>{{ hide ? 'visibility_off' : 'visibility' }}</mat-icon>
           </button>
-          <mat-error *ngIf="this.Password.invalid">{{getPasswordErrors()}}</mat-error>
+          <mat-error *ngIf="this.Password.invalid">{{ getPasswordErrors() }}</mat-error>
         </mat-form-field>
-      </mat-grid-tile>
+      </div>
 
-      <mat-grid-tile>
-        <mat-form-field appearance="fill" color="accent">
+      <!-- Row 4: Confirm Password, Role -->
+      <div class="form-row">
+        <mat-form-field appearance="outline">
           <mat-label>{{ 'confirmPassword' | translate }}</mat-label>
           <input matInput [type]="hide ? 'password' : 'text'" formControlName="rpassword">
+          <mat-icon matPrefix>lock_outline</mat-icon>
           <button mat-icon-button matSuffix (click)="hide = !hide">
-            <mat-icon>{{hide ? 'visibility_off' : 'visibility'}}</mat-icon>
+            <mat-icon>{{ hide ? 'visibility_off' : 'visibility' }}</mat-icon>
           </button>
-          <mat-error *ngIf="this.RPassword.hasError('rpassword')">
-            {{ 'passwordMessage' | translate }}
-          </mat-error>
+          <mat-error *ngIf="this.RPassword.hasError('rpassword')">{{ 'passwordMessage' | translate }}</mat-error>
         </mat-form-field>
-      </mat-grid-tile>
 
-      <mat-grid-tile>
-        <mat-form-field class="form-field">
+        <mat-form-field appearance="outline">
           <mat-label>{{ 'role' | translate }}</mat-label>
           <mat-select [(ngModel)]="selectedRoleId" [ngModelOptions]="{standalone: true}" required>
             <mat-option [value]="0">-- {{ 'selectRole' | translate }} --</mat-option>
@@ -77,55 +94,55 @@
               {{ role.name }}
             </mat-option>
           </mat-select>
+          <mat-icon matPrefix>admin_panel_settings</mat-icon>
         </mat-form-field>
-      </mat-grid-tile>
+      </div>
 
-      <mat-grid-tile>
-        <mat-form-field class="form-field">
+      <!-- Row 5: Status, Customer -->
+      <div class="form-row">
+        <mat-form-field appearance="outline">
           <mat-label>{{ 'status' | translate }}</mat-label>
           <mat-select formControlName="status">
             <mat-option [value]="'ACTIVE'">ACTIVE</mat-option>
             <mat-option [value]="'BLOCKED'">BLOCKED</mat-option>
           </mat-select>
+          <mat-icon matPrefix>toggle_on</mat-icon>
         </mat-form-field>
-      </mat-grid-tile>
 
-      <mat-grid-tile>
-        <mat-form-field appearance="fill" color="accent">
+        <mat-form-field appearance="outline">
           <mat-label>{{ 'customer' | translate }}</mat-label>
           <mat-select formControlName="customerName" multiple>
             <mat-option *ngFor="let customer of customerOptions" [value]="customer.erpCustomerID">
               {{ customer.erpCustomerID }}
             </mat-option>
           </mat-select>
+          <mat-icon matPrefix>storefront</mat-icon>
           <mat-error *ngIf="this.CustomerName.invalid || (this.CustomerName.touched || this.CustomerName.untouched)">
             {{ getCustomerError() }}
           </mat-error>
         </mat-form-field>
-      </mat-grid-tile>
+      </div>
 
-      <mat-grid-tile colspan="2">
-        <button mat-flat-button color="accent" class="create-account-btn" (click)="register()"
-                [disabled]="registerForm.invalid || selectedRoleId === 0">
-                {{ 'createAccount' | translate }}
-        </button>
-      </mat-grid-tile>
-
-      <mat-grid-tile style="display: none">
-        <mat-form-field class="form-field">
-          <mat-label>{{ 'userType' | translate }}</mat-label>
-          <mat-select formControlName="userType">
-            <mat-option [value]="'ADMIN'">ADMIN</mat-option>
-            <mat-option [value]="'READER'">READER</mat-option>
-            <mat-option [value]="'WRITER'">WRITER</mat-option>
-          </mat-select>
-        </mat-form-field>
-      </mat-grid-tile>
-
-      <mat-grid-tile style="display: none">
+      <!-- Hidden fields -->
+      <mat-form-field appearance="outline" style="display: none">
+        <mat-select formControlName="userType">
+          <mat-option [value]="'ADMIN'">ADMIN</mat-option>
+          <mat-option [value]="'READER'">READER</mat-option>
+          <mat-option [value]="'WRITER'">WRITER</mat-option>
+        </mat-select>
+      </mat-form-field>
+      <div style="display: none">
         <mat-checkbox formControlName="isSetupMenu">{{ 'showSetupMenu' | translate }}</mat-checkbox>
-      </mat-grid-tile>
+      </div>
 
-    </mat-grid-list>
+      <!-- Submit -->
+      <div class="form-footer">
+        <button mat-raised-button class="btn-create" (click)="register()"
+                [disabled]="registerForm.invalid || selectedRoleId === 0">
+          <mat-icon>person_add</mat-icon> {{ 'createAccount' | translate }}
+        </button>
+      </div>
+
+    </form>
   </div>
 </div>

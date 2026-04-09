@@ -21,6 +21,7 @@ import { CommonModule } from '@angular/common';
 import { MatSelectModule } from '@angular/material/select';
 import { AddPartnerGroupDialogComponent } from './add-partnergroup-dialog/add-partnergroup-dialog.component';
 import { EditPartnerGroupDialogComponent } from './edit-partnergroup-dialog/edit-partnergroup-dialog.component';
+import { PartnerGroupsHelpDialogComponent } from './partnergroups-help-dialog/partnergroups-help-dialog.component';
 import { MatPaginatorModule } from '@angular/material/paginator';
 import { PageEvent } from '@angular/material/paginator';
 import { LanguageService } from '../services/language.service';
@@ -137,6 +138,14 @@ export class PartnerGroupsComponent implements OnInit {
       if (result === 'updated') {
         this.getPartnerGroups();
       }
+    });
+  }
+
+  openHelp(): void {
+    this.dialog.open(PartnerGroupsHelpDialogComponent, {
+      width: '90%',
+      maxWidth: '1200px',
+      maxHeight: '90vh'
     });
   }
 

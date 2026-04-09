@@ -1,44 +1,28 @@
-
-<div mat-dialog-content class="dialog-content">
-  <h1 class="dialog-title">{{ 'addAlertConfiguration' | translate }}</h1>
-  <form [formGroup]="newConnectorForm" class="connector-form">
-
-    <!-- Row 1: Customer Name and ERP Customer ID -->
-    <div class="form-row">
-      <mat-form-field class="form-field full-width">
-        <mat-label>{{ 'alertName' | translate }}</mat-label>
-        <input matInput formControlName="alertName">
-      </mat-form-field>
-
+<div class="dialog-container">
+  <div class="dialog-header">
+    <div class="dialog-header-left">
+      <mat-icon class="dialog-header-icon">add_circle</mat-icon>
+      <h2 class="dialog-header-title">{{ 'addAlertConfiguration' | translate }}</h2>
     </div>
-
-    <div class="form-row">
-      <mat-form-field class="form-field full-width">
-        <mat-label>Description</mat-label>
-        <textarea matInput formControlName="description" rows="3"></textarea>
-      </mat-form-field>
-
-    </div>
-
-    <div class="form-row">
-      <mat-form-field class="form-field full-width">
-        <mat-label>{{ 'query' | translate }}</mat-label>
-        <input matInput formControlName="query">
-      </mat-form-field>
-
-    </div>
-    <div class="form-row">
-      <mat-form-field class="form-field full-width">
-        <mat-label>{{ 'emailSubject' | translate }}</mat-label>
-        <input matInput formControlName="emailSubject">
-      </mat-form-field>
-
-    </div>
-
-  </form>
-</div>
-
-<div mat-dialog-actions class="dialog-actions">
-  <button mat-button class="cancel-button" (click)="onCancel()">{{ 'cancel' | translate }}</button>
-  <button mat-raised-button color="primary" [disabled]="!newConnectorForm.valid" (click)="onSave()">{{ 'save' | translate }}</button>
+    <button mat-icon-button class="dialog-close-btn" (click)="onCancel()"><mat-icon>close</mat-icon></button>
+  </div>
+  <div mat-dialog-content class="dialog-body">
+    <form [formGroup]="newConnectorForm" class="dialog-form">
+      <div class="form-row">
+        <mat-form-field appearance="outline" class="full-width"><mat-label>{{ 'alertName' | translate }}</mat-label><input matInput formControlName="alertName"><mat-icon matPrefix>notifications</mat-icon></mat-form-field>
+      </div>
+      <div class="form-row">
+        <mat-form-field appearance="outline" class="full-width"><mat-label>Description</mat-label><textarea matInput formControlName="description" rows="3"></textarea><mat-icon matPrefix>notes</mat-icon></mat-form-field>
+      </div>
+      <div class="form-row">
+        <mat-form-field appearance="outline" class="full-width"><mat-label>{{ 'query' | translate }}</mat-label><input matInput formControlName="query"><mat-icon matPrefix>code</mat-icon></mat-form-field>
+      </div>
+      <div class="form-row">
+        <mat-form-field appearance="outline" class="full-width"><mat-label>{{ 'emailSubject' | translate }}</mat-label><input matInput formControlName="emailSubject"><mat-icon matPrefix>email</mat-icon></mat-form-field>
+      </div>
+    </form>
+  </div>
+  <div mat-dialog-actions class="dialog-footer">
+    <button mat-raised-button class="btn-save" [disabled]="!newConnectorForm.valid" (click)="onSave()"><mat-icon>save</mat-icon> {{ 'save' | translate }}</button>
+  </div>
 </div>

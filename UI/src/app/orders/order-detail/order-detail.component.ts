@@ -217,16 +217,34 @@ export class OrderDetailComponent {
   }
 
   getStatusClass(status: string): string {
-    if (status.toUpperCase() === 'ASNRVD') {
-      return 'in-ship-status';
-    } else if (status.toLocaleUpperCase() === 'ASNSNT') {
-      return 'shipped-status';
-    } else if (status.toLocaleUpperCase() === 'CANRVD') {
-      return 'in-cancel-status';
-    } else if (status.toLocaleUpperCase() === 'CANSNT') {
-      return 'cancelled-status';
-    } else {
-      return '';
+    if (!status) return '';
+    const s = status.toUpperCase();
+    switch (s) {
+      case 'NEW':
+        return 'new-status';
+      case 'SYNCED':
+      case 'INPROGRESS':
+        return 'sysced-status';
+      case 'SHIPPED':
+      case 'ASNSNT':
+        return 'shipped-status';
+      case 'CANCELLED':
+      case 'CANSNT':
+        return 'cancelled-status';
+      case 'ASNRVD':
+        return 'in-ship-status';
+      case 'CANRVD':
+        return 'in-cancel-status';
+      case 'ERROR':
+      case 'ASNERROR':
+      case 'ACKERROR':
+        return 'syncerror-status';
+      case 'PARTIALLY SHIPPED':
+        return 'in-ship-status';
+      case 'PARTIALLY CANCELLED':
+        return 'in-cancel-status';
+      default:
+        return 'sysced-status';
     }
   }
 

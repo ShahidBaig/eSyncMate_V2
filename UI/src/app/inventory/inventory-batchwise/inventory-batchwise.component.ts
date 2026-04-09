@@ -56,11 +56,12 @@ import { InventorypopupComponent } from '../inventory-popup/inventory-popup.comp
 export class InventoryBatchwiseComponent implements OnInit {
 
   mydate = environment.date;
-  displayedColumns: string[] = ['CustomerID', 'ItemID', 'SyncDate', 'Status', 'CustomerItemCode', 'ETADate', 'ETAQty', 'TotalATS', 'ATSL10', 'ATSL21', 'ATSL28', 'ATSL29', 'ATSL30', 'ATSL34', 'ATSL35', 'ATSL36', 'ATSL37', 'ATSL40', 'ATSL41', 'ATSL55', 'ATSL56', 'ATSL57', 'ATSL60', 'ATSL65', 'ATSL70', 'ATSL91','File',];
+  displayedColumns: string[] = ['File', 'ItemID', 'SyncDate', 'Status', 'CustomerItemCode', 'ETADate', 'ETAQty', 'TotalATS', 'ATSL10', 'ATSL21', 'ATSL28', 'ATSL29', 'ATSL30', 'ATSL34', 'ATSL35', 'ATSL36', 'ATSL37', 'ATSL40', 'ATSL41', 'ATSL55', 'ATSL56', 'ATSL57', 'ATSL60', 'ATSL65', 'ATSL70', 'ATSL91'];
   dataSource: any[] = [];
   batchID: string = '';
   batchStatus: string = '';
   routeType: string = '';
+  customerID: string = '';
   dateColumnLabel: string = 'Sent Date';
   showSpinner: boolean = false;
   isLoading: boolean = false;
@@ -85,6 +86,7 @@ export class InventoryBatchwiseComponent implements OnInit {
     this.batchID = data.batchID || (data.listofInventoryFiles?.[0]?.batchID ?? '');
     this.batchStatus = data.batchStatus || '';
     this.routeType = data.routeType || '';
+    this.customerID = data.customerID || '';
     this.dateColumnLabel = this.isReceivedType() ? 'Received Date' : 'Sent Date';
 
     this.batchWiseInventoryForm = this.fb.group({
@@ -167,7 +169,8 @@ export class InventoryBatchwiseComponent implements OnInit {
         }
 
         const dialogRef = this.dialog.open(InventorypopupComponent, {
-          width: '70%',
+          width: '85%',
+          maxWidth: '1100px',
           disableClose: true,
           data: this.listOfInventoryFiles,
         });

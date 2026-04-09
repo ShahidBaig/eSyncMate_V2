@@ -1,0 +1,329 @@
+<div class="help-container">
+  <div class="help-header">
+    <div class="header-left">
+      <mat-icon class="header-icon">inventory_2</mat-icon>
+      <div>
+        <h2 class="header-title">Inventory Feed Summary — Help Guide</h2>
+        <span class="header-subtitle">Track and monitor inventory feed batches for your marketplace partners in eSyncMate</span>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button mat-icon-button class="download-btn" matTooltip="Download Help Guide" (click)="downloadHelp()"><mat-icon>download</mat-icon></button>
+      <button mat-icon-button class="close-btn" (click)="close()"><mat-icon>close</mat-icon></button>
+    </div>
+  </div>
+
+  <mat-dialog-content #helpContent class="help-content">
+
+    <!-- How It Works -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>route</mat-icon> How Inventory Feeds Work in eSyncMate</h3>
+      <p class="help-text">eSyncMate receives inventory data from your ERP and sends updated stock levels to your marketplace partners:</p>
+      <div class="flow-diagram">
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#2563eb;"><mat-icon>business</mat-icon></div>
+          <span class="flow-label">ERP Sends Data</span>
+          <span class="flow-desc">Stock levels exported</span>
+        </div>
+        <div class="flow-arrow"><mat-icon>arrow_forward</mat-icon></div>
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#E8834A;"><mat-icon>sync</mat-icon></div>
+          <span class="flow-label">eSyncMate Processes</span>
+          <span class="flow-desc">Items parsed & mapped</span>
+        </div>
+        <div class="flow-arrow"><mat-icon>arrow_forward</mat-icon></div>
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#059669;"><mat-icon>inventory_2</mat-icon></div>
+          <span class="flow-label">Updates Stock</span>
+          <span class="flow-desc">ATS calculated</span>
+        </div>
+        <div class="flow-arrow"><mat-icon>arrow_forward</mat-icon></div>
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#0891b2;"><mat-icon>storefront</mat-icon></div>
+          <span class="flow-label">Sent to Marketplace</span>
+          <span class="flow-desc">Retailers updated</span>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- How to Search -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>search</mat-icon> How to Search Inventory Batches</h3>
+      <p class="help-text">To view inventory data, you must first select a customer. Here's how the search works:</p>
+      <div class="log-timeline">
+        <div class="log-step">
+          <div class="log-num">1</div>
+          <div class="log-body">
+            <span class="log-title">Select ERP Customer ID</span>
+            <span class="log-desc">Choose a marketplace partner from the searchable dropdown. This is required — no data loads until a customer is selected</span>
+          </div>
+        </div>
+        <div class="log-step">
+          <div class="log-num">2</div>
+          <div class="log-body">
+            <span class="log-title">Select Route Type (Optional)</span>
+            <span class="log-desc">After selecting a customer, the Route Type dropdown automatically loads only the inventory route types available for that customer</span>
+          </div>
+        </div>
+        <div class="log-step">
+          <div class="log-num">3</div>
+          <div class="log-body">
+            <span class="log-title">Set Date Range (Optional)</span>
+            <span class="log-desc">Start Date defaults to 7 days ago and Finish Date defaults to today. Adjust if needed</span>
+          </div>
+        </div>
+        <div class="log-step">
+          <div class="log-num">4</div>
+          <div class="log-body">
+            <span class="log-title">Click Search</span>
+            <span class="log-desc">eSyncMate loads all inventory batches matching your filters into the data grid</span>
+          </div>
+        </div>
+      </div>
+      <div class="tip-box" style="margin-top:14px;">
+        <mat-icon>lightbulb</mat-icon>
+        <span>You <strong>must select a Customer</strong> before searching. The Route Type dropdown only shows relevant options after a customer is selected. You can also filter by <strong>Item ID</strong> or <strong>Status</strong> for more specific results.</span>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Search Filters -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>filter_list</mat-icon> Search Filters</h3>
+      <p class="help-text">These filters are available on the search bar:</p>
+      <div class="card-grid">
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#eff6ff;"><mat-icon style="color:#2563eb;">tag</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Item ID</span>
+            <span class="info-card-desc">Search by ERP Item ID to find batches containing a specific product</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#fff7ed;"><mat-icon style="color:#E8834A;">people</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">ERP Customer ID</span>
+            <span class="info-card-desc">Required. Select your marketplace partner from the searchable dropdown — this loads route types for that customer</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#f5f3ff;"><mat-icon style="color:#7c3aed;">alt_route</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Route Type</span>
+            <span class="info-card-desc">Filter by feed type. Only shows inventory route types available for the selected customer</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#ecfdf5;"><mat-icon style="color:#059669;">date_range</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Start / Finish Date</span>
+            <span class="info-card-desc">Date range for when batches were processed. Defaults to last 7 days</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#fef2f2;"><mat-icon style="color:#dc2626;">flag</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Status</span>
+            <span class="info-card-desc">Filter by batch status: Processing, Completed, or Error</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Grid Columns -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>view_list</mat-icon> Grid Columns</h3>
+      <p class="help-text">The data grid shows these columns for each inventory batch:</p>
+      <div class="card-grid">
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#eff6ff;"><mat-icon style="color:#2563eb;">badge</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Customer ID</span>
+            <span class="info-card-desc">The marketplace partner this batch was processed for</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#ecfdf5;"><mat-icon style="color:#059669;">flag</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Status</span>
+            <span class="info-card-desc">Color-coded batch status — hover over the status to see a tooltip with additional details</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#fff7ed;"><mat-icon style="color:#E8834A;">schedule</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Start Date</span>
+            <span class="info-card-desc">When the batch started processing (MM/DD/YYYY HH:MM format)</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#fff7ed;"><mat-icon style="color:#E8834A;">event_available</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Finish Date</span>
+            <span class="info-card-desc">When the batch finished processing (MM/DD/YYYY HH:MM format)</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#f5f3ff;"><mat-icon style="color:#7c3aed;">alt_route</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Route Type</span>
+            <span class="info-card-desc">The type of inventory feed that was processed for this batch</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#fef9c3;"><mat-icon style="color:#ca8a04;">read_more</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Show Inventory (Action)</span>
+            <span class="info-card-desc">Click the icon button on any row to open the batch detail popup and view individual items</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Batch Statuses -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>label</mat-icon> Batch Statuses</h3>
+      <p class="help-text">Each batch has a color-coded status that indicates where it is in the processing lifecycle:</p>
+      <div class="status-card-grid">
+        <div class="status-card status-card-amber">
+          <div class="sc-header"><mat-icon>hourglass_top</mat-icon><span>Processing</span></div>
+          <p><strong>When set:</strong> As soon as eSyncMate begins reading inventory data from the ERP and starts processing the batch.</p>
+          <p><strong>What it means:</strong> The batch is currently being processed. Items are being read, mapped, and prepared for sending to the marketplace. The batch is not yet complete.</p>
+          <p><strong>What to do:</strong> Wait for the batch to finish. You can check back shortly — most batches complete within a few minutes.</p>
+        </div>
+        <div class="status-card status-card-green">
+          <div class="sc-header"><mat-icon>check_circle</mat-icon><span>Completed</span></div>
+          <p><strong>When set:</strong> After all items in the batch have been successfully processed and sent to the marketplace partner.</p>
+          <p><strong>What it means:</strong> The inventory feed finished successfully. All items were processed and stock levels have been updated on the marketplace.</p>
+          <p><strong>What to do:</strong> No action needed. You can click Show Inventory to verify the item-level details if required.</p>
+        </div>
+        <div class="status-card status-card-red">
+          <div class="sc-header"><mat-icon>error</mat-icon><span>Error</span></div>
+          <p><strong>When set:</strong> When something goes wrong during processing — for example, a connection failure to the marketplace API, invalid data, or a timeout.</p>
+          <p><strong>What it means:</strong> The batch did not complete successfully. Some or all items may not have been sent to the marketplace.</p>
+          <p><strong>What to do:</strong> Check the <strong>Exceptions</strong> page for detailed error information. Contact support if the issue persists.</p>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Show Inventory Action -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>touch_app</mat-icon> Show Inventory — Batch Detail Popup</h3>
+      <p class="help-text">Click the <strong>Show Inventory</strong> icon button on any batch row to open the batch detail popup:</p>
+      <div class="tab-preview">
+        <div class="tab-card">
+          <div class="tab-card-header">
+            <mat-icon>info</mat-icon>
+            <span>Popup Header</span>
+          </div>
+          <div class="tab-card-body">
+            <p>Shows the <strong>Customer ID</strong>, the batch <strong>Status</strong> (color-coded chip), and the <strong>total item count</strong> in the batch.</p>
+          </div>
+        </div>
+        <div class="tab-card">
+          <div class="tab-card-header">
+            <mat-icon>search</mat-icon>
+            <span>Search by Item ID</span>
+          </div>
+          <div class="tab-card-body">
+            <p>Use the search bar at the top to filter items within the batch by <strong>Item ID</strong>. Press Enter or click Search to apply the filter. Clear the search to see all items again.</p>
+          </div>
+        </div>
+        <div class="tab-card">
+          <div class="tab-card-header">
+            <mat-icon>view_column</mat-icon>
+            <span>Item Data Columns</span>
+          </div>
+          <div class="tab-card-body">
+            <p><strong>Show Inventory</strong> (action button), <strong>Item ID</strong>, <strong>Sent/Received Date</strong>, <strong>Status</strong> (NEW or SYNCED), <strong>Customer Item Code</strong>, <strong>ETA Date</strong>, <strong>ETA Qty</strong>, <strong>Total ATS</strong>, and individual <strong>warehouse ATS columns</strong> (L10, L21, L28, etc.).</p>
+          </div>
+        </div>
+      </div>
+      <div class="tip-box" style="margin-top:12px;">
+        <mat-icon>lightbulb</mat-icon>
+        <span>The date column label changes based on the route type: it shows <strong>"Received Date"</strong> for Full and Differential inventory feeds (data received from ERP), and <strong>"Sent Date"</strong> for upload feeds (data sent to the marketplace).</span>
+      </div>
+      <div class="tip-box" style="margin-top:8px;">
+        <mat-icon>lightbulb</mat-icon>
+        <span><strong>ATS</strong> means "Available to Sell" — the total quantity available across all warehouse locations. Each warehouse column (L10, L21, L28, etc.) shows the stock at that specific warehouse location.</span>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Item-Level Statuses -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>swap_horiz</mat-icon> Item-Level Statuses</h3>
+      <p class="help-text">Inside the batch detail popup, each individual item has its own status:</p>
+      <div class="status-card-grid">
+        <div class="status-card status-card-blue">
+          <div class="sc-header"><mat-icon>fiber_new</mat-icon><span>NEW</span></div>
+          <p><strong>When set:</strong> When the item is first received from the ERP and saved into eSyncMate.</p>
+          <p><strong>What it means:</strong> The item has been imported into the system but has <strong>not yet been sent</strong> to the marketplace partner. It is queued and waiting to be included in the next outbound feed.</p>
+        </div>
+        <div class="status-card status-card-green">
+          <div class="sc-header"><mat-icon>check_circle</mat-icon><span>SYNCED</span></div>
+          <p><strong>When set:</strong> After the item's inventory data has been successfully sent to the marketplace partner.</p>
+          <p><strong>What it means:</strong> The item's stock levels have been <strong>successfully transmitted</strong> to the marketplace. The retailer's system now has the updated quantity for this item.</p>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Inventory Files -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>description</mat-icon> Inventory Files Popup</h3>
+      <p class="help-text">Inside the batch detail popup, click the <strong>Show Inventory</strong> eye icon on any item row to view the raw inventory files for that item:</p>
+      <div class="card-grid">
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#eff6ff;"><mat-icon style="color:#2563eb;">badge</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">ERP Customer ID</span>
+            <span class="info-card-desc">The marketplace partner associated with this file</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#fff7ed;"><mat-icon style="color:#E8834A;">tag</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">ERP Item ID</span>
+            <span class="info-card-desc">The item this file belongs to</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#ecfdf5;"><mat-icon style="color:#059669;">event</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Activity Date</span>
+            <span class="info-card-desc">The date this inventory file was created (MM/DD/YYYY format)</span>
+          </div>
+        </div>
+      </div>
+      <div class="action-card-grid" style="margin-top:14px;">
+        <div class="action-card">
+          <div class="ac-icon" style="background:#eff6ff;"><mat-icon style="color:#2563eb;">save_alt</mat-icon></div>
+          <div class="ac-body">
+            <span class="ac-title">Download File</span>
+            <p class="ac-desc">Downloads the raw inventory file to your computer so you can review the exact data that was sent or received.</p>
+          </div>
+        </div>
+        <div class="action-card">
+          <div class="ac-icon" style="background:#f5f3ff;"><mat-icon style="color:#7c3aed;">visibility</mat-icon></div>
+          <div class="ac-body">
+            <span class="ac-title">View File</span>
+            <p class="ac-desc">Opens the file content in a viewer popup directly in the browser — supports JSON, EDI, and text file formats.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </mat-dialog-content>
+</div>

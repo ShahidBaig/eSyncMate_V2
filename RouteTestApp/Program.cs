@@ -36,6 +36,10 @@ using Microsoft.Graph.Users.Item.SendMail;
 
 static void Main()
 {
+    // ======== Amazon Missing Orders Report ========
+    FindMissingAmazonOrders().GetAwaiter().GetResult();
+    return;
+
     // Test Microsoft Graph Email
     //TestGraphEmailAsync().GetAwaiter().GetResult();
 
@@ -52,7 +56,7 @@ static void Main()
     IConfiguration config = new MyConfigurationImplementation();
     RouteEngine routeEngine = new RouteEngine(config);
     ////1, 4, 10,7 GECKO
-    int routeId = 109;
+    int routeId = 98;
     routeEngine.Execute(routeId);
 
 
@@ -77,8 +81,8 @@ static void Main()
     //Console.WriteLine($"Result: {result}");
 
 
-    //    string connectionString = "Server=192.168.0.44,7100;Database=ESYNCMATE;UID=esyncmate;PWD=eSyncMate786$$$;";
-    //    //string connectionString = "Server=DESKTOP-SPQA23Q;Database=eSyncmate_Dev;UID=sa;PWD=eSoft#1122;";
+    //    string connectionString = "<<SET_CONNECTION_STRING>>";
+    //    //string connectionString = "<<SET_CONNECTION_STRING>>";
 
     //    string sql = $@"SELECT ProductID,ReturnPolicy FROM ReturnPolicy WITH (NOLOCK) WHERE ISNULL(Processed,0) = 0";
     //    string Body = string.Empty;
@@ -500,8 +504,8 @@ static void MacysOrderProcess(IConfiguration config, Routes route)
 
             if (l_DestinationConnector.ConnectivityType == ConnectorTypesEnum.SqlServer.ToString())
             {
-                l_Orders.UseConnection("Server=MUHAMMADBILAL;Database=eSyncMate;UID=sa;PWD=Bilal@123;");
-                l_Customer.UseConnection("Server=MUHAMMADBILAL;Database=eSyncMate;UID=sa;PWD=Bilal@123;");
+                l_Orders.UseConnection("<<SET_CONNECTION_STRING>>");
+                l_Customer.UseConnection("<<SET_CONNECTION_STRING>>");
 
                 l_Customer.GetObject("ERPCustomerID", l_SourceConnector.CustomerID);
 
@@ -536,11 +540,11 @@ static async Task MissingOrdersProcessed()
     Orders l_Orders = new Orders();
     DataTable l_dt = new DataTable();
     string  l_OrderNumber = string.Empty;
-    l_Orders.UseConnection("Server=192.168.0.44,7100;Database=ESYNCMATE;UID=esyncmate;PWD=eSyncMate786$$$;");
+    l_Orders.UseConnection("<<SET_CONNECTION_STRING>>");
     l_Orders.ProcessAPIMissingOrders("LOW2221MP", ref l_dt);
     Routes route = new Routes();
 
-    route.UseConnection("Server=192.168.0.44,7100;Database=ESYNCMATE;UID=esyncmate;PWD=eSyncMate786$$$;");
+    route.UseConnection("<<SET_CONNECTION_STRING>>");
 
     route.Id = 79;
     if (!route.GetObject().IsSuccess)
@@ -826,7 +830,7 @@ static void ProcessOrder(MacysOrder order, Routes route, Customers customer, Con
     OrderData l_Data = null;
     string jsonString = string.Empty;
     MacysOrderAcceptInputModel l_MacysOrderAcceptInputModel = new MacysOrderAcceptInputModel();
-    l_Orders.UseConnection("Server=MUHAMMADBILAL;Database=eSyncMate;UID=sa;PWD=Bilal@123;");
+    l_Orders.UseConnection("<<SET_CONNECTION_STRING>>");
     //jsonString = JsonConvert.SerializeObject(order);
     MacysGetOrderResponseModel OrdersList = new MacysGetOrderResponseModel();
 
@@ -1211,7 +1215,7 @@ static void ProcessOrderForShipment(string orderNumber)
     string l_TransformationMap = "{     \"items\": {         \"#loop($.OutPut.TrackingInfo)\": {             \"level_of_service\": \"#ifcondition(#currentvalueatpath($.ShippingMethod),FEDEX HOME DELIVERY,FH,#ifcondition(#currentvalueatpath($.ShippingMethod),FEDEX GROUND,G2,FH))\",             \"order_line_number\": \"#currentvalueatpath($.OrderLineNo)\",             \"quantity\": \"#currentvalueatpath($.ShippedQty)\",             \"shipped_date\": \"#concat(#currentvalueatpath($.ShippedDate),T00:00:00.000Z)\",             \"shipping_method\": \"#ifcondition(#currentvalueatpath($.ShippingMethod),FEDEX HOME DELIVERY,FedExGroundHomeDelivery,#ifcondition(#currentvalueatpath($.ShippingMethod),FEDEX GROUND,FedExGround,FedExGround))\",             \"tracking_number\": \"#currentvalueatpath($.TrackingNo)\"         }     } }";
     string Body = "";
     int orderId = 0;
-    string connectionString = "Server=.;Database=ESYNCMATE;UID=sa;PWD=angel;";
+    string connectionString = "<<SET_CONNECTION_STRING>>";
 
     SCSGetOrderResponseModel order = GetOrdersData(orderNumber);
 
@@ -1649,7 +1653,7 @@ static void ProcessOrderDetail()
 {
     string Body = "";
     int orderId = 0;
-    string connectionString = "Server=192.168.0.44,7100;Database=ESYNCMATE;UID=esyncmate;PWD=eSyncMate786$$$;";
+    string connectionString = "<<SET_CONNECTION_STRING>>";
 
     //SCSGetOrderResponseModel order = GetOrdersData(orderNumber);
 
@@ -2330,4 +2334,471 @@ static async Task SaveAmazonReportToExcelAsync(string reportUrl, string outputPa
 //        }
 //    }
 //}
+
+
+// =====================================================================
+// Amazon Missing Orders Report
+// Compares Shipped orders on Amazon Portal vs eSyncMate database
+// Reports which Amazon Order IDs are missing and why
+// =====================================================================
+static async Task FindMissingAmazonOrders()
+{
+    Console.WriteLine("=============================================================");
+    Console.WriteLine("  Amazon Missing Orders Report");
+    Console.WriteLine("  Compares Amazon Shipped orders vs eSyncMate database");
+    Console.WriteLine("=============================================================\n");
+
+    // ===================== CONFIGURATION — UPDATE THESE =====================
+    // Amazon SP-API Credentials
+    string amazonBaseUrl       = "https://sellingpartnerapi-na.amazon.com";          // e.g. https://sellingpartnerapi-na.amazon.com
+    string amazonClientId      = "<<SET_AMAZON_CLIENT_ID>>";
+    string amazonClientSecret  = "<<SET_AMAZON_CLIENT_SECRET>>";
+    string amazonRefreshToken  = "<<SET_AMAZON_REFRESH_TOKEN>>";
+    string amazonApplicationId = "<<SET_AMAZON_APPLICATION_ID>>";           // Realm
+    string marketplaceId       = "ATVPDKIKX0DER";                // US Marketplace
+    string createdAfter        = "2026-04-02T00:00:00Z";         // Date range start
+    string createdBefore       = "2026-04-02T23:59:00Z";         // Date range end
+
+    // Database
+    string connectionString    = "Server=192.168.0.44,7100;Database=ESYNCMATE;UID=esyncmate;PWD=eSyncMate786$$$;";        // e.g. Server=x.x.x.x;Database=ESYNCMATE;UID=sa;PWD=xxx;
+    string erpCustomerId       = "AMA1005";                       // Amazon customer ID in eSyncMate
+
+    // Report output file
+    string reportPath          = Path.Combine(AppContext.BaseDirectory, $"AmazonMissingOrders_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
+    // ===================== END CONFIGURATION =====================
+
+    try
+    {
+        // -------------------------------------------------------
+        // STEP 1: Get Amazon OAuth Token
+        // -------------------------------------------------------
+        Console.WriteLine("[Step 1] Getting Amazon API token...");
+        string amazonToken = await GetAmazonToken(amazonClientId, amazonClientSecret, amazonRefreshToken, amazonApplicationId);
+        if (string.IsNullOrEmpty(amazonToken))
+        {
+            Console.WriteLine("  ERROR: Failed to get Amazon token. Check credentials.");
+            return;
+        }
+        Console.WriteLine($"  Token obtained: {amazonToken.Substring(0, 20)}...\n");
+
+        // -------------------------------------------------------
+        // STEP 2: Fetch ALL Shipped orders from Amazon
+        // -------------------------------------------------------
+        // Method 1: By CreatedDate
+        Console.WriteLine($"[Step 2a] Fetching Shipped orders by CreatedDate ({createdAfter} to {createdBefore})...");
+        var ordersByCreated = await GetAllAmazonOrders(amazonBaseUrl, amazonToken, marketplaceId, createdAfter, createdBefore, "Shipped", "Created");
+        Console.WriteLine($"  Orders created in range: {ordersByCreated.Count}\n");
+
+        // Method 2: By LastUpdatedDate (catches orders shipped on this date even if created earlier)
+        Console.WriteLine($"[Step 2b] Fetching Shipped orders by LastUpdatedDate ({createdAfter} to {createdBefore})...");
+        var ordersByUpdated = await GetAllAmazonOrders(amazonBaseUrl, amazonToken, marketplaceId, createdAfter, createdBefore, "Shipped", "LastUpdated");
+        Console.WriteLine($"  Orders updated in range: {ordersByUpdated.Count}\n");
+
+        // Merge both sets — deduplicate by AmazonOrderId
+        var allOrderDict = new Dictionary<string, AmazonGetOrdersResponseModel.AmazonOrder>();
+        foreach (var o in ordersByCreated) allOrderDict[o.AmazonOrderId] = o;
+        foreach (var o in ordersByUpdated) allOrderDict[o.AmazonOrderId] = o;
+        var amazonShippedOrders = allOrderDict.Values.ToList();
+
+        int afnCount = amazonShippedOrders.Count(o => o.FulfillmentChannel == "AFN");
+        int mfnCount = amazonShippedOrders.Count(o => o.FulfillmentChannel == "MFN");
+        Console.WriteLine($"  Combined unique Shipped orders: {amazonShippedOrders.Count}");
+        Console.WriteLine($"    AFN (Fulfilled by Amazon): {afnCount}");
+        Console.WriteLine($"    MFN (Fulfilled by Seller): {mfnCount}");
+        Console.WriteLine($"    Only in CreatedDate query: {ordersByCreated.Count(o => !ordersByUpdated.Any(u => u.AmazonOrderId == o.AmazonOrderId))}");
+        Console.WriteLine($"    Only in LastUpdated query: {ordersByUpdated.Count(o => !ordersByCreated.Any(c => c.AmazonOrderId == o.AmazonOrderId))}\n");
+
+        // -------------------------------------------------------
+        // STEP 3: Fetch orders from eSyncMate database (same date only)
+        // -------------------------------------------------------
+        string dbDate = createdAfter.Substring(0, 10);   // 2026-04-02
+
+        Console.WriteLine($"[Step 3] Fetching Amazon orders from eSyncMate database (OrderDate = {dbDate})...");
+        var dbOrders = GetDatabaseOrders(connectionString, erpCustomerId, dbDate, dbDate);
+        Console.WriteLine($"  eSyncMate orders: {dbOrders.Count}\n");
+
+        // Build set of order numbers in DB
+        var dbOrderNumbers = new HashSet<string>(dbOrders.Select(r => r["OrderNumber"].ToString()), StringComparer.OrdinalIgnoreCase);
+
+        // -------------------------------------------------------
+        // STEP 4: Find missing orders
+        // -------------------------------------------------------
+        Console.WriteLine("[Step 4] Comparing...\n");
+
+        var missingOrders = new List<(string AmazonOrderId, string AmazonStatus, string FulfillmentChannel, string PurchaseDate, string Reason)>();
+        int foundInDB = 0;
+
+        foreach (var order in amazonShippedOrders)
+        {
+            if (dbOrderNumbers.Contains(order.AmazonOrderId))
+            {
+                foundInDB++;
+            }
+            else
+            {
+                string reason;
+                if (order.FulfillmentChannel == "AFN")
+                {
+                    reason = "FBA order (Fulfilled by Amazon) — route only gets MFN/Unshipped orders";
+                }
+                else if (order.FulfillmentChannel == "MFN")
+                {
+                    reason = "MFN order was already Shipped when route ran — route only fetches Unshipped status";
+                }
+                else
+                {
+                    reason = $"Unknown — Status={order.OrderStatus}, Channel={order.FulfillmentChannel}, Type={order.OrderType}";
+                }
+
+                missingOrders.Add((
+                    order.AmazonOrderId,
+                    order.OrderStatus,
+                    order.FulfillmentChannel ?? "N/A",
+                    order.PurchaseDate.ToString("yyyy-MM-dd HH:mm"),
+                    reason
+                ));
+            }
+        }
+
+        Console.WriteLine($"  Found in DB:              {foundInDB}");
+        Console.WriteLine($"  Missing from DB:          {missingOrders.Count}\n");
+
+        // -------------------------------------------------------
+        // STEP 5: Print Report
+        // -------------------------------------------------------
+        Console.WriteLine("=============================================================");
+        Console.WriteLine("  REPORT SUMMARY");
+        Console.WriteLine("=============================================================");
+        Console.WriteLine($"  Date Range:                 {createdAfter} to {createdBefore}");
+        Console.WriteLine($"  Amazon Shipped orders:      {amazonShippedOrders.Count}");
+        Console.WriteLine($"  eSyncMate orders:           {dbOrders.Count}");
+        Console.WriteLine($"  Found in DB:                {foundInDB}");
+        Console.WriteLine($"  Missing from DB:            {missingOrders.Count}");
+        Console.WriteLine("-------------------------------------------------------------");
+
+        // Count by reason
+        var reasonGroups = missingOrders.GroupBy(m => m.Reason.Split('—')[0].Trim()).OrderByDescending(g => g.Count());
+        Console.WriteLine("\n  Missing Orders by Reason:");
+        foreach (var group in reasonGroups)
+        {
+            Console.WriteLine($"    {group.Key}: {group.Count()}");
+        }
+
+        // Count by fulfillment channel
+        var channelGroups = missingOrders.GroupBy(m => m.FulfillmentChannel).OrderByDescending(g => g.Count());
+        Console.WriteLine("\n  Missing Orders by Fulfillment Channel:");
+        foreach (var group in channelGroups)
+        {
+            Console.WriteLine($"    {group.Key}: {group.Count()}");
+        }
+
+        // Print first 50 missing orders
+        Console.WriteLine("\n-------------------------------------------------------------");
+        Console.WriteLine($"  Missing Order Details (showing {Math.Min(50, missingOrders.Count)} of {missingOrders.Count}):");
+        Console.WriteLine("-------------------------------------------------------------");
+        Console.WriteLine($"  {"AmazonOrderId",-22} {"Status",-10} {"Channel",-5} {"PurchaseDate",-18} Reason");
+        Console.WriteLine($"  {new string('-', 100)}");
+
+        foreach (var m in missingOrders.Take(50))
+        {
+            Console.WriteLine($"  {m.AmazonOrderId,-22} {m.AmazonStatus,-10} {m.FulfillmentChannel,-5} {m.PurchaseDate,-18} {m.Reason}");
+        }
+
+        // -------------------------------------------------------
+        // STEP 6: Export to Excel (Sheet 1: Summary, Sheet 2: Missing Orders)
+        // -------------------------------------------------------
+        using (var workbook = new XLWorkbook())
+        {
+            // ===== SHEET 1: Summary Report =====
+            var summarySheet = workbook.Worksheets.Add("Summary Report");
+
+            // Title
+            summarySheet.Cell("A1").Value = "Amazon Missing Orders Report";
+            summarySheet.Cell("A1").Style.Font.Bold = true;
+            summarySheet.Cell("A1").Style.Font.FontSize = 16;
+            summarySheet.Range("A1:B1").Merge();
+
+            summarySheet.Cell("A3").Value = "Report Generated:";
+            summarySheet.Cell("B3").Value = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+            summarySheet.Cell("A3").Style.Font.Bold = true;
+
+            summarySheet.Cell("A4").Value = "Date Range:";
+            summarySheet.Cell("B4").Value = $"{createdAfter} to {createdBefore}";
+            summarySheet.Cell("A4").Style.Font.Bold = true;
+
+            summarySheet.Cell("A6").Value = "Metric";
+            summarySheet.Cell("B6").Value = "Count";
+            summarySheet.Cell("A6").Style.Font.Bold = true;
+            summarySheet.Cell("B6").Style.Font.Bold = true;
+            summarySheet.Range("A6:B6").Style.Fill.BackgroundColor = XLColor.FromHtml("#E8834A");
+            summarySheet.Range("A6:B6").Style.Font.FontColor = XLColor.White;
+
+            summarySheet.Cell("A7").Value = "Amazon Shipped Orders (API)";
+            summarySheet.Cell("B7").Value = amazonShippedOrders.Count;
+
+            summarySheet.Cell("A8").Value = "eSyncMate Orders";
+            summarySheet.Cell("B8").Value = dbOrders.Count;
+
+            summarySheet.Cell("A9").Value = "Found in DB";
+            summarySheet.Cell("B9").Value = foundInDB;
+            summarySheet.Cell("B9").Style.Font.FontColor = XLColor.Green;
+
+            summarySheet.Cell("A10").Value = "Missing from DB";
+            summarySheet.Cell("B10").Value = missingOrders.Count;
+            summarySheet.Cell("A10").Style.Font.Bold = true;
+            summarySheet.Cell("B10").Style.Font.Bold = true;
+            summarySheet.Cell("B10").Style.Font.FontColor = missingOrders.Count > 0 ? XLColor.Red : XLColor.Green;
+
+            // Reason breakdown
+            int row = 11;
+            summarySheet.Cell(row, 1).Value = "Missing Orders by Reason";
+            summarySheet.Cell(row, 1).Style.Font.Bold = true;
+            summarySheet.Cell(row, 1).Style.Font.FontSize = 12;
+            row++;
+
+            summarySheet.Cell(row, 1).Value = "Reason";
+            summarySheet.Cell(row, 2).Value = "Count";
+            summarySheet.Cell(row, 1).Style.Font.Bold = true;
+            summarySheet.Cell(row, 2).Style.Font.Bold = true;
+            summarySheet.Range(row, 1, row, 2).Style.Fill.BackgroundColor = XLColor.FromHtml("#f1f5f9");
+            row++;
+
+            foreach (var group in missingOrders.GroupBy(m => m.Reason.Split('—')[0].Trim()).OrderByDescending(g => g.Count()))
+            {
+                summarySheet.Cell(row, 1).Value = group.Key;
+                summarySheet.Cell(row, 2).Value = group.Count();
+                row++;
+            }
+
+            row += 2;
+            summarySheet.Cell(row, 1).Value = "Missing Orders by Fulfillment Channel";
+            summarySheet.Cell(row, 1).Style.Font.Bold = true;
+            summarySheet.Cell(row, 1).Style.Font.FontSize = 12;
+            row++;
+
+            summarySheet.Cell(row, 1).Value = "Channel";
+            summarySheet.Cell(row, 2).Value = "Count";
+            summarySheet.Cell(row, 1).Style.Font.Bold = true;
+            summarySheet.Cell(row, 2).Style.Font.Bold = true;
+            summarySheet.Range(row, 1, row, 2).Style.Fill.BackgroundColor = XLColor.FromHtml("#f1f5f9");
+            row++;
+
+            foreach (var group in missingOrders.GroupBy(m => m.FulfillmentChannel).OrderByDescending(g => g.Count()))
+            {
+                summarySheet.Cell(row, 1).Value = group.Key;
+                summarySheet.Cell(row, 2).Value = group.Count();
+                row++;
+            }
+
+            summarySheet.Column(1).Width = 35;
+            summarySheet.Column(2).Width = 20;
+
+            // ===== SHEET 2: Missing Order Details =====
+            var detailSheet = workbook.Worksheets.Add("Missing Orders");
+
+            // Header row
+            detailSheet.Cell("A1").Value = "Amazon Order ID";
+            detailSheet.Cell("B1").Value = "Order Date";
+            detailSheet.Cell("C1").Value = "Amazon Status";
+            detailSheet.Cell("D1").Value = "Fulfillment Channel";
+            detailSheet.Cell("E1").Value = "Reason";
+
+            var headerRange = detailSheet.Range("A1:E1");
+            headerRange.Style.Font.Bold = true;
+            headerRange.Style.Font.FontColor = XLColor.White;
+            headerRange.Style.Fill.BackgroundColor = XLColor.FromHtml("#E8834A");
+
+            // Data rows
+            int dataRow = 2;
+            foreach (var m in missingOrders.OrderBy(o => o.PurchaseDate))
+            {
+                detailSheet.Cell(dataRow, 1).Value = m.AmazonOrderId;
+                detailSheet.Cell(dataRow, 2).Value = m.PurchaseDate;
+                detailSheet.Cell(dataRow, 3).Value = m.AmazonStatus;
+                detailSheet.Cell(dataRow, 4).Value = m.FulfillmentChannel;
+                detailSheet.Cell(dataRow, 5).Value = m.Reason;
+
+                // Alternate row color
+                if (dataRow % 2 == 0)
+                {
+                    detailSheet.Range(dataRow, 1, dataRow, 5).Style.Fill.BackgroundColor = XLColor.FromHtml("#f8fafc");
+                }
+
+                dataRow++;
+            }
+
+            // Auto-fit columns
+            detailSheet.Column(1).Width = 25;
+            detailSheet.Column(2).Width = 20;
+            detailSheet.Column(3).Width = 15;
+            detailSheet.Column(4).Width = 20;
+            detailSheet.Column(5).Width = 70;
+
+            // Add autofilter
+            if (missingOrders.Count > 0)
+            {
+                detailSheet.Range(1, 1, dataRow - 1, 5).SetAutoFilter();
+            }
+
+            workbook.SaveAs(reportPath);
+        }
+
+        Console.WriteLine($"\n  Excel report exported to: {reportPath}");
+        Console.WriteLine("\n=============================================================");
+        Console.WriteLine("  Report Complete");
+        Console.WriteLine("=============================================================");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"\nERROR: {ex.Message}");
+        Console.WriteLine(ex.StackTrace);
+    }
+}
+
+// Get Amazon OAuth Token
+static async Task<string> GetAmazonToken(string clientId, string clientSecret, string refreshToken, string applicationId)
+{
+    var client = new RestClient();
+    var request = new RestRequest("https://api.amazon.com/auth/o2/token", Method.Post);
+    request.AddHeader("Content-Type", "application/x-www-form-urlencoded");
+    request.AddParameter("application_id", applicationId);
+    request.AddParameter("client_id", clientId);
+    request.AddParameter("client_secret", clientSecret);
+    request.AddParameter("refresh_token", refreshToken);
+    request.AddParameter("grant_type", "refresh_token");
+
+    var response = await client.ExecuteAsync(request);
+    if (response.IsSuccessful && !string.IsNullOrEmpty(response.Content))
+    {
+        var tokenInfo = JsonConvert.DeserializeAnonymousType(response.Content, new { access_token = "" });
+        return tokenInfo?.access_token ?? "";
+    }
+
+    Console.WriteLine($"  Token error: {response.StatusCode} — {response.Content}");
+    return "";
+}
+
+// Fetch ALL Amazon orders with a given status (handles pagination)
+// dateFilterMode: "Created" uses CreatedAfter/Before, "LastUpdated" uses LastUpdatedAfter/Before
+static async Task<List<AmazonGetOrdersResponseModel.AmazonOrder>> GetAllAmazonOrders(
+    string baseUrl, string token, string marketplaceId, string dateAfter, string dateBefore, string orderStatus, string dateFilterMode = "Created")
+{
+    var allOrders = new List<AmazonGetOrdersResponseModel.AmazonOrder>();
+    string nextToken = null;
+    int page = 0;
+
+    var client = new RestClient();
+
+    do
+    {
+        page++;
+        string url;
+
+        if (string.IsNullOrEmpty(nextToken))
+        {
+            if (dateFilterMode == "LastUpdated")
+            {
+                url = $"{baseUrl}/orders/v0/orders?MarketplaceIds={marketplaceId}&LastUpdatedAfter={dateAfter}&LastUpdatedBefore={dateBefore}&OrderStatuses={orderStatus}";
+            }
+            else
+            {
+                url = $"{baseUrl}/orders/v0/orders?MarketplaceIds={marketplaceId}&CreatedAfter={dateAfter}&CreatedBefore={dateBefore}&OrderStatuses={orderStatus}";
+            }
+        }
+        else
+        {
+            url = $"{baseUrl}/orders/v0/orders?NextToken={Uri.EscapeDataString(nextToken)}";
+        }
+
+        var request = new RestRequest(url, Method.Get);
+        request.AddHeader("x-amz-access-token", token);
+        request.AddHeader("Accept", "application/json");
+
+        var response = await client.ExecuteAsync(request);
+
+        if (!response.IsSuccessful)
+        {
+            string errorSnippet = response.Content?.Substring(0, Math.Min(200, response.Content?.Length ?? 0)) ?? "";
+            bool isRateLimit = (int)response.StatusCode == 429 || errorSnippet.Contains("QuotaExceeded");
+
+            if (isRateLimit)
+            {
+                int waitSeconds = Math.Min(60, 10 * (int)Math.Pow(2, Math.Min(page / 20, 3))); // 10s, 20s, 40s, 60s
+                Console.WriteLine($"  Page {page}: Rate limited / Quota exceeded — waiting {waitSeconds} seconds...");
+                await Task.Delay(waitSeconds * 1000);
+                page--; // Retry same page
+                continue;
+            }
+
+            Console.WriteLine($"  Page {page} error: {response.StatusCode} — {errorSnippet}");
+            break;
+        }
+
+        var pageResult = JsonConvert.DeserializeObject<AmazonGetOrdersResponseModel>(response.Content);
+
+        if (pageResult?.payload?.Orders != null && pageResult.payload.Orders.Any())
+        {
+            allOrders.AddRange(pageResult.payload.Orders);
+            Console.WriteLine($"  Page {page}: {pageResult.payload.Orders.Count} orders (total: {allOrders.Count})");
+        }
+
+        nextToken = pageResult?.payload?.NextToken;
+
+        // Amazon rate limit: 2 seconds between requests to avoid quota
+        await Task.Delay(2000);
+
+    } while (!string.IsNullOrWhiteSpace(nextToken));
+
+    return allOrders;
+}
+
+// Get Amazon orders from eSyncMate database
+// If dateFrom/dateTo are empty, gets ALL orders; otherwise filters by OrderDate
+static List<DataRow> GetDatabaseOrders(string connectionString, string erpCustomerId, string dateFrom, string dateTo)
+{
+    var result = new List<DataRow>();
+    var dt = new DataTable();
+
+    try
+    {
+        var conn = new eSyncMate.DB.DBConnector(connectionString);
+        string dateFilter = "";
+        if (!string.IsNullOrEmpty(dateFrom) && !string.IsNullOrEmpty(dateTo))
+        {
+            dateFilter = $" AND CAST(O.OrderDate AS DATE) BETWEEN '{dateFrom}' AND '{dateTo}'";
+        }
+
+        string sql = $@"SELECT O.Id, O.OrderNumber, O.Status, O.OrderDate, O.ExternalId, O.CreatedDate
+                        FROM Orders O WITH (NOLOCK)
+                            INNER JOIN Customers C WITH (NOLOCK) ON O.CustomerId = C.Id
+                        WHERE C.ERPCustomerID = '{erpCustomerId}'{dateFilter}
+                        ORDER BY O.OrderDate DESC";
+
+        conn.GetData(sql, ref dt);
+
+        foreach (DataRow row in dt.Rows)
+        {
+            result.Add(row);
+        }
+
+        // Show status breakdown
+        if (dt.Rows.Count > 0)
+        {
+            var statusGroups = dt.AsEnumerable()
+                .GroupBy(r => r["Status"].ToString())
+                .OrderByDescending(g => g.Count());
+            Console.WriteLine($"    Status breakdown:");
+            foreach (var g in statusGroups)
+            {
+                Console.WriteLine($"      {g.Key}: {g.Count()}");
+            }
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"  DB Error: {ex.Message}");
+    }
+
+    return result;
+}
 

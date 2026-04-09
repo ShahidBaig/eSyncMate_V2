@@ -1,78 +1,94 @@
-<div mat-dialog-content class="dialog-content">
-  <h1 class="dialog-title">{{ 'editCustomerProductCatalog' | translate }}</h1>
-  <form [formGroup]="updateCustomerProductCatalogForm" class="customerProductCatalog-form">
+<div class="dialog-container">
+  <div class="dialog-header">
+    <div class="dialog-header-left">
+      <mat-icon class="dialog-header-icon">edit</mat-icon>
+      <h2 class="dialog-header-title">{{ 'editCustomerProductCatalog' | translate }}</h2>
+    </div>
+    <button mat-icon-button class="dialog-close-btn" (click)="onCancel()">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
 
-    <mat-tab-group>
-      <mat-tab label="General">
-        <br />
-        <!-- Row 1: Name -->
-        <div class="form-row">
-          <mat-form-field class="form-field">
-            <mat-label>{{ 'brand' | translate }}</mat-label>
-            <input matInput formControlName="brand">
-          </mat-form-field>
+  <div mat-dialog-content class="dialog-body">
+    <form [formGroup]="updateCustomerProductCatalogForm" class="dialog-form">
+      <mat-tab-group animationDuration="200ms">
 
-          <mat-form-field class="form-field">
-            <mat-label>{{ 'itemID' | translate }}</mat-label>
-            <input matInput formControlName="itemID">
-          </mat-form-field>
+        <mat-tab>
+          <ng-template mat-tab-label>
+            <mat-icon class="tab-icon">info</mat-icon> General
+          </ng-template>
+          <div class="tab-body">
+            <div class="form-row">
+              <mat-form-field appearance="outline">
+                <mat-label>{{ 'brand' | translate }}</mat-label>
+                <input matInput formControlName="brand">
+                <mat-icon matPrefix>label</mat-icon>
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>{{ 'itemID' | translate }}</mat-label>
+                <input matInput formControlName="itemID">
+                <mat-icon matPrefix>inventory_2</mat-icon>
+              </mat-form-field>
+            </div>
+            <div class="form-row">
+              <mat-form-field appearance="outline">
+                <mat-label>{{ 'upc' | translate }}</mat-label>
+                <input matInput formControlName="upc">
+                <mat-icon matPrefix>qr_code</mat-icon>
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>{{ 'itemTypeName' | translate }}</mat-label>
+                <input matInput formControlName="itemTypeName">
+                <mat-icon matPrefix>category</mat-icon>
+              </mat-form-field>
+            </div>
+            <div class="form-row">
+              <mat-form-field appearance="outline">
+                <mat-label>{{ 'productRelation' | translate }}</mat-label>
+                <input matInput formControlName="productRelation">
+                <mat-icon matPrefix>account_tree</mat-icon>
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>{{ 'parentID' | translate }}</mat-label>
+                <input matInput formControlName="parentID">
+                <mat-icon matPrefix>family_restroom</mat-icon>
+              </mat-form-field>
+            </div>
+          </div>
+        </mat-tab>
 
-          <mat-form-field class="form-field">
-            <mat-label>{{ 'upc' | translate }}</mat-label>
-            <input matInput formControlName="upc">
-          </mat-form-field>
+        <mat-tab>
+          <ng-template mat-tab-label>
+            <mat-icon class="tab-icon">attach_money</mat-icon> Pricing
+          </ng-template>
+          <div class="tab-body">
+            <div class="form-row">
+              <mat-form-field appearance="outline">
+                <mat-label>{{ 'listPrice' | translate }}</mat-label>
+                <input matInput formControlName="listPrice">
+                <mat-icon matPrefix>sell</mat-icon>
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>{{ 'mapPrice' | translate }}</mat-label>
+                <input matInput formControlName="mapPrice">
+                <mat-icon matPrefix>price_check</mat-icon>
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>{{ 'offPrice' | translate }}</mat-label>
+                <input matInput formControlName="offPrice">
+                <mat-icon matPrefix>local_offer</mat-icon>
+              </mat-form-field>
+            </div>
+          </div>
+        </mat-tab>
 
-          <mat-form-field class="form-field">
-            <mat-label>{{ 'itemTypeName' | translate }}</mat-label>
-            <input matInput formControlName="itemTypeName">
-          </mat-form-field>
+      </mat-tab-group>
+    </form>
+  </div>
 
-
-        </div>
-
-        <!-- Row 2: Name -->
-        <div class="form-row">
-          <mat-form-field class="form-field">
-            <mat-label>{{ 'productRelation' | translate }}</mat-label>
-            <input matInput formControlName="productRelation">
-          </mat-form-field>
-
-          <mat-form-field class="form-field">
-            <mat-label>{{ 'parentID' | translate }}</mat-label>
-            <input matInput formControlName="parentID">
-          </mat-form-field>
-
-        </div>
-
-      </mat-tab>
-
-      <mat-tab label="Pricing">
-        <br />
-        <!-- Row 2: Name -->
-        <div class="form-row">
-
-          <mat-form-field class="form-field">
-            <mat-label>{{ 'listPrice' | translate }}</mat-label>
-            <input matInput formControlName="listPrice">
-          </mat-form-field>
-
-          <mat-form-field class="form-field">
-            <mat-label>{{ 'mapPrice' | translate }}</mat-label>
-            <input matInput formControlName="mapPrice">
-          </mat-form-field>
-
-          <mat-form-field class="form-field">
-            <mat-label>{{ 'offPrice' | translate }}</mat-label>
-            <input matInput formControlName="offPrice">
-          </mat-form-field>
-        </div>
-      </mat-tab>
-
-    </mat-tab-group>
-  </form>
-</div>
-
-<div mat-dialog-actions class="dialog-actions">
-  <button mat-button class="cancel-button" (click)="onCancel()">{{ 'cancel' | translate }}</button>
-  <button mat-raised-button color="primary" [disabled]="!updateCustomerProductCatalogForm.valid" (click)="updateCustomerProductCatalog()">{{ 'update' | translate }}</button>
+  <div mat-dialog-actions class="dialog-footer">
+    <button mat-raised-button class="btn-save" [disabled]="!updateCustomerProductCatalogForm.valid" (click)="updateCustomerProductCatalog()">
+      <mat-icon>save</mat-icon> {{ 'update' | translate }}
+    </button>
+  </div>
 </div>

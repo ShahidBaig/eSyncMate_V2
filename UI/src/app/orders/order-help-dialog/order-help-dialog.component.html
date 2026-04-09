@@ -1,0 +1,284 @@
+<div class="help-container">
+  <!-- Header -->
+  <div class="help-header">
+    <div class="header-left">
+      <mat-icon class="header-icon">shopping_cart</mat-icon>
+      <div>
+        <h2 class="header-title">Orders — Help Guide</h2>
+        <span class="header-subtitle">Everything you need to know about managing your orders in eSyncMate</span>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button mat-icon-button class="download-btn" matTooltip="Download Help Guide" (click)="downloadHelp()"><mat-icon>download</mat-icon></button>
+      <button mat-icon-button class="close-btn" (click)="close()">
+      <mat-icon>close</mat-icon>
+        </button>
+    </div>
+  </div>
+
+  <mat-dialog-content #helpContent class="help-content">
+
+    <!-- How Orders Work in eSyncMate -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>route</mat-icon> How Orders Work in eSyncMate</h3>
+      <p class="help-text">eSyncMate receives orders from your retail partners and manages them through each stage automatically:</p>
+      <div class="flow-diagram">
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#2563eb;"><mat-icon>storefront</mat-icon></div>
+          <span class="flow-label">Order Received</span>
+          <span class="flow-desc">Marketplace sends order</span>
+        </div>
+        <div class="flow-arrow"><mat-icon>arrow_forward</mat-icon></div>
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#059669;"><mat-icon>thumb_up</mat-icon></div>
+          <span class="flow-label">Acknowledged</span>
+          <span class="flow-desc">eSyncMate confirms receipt</span>
+        </div>
+        <div class="flow-arrow"><mat-icon>arrow_forward</mat-icon></div>
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#E8834A;"><mat-icon>sync</mat-icon></div>
+          <span class="flow-label">Synced to ERP</span>
+          <span class="flow-desc">Sales Order created</span>
+        </div>
+        <div class="flow-arrow"><mat-icon>arrow_forward</mat-icon></div>
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#7c3aed;"><mat-icon>local_shipping</mat-icon></div>
+          <span class="flow-label">Shipped</span>
+          <span class="flow-desc">ASN sent to marketplace</span>
+        </div>
+      </div>
+      <div class="tip-box" style="margin-top:14px;">
+        <mat-icon>lightbulb</mat-icon>
+        <span>If an order is cancelled by the marketplace or ERP, eSyncMate handles the cancellation automatically and notifies the marketplace. Orders can be <strong>fully cancelled</strong> or <strong>partially cancelled</strong> (some items cancelled, others still active).</span>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Finding Your Orders -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>search</mat-icon> Finding Your Orders</h3>
+      <p class="help-text">Use any of these filters to quickly find the orders you need:</p>
+      <div class="card-grid">
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#eff6ff;"><mat-icon style="color:#2563eb;">tag</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">eSyncMate ID</span>
+            <span class="info-card-desc">The unique order number assigned by eSyncMate when the order is received</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#fff7ed;"><mat-icon style="color:#E8834A;">confirmation_number</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Customer PO</span>
+            <span class="info-card-desc">The Purchase Order number from the marketplace (the retailer's order reference)</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#ecfdf5;"><mat-icon style="color:#059669;">receipt_long</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">ERP SO#</span>
+            <span class="info-card-desc">The Sales Order number created in your ERP system after the order is synced</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#f5f3ff;"><mat-icon style="color:#7c3aed;">date_range</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Date Range</span>
+            <span class="info-card-desc">Filter orders by the date range they were received in eSyncMate</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#fef2f2;"><mat-icon style="color:#dc2626;">flag</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Status</span>
+            <span class="info-card-desc">Filter by current order status (New, Synced, Shipped, Error, etc.)</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#f0fdfa;"><mat-icon style="color:#0891b2;">storefront</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Customer Name</span>
+            <span class="info-card-desc">Filter orders by retail partner (Amazon, Walmart, Target, Lowes, etc.)</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Understanding Order Statuses -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>label</mat-icon> Understanding Order Statuses</h3>
+      <p class="help-text">Each order has a color-coded status so you can track its progress at a glance:</p>
+      <div class="status-card-grid">
+        <div class="status-card status-card-blue">
+          <div class="sc-header"><mat-icon>fiber_new</mat-icon><span>New</span></div>
+          <p>Order has been received from the marketplace and saved in eSyncMate. Waiting to be sent to your ERP system.</p>
+        </div>
+        <div class="status-card status-card-green">
+          <div class="sc-header"><mat-icon>check_circle</mat-icon><span>Synced</span></div>
+          <p>Order has been successfully sent to your ERP system. A Sales Order number has been created and confirmed.</p>
+        </div>
+        <div class="status-card status-card-teal">
+          <div class="sc-header"><mat-icon>local_shipping</mat-icon><span>Shipped</span></div>
+          <p>All items have been shipped. eSyncMate has sent the shipment notification (ASN) with tracking details to the marketplace.</p>
+        </div>
+        <div class="status-card status-card-amber">
+          <div class="sc-header"><mat-icon>splitscreen</mat-icon><span>Partially Shipped</span></div>
+          <p>Some items have been shipped but others are still pending. eSyncMate will continue to track the remaining items.</p>
+        </div>
+        <div class="status-card status-card-gray">
+          <div class="sc-header"><mat-icon>cancel</mat-icon><span>Cancelled</span></div>
+          <p>The entire order has been cancelled. eSyncMate has notified the marketplace about the cancellation.</p>
+        </div>
+        <div class="status-card status-card-amber">
+          <div class="sc-header"><mat-icon>content_cut</mat-icon><span>Partially Cancelled</span></div>
+          <p>Some items in the order have been cancelled, but the remaining items are still being processed or shipped.</p>
+        </div>
+        <div class="status-card status-card-red">
+          <div class="sc-header"><mat-icon>error</mat-icon><span>Error</span></div>
+          <p>Something went wrong while sending this order to your ERP. Use <strong>Re-Process</strong> to retry sending it.</p>
+        </div>
+        <div class="status-card status-card-red">
+          <div class="sc-header"><mat-icon>sync_problem</mat-icon><span>Asn Error</span></div>
+          <p>The shipment notification failed to send to the marketplace.</p>
+        </div>
+        <div class="status-card status-card-red">
+          <div class="sc-header"><mat-icon>report_problem</mat-icon><span>Ack Error</span></div>
+          <p>Order acknowledgment failed to send to the marketplace.</p>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- What You Can Do -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>touch_app</mat-icon> What You Can Do</h3>
+      <p class="help-text">These action buttons are available on each order row:</p>
+      <div class="action-card-grid">
+        <div class="action-card">
+          <div class="ac-icon" style="background:#eff6ff;"><mat-icon style="color:#2563eb;">visibility</mat-icon></div>
+          <div class="ac-body">
+            <span class="ac-title">View Order Details</span>
+            <p class="ac-desc">See the complete order information including shipping address, order line items, quantities, prices, and individual line statuses. You can edit the shipping address when the order is in <strong>New</strong> or <strong>Error</strong> status.</p>
+          </div>
+        </div>
+        <div class="action-card">
+          <div class="ac-icon" style="background:#ecfdf5;"><mat-icon style="color:#059669;">folder_open</mat-icon></div>
+          <div class="ac-body">
+            <span class="ac-title">Show Files</span>
+            <p class="ac-desc">View the complete processing history of the order — every data exchange between eSyncMate, your ERP system, and the marketplace is recorded here.</p>
+          </div>
+        </div>
+        <div class="action-card">
+          <div class="ac-icon" style="background:#fef2f2;"><mat-icon style="color:#dc2626;">refresh</mat-icon></div>
+          <div class="ac-body">
+            <span class="ac-title">Re-Process Order</span>
+            <p class="ac-desc">Available only for orders in <strong>Error</strong> status. eSyncMate will retry processing the order and sending it to your ERP.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Order Detail View -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>preview</mat-icon> Inside the Order Detail View</h3>
+      <p class="help-text">When you click <strong>View Order Details</strong>, you'll see two tabs:</p>
+      <div class="tab-preview">
+        <div class="tab-card">
+          <div class="tab-card-header">
+            <mat-icon>location_on</mat-icon>
+            <span>Shipping Address</span>
+          </div>
+          <div class="tab-card-body">
+            <p>View or edit the delivery address — name, company, street, city, state, zip code, and country.</p>
+            <div class="tip-box">
+              <mat-icon>lightbulb</mat-icon>
+              <span>You can only edit the shipping address when the order status is <strong>New</strong> or <strong>Error</strong>.</span>
+            </div>
+          </div>
+        </div>
+        <div class="tab-card">
+          <div class="tab-card-header">
+            <mat-icon>list_alt</mat-icon>
+            <span>Order Lines (Details)</span>
+          </div>
+          <div class="tab-card-body">
+            <p>See every item in the order with quantities, pricing, and individual line statuses:</p>
+            <div class="mini-status-row">
+              <span class="mini-pill" style="background:#eff6ff;color:#2563eb;">New</span>
+              <span class="mini-pill" style="background:#fff7ed;color:#E8834A;">In Ship</span>
+              <span class="mini-pill" style="background:#ecfdf5;color:#059669;">Shipped</span>
+              <span class="mini-pill" style="background:#fef2f2;color:#dc2626;">In Cancel</span>
+              <span class="mini-pill" style="background:#f1f5f9;color:#64748b;">Cancelled</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Show Files — What Each Activity Means -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>folder_open</mat-icon> Show Files — What Each Activity Means</h3>
+      <p class="help-text">eSyncMate records every data exchange for each order. Click <strong>Show Files</strong> to see the full history:</p>
+      <div class="log-timeline">
+        <div class="log-step">
+          <div class="log-num">1</div>
+          <div class="log-body">
+            <span class="log-title">Order Received from Customer</span>
+            <span class="log-desc">The original order data as it was received from the marketplace</span>
+          </div>
+        </div>
+        <div class="log-step">
+          <div class="log-num">2</div>
+          <div class="log-body">
+            <span class="log-title">Order Acknowledged in Customer Portal</span>
+            <span class="log-desc">eSyncMate sent a confirmation back to the marketplace that the order was received</span>
+          </div>
+        </div>
+        <div class="log-step">
+          <div class="log-num">3</div>
+          <div class="log-body">
+            <span class="log-title">Order Request Sent to ERP</span>
+            <span class="log-desc">eSyncMate sent the order data to your ERP system to create a Sales Order</span>
+          </div>
+        </div>
+        <div class="log-step">
+          <div class="log-num">4</div>
+          <div class="log-body">
+            <span class="log-title">Order Created in ERP</span>
+            <span class="log-desc">Your ERP system confirmed the Sales Order was created successfully</span>
+          </div>
+        </div>
+        <div class="log-step">
+          <div class="log-num">5</div>
+          <div class="log-body">
+            <span class="log-title">ASN Received from ERP</span>
+            <span class="log-desc">Shipment details (tracking number, carrier, items shipped) were received from your ERP/warehouse</span>
+          </div>
+        </div>
+        <div class="log-step">
+          <div class="log-num">6</div>
+          <div class="log-body">
+            <span class="log-title">ASN Sent to Customer</span>
+            <span class="log-desc">eSyncMate sent the shipment notification to the marketplace so your customer gets tracking info</span>
+          </div>
+        </div>
+        <div class="log-step">
+          <div class="log-num">7</div>
+          <div class="log-body">
+            <span class="log-title">Cancellation Data</span>
+            <span class="log-desc">If any items were cancelled — the cancellation request from ERP and the confirmation sent to the marketplace</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </mat-dialog-content>
+</div>

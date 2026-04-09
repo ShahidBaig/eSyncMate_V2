@@ -6,122 +6,249 @@
   overflow: hidden;
 }
 
-/* Dialog Container */
-.dialog-content {
-  padding: 0 !important;
+/* Container */
+.dialog-container {
+  font-family: 'Poppins', sans-serif;
   display: flex;
   flex-direction: column;
   height: 100%;
   overflow: hidden;
-  max-height: none !important;
 }
 
-/* Header */
+/* ============================================================
+   Header — clean white, no background color
+   ============================================================ */
 .dialog-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 24px;
-  background: #3f51b5;
-  color: #fff;
-  flex-shrink: 0;
-
-  .header-left {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-
-  .header-icon {
-    font-size: 24px;
-    width: 24px;
-    height: 24px;
-  }
-
-  .dialog-title {
-    margin: 0;
-    font-size: 18px;
-    font-weight: 700;
-    letter-spacing: 0.3px;
-  }
-
-  .header-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 3px 12px;
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 12px;
-    font-size: 12px;
-    font-weight: 600;
-  }
-
-  .status-chip {
-    padding: 3px 12px;
-    border-radius: 12px;
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-
-  .chip-completed {
-    background: #c8e6c9;
-    color: #1b5e20;
-  }
-
-  .chip-processing {
-    background: #fff9c4;
-    color: #f57f17;
-  }
-
-  .chip-error {
-    background: #ffcdd2;
-    color: #b71c1c;
-  }
-}
-
-/* Search Card */
-.search-card {
-  margin: 16px 20px 0;
+  padding: 18px 24px;
+  background: #ffffff;
+  border-bottom: 2px solid #e2e8f0;
   flex-shrink: 0;
 }
 
-.form-row {
+.header-left {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
 }
 
-.search-field {
-  min-width: 180px;
+.header-icon-wrap {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: #eff6ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  mat-icon {
+    font-size: 22px;
+    width: 22px;
+    height: 22px;
+    color: #2563eb;
+  }
+}
+
+.header-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.dialog-header-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: #1e293b;
+  letter-spacing: 0.2px;
+}
+
+.header-subtitle {
+  font-size: 12px;
+  font-weight: 500;
+  color: #94a3b8;
+  letter-spacing: 0.3px;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Status Chips — pill style */
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 14px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.chip-icon {
+  font-size: 14px !important;
+  width: 14px !important;
+  height: 14px !important;
+}
+
+.chip-completed { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+.chip-processing { background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; }
+.chip-error { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+
+/* Item Count Badge */
+.header-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 14px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.badge-icon {
+  font-size: 15px !important;
+  width: 15px !important;
+  height: 15px !important;
+  color: #94a3b8;
+}
+
+.dialog-close-btn {
+  color: #94a3b8;
+  &:hover { color: #1e293b; background: #f1f5f9; border-radius: 50%; }
+}
+
+/* ============================================================
+   Body
+   ============================================================ */
+.dialog-body {
+  padding: 0 !important;
+  display: flex;
+  flex-direction: column;
   flex: 1;
+  overflow: hidden !important;
+  max-height: none !important;
 }
 
-.item-search-field {
-  max-width: 220px;
+/* Search Row */
+.search-row {
+  padding: 16px 24px 12px;
+  flex-shrink: 0;
 }
 
-.search-btn {
-  height: 48px;
-  white-space: nowrap;
+.search-form {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
-/* Table Container */
+.search-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+  height: 42px;
+  min-width: 280px;
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  transition: all 0.2s ease;
+
+  &:focus-within {
+    border-color: #2563eb;
+    background: #ffffff;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  }
+}
+
+.search-input-icon {
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
+.search-input {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: 'Poppins', sans-serif;
+  font-size: 13px;
+  color: #1e293b;
+  flex: 1;
+  height: 100%;
+
+  &::placeholder {
+    color: #94a3b8;
+    font-weight: 400;
+  }
+}
+
+.search-clear-btn {
+  width: 28px !important;
+  height: 28px !important;
+  line-height: 28px !important;
+  flex-shrink: 0;
+
+  mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    color: #94a3b8;
+  }
+
+  &:hover mat-icon { color: #1e293b; }
+}
+
+.btn-search {
+  height: 42px;
+  padding: 0 20px !important;
+  background: #2563eb !important;
+  color: white !important;
+  font-family: 'Poppins', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 10px !important;
+  letter-spacing: 0.2px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.3);
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: #1d4ed8 !important;
+    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.4);
+  }
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+}
+
+/* ============================================================
+   Table Section
+   ============================================================ */
 .table-section {
   flex: 1;
-  margin: 12px 20px;
+  margin: 0 24px 8px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-}
-
-.table-card {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
 }
 
 .table-scroll {
@@ -129,116 +256,183 @@
   overflow: auto;
 
   &::-webkit-scrollbar { width: 6px; height: 6px; }
-  &::-webkit-scrollbar-track { background: #f5f5f5; }
-  &::-webkit-scrollbar-thumb { background: #bdbdbd; border-radius: 3px; }
-  &::-webkit-scrollbar-thumb:hover { background: #999; }
+  &::-webkit-scrollbar-track { background: #f1f5f9; }
+  &::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+  &::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 }
 
 .fixed-table {
-  table-layout: fixed;
-  width: 250%;
+  table-layout: auto;
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
 }
 
-/* Table Header */
+/* Table Header — theme colors (sticky handled in global styles via panelClass) */
 ::ng-deep .fixed-table th.mat-mdc-header-cell {
-  background: #f5f7fa !important;
-  font-weight: 700 !important;
-  font-size: 13px !important;
-  color: #333 !important;
-  padding: 8px 10px !important;
-  border-bottom: 2px solid #e0e0e0 !important;
+  background: #e8eef6 !important;
+  font-weight: 600 !important;
+  font-size: 12px !important;
+  color: #334155 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 12px 14px !important;
+  border-bottom: 2px solid #c9d5e3 !important;
   white-space: nowrap;
+  vertical-align: middle !important;
 }
 
-/* Table Rows */
+/* Table Rows — comfortable row height & padding */
 ::ng-deep .fixed-table td.mat-mdc-cell {
-  padding: 6px 10px !important;
   font-size: 13px !important;
-  color: #333 !important;
-  border-bottom: 1px solid #f0f0f0 !important;
+  color: #1e293b !important;
+  padding: 10px 14px !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+  white-space: nowrap;
+  line-height: 1.4;
+  vertical-align: middle !important;
+}
+
+::ng-deep .fixed-table tr.mat-mdc-row {
+  height: 44px !important;
+}
+
+::ng-deep .fixed-table tr.mat-mdc-row:nth-child(even) {
+  background: #f8fafc;
 }
 
 ::ng-deep .fixed-table tr.mat-mdc-row:hover {
-  background: #f8f9ff;
+  background: #eff6ff !important;
 }
 
-/* Alternate row coloring */
-::ng-deep .fixed-table tr.mat-mdc-row:nth-child(even) {
-  background: #fafafa;
-}
-
-::ng-deep .fixed-table tr.mat-mdc-row:nth-child(even):hover {
-  background: #f0f2ff;
-}
-
-/* Paginator */
-.paginator-section {
-  flex-shrink: 0;
-  padding: 0 20px;
-}
-
-/* Dialog Actions */
-.dialog-actions {
-  display: flex;
-  justify-content: flex-end;
-  padding: 10px 24px;
-  border-top: 1px solid #e0e0e0;
-  flex-shrink: 0;
-}
-
-.close-button {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-weight: 600;
-}
-
-/* Table status chips */
+/* Table Status Chips */
 .table-status-chip {
-  display: inline-block;
-  padding: 3px 10px;
-  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 9999px;
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
   white-space: nowrap;
 }
 
-.tbl-chip-synced {
-  background: #e8f5e9;
-  color: #2e7d32;
+.tbl-chip-synced { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
+.tbl-chip-new { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
+.tbl-chip-default { background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0; }
+
+/* Cell helper classes — readability */
+::ng-deep .fixed-table .cell-item-id {
+  font-weight: 600 !important;
+  color: #1e293b !important;
+  letter-spacing: 0.2px;
 }
 
-.tbl-chip-new {
-  background: #e3f2fd;
-  color: #1565c0;
+::ng-deep .fixed-table .cell-date {
+  color: #475569 !important;
+  font-size: 13px !important;
+  font-variant-numeric: tabular-nums;
 }
 
-.tbl-chip-default {
-  background: #f5f5f5;
-  color: #616161;
-}
-
-/* Column widths — text columns wider, qty columns tight */
-.mat-column-CustomerID { min-width: 90px; }
-.mat-column-ItemID { min-width: 90px; }
-.mat-column-SyncDate { min-width: 130px; }
-.mat-column-Status { min-width: 65px; }
-.mat-column-CustomerItemCode { min-width: 100px; }
-.mat-column-ETADate { min-width: 95px; }
-.mat-column-File { min-width: 40px; }
-
-/* Qty & ATS columns — compact, right-aligned */
-.mat-column-ETAQty,
-.mat-column-TotalATS,
-.mat-column-ATSL10, .mat-column-ATSL21, .mat-column-ATSL28, .mat-column-ATSL29, .mat-column-ATSL30,
-.mat-column-ATSL34, .mat-column-ATSL35, .mat-column-ATSL36, .mat-column-ATSL37, .mat-column-ATSL40,
-.mat-column-ATSL41, .mat-column-ATSL55, .mat-column-ATSL56, .mat-column-ATSL57, .mat-column-ATSL60,
-.mat-column-ATSL65, .mat-column-ATSL70, .mat-column-ATSL91 {
-  min-width: 55px;
-  max-width: 65px;
+::ng-deep .fixed-table .cell-number {
+  font-variant-numeric: tabular-nums;
+  font-size: 13px !important;
+  color: #334155 !important;
   text-align: right;
 }
 
-input[matInput] {
-  padding: 8px 12px;
+::ng-deep .fixed-table .cell-total {
+  font-weight: 700 !important;
+  font-variant-numeric: tabular-nums;
+  font-size: 13.5px !important;
+  color: #1e293b !important;
+  text-align: right;
+}
+
+/* ============================================================
+   Column widths — readable spacing for client
+   ============================================================ */
+
+/* Action column — first, sticky left */
+::ng-deep .fixed-table th.mat-mdc-header-cell.mat-column-File,
+::ng-deep .fixed-table td.mat-mdc-cell.mat-column-File {
+  width: 52px; min-width: 52px; max-width: 52px;
+  padding: 0 8px !important;
+  text-align: center !important;
+  vertical-align: middle !important;
+  position: sticky; left: 0; z-index: 1;
+}
+::ng-deep .fixed-table td.mat-mdc-cell.mat-column-File .mat-mdc-icon-button {
+  margin: 0 auto;
+  display: flex; align-items: center; justify-content: center;
+  width: 32px !important; height: 32px !important; padding: 0 !important;
+}
+::ng-deep .fixed-table th.mat-mdc-header-cell.mat-column-File {
+  z-index: 12 !important;
+  border-right: 1px solid #c9d5e3;
+}
+::ng-deep .fixed-table td.mat-mdc-cell.mat-column-File {
+  background: #ffffff;
+  border-right: 1px solid #f1f5f9;
+}
+::ng-deep .fixed-table tr.mat-mdc-row:nth-child(even) td.mat-mdc-cell.mat-column-File {
+  background: #f8fafc;
+}
+::ng-deep .fixed-table tr.mat-mdc-row:hover td.mat-mdc-cell.mat-column-File {
+  background: #eff6ff !important;
+}
+
+/* Text columns — compact spacing */
+::ng-deep .fixed-table .mat-column-ItemID {
+  min-width: 110px;
+  font-weight: 500 !important;
+}
+
+::ng-deep .fixed-table .mat-column-SyncDate {
+  min-width: 140px;
+}
+
+::ng-deep .fixed-table .mat-column-Status {
+  min-width: 80px;
+}
+
+::ng-deep .fixed-table .mat-column-CustomerItemCode {
+  min-width: 120px;
+}
+
+::ng-deep .fixed-table .mat-column-ETADate {
+  min-width: 100px;
+}
+
+/* Numeric columns — right-aligned */
+::ng-deep .fixed-table .mat-column-ETAQty {
+  min-width: 70px; text-align: right;
+}
+
+::ng-deep .fixed-table .mat-column-TotalATS {
+  min-width: 80px; text-align: right;
+  font-weight: 600 !important;
+}
+
+/* ATS Location columns — uniform readable width, right-aligned */
+::ng-deep .fixed-table .mat-column-ATSL10,
+::ng-deep .fixed-table .mat-column-ATSL21,
+::ng-deep .fixed-table .mat-column-ATSL28,
+::ng-deep .fixed-table .mat-column-ATSL29,
+::ng-deep .fixed-table .mat-column-ATSL30,
+::ng-deep .fixed-table .mat-column-ATSL34,
+::ng-deep .fixed-table .mat-column-ATSL35,
+::ng-deep .fixed-table .mat-column-ATSL36,
+::ng-deep .fixed-table .mat-column-ATSL37,
+::ng-deep .fixed-table .mat-column-ATSL40,
+::ng-deep .fixed-table .mat-column-ATSL41,
+::ng-deep .fixed-table .mat-column-ATSL55,
+::ng-deep .fixed-table .mat-column-ATSL56,
+::ng-deep .fixed-table .mat-column-ATSL57,
+::ng-deep .fixed-table .mat-column-ATSL60,
+::ng-deep .fixed-table .mat-column-ATSL65,
+::ng-deep .fixed-table .mat-column-ATSL70,
+::ng-deep .fixed-table .mat-column-ATSL91 {
+  min-width: 70px; text-align: right;
 }

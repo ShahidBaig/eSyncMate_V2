@@ -1,0 +1,224 @@
+<div class="help-container">
+  <!-- Header -->
+  <div class="help-header">
+    <div class="header-left">
+      <mat-icon class="header-icon">security</mat-icon>
+      <div>
+        <h2 class="header-title">Role Management — Help Guide</h2>
+        <span class="header-subtitle">Everything you need to know about managing roles and permissions</span>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button mat-icon-button class="download-btn" matTooltip="Download Help Guide" (click)="downloadHelp()"><mat-icon>download</mat-icon></button>
+      <button mat-icon-button class="close-btn" (click)="close()">
+      <mat-icon>close</mat-icon>
+        </button>
+    </div>
+  </div>
+
+  <mat-dialog-content #helpContent class="help-content">
+
+    <!-- How Role Management Works — Visual Flow Diagram -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>route</mat-icon> How Role Management Works</h3>
+      <p class="help-text">Every role follows this process to control what users can access:</p>
+      <div class="flow-diagram">
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#2563eb;"><mat-icon>add_circle</mat-icon></div>
+          <span class="flow-label">Create Role</span>
+          <span class="flow-desc">Define a new role</span>
+        </div>
+        <div class="flow-arrow"><mat-icon>arrow_forward</mat-icon></div>
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#E8834A;"><mat-icon>tune</mat-icon></div>
+          <span class="flow-label">Set Permissions</span>
+          <span class="flow-desc">Choose menu access</span>
+        </div>
+        <div class="flow-arrow"><mat-icon>arrow_forward</mat-icon></div>
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#7c3aed;"><mat-icon>person_add</mat-icon></div>
+          <span class="flow-label">Assign to Users</span>
+          <span class="flow-desc">Link users to role</span>
+        </div>
+        <div class="flow-arrow"><mat-icon>arrow_forward</mat-icon></div>
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#059669;"><mat-icon>verified_user</mat-icon></div>
+          <span class="flow-label">Access Controlled</span>
+          <span class="flow-desc">Permissions enforced</span>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Understanding Roles -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>tab</mat-icon> Understanding Roles</h3>
+      <p class="help-text">The Role Management screen has two tabs that let you manage roles and their permissions:</p>
+      <div class="tab-preview">
+        <div class="tab-card">
+          <div class="tab-card-header">
+            <mat-icon>badge</mat-icon>
+            <span>Roles Tab</span>
+          </div>
+          <div class="tab-card-body">
+            <p>Create, edit, and delete roles. Each role has a name, description, and active/inactive status. This is where you define the roles that will be available across the system.</p>
+          </div>
+        </div>
+        <div class="tab-card">
+          <div class="tab-card-header">
+            <mat-icon>assignment</mat-icon>
+            <span>Menu Assignments Tab</span>
+          </div>
+          <div class="tab-card-body">
+            <p>Configure which menus each role can access. Select a role first, then check or uncheck View, Add, Edit, and Delete permissions for every menu in the system.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Permission Levels -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>lock</mat-icon> Permission Levels</h3>
+      <p class="help-text">Each menu can have up to four permission levels assigned per role:</p>
+      <div class="status-card-grid">
+        <div class="status-card status-card-blue">
+          <div class="sc-header"><mat-icon>visibility</mat-icon><span>View</span></div>
+          <p>User can see the menu and data. Without this permission, the menu is completely hidden from the user's navigation.</p>
+        </div>
+        <div class="status-card status-card-green">
+          <div class="sc-header"><mat-icon>add_circle</mat-icon><span>Add</span></div>
+          <p>User can create new records. The "New" or "Add" buttons will appear on the page when this is enabled.</p>
+        </div>
+        <div class="status-card status-card-amber">
+          <div class="sc-header"><mat-icon>edit</mat-icon><span>Edit</span></div>
+          <p>User can modify existing records. The "Edit" button will appear on each row when this is enabled.</p>
+        </div>
+        <div class="status-card status-card-red">
+          <div class="sc-header"><mat-icon>delete</mat-icon><span>Delete</span></div>
+          <p>User can remove records. The "Delete" button will appear on each row when this is enabled.</p>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- What You Can Do -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>touch_app</mat-icon> What You Can Do</h3>
+      <p class="help-text">Here are the main actions available on this screen:</p>
+      <div class="action-card-grid">
+        <div class="action-card">
+          <div class="ac-icon" style="background:#eff6ff;"><mat-icon style="color:#2563eb;">add_circle</mat-icon></div>
+          <div class="ac-body">
+            <span class="ac-title">Create Role</span>
+            <p class="ac-desc">Click <strong>New Role</strong> to create a new role. Enter a name and description, set it as active, and save. The role will then appear in the roles table and can be assigned permissions.</p>
+          </div>
+        </div>
+        <div class="action-card">
+          <div class="ac-icon" style="background:#ecfdf5;"><mat-icon style="color:#059669;">edit</mat-icon></div>
+          <div class="ac-body">
+            <span class="ac-title">Edit Role</span>
+            <p class="ac-desc">Click the <strong>Edit</strong> button on any role to update its name, description, or active status. You can also deactivate a role without deleting it.</p>
+          </div>
+        </div>
+        <div class="action-card">
+          <div class="ac-icon" style="background:#f5f3ff;"><mat-icon style="color:#7c3aed;">assignment</mat-icon></div>
+          <div class="ac-body">
+            <span class="ac-title">Configure Menu Access</span>
+            <p class="ac-desc">Click the <strong>Assign Menus</strong> button on a role to open the Menu Assignments tab. From there, expand each module to see its menus and set <strong>View</strong>, <strong>Add</strong>, <strong>Edit</strong>, and <strong>Delete</strong> permissions per menu. Use <strong>Select All</strong> to quickly grant full access to an entire module.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- How Permissions Flow -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>account_tree</mat-icon> How Permissions Flow</h3>
+      <p class="help-text">Here is what happens when a user with an assigned role logs in:</p>
+      <div class="log-timeline">
+        <div class="log-step">
+          <div class="log-num">1</div>
+          <div class="log-body">
+            <span class="log-title">User Logs In</span>
+            <span class="log-desc">The user enters their credentials and authenticates with the system</span>
+          </div>
+        </div>
+        <div class="log-step">
+          <div class="log-num">2</div>
+          <div class="log-body">
+            <span class="log-title">System Loads Role Permissions</span>
+            <span class="log-desc">The system looks up the user's assigned role and loads all menu permissions for that role</span>
+          </div>
+        </div>
+        <div class="log-step">
+          <div class="log-num">3</div>
+          <div class="log-body">
+            <span class="log-title">Navigation Shows Only Permitted Menus</span>
+            <span class="log-desc">The sidebar navigation only displays menus where the user's role has View permission enabled</span>
+          </div>
+        </div>
+        <div class="log-step">
+          <div class="log-num">4</div>
+          <div class="log-body">
+            <span class="log-title">Each Page Checks Add, Edit, and Delete Permissions</span>
+            <span class="log-desc">When the user opens a page, the system checks which actions are allowed and shows or hides buttons accordingly</span>
+          </div>
+        </div>
+        <div class="log-step">
+          <div class="log-num">5</div>
+          <div class="log-body">
+            <span class="log-title">Buttons Appear or Hide Based on Permissions</span>
+            <span class="log-desc">If the role does not have Add permission, the "New" button is hidden. Same for Edit and Delete buttons on each row.</span>
+          </div>
+        </div>
+      </div>
+      <div class="tip-box" style="margin-top: 12px;">
+        <mat-icon>lightbulb</mat-icon>
+        <span>Changes to role permissions take effect the next time the user logs in.</span>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Default Roles -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>shield</mat-icon> Default Roles</h3>
+      <p class="help-text">The system comes with these pre-configured roles to get you started:</p>
+      <div class="status-card-grid">
+        <div class="status-card status-card-purple">
+          <div class="sc-header"><mat-icon>admin_panel_settings</mat-icon><span>SuperAdmin</span></div>
+          <p>Full system access to every menu and every permission level. This role can manage all settings, users, and configurations.</p>
+        </div>
+        <div class="status-card status-card-blue">
+          <div class="sc-header"><mat-icon>manage_accounts</mat-icon><span>Admin</span></div>
+          <p>Access to all menus except Role Management. Admins can manage day-to-day operations but cannot change role permissions.</p>
+        </div>
+        <div class="status-card status-card-amber">
+          <div class="sc-header"><mat-icon>engineering</mat-icon><span>Operator</span></div>
+          <p>Access to Orders and Products with Add and Edit permissions only. Operators can create and update records but cannot delete them.</p>
+        </div>
+        <div class="status-card status-card-gray">
+          <div class="sc-header"><mat-icon>person</mat-icon><span>Viewer</span></div>
+          <p>Read-only access to Orders and Products. Viewers can see data but cannot create, edit, or delete any records.</p>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Hidden Menus -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>visibility_off</mat-icon> Hidden Menus</h3>
+      <div class="tip-box">
+        <mat-icon>lightbulb</mat-icon>
+        <span>Some internal menus (Connectors, Maps, Routes, etc.) are hidden from the Role Management screen. These can only be assigned directly to specific users by an administrator.</span>
+      </div>
+    </section>
+
+  </mat-dialog-content>
+</div>

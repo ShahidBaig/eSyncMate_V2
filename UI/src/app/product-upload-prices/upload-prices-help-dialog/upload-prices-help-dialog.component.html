@@ -1,0 +1,270 @@
+<div class="help-container">
+  <!-- Header -->
+  <div class="help-header">
+    <div class="header-left">
+      <mat-icon class="header-icon">upload_file</mat-icon>
+      <div>
+        <h2 class="header-title">Product Promotions — Help Guide</h2>
+        <span class="header-subtitle">Upload and manage promotional pricing for your marketplace partners in eSyncMate</span>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button mat-icon-button class="download-btn" matTooltip="Download Help Guide" (click)="downloadHelp()"><mat-icon>download</mat-icon></button>
+      <button mat-icon-button class="close-btn" (click)="close()">
+      <mat-icon>close</mat-icon>
+        </button>
+    </div>
+  </div>
+
+  <mat-dialog-content #helpContent class="help-content">
+
+    <!-- How It Works -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>route</mat-icon> How Promotional Pricing Works in eSyncMate</h3>
+      <p class="help-text">eSyncMate manages your promotional prices from upload to marketplace activation:</p>
+      <div class="flow-diagram">
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#2563eb;"><mat-icon>file_download</mat-icon></div>
+          <span class="flow-label">Download Template</span>
+          <span class="flow-desc">Get CSV sample</span>
+        </div>
+        <div class="flow-arrow"><mat-icon>arrow_forward</mat-icon></div>
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#7c3aed;"><mat-icon>edit_note</mat-icon></div>
+          <span class="flow-label">Fill In Prices</span>
+          <span class="flow-desc">Promo dates & amounts</span>
+        </div>
+        <div class="flow-arrow"><mat-icon>arrow_forward</mat-icon></div>
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#E8834A;"><mat-icon>cloud_upload</mat-icon></div>
+          <span class="flow-label">Upload CSV</span>
+          <span class="flow-desc">Submit to eSyncMate</span>
+        </div>
+        <div class="flow-arrow"><mat-icon>arrow_forward</mat-icon></div>
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#0891b2;"><mat-icon>fact_check</mat-icon></div>
+          <span class="flow-label">Validated</span>
+          <span class="flow-desc">eSyncMate checks data</span>
+        </div>
+        <div class="flow-arrow"><mat-icon>arrow_forward</mat-icon></div>
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#059669;"><mat-icon>storefront</mat-icon></div>
+          <span class="flow-label">Live on Marketplace</span>
+          <span class="flow-desc">Promo active</span>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Page Layout — 3 Sections -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>dashboard</mat-icon> Page Layout</h3>
+      <p class="help-text">The Product Promotions page has three sections side by side:</p>
+      <div class="tab-preview" style="grid-template-columns: 1fr 1fr 1fr;">
+        <div class="tab-card">
+          <div class="tab-card-header">
+            <mat-icon>filter_list</mat-icon>
+            <span>Search & Filter</span>
+          </div>
+          <div class="tab-card-body">
+            <p>Find existing promotions in the data grid.</p>
+            <p>Choose a <strong>Search By</strong> option (ID, Customer, Item ID, Promo Start/End Date, or Upload Date), enter your value, and click <strong>Search</strong>.</p>
+          </div>
+        </div>
+        <div class="tab-card">
+          <div class="tab-card-header">
+            <mat-icon>cloud_upload</mat-icon>
+            <span>Upload</span>
+          </div>
+          <div class="tab-card-body">
+            <p>Upload new promotional prices:</p>
+            <p>1. Select <strong>ERP Customer ID</strong></p>
+            <p>2. Choose your <strong>CSV file</strong></p>
+            <p>3. Click <strong>Upload</strong></p>
+            <p>eSyncMate validates each row and applies promotional prices based on start/end dates.</p>
+          </div>
+        </div>
+        <div class="tab-card">
+          <div class="tab-card-header">
+            <mat-icon>build</mat-icon>
+            <span>Actions</span>
+          </div>
+          <div class="tab-card-body">
+            <p>Has its own <strong>independent</strong> ERP Customer ID selector.</p>
+            <p><strong>Sample</strong> — Download a CSV template with correct column headers.</p>
+            <p><strong>Discrepancies</strong> — Download a report showing price differences between your uploads and the marketplace.</p>
+          </div>
+        </div>
+      </div>
+      <div class="tip-box" style="margin-top:12px;">
+        <mat-icon>lightbulb</mat-icon>
+        <span>The Upload and Actions sections have <strong>independent</strong> Customer ID selections. Selecting a customer in Upload does not affect the Actions section. Only <strong>CSV files</strong> are accepted for upload.</span>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Finding Promotions -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>search</mat-icon> Finding Promotions</h3>
+      <p class="help-text">Use the Search & Filter section to find promotional pricing records:</p>
+      <div class="card-grid">
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#eff6ff;"><mat-icon style="color:#2563eb;">tag</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">ID</span>
+            <span class="info-card-desc">Search by the unique promotion record number assigned by eSyncMate</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#fff7ed;"><mat-icon style="color:#E8834A;">storefront</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">ERP Customer ID</span>
+            <span class="info-card-desc">Filter by marketplace partner to see their promotions only</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#ecfdf5;"><mat-icon style="color:#059669;">inventory_2</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Item ID</span>
+            <span class="info-card-desc">Search by product item number to find promotions for a specific product</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#f5f3ff;"><mat-icon style="color:#7c3aed;">event</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Promo Start / End Date</span>
+            <span class="info-card-desc">Filter by promotion date range — when the promo begins or ends</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#f0fdfa;"><mat-icon style="color:#0891b2;">date_range</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Upload Date</span>
+            <span class="info-card-desc">Filter by when the promotion was uploaded to eSyncMate</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Actions -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>touch_app</mat-icon> What You Can Do</h3>
+      <p class="help-text">These actions are available on the Product Promotions page:</p>
+      <div class="action-card-grid">
+        <div class="action-card">
+          <div class="ac-icon" style="background:#ecfdf5;"><mat-icon style="color:#059669;">cloud_upload</mat-icon></div>
+          <div class="ac-body">
+            <span class="ac-title">Upload Promotional Prices</span>
+            <p class="ac-desc">In the Upload section, select a customer, choose your CSV file, and click Upload. eSyncMate validates each row and schedules promotional prices based on the start and end dates you provided.</p>
+          </div>
+        </div>
+        <div class="action-card">
+          <div class="ac-icon" style="background:#eff6ff;"><mat-icon style="color:#2563eb;">file_download</mat-icon></div>
+          <div class="ac-body">
+            <span class="ac-title">Download Sample Template</span>
+            <p class="ac-desc">In the Actions section, click <strong>Sample</strong> to download a CSV template with the correct column headers: Item ID, Promo List Price, Offer Price, MAP Price, Start Date, and End Date.</p>
+          </div>
+        </div>
+        <div class="action-card">
+          <div class="ac-icon" style="background:#fef2f2;"><mat-icon style="color:#dc2626;">download</mat-icon></div>
+          <div class="ac-body">
+            <span class="ac-title">Download Discrepancies Report</span>
+            <p class="ac-desc">In the Actions section, select a customer and click <strong>Discrepancies</strong>. eSyncMate generates a report showing differences between your uploaded prices and the prices currently on the marketplace.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Upload Process -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>format_list_numbered</mat-icon> Step-by-Step Upload Process</h3>
+      <p class="help-text">Follow these steps to upload promotional prices:</p>
+      <div class="log-timeline">
+        <div class="log-step">
+          <div class="log-num">1</div>
+          <div class="log-body">
+            <span class="log-title">Select Customer</span>
+            <span class="log-desc">In the Upload section, choose the ERP Customer ID for the marketplace partner</span>
+          </div>
+        </div>
+        <div class="log-step">
+          <div class="log-num">2</div>
+          <div class="log-body">
+            <span class="log-title">Download Template</span>
+            <span class="log-desc">In the Actions section, click Sample to get a CSV file with the correct column headers</span>
+          </div>
+        </div>
+        <div class="log-step">
+          <div class="log-num">3</div>
+          <div class="log-body">
+            <span class="log-title">Fill In Your Data</span>
+            <span class="log-desc">Open the template in Excel and enter Item ID, promo prices, start date, and end date for each product</span>
+          </div>
+        </div>
+        <div class="log-step">
+          <div class="log-num">4</div>
+          <div class="log-body">
+            <span class="log-title">Upload File</span>
+            <span class="log-desc">In the Upload section, choose your completed CSV file and click Upload</span>
+          </div>
+        </div>
+        <div class="log-step">
+          <div class="log-num">5</div>
+          <div class="log-body">
+            <span class="log-title">Verify Results</span>
+            <span class="log-desc">Use Search to find your customer's promotions in the grid. Check that prices and dates are correct</span>
+          </div>
+        </div>
+      </div>
+      <div class="tip-box" style="margin-top:14px;">
+        <mat-icon>lightbulb</mat-icon>
+        <span>After uploading, use the <strong>Discrepancies</strong> report in the Actions section to verify that marketplace prices match your uploads. If there are differences, re-upload the corrected file.</span>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Grid Columns -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>view_list</mat-icon> Grid Columns</h3>
+      <p class="help-text">The data grid shows these columns for each promotional price record:</p>
+      <div class="card-grid">
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#eff6ff;"><mat-icon style="color:#2563eb;">badge</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Customer ID / Item ID</span>
+            <span class="info-card-desc">The marketplace partner and product item number</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#ecfdf5;"><mat-icon style="color:#059669;">attach_money</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Promo Prices</span>
+            <span class="info-card-desc">List Price, Offer Price, and MAP Price for the promotion period</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#f5f3ff;"><mat-icon style="color:#7c3aed;">date_range</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Promo Start / End Date</span>
+            <span class="info-card-desc">Date and time when the promotion begins and ends (MM/DD/YYYY hh:mm AM/PM)</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#fff7ed;"><mat-icon style="color:#E8834A;">history</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Original Prices / Upload Date</span>
+            <span class="info-card-desc">The original prices before the promotion was applied, and when it was uploaded</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </mat-dialog-content>
+</div>

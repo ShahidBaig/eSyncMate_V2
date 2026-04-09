@@ -36,12 +36,11 @@ $red:           #dc2626;
 // ============================================================
 .login-page {
   display: flex;
-  height: 100%;
+  min-height: 100%;
   padding: 24px;
   gap: 24px;
   box-sizing: border-box;
   max-width: 1600px;
-  max-height: 900px;
 }
 
 // ============================================================
@@ -323,14 +322,235 @@ $red:           #dc2626;
   }
 }
 
+// ============================================================
+// MFA Views — Professional 2FA UI
+// ============================================================
+
+// Wider card when MFA is active (no promo column)
+.mfa-column-wide {
+  flex: none !important;
+  width: 540px !important;
+  min-width: 500px !important;
+  max-width: 580px;
+  margin: 32px auto !important;
+  align-items: center !important;
+}
+.mfa-card-wide {
+  padding: 44px 52px 40px !important;
+  flex: none !important;
+  align-items: center !important;
+  margin-bottom: 32px;
+}
+
+// Centered logo for MFA views
+.mfa-logo-centered {
+  justify-content: center !important;
+  margin-bottom: 32px !important;
+  padding-bottom: 24px;
+  border-bottom: 1px solid #f1f5f9;
+  width: 100%;
+
+  img { height: 40px !important; margin-left: -77px; }
+  .logo-caption { font-size: 24px !important; font-weight: 800 !important; letter-spacing: -0.3px !important; }
+}
+
+// MFA Section Container
+.mfa-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  padding: 8px 0 0;
+}
+
+// Icon Circle
+.mfa-icon-circle {
+  width: 76px; height: 76px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 24px;
+  mat-icon { font-size: 38px; width: 38px; height: 38px; color: #fff; }
+}
+.mfa-icon-orange {
+  background: linear-gradient(135deg, #E8834A, #f0a070);
+  box-shadow: 0 10px 30px rgba(232, 131, 74, 0.3);
+}
+.mfa-icon-blue {
+  background: linear-gradient(135deg, #2563eb, #3b82f6);
+  box-shadow: 0 10px 30px rgba(37, 99, 235, 0.25);
+}
+
+// Title
+.mfa-title {
+  font-size: 24px; font-weight: 800; color: #0f172a;
+  margin: 0 0 10px; text-align: center; letter-spacing: -0.3px;
+}
+
+// Subtitle
+.mfa-subtitle {
+  font-size: 14px; color: #64748b; text-align: center;
+  margin: 0 0 28px; line-height: 1.7; max-width: 380px; font-weight: 500;
+}
+
+// QR Card
+.qr-card {
+  display: flex; align-items: flex-start; gap: 28px;
+  width: 100%; padding: 24px;
+  background: #f8fafc; border-radius: 16px; border: 1px solid #e2e8f0;
+  margin-bottom: 28px;
+}
+
+.qr-frame {
+  flex-shrink: 0; padding: 10px; background: #fff; border-radius: 14px;
+  border: 2px solid #e2e8f0; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+  .qr-image { width: 160px; height: 160px; border-radius: 8px; display: block; }
+}
+
+.qr-instructions {
+  display: flex; flex-direction: column; gap: 14px; padding-top: 8px;
+}
+
+.qr-step {
+  display: flex; align-items: flex-start; gap: 10px;
+}
+.qr-step-num {
+  width: 24px; height: 24px; border-radius: 50%;
+  background: linear-gradient(135deg, #E8834A, #f0a070);
+  color: #fff; font-size: 12px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.qr-step span {
+  font-size: 13px; color: #475569; line-height: 1.5; font-weight: 500;
+  strong { font-weight: 700; color: #1e293b; }
+}
+
+// Divider
+.mfa-divider {
+  display: flex; align-items: center; gap: 16px;
+  width: 100%; margin-bottom: 24px;
+}
+.mfa-divider-line { flex: 1; height: 1px; background: #e2e8f0; }
+.mfa-divider-text {
+  font-size: 11px; font-weight: 800; color: #94a3b8;
+  text-transform: uppercase; letter-spacing: 1.2px; white-space: nowrap;
+}
+
+// OTP Form
+.otp-form {
+  width: 100%; display: flex; flex-direction: column; align-items: center; gap: 20px;
+}
+
+// Digit Boxes
+.otp-digits {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+}
+
+.otp-digit {
+  width: 52px; height: 60px;
+  border: 2px solid #e2e8f0;
+  border-radius: 14px;
+  background: #f8fafc;
+  font-size: 26px;
+  font-weight: 800;
+  color: #0f172a;
+  text-align: center;
+  outline: none;
+  transition: all 0.2s ease;
+  caret-color: #E8834A;
+  -webkit-font-smoothing: antialiased;
+
+  &:focus {
+    border-color: #E8834A;
+    background: #fff;
+    box-shadow: 0 0 0 4px rgba(232, 131, 74, 0.12);
+    transform: translateY(-2px);
+  }
+
+  &:not([value=""]):not(:placeholder-shown) {
+    border-color: #E8834A;
+    background: #fff;
+  }
+}
+
+// Error state on digit boxes
+.otp-digits.otp-invalid .otp-digit {
+  border-color: #ef4444 !important;
+  background: #fef2f2 !important;
+  animation: shake 0.4s ease-in-out;
+
+  &:focus {
+    box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.12) !important;
+  }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-4px); }
+  40% { transform: translateX(4px); }
+  60% { transform: translateX(-3px); }
+  80% { transform: translateX(3px); }
+}
+
+.otp-separator {
+  width: 16px; height: 3px; border-radius: 2px;
+  background: #cbd5e1; margin: 0 4px;
+}
+
+// Error
+.otp-error-row {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 10px 20px; background: #fef2f2; border: 1px solid #fecaca;
+  border-radius: 10px; width: 100%;
+
+  mat-icon { font-size: 18px; width: 18px; height: 18px; color: #dc2626; flex-shrink: 0; }
+  span { font-size: 13px; font-weight: 600; color: #dc2626; }
+}
+
+// Progress
+.mfa-progress { width: 100%; border-radius: 6px; }
+
+// Submit Button
+.mfa-submit-btn {
+  width: 100%; height: 50px;
+  border: none; border-radius: 14px;
+  background: linear-gradient(135deg, #E8834A, #d4722e);
+  color: #fff; font-size: 15px; font-weight: 700;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  transition: all 0.2s ease;
+  box-shadow: 0 6px 20px rgba(232, 131, 74, 0.3);
+  letter-spacing: 0.2px;
+
+  mat-icon { font-size: 20px; width: 20px; height: 20px; }
+
+  &:hover:not(:disabled) {
+    background: linear-gradient(135deg, #d4722e, #c0621e);
+    box-shadow: 0 8px 28px rgba(232, 131, 74, 0.4);
+    transform: translateY(-1px);
+  }
+  &:active:not(:disabled) { transform: translateY(0); }
+  &:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
+}
+
+// Help
+.mfa-help {
+  display: flex; align-items: flex-start; gap: 10px;
+  margin-top: 12px; padding: 14px 18px;
+  background: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0;
+  width: 100%;
+
+  mat-icon { font-size: 18px; width: 18px; height: 18px; color: #94a3b8; flex-shrink: 0; margin-top: 1px; }
+  span { font-size: 12px; color: #64748b; font-weight: 500; line-height: 1.5; strong { font-weight: 700; color: #475569; } }
+}
+
 // Footer
 .login-footer {
-  margin-top: 20px;
-  padding-top: 16px;
+  margin-top: 24px;
+  padding-top: 18px;
   border-top: 1px solid $gray-100;
   text-align: center;
   font-size: 11px;
   color: $gray-400;
+  width: 100%;
 
   strong {
     color: $gray-500;

@@ -1,8 +1,27 @@
-<h1 mat-dialog-title>File Content {{ data.routeName ? '[' + data.routeName + ']' : '' }}</h1>
-<mat-dialog-content>
-  <ngx-json-viewer *ngIf="data.type === 'json'" [json]="data.content" [expanded]="true"></ngx-json-viewer>
-  <textarea class="notepad-like" *ngIf="data.type !== 'json'">{{ data.content }}</textarea>
-</mat-dialog-content>
-<mat-dialog-actions>
-  <button mat-button mat-dialog-close>Close</button>
-</mat-dialog-actions>
+<div class="viewer-container">
+  <div class="viewer-header">
+    <div class="header-left">
+      <mat-icon class="header-icon">description</mat-icon>
+      <div>
+        <h2 class="viewer-title">File Viewer</h2>
+        <span class="viewer-subtitle" *ngIf="data.routeName">{{ data.routeName }}</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <span class="file-badge" [ngClass]="data.type === 'json' ? 'badge-json' : 'badge-text'">
+        {{ data.type | uppercase }}
+      </span>
+      <button mat-icon-button class="close-btn" mat-dialog-close>
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+  </div>
+
+  <mat-dialog-content class="viewer-content">
+    <div class="json-wrapper" *ngIf="data.type === 'json'">
+      <ngx-json-viewer [json]="data.content" [expanded]="true"></ngx-json-viewer>
+    </div>
+    <pre class="code-block" *ngIf="data.type !== 'json'">{{ data.content }}</pre>
+  </mat-dialog-content>
+
+</div>

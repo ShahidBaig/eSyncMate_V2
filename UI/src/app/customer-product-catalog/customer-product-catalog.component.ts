@@ -14,6 +14,7 @@ import { NgToastService } from 'ng-angular-popup';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialog } from '@angular/material/dialog';
+import { ProductCatalogHelpDialogComponent } from './product-catalog-help-dialog/product-catalog-help-dialog.component';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { CommonModule } from '@angular/common';
@@ -95,20 +96,37 @@ export class CustomerProductCatalogComponent {
   showDataColumn: boolean = true;
   selectedFile: File | null = null;
   isButtonDisabled: boolean = false;
+  // Upload section
   erpCustomerID: string = '';
+  itemTypes: string = '';
+  itemTypeName: string = '';
+  itemTypeFilter: string = '';
+  itemTypesOptions: ItemTypes[] | undefined;
+
+  // Actions section
+  actionsErpCustomerID: string = '';
+  actionsItemTypes: string = '';
+  actionsItemTypeName: string = '';
+  actionsItemTypeFilter: string = '';
+  actionsItemTypesOptions: ItemTypes[] | undefined;
+
+  // Download section
+  downloadErpCustomerID: string = '';
+  downloadItemTypes: string = '';
+  downloadItemTypeName: string = '';
+  downloadItemTypeFilter: string = '';
+  downloadItemTypesOptions: ItemTypes[] | undefined;
+
   customerID: string = '';
   listOfHistoryCustomerProductCatalog: HistoryCustomerProductCatalog[] = [];
   historyCustomerProductCatalogToDisplay: HistoryCustomerProductCatalog[] = [];
-  itemTypesOptions: ItemTypes[] | undefined;
   customersOptions: Customers[] | undefined;
-  itemTypes: string = '';
-  itemTypeName: string = '';
   isAdminUser: boolean = false;
   canAdd = false;
   canEdit = false;
   canDelete = false;
   panelsCollapsed = false;
-  itemTypeFilter: string = '';
+  activeMode: 'upload' | 'download' = 'upload';
   userID: number = 0;
   isPrepareData: boolean = false;
   isPrepareDataDisable: boolean = false;
@@ -120,7 +138,6 @@ export class CustomerProductCatalogComponent {
   @ViewChild(MatPaginator) paginator!: MatPaginator;
 
   columns: string[] = [
-    'ProductId',
     'CustomerID',
     'ItemID',
     'UPC',
@@ -196,19 +213,57 @@ export class CustomerProductCatalogComponent {
     });
   }
 
+  // Upload section handlers
   onCustomerSelectionChange(event: MatSelectChange) {
     this.erpCustomerID = event.value;
     this.getItemTypes(this.erpCustomerID);
   }
 
-  oncustomerSelectionChange(event: MatSelectChange) {
-    this.customerID = event.value;
-  }
-
   onItemTypesChange(event: MatAutocompleteSelectedEvent) {
     this.itemTypes = event.option.value.item_Type_Id;
     this.itemTypeName = event.option.value.item_Type;
+  }
 
+  // Actions section handlers
+  onActionsCustomerChange(event: MatSelectChange) {
+    this.actionsErpCustomerID = event.value;
+    this.api.getItemTypes(this.actionsErpCustomerID).subscribe({
+      next: (res: any) => { this.actionsItemTypesOptions = res.itemTypes; },
+    });
+  }
+
+  onActionsItemTypeChange(event: MatAutocompleteSelectedEvent) {
+    this.actionsItemTypes = event.option.value.item_Type_Id;
+    this.actionsItemTypeName = event.option.value.item_Type;
+  }
+
+  getFilteredActionsItemTypes(): any {
+    const filterValue = (this.actionsItemTypeFilter ?? '').toString().trim().toLowerCase();
+    if (filterValue === '') return this.actionsItemTypesOptions;
+    return this.actionsItemTypesOptions?.filter(p => p.item_Type.toLocaleLowerCase().includes(filterValue));
+  }
+
+  // Download section handlers
+  onDownloadCustomerChange(event: MatSelectChange) {
+    this.downloadErpCustomerID = event.value;
+    this.api.getItemTypes(this.downloadErpCustomerID).subscribe({
+      next: (res: any) => { this.downloadItemTypesOptions = res.itemTypes; },
+    });
+  }
+
+  onDownloadItemTypeChange(event: MatAutocompleteSelectedEvent) {
+    this.downloadItemTypes = event.option.value.item_Type_Id;
+    this.downloadItemTypeName = event.option.value.item_Type;
+  }
+
+  getFilteredDownloadItemTypes(): any {
+    const filterValue = (this.downloadItemTypeFilter ?? '').toString().trim().toLowerCase();
+    if (filterValue === '') return this.downloadItemTypesOptions;
+    return this.downloadItemTypesOptions?.filter(p => p.item_Type.toLocaleLowerCase().includes(filterValue));
+  }
+
+  oncustomerSelectionChange(event: MatSelectChange) {
+    this.customerID = event.value;
   }
 
   openEditDialog(connectorData: any) {
@@ -509,6 +564,14 @@ export class CustomerProductCatalogComponent {
     });
   }
 
+  openHelp(): void {
+    this.dialog.open(ProductCatalogHelpDialogComponent, {
+      width: '90%',
+      maxWidth: '1200px',
+      maxHeight: '90vh',
+    });
+  }
+
   downloadRejectProductCSV(customerID: any) {
     if (!customerID) {
       this.showInfoToast(this.languageService.getTranslation('eRPCustID'));
@@ -796,28 +859,20 @@ export class CustomerProductCatalogComponent {
   }
 
   getStatusClass(status: string): string {
-    if (status.toUpperCase() === 'NEW') {
-      return 'new-status';
-    } else if (status.toUpperCase() === 'SYNCED') {
-      return 'sysced-status';
-    } else if (status.toUpperCase() === 'APPROVED') {
-      return 'processed-status';
-    } else if (status.toUpperCase() === 'APPROVED_PR') {
-      return 'acknowledged-status';
-    } else if (status.toUpperCase() === 'ERROR') {
-      return 'syncerror-status';
-    } else if (status.toUpperCase() === 'UPDATED') {
-      return 'finished-status';
-    } else if (status.toUpperCase() === 'PENDING') {
-      return 'splited-status';
-    } else if (status.toUpperCase() === 'REJECTED') {
-      return 'rejected-status';
-    } else if (status.toUpperCase() === 'SUSPENDED') {
-      return 'suspended-status';
-    } else if (status.toUpperCase() === 'UNLISTED') {
-      return 'unlisted-status';
-    } else {
-      return 'invedi-status';
+    if (!status) return '';
+    switch (status.toUpperCase()) {
+      case 'NEW':           return 'new-status';
+      case 'UPDATED':       return 'updated-status';
+      case 'PENDING':       return 'pending-status';
+      case 'APPROVED':      return 'approved-status';
+      case 'APPROVED_PR':   return 'approved-status';
+      case 'PUBLISHED':     return 'published-status';
+      case 'SYNCED':        return 'synced-status';
+      case 'REJECTED':      return 'rejected-status';
+      case 'ERROR':         return 'error-status';
+      case 'SUSPENDED':     return 'suspended-status';
+      case 'UNLISTED':      return 'unlisted-status';
+      default:              return 'synced-status';
     }
   }
 

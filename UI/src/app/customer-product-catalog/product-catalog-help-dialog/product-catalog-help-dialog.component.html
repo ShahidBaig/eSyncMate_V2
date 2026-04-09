@@ -1,0 +1,400 @@
+<div class="help-container">
+  <!-- Header -->
+  <div class="help-header">
+    <div class="header-left">
+      <mat-icon class="header-icon">menu_book</mat-icon>
+      <div>
+        <h2 class="header-title">Product Catalog — Help Guide</h2>
+        <span class="header-subtitle">Everything you need to know about managing your product catalog in eSyncMate</span>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button mat-icon-button class="download-btn" matTooltip="Download Help Guide" (click)="downloadHelp()"><mat-icon>download</mat-icon></button>
+      <button mat-icon-button class="close-btn" (click)="close()">
+      <mat-icon>close</mat-icon>
+        </button>
+    </div>
+  </div>
+
+  <mat-dialog-content #helpContent class="help-content">
+
+    <!-- How Product Catalog Works -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>route</mat-icon> How Product Catalog Works in eSyncMate</h3>
+      <p class="help-text">eSyncMate manages your product data from upload to marketplace. Here's the journey:</p>
+      <div class="flow-diagram">
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#2563eb;"><mat-icon>person</mat-icon></div>
+          <span class="flow-label">Select Customer</span>
+          <span class="flow-desc">Choose your partner</span>
+        </div>
+        <div class="flow-arrow"><mat-icon>arrow_forward</mat-icon></div>
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#7c3aed;"><mat-icon>download</mat-icon></div>
+          <span class="flow-label">Download Template</span>
+          <span class="flow-desc">Get the CSV template</span>
+        </div>
+        <div class="flow-arrow"><mat-icon>arrow_forward</mat-icon></div>
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#E8834A;"><mat-icon>edit_note</mat-icon></div>
+          <span class="flow-label">Fill Data</span>
+          <span class="flow-desc">Enter product details</span>
+        </div>
+        <div class="flow-arrow"><mat-icon>arrow_forward</mat-icon></div>
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#059669;"><mat-icon>upload_file</mat-icon></div>
+          <span class="flow-label">Upload CSV</span>
+          <span class="flow-desc">Submit to eSyncMate</span>
+        </div>
+        <div class="flow-arrow"><mat-icon>arrow_forward</mat-icon></div>
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#0891b2;"><mat-icon>fact_check</mat-icon></div>
+          <span class="flow-label">Validated</span>
+          <span class="flow-desc">eSyncMate checks data</span>
+        </div>
+        <div class="flow-arrow"><mat-icon>arrow_forward</mat-icon></div>
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#16a34a;"><mat-icon>publish</mat-icon></div>
+          <span class="flow-label">Published</span>
+          <span class="flow-desc">Live on marketplace</span>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Upload Mode — Detailed -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>cloud_upload</mat-icon> Upload Mode (Default)</h3>
+      <p class="help-text">This is the default view. Use the <strong>Upload</strong> pill button on the right side of the page title to switch to this mode. It has three sections side by side:</p>
+      <div class="tab-preview" style="grid-template-columns: 1fr 1fr 1fr;">
+        <div class="tab-card">
+          <div class="tab-card-header">
+            <mat-icon>filter_list</mat-icon>
+            <span>Search & Filter</span>
+          </div>
+          <div class="tab-card-body">
+            <p>Find existing products in the data grid below.</p>
+            <p>Choose a <strong>Search By</strong> option (Product ID, Customer ID, Item ID, Status, Item Type, or Date), enter your value, and click <strong>Search</strong>.</p>
+            <p>The results appear in the product grid with all columns — Customer ID, Item ID, UPC, Status, Prices, and Upload Date.</p>
+          </div>
+        </div>
+        <div class="tab-card">
+          <div class="tab-card-header">
+            <mat-icon>cloud_upload</mat-icon>
+            <span>Upload</span>
+          </div>
+          <div class="tab-card-body">
+            <p>Upload new product data to eSyncMate:</p>
+            <p>1. Select <strong>ERP Customer ID</strong></p>
+            <p>2. Select <strong>Item Type</strong></p>
+            <p>3. Choose your <strong>CSV file</strong></p>
+            <p>4. Click <strong>Upload</strong></p>
+            <p>eSyncMate validates each row and adds valid products to the catalog. Invalid rows are flagged as rejected.</p>
+          </div>
+        </div>
+        <div class="tab-card">
+          <div class="tab-card-header">
+            <mat-icon>build</mat-icon>
+            <span>Actions</span>
+          </div>
+          <div class="tab-card-body">
+            <p>Has its own <strong>independent</strong> Customer ID and Item Type selectors.</p>
+            <p><strong>Sample</strong> — Download a CSV template with correct column headers for the selected item type.</p>
+            <p><strong>Rejected</strong> — Download products that failed validation so you can fix and re-upload them.</p>
+            <p><strong>Clear Errors</strong> — Reset products stuck in Error status so eSyncMate can retry processing them.</p>
+          </div>
+        </div>
+      </div>
+      <div class="tip-box" style="margin-top:12px;">
+        <mat-icon>lightbulb</mat-icon>
+        <span>Each section (Search, Upload, Actions) has its <strong>own independent</strong> Customer ID and Item Type selection. Changing the customer in Upload does not affect Actions or Download.</span>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Download Mode — Detailed -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>download</mat-icon> Download Mode</h3>
+      <p class="help-text">Click the <strong>Download</strong> pill button on the right side of the page title to switch to this mode:</p>
+      <div class="tab-preview" style="grid-template-columns: 1fr;">
+        <div class="tab-card">
+          <div class="tab-card-header">
+            <mat-icon>download</mat-icon>
+            <span>Download Product Data</span>
+          </div>
+          <div class="tab-card-body">
+            <p>Export your existing product data as a CSV file to your computer.</p>
+            <p>1. Select <strong>ERP Customer ID</strong> — choose which marketplace partner's products to download.</p>
+            <p>2. Select <strong>Item Type</strong> — choose the product category.</p>
+            <p>3. Click <strong>Download CSV</strong> — eSyncMate exports all matching products as a CSV file.</p>
+            <div class="tip-box">
+              <mat-icon>lightbulb</mat-icon>
+              <span>The product grid and search controls are <strong>hidden in Download mode</strong>. The Download section uses its own Customer ID and Item Type — independent from Upload and Actions. Switch back to <strong>Upload</strong> to view, search, and manage products.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Finding Products -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>search</mat-icon> Finding Products</h3>
+      <p class="help-text">In Upload mode, use the Search & Filter section to find products:</p>
+      <div class="card-grid">
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#eff6ff;"><mat-icon style="color:#2563eb;">tag</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Product ID</span>
+            <span class="info-card-desc">Search by the unique product ID assigned by eSyncMate</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#fff7ed;"><mat-icon style="color:#E8834A;">storefront</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">ERP Customer ID</span>
+            <span class="info-card-desc">Filter products by marketplace partner</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#ecfdf5;"><mat-icon style="color:#059669;">inventory_2</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Item ID / UPC</span>
+            <span class="info-card-desc">Search by ERP item number, SKU, or UPC code</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#f5f3ff;"><mat-icon style="color:#7c3aed;">flag</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Status</span>
+            <span class="info-card-desc">Filter by product status (New, Approved, Published, Updated, Rejected, Error, Unlisted)</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#f0fdfa;"><mat-icon style="color:#0891b2;">date_range</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Upload Date</span>
+            <span class="info-card-desc">Filter products by the date range they were uploaded to eSyncMate</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#fdf2f8;"><mat-icon style="color:#9d174d;">category</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Item Type Name</span>
+            <span class="info-card-desc">Filter by product category or item type</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Understanding Product Statuses -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>label</mat-icon> Understanding Product Statuses</h3>
+      <p class="help-text">Each product has a color-coded status so you can track its progress at a glance:</p>
+      <div class="status-card-grid">
+        <div class="status-card status-card-blue">
+          <div class="sc-header"><mat-icon>fiber_new</mat-icon><span>New</span></div>
+          <p>Product has been uploaded to eSyncMate and is waiting to be sent to the marketplace for approval.</p>
+        </div>
+        <div class="status-card status-card-green">
+          <div class="sc-header"><mat-icon>check_circle</mat-icon><span>Approved</span></div>
+          <p>The marketplace has approved the product. It is now ready for pricing and inventory sync.</p>
+        </div>
+        <div class="status-card status-card-teal">
+          <div class="sc-header"><mat-icon>publish</mat-icon><span>Published</span></div>
+          <p>Product is live on the marketplace. Customers can now see and purchase this product.</p>
+        </div>
+        <div class="status-card status-card-purple">
+          <div class="sc-header"><mat-icon>update</mat-icon><span>Updated</span></div>
+          <p>Product details have been modified since the last publish. eSyncMate will send the changes on the next sync.</p>
+        </div>
+        <div class="status-card status-card-amber">
+          <div class="sc-header"><mat-icon>hourglass_empty</mat-icon><span>Pending</span></div>
+          <p>Product is waiting for marketplace approval. This usually happens after initial upload or after updates.</p>
+        </div>
+        <div class="status-card status-card-red">
+          <div class="sc-header"><mat-icon>cancel</mat-icon><span>Rejected</span></div>
+          <p>The marketplace rejected this product. Download the rejected items CSV to see the reason, fix the data, and re-upload.</p>
+        </div>
+        <div class="status-card status-card-red">
+          <div class="sc-header"><mat-icon>error</mat-icon><span>Error</span></div>
+          <p>Something went wrong during processing. Use <strong>Clear Errors</strong> in the Actions section to reset and retry.</p>
+        </div>
+        <div class="status-card status-card-gray">
+          <div class="sc-header"><mat-icon>visibility_off</mat-icon><span>Unlisted</span></div>
+          <p>Product has been removed from the marketplace listing. It is no longer visible to customers but still exists in eSyncMate.</p>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- What You Can Do — Upload Section -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>cloud_upload</mat-icon> Upload Section</h3>
+      <p class="help-text">In Upload mode, select your customer and item type, then upload your product CSV file:</p>
+      <div class="action-card-grid">
+        <div class="action-card">
+          <div class="ac-icon" style="background:#ecfdf5;"><mat-icon style="color:#059669;">cloud_upload</mat-icon></div>
+          <div class="ac-body">
+            <span class="ac-title">Upload Products</span>
+            <p class="ac-desc">Select an <strong>ERP Customer ID</strong> and <strong>Item Type</strong>, choose your CSV file, and click Upload. eSyncMate validates each row and adds valid products to the catalog.</p>
+          </div>
+        </div>
+      </div>
+      <div class="tip-box" style="margin-top:12px;">
+        <mat-icon>lightbulb</mat-icon>
+        <span>Only <strong>CSV files</strong> are accepted for upload. Make sure your column headers match the sample template exactly.</span>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Actions Section -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>build</mat-icon> Actions Section</h3>
+      <p class="help-text">The Actions panel shows the currently selected customer and item type, with these buttons:</p>
+      <div class="action-card-grid">
+        <div class="action-card">
+          <div class="ac-icon" style="background:#eff6ff;"><mat-icon style="color:#2563eb;">file_download</mat-icon></div>
+          <div class="ac-body">
+            <span class="ac-title">Download Sample Template</span>
+            <p class="ac-desc">Download a pre-formatted CSV template with the correct column headers for the selected customer and item type. Use this as your starting point for data entry.</p>
+          </div>
+        </div>
+        <div class="action-card">
+          <div class="ac-icon" style="background:#fef2f2;"><mat-icon style="color:#dc2626;">error_outline</mat-icon></div>
+          <div class="ac-body">
+            <span class="ac-title">Download Rejected Products</span>
+            <p class="ac-desc">Download a CSV of products that failed validation (missing fields, invalid UPC, duplicate entries, etc.). Fix the issues and re-upload.</p>
+          </div>
+        </div>
+        <div class="action-card">
+          <div class="ac-icon" style="background:#fff7ed;"><mat-icon style="color:#ea580c;">auto_fix_high</mat-icon></div>
+          <div class="ac-body">
+            <span class="ac-title">Clear Errors</span>
+            <p class="ac-desc">Reset all products stuck in Error status so eSyncMate can reprocess them. This clears the error flag and allows the system to retry.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Download Mode -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>download</mat-icon> Download Mode</h3>
+      <p class="help-text">Switch to Download mode using the toggle at the top to export your product data:</p>
+      <div class="action-card-grid">
+        <div class="action-card">
+          <div class="ac-icon" style="background:#fff7ed;"><mat-icon style="color:#E8834A;">download</mat-icon></div>
+          <div class="ac-body">
+            <span class="ac-title">Download CSV</span>
+            <p class="ac-desc">Select the <strong>ERP Customer ID</strong> and <strong>Item Type</strong>, then click Download CSV. eSyncMate will export all matching product data as a CSV file to your computer.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Upload Process Steps -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>format_list_numbered</mat-icon> Step-by-Step Upload Process</h3>
+      <p class="help-text">Follow these steps to upload products successfully:</p>
+      <div class="log-timeline">
+        <div class="log-step">
+          <div class="log-num">1</div>
+          <div class="log-body">
+            <span class="log-title">Select Customer</span>
+            <span class="log-desc">Choose the ERP Customer ID for the marketplace partner you are uploading products for</span>
+          </div>
+        </div>
+        <div class="log-step">
+          <div class="log-num">2</div>
+          <div class="log-body">
+            <span class="log-title">Choose Item Type</span>
+            <span class="log-desc">Select the product category. This determines which columns appear in the template</span>
+          </div>
+        </div>
+        <div class="log-step">
+          <div class="log-num">3</div>
+          <div class="log-body">
+            <span class="log-title">Download Template</span>
+            <span class="log-desc">Click the Sample button in the Actions section to get a CSV with the correct column headers</span>
+          </div>
+        </div>
+        <div class="log-step">
+          <div class="log-num">4</div>
+          <div class="log-body">
+            <span class="log-title">Fill in Your Data</span>
+            <span class="log-desc">Open the template in Excel and fill in your product information (item IDs, pricing, UPC, etc.)</span>
+          </div>
+        </div>
+        <div class="log-step">
+          <div class="log-num">5</div>
+          <div class="log-body">
+            <span class="log-title">Upload File</span>
+            <span class="log-desc">In the Upload section, choose your completed CSV file and click Upload</span>
+          </div>
+        </div>
+        <div class="log-step">
+          <div class="log-num">6</div>
+          <div class="log-body">
+            <span class="log-title">Review Results</span>
+            <span class="log-desc">Valid products appear in the grid. If any rows failed, click Rejected in Actions to download and review errors</span>
+          </div>
+        </div>
+      </div>
+      <div class="tip-box" style="margin-top:14px;">
+        <mat-icon>lightbulb</mat-icon>
+        <span>Always download the <strong>latest template</strong> before uploading. Column names must match exactly or the upload will fail.</span>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Grid Columns -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>view_list</mat-icon> Product Grid Columns</h3>
+      <p class="help-text">The data grid in Upload mode shows these columns for each product:</p>
+      <div class="card-grid">
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#eff6ff;"><mat-icon style="color:#2563eb;">badge</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Customer ID / Item ID</span>
+            <span class="info-card-desc">The marketplace partner and ERP item number for this product</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#ecfdf5;"><mat-icon style="color:#059669;">qr_code</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">UPC / Status</span>
+            <span class="info-card-desc">Universal Product Code and color-coded processing status</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#fff7ed;"><mat-icon style="color:#E8834A;">attach_money</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">List Price / MAP Price</span>
+            <span class="info-card-desc">Product pricing — list price and minimum advertised price</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#f5f3ff;"><mat-icon style="color:#7c3aed;">date_range</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Upload Date</span>
+            <span class="info-card-desc">The date when the product was uploaded to eSyncMate (MM/DD/YYYY format)</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+  </mat-dialog-content>
+</div>

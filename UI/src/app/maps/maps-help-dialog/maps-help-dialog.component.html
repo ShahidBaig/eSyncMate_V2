@@ -1,0 +1,150 @@
+<div class="help-container">
+  <!-- Header -->
+  <div class="help-header">
+    <div class="header-left">
+      <mat-icon class="header-icon">map</mat-icon>
+      <div>
+        <h2 class="header-title">Maps — Help Guide</h2>
+        <span class="header-subtitle">Configure data transformations that convert information between systems</span>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button mat-icon-button class="download-btn" matTooltip="Download Help Guide" (click)="downloadHelp()"><mat-icon>download</mat-icon></button>
+      <button mat-icon-button class="close-btn" (click)="close()">
+      <mat-icon>close</mat-icon>
+        </button>
+    </div>
+  </div>
+
+  <mat-dialog-content #helpContent class="help-content">
+
+    <!-- How Maps Work -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>route</mat-icon> How Maps Work</h3>
+      <p class="help-text">Maps translate data from one format to another so your systems can understand each other:</p>
+      <div class="flow-diagram">
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#2563eb;"><mat-icon>input</mat-icon></div>
+          <span class="flow-label">Source Data</span>
+          <span class="flow-desc">Original format</span>
+        </div>
+        <div class="flow-arrow"><mat-icon>arrow_forward</mat-icon></div>
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#E8834A;"><mat-icon>transform</mat-icon></div>
+          <span class="flow-label">Map Transforms</span>
+          <span class="flow-desc">Converts fields & structure</span>
+        </div>
+        <div class="flow-arrow"><mat-icon>arrow_forward</mat-icon></div>
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#059669;"><mat-icon>output</mat-icon></div>
+          <span class="flow-label">Destination Format</span>
+          <span class="flow-desc">Ready for the target system</span>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Finding Maps -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>search</mat-icon> Finding Maps</h3>
+      <p class="help-text">Use any of these filters to quickly locate the map you need:</p>
+      <div class="card-grid">
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#eff6ff;"><mat-icon style="color:#2563eb;">tag</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Map ID</span>
+            <span class="info-card-desc">Search by the unique numeric identifier</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#fff7ed;"><mat-icon style="color:#E8834A;">label</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Map Name</span>
+            <span class="info-card-desc">Search by the descriptive name of the map</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#f5f3ff;"><mat-icon style="color:#7c3aed;">category</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Map Type</span>
+            <span class="info-card-desc">Filter by the type of transformation</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#ecfdf5;"><mat-icon style="color:#059669;">date_range</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Created Date</span>
+            <span class="info-card-desc">Filter maps by when they were originally created</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- What You Can Do -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>touch_app</mat-icon> What You Can Do</h3>
+      <p class="help-text">Use these actions to manage your maps:</p>
+      <div class="action-card-grid">
+        <div class="action-card">
+          <div class="ac-icon" style="background:#eff6ff;"><mat-icon style="color:#2563eb;">add_circle</mat-icon></div>
+          <div class="ac-body">
+            <span class="ac-title">Add Map</span>
+            <p class="ac-desc">Create a new data transformation map. Enter a name, choose the map type, and write the transformation rules in the built-in editor.</p>
+          </div>
+        </div>
+        <div class="action-card">
+          <div class="ac-icon" style="background:#ecfdf5;"><mat-icon style="color:#059669;">edit</mat-icon></div>
+          <div class="ac-body">
+            <span class="ac-title">Edit Map</span>
+            <p class="ac-desc">Update the map name, type, or transformation rules. Changes take effect the next time a route using this map runs.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Map Configuration -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>settings</mat-icon> Map Configuration</h3>
+      <p class="help-text">When adding or editing a map, you will work with these areas:</p>
+      <div class="tab-preview">
+        <div class="tab-card">
+          <div class="tab-card-header">
+            <mat-icon>label</mat-icon>
+            <span>Map Name</span>
+          </div>
+          <div class="tab-card-body">
+            <p>A clear, descriptive name for the transformation (for example, "Order to ERP" or "Inventory to Amazon").</p>
+          </div>
+        </div>
+        <div class="tab-card">
+          <div class="tab-card-header">
+            <mat-icon>category</mat-icon>
+            <span>Map Type</span>
+          </div>
+          <div class="tab-card-body">
+            <p>The category of transformation. This determines which routes can use this map.</p>
+          </div>
+        </div>
+        <div class="tab-card">
+          <div class="tab-card-header">
+            <mat-icon>code</mat-icon>
+            <span>Map Editor</span>
+          </div>
+          <div class="tab-card-body">
+            <p>The JSON-based editor where you define how source fields map to destination fields with any needed conversions.</p>
+          </div>
+        </div>
+      </div>
+      <div class="tip-box">
+        <mat-icon>lightbulb</mat-icon>
+        <span>Maps use a JSON transformation format that maps source fields to destination fields. Each field mapping can include value conversions, default values, and conditional logic to handle different data scenarios.</span>
+      </div>
+    </section>
+
+  </mat-dialog-content>
+</div>

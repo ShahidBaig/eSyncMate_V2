@@ -1,0 +1,243 @@
+<div class="help-container">
+  <!-- Header -->
+  <div class="help-header">
+    <div class="header-left">
+      <mat-icon class="header-icon">people</mat-icon>
+      <div>
+        <h2 class="header-title">Customers — Help Guide</h2>
+        <span class="header-subtitle">Everything you need to know about managing your marketplace partners</span>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button mat-icon-button class="download-btn" matTooltip="Download Help Guide" (click)="downloadHelp()"><mat-icon>download</mat-icon></button>
+      <button mat-icon-button class="close-btn" (click)="close()">
+      <mat-icon>close</mat-icon>
+        </button>
+    </div>
+  </div>
+
+  <mat-dialog-content #helpContent class="help-content">
+
+    <!-- How Customer Management Works — Visual Flow Diagram -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>route</mat-icon> How Customer Management Works</h3>
+      <p class="help-text">Setting up a new marketplace partner follows this simple path:</p>
+      <div class="flow-diagram">
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#2563eb;"><mat-icon>person_add</mat-icon></div>
+          <span class="flow-label">Add Partner</span>
+          <span class="flow-desc">Create customer record</span>
+        </div>
+        <div class="flow-arrow"><mat-icon>arrow_forward</mat-icon></div>
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#E8834A;"><mat-icon>badge</mat-icon></div>
+          <span class="flow-label">Configure IDs</span>
+          <span class="flow-desc">ERP & ISA identifiers</span>
+        </div>
+        <div class="flow-arrow"><mat-icon>arrow_forward</mat-icon></div>
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#7c3aed;"><mat-icon>notifications_active</mat-icon></div>
+          <span class="flow-label">Set Up Alerts</span>
+          <span class="flow-desc">Email notifications</span>
+        </div>
+        <div class="flow-arrow"><mat-icon>arrow_forward</mat-icon></div>
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#059669;"><mat-icon>check_circle</mat-icon></div>
+          <span class="flow-label">Ready for Orders</span>
+          <span class="flow-desc">Partner is live</span>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Finding Your Partners -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>search</mat-icon> Finding Your Partners</h3>
+      <p class="help-text">Use any of these filters to quickly find the customer you're looking for:</p>
+      <div class="card-grid">
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#eff6ff;"><mat-icon style="color:#2563eb;">person</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Name</span>
+            <span class="info-card-desc">Search by the customer or partner display name</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#fff7ed;"><mat-icon style="color:#E8834A;">tag</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">ERP Customer ID</span>
+            <span class="info-card-desc">Search by the ERP identifier (e.g., KNO8068, LOW2221MP)</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#f5f3ff;"><mat-icon style="color:#7c3aed;">storefront</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Marketplace</span>
+            <span class="info-card-desc">Filter by marketplace type (Target Plus, Amazon, Walmart, etc.)</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#ecfdf5;"><mat-icon style="color:#059669;">date_range</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Created Date</span>
+            <span class="info-card-desc">Filter customers by when they were added to the system</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- What You Can Do -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>touch_app</mat-icon> What You Can Do</h3>
+      <p class="help-text">These are the main actions available for managing your partners:</p>
+      <div class="action-card-grid">
+        <div class="action-card">
+          <div class="ac-icon" style="background:#eff6ff;"><mat-icon style="color:#2563eb;">person_add</mat-icon></div>
+          <div class="ac-body">
+            <span class="ac-title">Add Customer</span>
+            <p class="ac-desc">Create a new marketplace partner. Enter the partner name, ERP Customer ID, ISA identifiers, receiver IDs, and select the marketplace type. Once saved, the partner is ready for order and product integrations.</p>
+          </div>
+        </div>
+        <div class="action-card">
+          <div class="ac-icon" style="background:#ecfdf5;"><mat-icon style="color:#059669;">edit</mat-icon></div>
+          <div class="ac-body">
+            <span class="ac-title">Edit Customer</span>
+            <p class="ac-desc">Update an existing partner's details — change the display name, ERP Customer ID, ISA identifiers, receiver IDs, or marketplace assignment. Changes take effect immediately for all future orders.</p>
+          </div>
+        </div>
+        <div class="action-card">
+          <div class="ac-icon" style="background:#fff7ed;"><mat-icon style="color:#E8834A;">notifications_active</mat-icon></div>
+          <div class="ac-body">
+            <span class="ac-title">Alert Configuration</span>
+            <p class="ac-desc">Set up automated email notifications for this partner. Configure alerts for order received, order errors, ASN confirmations, cancellations, and inventory sync status. Each alert can have multiple email recipients.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Customer Details -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>assignment</mat-icon> Customer Details</h3>
+      <p class="help-text">Each customer record contains the following key fields:</p>
+      <div class="card-grid">
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#eff6ff;"><mat-icon style="color:#2563eb;">person</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Name</span>
+            <span class="info-card-desc">The display name for this partner (e.g., "Knott — Mirakl")</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#fff7ed;"><mat-icon style="color:#E8834A;">tag</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">ERP Customer ID</span>
+            <span class="info-card-desc">Must match the ERP system's customer code exactly (e.g., KNO8068)</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#f5f3ff;"><mat-icon style="color:#7c3aed;">fingerprint</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">ISA Customer ID</span>
+            <span class="info-card-desc">The EDI ISA segment identifier used for electronic data interchange</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#ecfdf5;"><mat-icon style="color:#059669;">receipt_long</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">ISA 810 / 856 Receiver ID</span>
+            <span class="info-card-desc">EDI receiver IDs for invoice (810) and shipment notification (856) documents</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#f0fdfa;"><mat-icon style="color:#0891b2;">storefront</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Marketplace</span>
+            <span class="info-card-desc">The marketplace platform this partner operates on (Target Plus, Amazon, etc.)</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Alert Configuration -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>notifications_active</mat-icon> Alert Configuration</h3>
+      <p class="help-text">Each customer can have automated email alerts configured for important events:</p>
+      <div class="tab-preview">
+        <div class="tab-card">
+          <div class="tab-card-header">
+            <mat-icon>shopping_cart</mat-icon>
+            <span>Order Alerts</span>
+          </div>
+          <div class="tab-card-body">
+            <p>Get notified when new orders arrive, when orders fail to sync to ERP, or when cancellation requests come in from the marketplace.</p>
+            <div class="mini-status-row">
+              <span class="mini-pill" style="background:#eff6ff;color:#2563eb;">Order Received</span>
+              <span class="mini-pill" style="background:#fef2f2;color:#dc2626;">Order Error</span>
+              <span class="mini-pill" style="background:#f1f5f9;color:#64748b;">Cancellation</span>
+            </div>
+          </div>
+        </div>
+        <div class="tab-card">
+          <div class="tab-card-header">
+            <mat-icon>local_shipping</mat-icon>
+            <span>Shipment & Sync Alerts</span>
+          </div>
+          <div class="tab-card-body">
+            <p>Get notified when shipment confirmations (ASN) are sent, when ASN fails, or when inventory sync completes or encounters issues.</p>
+            <div class="mini-status-row">
+              <span class="mini-pill" style="background:#ecfdf5;color:#059669;">ASN Sent</span>
+              <span class="mini-pill" style="background:#fef2f2;color:#dc2626;">ASN Error</span>
+              <span class="mini-pill" style="background:#fff7ed;color:#E8834A;">Sync Status</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="tip-box" style="margin-top: 12px;">
+        <mat-icon>lightbulb</mat-icon>
+        <span>Each alert type can have multiple email recipients. You can add, edit, or remove recipients at any time without affecting the customer's order processing.</span>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Understanding Marketplaces -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>storefront</mat-icon> Understanding Marketplaces</h3>
+      <p class="help-text">Each customer is linked to a marketplace platform. Here are the supported marketplace types:</p>
+      <div class="status-card-grid">
+        <div class="status-card status-card-blue">
+          <div class="sc-header"><mat-icon>store</mat-icon><span>TARGET PLUS</span></div>
+          <p>Target's third-party marketplace. Orders arrive via Target Plus API with specific EDI requirements for acknowledgments and shipment notifications.</p>
+        </div>
+        <div class="status-card status-card-purple">
+          <div class="sc-header"><mat-icon>shopping_bag</mat-icon><span>MIRAKL / KNOT</span></div>
+          <p>Mirakl-powered marketplaces (including Knot). Orders are pulled via Mirakl API with unique offer and order ID formats.</p>
+        </div>
+        <div class="status-card status-card-teal">
+          <div class="sc-header"><mat-icon>inventory</mat-icon><span>AMAZON SP-API</span></div>
+          <p>Amazon Seller Central via SP-API. Supports order sync, inventory feeds, and product listing updates through Amazon's API framework.</p>
+        </div>
+        <div class="status-card status-card-green">
+          <div class="sc-header"><mat-icon>local_mall</mat-icon><span>WALMART</span></div>
+          <p>Walmart Marketplace integration. Handles order retrieval, shipment confirmations, and inventory updates through Walmart's partner API.</p>
+        </div>
+        <div class="status-card status-card-amber">
+          <div class="sc-header"><mat-icon>home</mat-icon><span>LOWES</span></div>
+          <p>Lowe's marketplace integration. Manages home improvement product orders with specific shipping and compliance requirements.</p>
+        </div>
+        <div class="status-card status-card-red">
+          <div class="sc-header"><mat-icon>checkroom</mat-icon><span>MACY'S</span></div>
+          <p>Macy's marketplace integration. Handles fashion and home goods orders with department store-specific fulfillment workflows.</p>
+        </div>
+      </div>
+    </section>
+
+  </mat-dialog-content>
+</div>

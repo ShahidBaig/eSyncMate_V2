@@ -16,6 +16,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatIconModule } from '@angular/material/icon';
 import { PopupComponent } from '../popup/popup.component';
 import { MatDialog } from '@angular/material/dialog';
+import { MapsHelpDialogComponent } from './maps-help-dialog/maps-help-dialog.component';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { CommonModule } from '@angular/common';
@@ -113,6 +114,10 @@ export class MapsComponent implements OnInit {
     if (this.selectedOption === 'Select Map') {
       this.getMaps();
     }
+  }
+
+  openHelp(): void {
+    this.dialog.open(MapsHelpDialogComponent, { width: '90%', maxWidth: '1200px', maxHeight: '90vh' });
   }
 
   openAddMapDialog(): void {

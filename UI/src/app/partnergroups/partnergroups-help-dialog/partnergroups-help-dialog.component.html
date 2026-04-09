@@ -1,0 +1,177 @@
+<div class="help-container">
+  <!-- Header -->
+  <div class="help-header">
+    <div class="header-left">
+      <mat-icon class="header-icon">group_work</mat-icon>
+      <div>
+        <h2 class="header-title">Partner Groups — Help Guide</h2>
+        <span class="header-subtitle">Define trading partner relationships for your integration routes</span>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button mat-icon-button class="download-btn" matTooltip="Download Help Guide" (click)="downloadHelp()"><mat-icon>download</mat-icon></button>
+      <button mat-icon-button class="close-btn" (click)="close()">
+      <mat-icon>close</mat-icon>
+        </button>
+    </div>
+  </div>
+
+  <mat-dialog-content #helpContent class="help-content">
+
+    <!-- How Partner Groups Work -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>route</mat-icon> How Partner Groups Work</h3>
+      <p class="help-text">Partner groups pair up a sender and receiver so your routes know who is exchanging data:</p>
+      <div class="flow-diagram">
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#2563eb;"><mat-icon>business</mat-icon></div>
+          <span class="flow-label">Source Party</span>
+          <span class="flow-desc">Where data comes from</span>
+        </div>
+        <div class="flow-arrow"><mat-icon>arrow_forward</mat-icon></div>
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#E8834A;"><mat-icon>group_work</mat-icon></div>
+          <span class="flow-label">Partner Group</span>
+          <span class="flow-desc">Links the two parties</span>
+        </div>
+        <div class="flow-arrow"><mat-icon>arrow_forward</mat-icon></div>
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#059669;"><mat-icon>storefront</mat-icon></div>
+          <span class="flow-label">Destination Party</span>
+          <span class="flow-desc">Where data goes to</span>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Finding Partner Groups -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>search</mat-icon> Finding Partner Groups</h3>
+      <p class="help-text">Use any of these filters to quickly find the partner group you need:</p>
+      <div class="card-grid">
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#eff6ff;"><mat-icon style="color:#2563eb;">tag</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Partner Group ID</span>
+            <span class="info-card-desc">Search by the unique numeric identifier</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#fff7ed;"><mat-icon style="color:#E8834A;">description</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Description</span>
+            <span class="info-card-desc">Search by the partner group description text</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#f5f3ff;"><mat-icon style="color:#7c3aed;">upload</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Source Party</span>
+            <span class="info-card-desc">Filter by the party that sends the data</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#ecfdf5;"><mat-icon style="color:#059669;">download</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Destination Party</span>
+            <span class="info-card-desc">Filter by the party that receives the data</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- What You Can Do -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>touch_app</mat-icon> What You Can Do</h3>
+      <p class="help-text">Use these actions to manage your partner groups:</p>
+      <div class="action-card-grid">
+        <div class="action-card">
+          <div class="ac-icon" style="background:#eff6ff;"><mat-icon style="color:#2563eb;">add_circle</mat-icon></div>
+          <div class="ac-body">
+            <span class="ac-title">Add Partner Group</span>
+            <p class="ac-desc">Create a new partner group by choosing a source party and a destination party from your customer list. The description is automatically filled in based on the party names you select.</p>
+          </div>
+        </div>
+        <div class="action-card">
+          <div class="ac-icon" style="background:#ecfdf5;"><mat-icon style="color:#059669;">edit</mat-icon></div>
+          <div class="ac-body">
+            <span class="ac-title">Edit Partner Group</span>
+            <p class="ac-desc">Update the source party, destination party, or description of an existing partner group. Changes take effect the next time a route using this group runs.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Partner Group Fields -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>settings</mat-icon> Partner Group Fields</h3>
+      <p class="help-text">When adding or editing a partner group, you will work with these fields:</p>
+      <div class="card-grid">
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#eff6ff;"><mat-icon style="color:#2563eb;">upload</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Source Party</span>
+            <span class="info-card-desc">The customer or system that sends data (for example, your ERP or a marketplace)</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#ecfdf5;"><mat-icon style="color:#059669;">download</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Destination Party</span>
+            <span class="info-card-desc">The customer or system that receives data (for example, a marketplace or your ERP)</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#fff7ed;"><mat-icon style="color:#E8834A;">description</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Description</span>
+            <span class="info-card-desc">Automatically set to "Source Party - Destination Party" but you can change it if needed</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- How They're Used -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>link</mat-icon> How They're Used</h3>
+      <p class="help-text">Partner groups connect to routes and flows to power your automated data exchanges:</p>
+      <div class="flow-diagram">
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#2563eb;"><mat-icon>group_work</mat-icon></div>
+          <span class="flow-label">Create Group</span>
+          <span class="flow-desc">Pair source & destination</span>
+        </div>
+        <div class="flow-arrow"><mat-icon>arrow_forward</mat-icon></div>
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#7c3aed;"><mat-icon>alt_route</mat-icon></div>
+          <span class="flow-label">Assign to Route</span>
+          <span class="flow-desc">Route uses the group</span>
+        </div>
+        <div class="flow-arrow"><mat-icon>arrow_forward</mat-icon></div>
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#E8834A;"><mat-icon>account_tree</mat-icon></div>
+          <span class="flow-label">Add to Flow</span>
+          <span class="flow-desc">Flow schedules the route</span>
+        </div>
+        <div class="flow-arrow"><mat-icon>arrow_forward</mat-icon></div>
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#059669;"><mat-icon>sync</mat-icon></div>
+          <span class="flow-label">Data Exchanges</span>
+          <span class="flow-desc">Runs automatically</span>
+        </div>
+      </div>
+      <div class="tip-box">
+        <mat-icon>lightbulb</mat-icon>
+        <span>Partner groups establish who is exchanging data. Routes define what data is processed. Flows control when it all runs.</span>
+      </div>
+    </section>
+
+  </mat-dialog-content>
+</div>

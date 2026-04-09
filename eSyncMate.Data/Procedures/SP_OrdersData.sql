@@ -70,6 +70,26 @@ BEGIN
 					AND ISNULL(D.[Status], '') = 'ASNRVD'
 				GROUP BY O.Id, O.OrderNumber, O.ExternalId, D.[LineNo], D.TrackingNo, D.ShippedDate
 			END
+			ELSE IF @l_CustomerID IN ('KNO8068')
+			BEGIN
+				SELECT O.Id, O.OrderNumber, O.ExternalId, D.[LineNo], D.TrackingNo, D.ShippedDate, SUM(D.LineQty) LineQty,
+							MAX(CASE WHEN D.ShippingMethod = 'FEDEX HOME DELIVERY' OR D.ShippingMethod = 'FEDEX GROUND' THEN 'fedex' WHEN D.ShippingMethod LIKE 'UPS %' THEN 'ups' ELSE 'fedex' END) LevelOfService,
+							MAX(CASE WHEN D.ShippingMethod = 'FEDEX HOME DELIVERY' THEN 'FedExGroundHomeDelivery' WHEN D.ShippingMethod = 'FEDEX GROUND' THEN 'FedExGround' ELSE 'FedExGround' END) ShippingMethod,
+							O.ExternalId AS SellerOrderId, MAX(D.ItemID) ItemID,
+							-- Shipped = true when total ordered qty = total ASN qty (no remaining qty to ship)
+							CAST(CASE WHEN MAX(OD.RemainingQty) = 0 THEN 1 ELSE 0 END AS BIT) AS Shipped
+				FROM Orders O WITH (NOLOCK)
+					INNER JOIN Customers C WITH (NOLOCK) ON O.CustomerId = C.Id
+					INNER JOIN OrderDetail D WITH (NOLOCK) ON O.Id = D.OrderId
+					CROSS APPLY (
+						SELECT SUM(D2.LineQty) - SUM(ISNULL(D2.ASNQty, 0)) - SUM(ISNULL(D2.CancelQty, 0)) RemainingQty
+						FROM OrderDetail D2 WITH (NOLOCK)
+						WHERE D2.OrderId = O.Id
+					) OD
+				WHERE C.ERPCustomerID = @l_CustomerID AND O.Status = @l_OrderStatus AND ISNULL(D.TrackingNo, '') <> ''
+					AND ISNULL(D.[Status], '') = 'ASNRVD'
+				GROUP BY O.Id, O.OrderNumber, O.ExternalId, D.[LineNo], D.TrackingNo, D.ShippedDate
+			END
 			ELSE IF @l_CustomerID IN ('AMA1005')
 			BEGIN
 					SELECT O.Id, O.OrderNumber, O.ExternalId, D.[LineNo], D.TrackingNo, D.ShippedDate, SUM(D.LineQty) LineQty,
@@ -81,6 +101,19 @@ BEGIN
 					INNER JOIN OrderDetail D WITH (NOLOCK) ON O.Id = D.OrderId
 				WHERE C.ERPCustomerID = @l_CustomerID AND O.Status = @l_OrderStatus AND ISNULL(D.TrackingNo, '') <> ''
 					AND ISNULL(D.[Status], '') = 'ASNRVD' --AND O.Id = 234033
+				GROUP BY O.Id, O.OrderNumber, O.ExternalId, D.[LineNo], D.TrackingNo, D.ShippedDate
+			END
+			ELSE IF @l_CustomerID IN ('MIC1300MP')
+			BEGIN
+					SELECT O.Id, O.OrderNumber, O.ExternalId, D.[LineNo], D.TrackingNo, D.ShippedDate, SUM(D.LineQty) LineQty,
+					MAX(CASE WHEN D.ShippingMethod = 'FEDEX HOME DELIVERY' OR D.ShippingMethod = 'FEDEX GROUND' THEN 'FEDEX' WHEN D.ShippingMethod LIKE 'UPS %' THEN 'UPS' ELSE 'FEDEX' END) LevelOfService,
+					MAX(CASE WHEN D.ShippingMethod = 'FEDEX HOME DELIVERY' THEN 'FedExGroundHomeDelivery' WHEN D.ShippingMethod = 'FEDEX GROUND' THEN 'FedExGround' ELSE 'FedExGround' END ) ShippingMethod,
+					O.ExternalId AS  SellerOrderId,MAX(D.ItemID) ItemID,Max(D.order_line_id) AS order_line_id,Max(D.Id) AS OrderDetailID
+				FROM Orders O WITH (NOLOCK)
+					INNER JOIN Customers C WITH (NOLOCK) ON O.CustomerId = C.Id
+					INNER JOIN OrderDetail D WITH (NOLOCK) ON O.Id = D.OrderId
+				WHERE C.ERPCustomerID = @l_CustomerID AND O.Status = @l_OrderStatus AND ISNULL(D.TrackingNo, '') <> ''
+					AND ISNULL(D.[Status], '') = 'ASNRVD'
 				GROUP BY O.Id, O.OrderNumber, O.ExternalId, D.[LineNo], D.TrackingNo, D.ShippedDate
 			END
 			ELSE

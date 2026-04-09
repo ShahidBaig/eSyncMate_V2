@@ -1,0 +1,236 @@
+<div class="help-container">
+  <!-- Header -->
+  <div class="help-header">
+    <div class="header-left">
+      <mat-icon class="header-icon">cable</mat-icon>
+      <div>
+        <h2 class="header-title">Connectors — Help Guide</h2>
+        <span class="header-subtitle">Configure data source and destination connections for your routes</span>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button mat-icon-button class="download-btn" matTooltip="Download Help Guide" (click)="downloadHelp()"><mat-icon>download</mat-icon></button>
+      <button mat-icon-button class="close-btn" (click)="close()">
+      <mat-icon>close</mat-icon>
+        </button>
+    </div>
+  </div>
+
+  <mat-dialog-content #helpContent class="help-content">
+
+    <!-- How Connectors Work — Visual Flow Diagram -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>route</mat-icon> How Connectors Work</h3>
+      <p class="help-text">Connectors are the bridges that move data between your systems and marketplaces:</p>
+      <div class="flow-diagram">
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#2563eb;"><mat-icon>storage</mat-icon></div>
+          <span class="flow-label">Data Source</span>
+          <span class="flow-desc">ERP / Database / API</span>
+        </div>
+        <div class="flow-arrow"><mat-icon>arrow_forward</mat-icon></div>
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#E8834A;"><mat-icon>cable</mat-icon></div>
+          <span class="flow-label">Connector</span>
+          <span class="flow-desc">Reads data</span>
+        </div>
+        <div class="flow-arrow"><mat-icon>arrow_forward</mat-icon></div>
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#7c3aed;"><mat-icon>hub</mat-icon></div>
+          <span class="flow-label">eSyncMate</span>
+          <span class="flow-desc">Transforms & routes</span>
+        </div>
+        <div class="flow-arrow"><mat-icon>arrow_forward</mat-icon></div>
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#059669;"><mat-icon>cable</mat-icon></div>
+          <span class="flow-label">Connector</span>
+          <span class="flow-desc">Sends data</span>
+        </div>
+        <div class="flow-arrow"><mat-icon>arrow_forward</mat-icon></div>
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#0891b2;"><mat-icon>storefront</mat-icon></div>
+          <span class="flow-label">Destination</span>
+          <span class="flow-desc">Marketplace / ERP</span>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Connector Types -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>category</mat-icon> Connector Types</h3>
+      <p class="help-text">Each connector uses one of these communication methods:</p>
+      <div class="status-card-grid">
+        <div class="status-card status-card-blue">
+          <div class="sc-header"><mat-icon>dns</mat-icon><span>SQL Server</span></div>
+          <p>Connects directly to a database using stored procedures or queries. Typically used for reading inventory, orders, and product data from your ERP system.</p>
+        </div>
+        <div class="status-card status-card-green">
+          <div class="sc-header"><mat-icon>cloud</mat-icon><span>REST API</span></div>
+          <p>Connects to marketplace APIs over HTTP (Target Plus, Mirakl, Amazon, Walmart). Supports GET, POST, and PUT requests with headers and authentication.</p>
+        </div>
+        <div class="status-card status-card-purple">
+          <div class="sc-header"><mat-icon>folder_shared</mat-icon><span>FTP / SFTP</span></div>
+          <p>Transfers files to and from remote servers. Used for EDI document exchange (850, 855, 856, 810) with trading partners.</p>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Finding Connectors -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>search</mat-icon> Finding Connectors</h3>
+      <p class="help-text">Use any of these filters to quickly locate the connector you need:</p>
+      <div class="card-grid">
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#eff6ff;"><mat-icon style="color:#2563eb;">tag</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Connector ID</span>
+            <span class="info-card-desc">Search by the unique numeric identifier assigned to the connector</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#fff7ed;"><mat-icon style="color:#E8834A;">label</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Connector Name</span>
+            <span class="info-card-desc">Search by the descriptive name given to the connector</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#f5f3ff;"><mat-icon style="color:#7c3aed;">category</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Connector Type</span>
+            <span class="info-card-desc">Filter by connection method — SQL Server, REST API, or FTP</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#ecfdf5;"><mat-icon style="color:#059669;">date_range</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Created Date</span>
+            <span class="info-card-desc">Filter connectors by when they were originally created</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- What You Can Do -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>touch_app</mat-icon> What You Can Do</h3>
+      <p class="help-text">Use these actions to manage your connectors:</p>
+      <div class="action-card-grid">
+        <div class="action-card">
+          <div class="ac-icon" style="background:#eff6ff;"><mat-icon style="color:#2563eb;">add_circle</mat-icon></div>
+          <div class="ac-body">
+            <span class="ac-title">Add Connector</span>
+            <p class="ac-desc">Create a new connector by choosing its type, providing a name, and configuring the connection data. You'll fill in details like the URL, headers, credentials, or connection string depending on the type.</p>
+          </div>
+        </div>
+        <div class="action-card">
+          <div class="ac-icon" style="background:#ecfdf5;"><mat-icon style="color:#059669;">edit</mat-icon></div>
+          <div class="ac-body">
+            <span class="ac-title">Edit Connector</span>
+            <p class="ac-desc">Update an existing connector's name, type, or connection data. Any changes you make will take effect the next time a route using this connector runs.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Setting Up a Connector -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>settings</mat-icon> Setting Up a Connector</h3>
+      <p class="help-text">When adding or editing a connector, you'll work with these configuration areas:</p>
+      <div class="tab-preview">
+        <div class="tab-card">
+          <div class="tab-card-header">
+            <mat-icon>info</mat-icon>
+            <span>General</span>
+          </div>
+          <div class="tab-card-body">
+            <p>Enter the connector name and select the connectivity type (SQL Server, REST, or FTP). This determines which additional fields you'll need to fill in.</p>
+          </div>
+        </div>
+        <div class="tab-card">
+          <div class="tab-card-header">
+            <mat-icon>dns</mat-icon>
+            <span>SQL Server Setup</span>
+          </div>
+          <div class="tab-card-body">
+            <p>Provide the connection string to your database, specify the command type (stored procedure or query), and set the command to execute.</p>
+          </div>
+        </div>
+        <div class="tab-card">
+          <div class="tab-card-header">
+            <mat-icon>cloud</mat-icon>
+            <span>REST API Setup</span>
+          </div>
+          <div class="tab-card-body">
+            <p>Enter the base URL for the API endpoint and configure HTTP headers including authorization keys for secure access.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Connection Data Fields -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>tune</mat-icon> Connection Data Fields</h3>
+      <p class="help-text">These are the key fields you'll configure in the connection data (JSON format):</p>
+      <div class="log-timeline">
+        <div class="log-step">
+          <div class="log-num">1</div>
+          <div class="log-body">
+            <span class="log-title">ConnectivityType</span>
+            <span class="log-desc">Specifies how the connector communicates — SqlServer, Rest, or FTP</span>
+          </div>
+        </div>
+        <div class="log-step">
+          <div class="log-num">2</div>
+          <div class="log-body">
+            <span class="log-title">BaseUrl</span>
+            <span class="log-desc">The API endpoint address for REST connectors (e.g., https://marketplace-api.example.com)</span>
+          </div>
+        </div>
+        <div class="log-step">
+          <div class="log-num">3</div>
+          <div class="log-body">
+            <span class="log-title">Headers</span>
+            <span class="log-desc">HTTP headers for authentication and content type — each header has a "name" and "value" pair</span>
+          </div>
+        </div>
+        <div class="log-step">
+          <div class="log-num">4</div>
+          <div class="log-body">
+            <span class="log-title">ConnectionString</span>
+            <span class="log-desc">The database connection string used by SQL Server connectors to reach your ERP database</span>
+          </div>
+        </div>
+        <div class="log-step">
+          <div class="log-num">5</div>
+          <div class="log-body">
+            <span class="log-title">Command / CommandType</span>
+            <span class="log-desc">The SQL command to run (stored procedure name or query) and its type (SP or QUERY)</span>
+          </div>
+        </div>
+        <div class="log-step">
+          <div class="log-num">6</div>
+          <div class="log-body">
+            <span class="log-title">CustomerID</span>
+            <span class="log-desc">The ERP Customer ID that this connector is associated with for data filtering</span>
+          </div>
+        </div>
+      </div>
+      <div class="tip-box">
+        <mat-icon>lightbulb</mat-icon>
+        <span>REST connectors require headers with authorization keys. SQL connectors need a valid connection string.</span>
+      </div>
+    </section>
+
+  </mat-dialog-content>
+</div>

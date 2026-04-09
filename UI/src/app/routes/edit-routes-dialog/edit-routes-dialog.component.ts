@@ -98,6 +98,9 @@ export class EditRoutesDialogComponent {
   routeTypesOptions: RouteTypes[] | undefined;
   partnerGroupOptions: PartnerGroup[] | undefined;
   frequencyTypeOptions = ['Minutely', 'Hourly', 'Daily', 'Weekly', 'Monthly'];
+  filteredCustomers: any[] = []; filteredConnectors: any[] = []; filteredMaps: any[] = [];
+  filteredRouteTypes: any[] = []; filteredPartnerGroups: any[] = [];
+  searchCustomer = ''; searchConnector = ''; searchMap = ''; searchRouteType = ''; searchPartnerGroup = '';
   selectedFrequencyType: string = '';
   daysOfWeek: string[] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
   selectedWeekdays: string[] = this.daysOfWeek.filter(day => day !== 'Saturday' && day !== 'Sunday');
@@ -263,42 +266,50 @@ export class EditRoutesDialogComponent {
 
   getCustomersData() {
     this.routeApi.getCustomersData().subscribe({
-      next: (res: any) => {
-        this.customerOptions = res.customers;
-      },
+      next: (res: any) => { this.customerOptions = res.customers; this.filteredCustomers = this.customerOptions || []; },
     });
   }
 
   getConnectors() {
     this.routeApi.getConnectors().subscribe({
-      next: (res: any) => {
-        this.connectorsOptions = res.connectors;
-      },
+      next: (res: any) => { this.connectorsOptions = res.connectors; this.filteredConnectors = this.connectorsOptions || []; },
     });
   }
 
   getMaps() {
     this.routeApi.getMaps().subscribe({
-      next: (res: any) => {
-        this.mapsOptions = res.maps;
-      },
+      next: (res: any) => { this.mapsOptions = res.maps; this.filteredMaps = this.mapsOptions || []; },
     });
   }
 
   getPartnerGroup() {
     this.routeApi.getPartnerGroup().subscribe({
-      next: (res: any) => {
-        this.partnerGroupOptions = res.partnerGroup;
-      },
+      next: (res: any) => { this.partnerGroupOptions = res.partnerGroup; this.filteredPartnerGroups = this.partnerGroupOptions || []; },
     });
   }
 
   getRouteTypes() {
     this.routeApi.getRouteTypes().subscribe({
-      next: (res: any) => {
-        this.routeTypesOptions = res.routeType;
-      },
+      next: (res: any) => { this.routeTypesOptions = res.routeType; this.filteredRouteTypes = this.routeTypesOptions || []; },
     });
+  }
+
+  onSelectOpened(type: string, opened: boolean): void {
+    if (opened) {
+      if (type === 'customer') { this.searchCustomer = ''; this.filteredCustomers = this.customerOptions || []; }
+      if (type === 'connector') { this.searchConnector = ''; this.filteredConnectors = this.connectorsOptions || []; }
+      if (type === 'map') { this.searchMap = ''; this.filteredMaps = this.mapsOptions || []; }
+      if (type === 'routeType') { this.searchRouteType = ''; this.filteredRouteTypes = this.routeTypesOptions || []; }
+      if (type === 'partnerGroup') { this.searchPartnerGroup = ''; this.filteredPartnerGroups = this.partnerGroupOptions || []; }
+    }
+  }
+
+  filterList(type: string): void {
+    if (type === 'customer') { const s = this.searchCustomer.toLowerCase(); this.filteredCustomers = (this.customerOptions || []).filter((c: any) => (c.name || '').toLowerCase().includes(s)); }
+    if (type === 'connector') { const s = this.searchConnector.toLowerCase(); this.filteredConnectors = (this.connectorsOptions || []).filter((c: any) => (c.name || '').toLowerCase().includes(s)); }
+    if (type === 'map') { const s = this.searchMap.toLowerCase(); this.filteredMaps = (this.mapsOptions || []).filter((m: any) => (m.name || '').toLowerCase().includes(s)); }
+    if (type === 'routeType') { const s = this.searchRouteType.toLowerCase(); this.filteredRouteTypes = (this.routeTypesOptions || []).filter((r: any) => (r.name || '').toLowerCase().includes(s)); }
+    if (type === 'partnerGroup') { const s = this.searchPartnerGroup.toLowerCase(); this.filteredPartnerGroups = (this.partnerGroupOptions || []).filter((p: any) => (p.description || '').toLowerCase().includes(s)); }
   }
 
   onCancel(): void {

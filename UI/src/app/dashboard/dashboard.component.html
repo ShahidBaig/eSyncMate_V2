@@ -8,175 +8,162 @@
       </div>
       <div>
         <h2>Dashboard</h2>
-        <p class="title-sub">Real-time overview of your EDI operations</p>
+        <p class="title-sub">Real-time overview of your API operations</p>
       </div>
     </div>
     <div class="dashboard-actions">
-      <div class="time-chip">
-        <mat-icon>schedule</mat-icon>
-        <span>Last 24 Hours</span>
+      <!-- Quick Presets -->
+      <div class="preset-chips">
+        <button class="preset-chip" [class.active]="activePreset === '24h'" (click)="setPreset('24h')">24H</button>
+        <button class="preset-chip" [class.active]="activePreset === '7d'" (click)="setPreset('7d')">7D</button>
+        <button class="preset-chip" [class.active]="activePreset === '30d'" (click)="setPreset('30d')">30D</button>
       </div>
-      <button mat-icon-button (click)="manualRefresh()" [disabled]="loading || inventoryLoading" class="refresh-btn">
+
+      <!-- Date Range Picker -->
+      <div class="date-range-wrap" [class.range-active]="activePreset === 'custom'">
+        <mat-icon class="date-range-icon">date_range</mat-icon>
+        <mat-form-field appearance="outline" class="date-range-field">
+          <mat-date-range-input [rangePicker]="rangePicker">
+            <input matStartDate [(ngModel)]="filterFrom" placeholder="Start date" (dateChange)="onCustomDate()">
+            <input matEndDate [(ngModel)]="filterTo" placeholder="End date" (dateChange)="onRangeClose()">
+          </mat-date-range-input>
+          <mat-date-range-picker #rangePicker></mat-date-range-picker>
+          <mat-datepicker-toggle matSuffix [for]="rangePicker"></mat-datepicker-toggle>
+        </mat-form-field>
+      </div>
+
+      <!-- Refresh -->
+      <button mat-icon-button (click)="manualRefresh()" [disabled]="loading || inventoryLoading" class="refresh-btn" matTooltip="Refresh">
         <mat-icon [class.spinning]="loading || inventoryLoading">sync</mat-icon>
       </button>
     </div>
   </div>
 
-  <!-- Tabs -->
-  <mat-tab-group class="dashboard-tabs" animationDuration="200ms">
+  <!-- Loading -->
+  <div class="loading-overlay" *ngIf="loading">
+    <div class="loading-content">
+      <mat-spinner diameter="44"></mat-spinner>
+      <span>Loading order statistics...</span>
+    </div>
+  </div>
 
-    <!-- ===== ORDERS TAB ===== -->
-    <mat-tab>
-      <ng-template mat-tab-label>
-        <div class="tab-label-custom">
-          <div class="tab-icon-wrap tab-icon-orders"><mat-icon>shopping_cart</mat-icon></div>
-          <div class="tab-text">
-            <span class="tab-main">Orders</span>
-            <span class="tab-sub">{{ totalOrders }} total</span>
-          </div>
-        </div>
-      </ng-template>
+  <div class="dashboard-body" *ngIf="!loading">
 
-      <div class="loading-overlay" *ngIf="loading">
-        <div class="loading-content">
-          <mat-spinner diameter="44"></mat-spinner>
-          <span>Loading order statistics...</span>
+    <!-- KPI Tiles — 5 individual cards -->
+    <div class="kpi-tiles">
+      <div class="kpi-tile kpi-total">
+        <div class="kpi-tile-icon"><mat-icon>shopping_cart</mat-icon></div>
+        <div class="kpi-tile-data">
+          <span class="kpi-tile-value">{{ totalOrders }}</span>
+          <span class="kpi-tile-label">Total Orders</span>
         </div>
       </div>
-
-      <div class="tab-body" *ngIf="!loading">
-
-        <div class="inv-kpi-strip">
-          <div class="inv-kpi">
-            <mat-icon class="inv-kpi-icon" style="color:#3f51b5;">shopping_cart</mat-icon>
-            <div class="inv-kpi-data">
-              <span class="inv-kpi-value">{{ totalOrders }}</span>
-              <span class="inv-kpi-label">Total Orders</span>
-            </div>
-          </div>
-          <div class="inv-kpi-divider"></div>
-          <div class="inv-kpi">
-            <mat-icon class="inv-kpi-icon" style="color:#E8834A;">fiber_new</mat-icon>
-            <div class="inv-kpi-data">
-              <span class="inv-kpi-value" style="color:#E8834A;">{{ getStatusCount('NEW') }}</span>
-              <span class="inv-kpi-label">New</span>
-            </div>
-          </div>
-          <div class="inv-kpi-divider"></div>
-          <div class="inv-kpi">
-            <mat-icon class="inv-kpi-icon" style="color:#2e7d32;">check_circle</mat-icon>
-            <div class="inv-kpi-data">
-              <span class="inv-kpi-value" style="color:#2e7d32;">{{ getStatusCount('SYNCED') }}</span>
-              <span class="inv-kpi-label">Synced</span>
-            </div>
-          </div>
-          <div class="inv-kpi-divider"></div>
-          <div class="inv-kpi">
-            <mat-icon class="inv-kpi-icon" style="color:#3f51b5;">local_shipping</mat-icon>
-            <div class="inv-kpi-data">
-              <span class="inv-kpi-value" style="color:#3f51b5;">{{ getStatusCount('SHIPPED') }}</span>
-              <span class="inv-kpi-label">Shipped</span>
-            </div>
-          </div>
-          <div class="inv-kpi-divider"></div>
-          <div class="inv-kpi">
-            <mat-icon class="inv-kpi-icon" style="color:#c62828;">error</mat-icon>
-            <div class="inv-kpi-data">
-              <span class="inv-kpi-value" style="color:#c62828;">{{ getErrorCount() }}</span>
-              <span class="inv-kpi-label">Errors</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="inv-section-title">
-          <mat-icon>storefront</mat-icon>
-          <span>Partner Order Distribution</span>
-        </div>
-
-        <div class="content-row">
-          <div class="content-card">
-            <div class="card-top">
-              <div class="card-top-left">
-                <div class="card-top-icon" style="background:#E8834A;"><mat-icon>storefront</mat-icon></div>
-                <div>
-                  <h3>Orders by Partner</h3>
-                  <p>Order count per trading partner</p>
-                </div>
-              </div>
-              <span class="card-top-badge">{{ customerStats.length }} partners</span>
-            </div>
-            <div class="card-content">
-              <div class="customer-list" *ngIf="customerStats.length > 0">
-                <div class="customer-row" *ngFor="let row of customerStats; let i = index">
-                  <div class="customer-rank">{{ i + 1 }}</div>
-                  <div class="customer-info">
-                    <span class="customer-name">{{ getPartnerName(row.erpCustomerID) }}</span>
-                    <span class="customer-id">{{ row.erpCustomerID }}</span>
-                  </div>
-                  <div class="customer-bar-wrap">
-                    <div class="customer-bar" [style.width.%]="totalOrders > 0 ? (row.orderCount / totalOrders * 100) : 0"></div>
-                  </div>
-                  <div class="customer-count">{{ row.orderCount }}</div>
-                </div>
-              </div>
-              <div class="empty-state" *ngIf="customerStats.length === 0">
-                <mat-icon>inbox</mat-icon>
-                <p>No orders in the last 24 hours</p>
-              </div>
-            </div>
-          </div>
-
-          <div class="content-card">
-            <div class="card-top">
-              <div class="card-top-left">
-                <div class="card-top-icon" style="background:#00695c;"><mat-icon>donut_small</mat-icon></div>
-                <div>
-                  <h3>Orders by Status</h3>
-                  <p>Status breakdown of all orders</p>
-                </div>
-              </div>
-              <span class="card-top-badge">{{ statusStats.length }} statuses</span>
-            </div>
-            <div class="card-content">
-              <div class="status-grid" *ngIf="statusStats.length > 0">
-                <div class="status-tile" *ngFor="let stat of statusStats" [style.borderLeftColor]="getStatusColor(stat.status)">
-                  <div class="status-tile-top">
-                    <mat-icon [style.color]="getStatusColor(stat.status)">{{ getStatusIcon(stat.status) }}</mat-icon>
-                    <span class="status-tile-count" [style.color]="getStatusColor(stat.status)">{{ stat.statusCount }}</span>
-                  </div>
-                  <span class="status-tile-name">{{ stat.status }}</span>
-                  <div class="status-tile-bar">
-                    <div class="status-tile-fill" [style.width.%]="totalOrders > 0 ? (stat.statusCount / totalOrders * 100) : 0"
-                         [style.background]="getStatusColor(stat.status)"></div>
-                  </div>
-                  <span class="status-tile-pct">{{ totalOrders > 0 ? (stat.statusCount / totalOrders * 100).toFixed(1) : 0 }}%</span>
-                </div>
-              </div>
-              <div class="empty-state" *ngIf="statusStats.length === 0">
-                <mat-icon>inbox</mat-icon>
-                <p>No orders in the last 24 hours</p>
-              </div>
-            </div>
-          </div>
+      <div class="kpi-tile kpi-new">
+        <div class="kpi-tile-icon"><mat-icon>fiber_new</mat-icon></div>
+        <div class="kpi-tile-data">
+          <span class="kpi-tile-value" style="color:#E8834A;">{{ getStatusCount('NEW') }}</span>
+          <span class="kpi-tile-label">New</span>
         </div>
       </div>
-    </mat-tab>
+      <div class="kpi-tile kpi-synced">
+        <div class="kpi-tile-icon"><mat-icon>check_circle</mat-icon></div>
+        <div class="kpi-tile-data">
+          <span class="kpi-tile-value" style="color:#2e7d32;">{{ getStatusCount('SYNCED') }}</span>
+          <span class="kpi-tile-label">Synced</span>
+        </div>
+      </div>
+      <div class="kpi-tile kpi-shipped">
+        <div class="kpi-tile-icon"><mat-icon>local_shipping</mat-icon></div>
+        <div class="kpi-tile-data">
+          <span class="kpi-tile-value" style="color:#3f51b5;">{{ getStatusCount('SHIPPED') }}</span>
+          <span class="kpi-tile-label">Shipped</span>
+        </div>
+      </div>
+      <div class="kpi-tile kpi-error">
+        <div class="kpi-tile-icon"><mat-icon>warning_amber</mat-icon></div>
+        <div class="kpi-tile-data">
+          <span class="kpi-tile-value" style="color:#c62828;">{{ getErrorCount() }}</span>
+          <span class="kpi-tile-label">Errors</span>
+        </div>
+      </div>
+    </div>
 
-    <!-- INVENTORY TAB — hidden for now -->
-    <!--
-    <mat-tab>
-      <ng-template mat-tab-label>
-        <div class="tab-label-custom">
-          <div class="tab-icon-wrap tab-icon-inventory"><mat-icon>inventory_2</mat-icon></div>
-          <div class="tab-text">
-            <span class="tab-main">Inventory</span>
-            <span class="tab-sub">{{ totalBatches }} batches</span>
+    <!-- Section Title -->
+    <div class="inv-section-title">
+      <mat-icon>storefront</mat-icon>
+      <span>Partner Order Distribution</span>
+    </div>
+
+    <!-- Orders by Partner — Full Width -->
+    <div class="content-card">
+      <div class="card-top">
+        <div class="card-top-left">
+          <div class="card-top-icon" style="background:#E8834A;"><mat-icon>storefront</mat-icon></div>
+          <div>
+            <h3>Orders by Partner</h3>
+            <p>Order count per trading partner</p>
           </div>
         </div>
-      </ng-template>
-    </mat-tab>
-    -->
+        <span class="card-top-badge">{{ customerStats.length }} partners</span>
+      </div>
+      <div class="card-content">
+        <div class="customer-list" *ngIf="customerStats.length > 0">
+          <ng-container *ngFor="let row of customerStats; let i = index">
+            <!-- Partner Row — Clickable -->
+            <div class="customer-row"
+                 [class.expanded]="expandedPartner === row.erpCustomerID"
+                 (click)="togglePartnerDetail(row.erpCustomerID)">
+              <div class="customer-rank">{{ i + 1 }}</div>
+              <div class="customer-info">
+                <span class="customer-name">{{ getPartnerName(row.erpCustomerID) }}</span>
+                <span class="customer-id">{{ row.erpCustomerID }}</span>
+              </div>
+              <div class="customer-bar-wrap">
+                <div class="customer-bar" [style.width.%]="totalOrders > 0 ? (row.orderCount / totalOrders * 100) : 0"></div>
+              </div>
+              <div class="customer-count">{{ row.orderCount }}</div>
+              <mat-icon class="expand-icon" [class.rotated]="expandedPartner === row.erpCustomerID">expand_more</mat-icon>
+            </div>
 
-  </mat-tab-group>
+            <!-- Expanded Status Breakdown -->
+            <div class="partner-detail" *ngIf="expandedPartner === row.erpCustomerID">
+              <div class="partner-detail-header">
+                <span class="pdh-title">{{ getPartnerName(row.erpCustomerID) }} — Status Breakdown</span>
+                <span class="pdh-total">{{ row.orderCount }} orders</span>
+              </div>
+              <div class="partner-status-grid" *ngIf="(partnerStatuses[row.erpCustomerID] || []).length > 0">
+                <div class="partner-status-chip" *ngFor="let stat of partnerStatuses[row.erpCustomerID]"
+                     [style.borderLeftColor]="getStatusColor(stat.status)"
+                     [style.background]="getStatusBg(stat.status)">
+                  <div class="psc-icon-wrap" [style.background]="getStatusColor(stat.status)">
+                    <mat-icon class="psc-icon">{{ getStatusIcon(stat.status) }}</mat-icon>
+                  </div>
+                  <div class="psc-data">
+                    <span class="psc-count" [style.color]="getStatusColor(stat.status)">{{ stat.statusCount }}</span>
+                    <span class="psc-label">{{ stat.status }}</span>
+                  </div>
+                  <div class="psc-right">
+                    <span class="psc-pct" [style.color]="getStatusColor(stat.status)">{{ row.orderCount > 0 ? (stat.statusCount / row.orderCount * 100).toFixed(0) : 0 }}%</span>
+                    <div class="psc-bar">
+                      <div class="psc-bar-fill" [style.width.%]="row.orderCount > 0 ? (stat.statusCount / row.orderCount * 100) : 0"
+                           [style.background]="getStatusColor(stat.status)"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="partner-detail-empty" *ngIf="(partnerStatuses[row.erpCustomerID] || []).length === 0">
+                No status data available
+              </div>
+            </div>
+          </ng-container>
+        </div>
+        <div class="empty-state" *ngIf="customerStats.length === 0">
+          <mat-icon>inbox</mat-icon>
+          <p>No orders in the last 24 hours</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
 
 </div>

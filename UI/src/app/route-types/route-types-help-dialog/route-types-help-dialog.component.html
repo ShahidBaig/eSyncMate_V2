@@ -1,0 +1,123 @@
+<div class="help-container">
+  <!-- Header -->
+  <div class="help-header">
+    <div class="header-left">
+      <mat-icon class="header-icon">category</mat-icon>
+      <div>
+        <h2 class="header-title">Route Types — Help Guide</h2>
+        <span class="header-subtitle">Categorize your integration routes by what they do</span>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button mat-icon-button class="download-btn" matTooltip="Download Help Guide" (click)="downloadHelp()"><mat-icon>download</mat-icon></button>
+      <button mat-icon-button class="close-btn" (click)="close()">
+      <mat-icon>close</mat-icon>
+        </button>
+    </div>
+  </div>
+
+  <mat-dialog-content #helpContent class="help-content">
+
+    <!-- What Route Types Are -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>info</mat-icon> What Route Types Are</h3>
+      <p class="help-text">Route types label the purpose of each route so you can quickly tell what it does:</p>
+      <div class="status-card-grid" style="grid-template-columns: 1fr;">
+        <div class="status-card status-card-blue">
+          <div class="sc-header"><mat-icon>category</mat-icon><span>Overview</span></div>
+          <p>Each route type represents a specific kind of data exchange — like importing orders, uploading inventory, or sending shipment notifications. When you create a route, you pick a route type to define its function. Route types keep your integrations organized and easy to understand at a glance.</p>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Finding Route Types -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>search</mat-icon> Finding Route Types</h3>
+      <p class="help-text">Use any of these filters to quickly find the route type you need:</p>
+      <div class="card-grid">
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#eff6ff;"><mat-icon style="color:#2563eb;">tag</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Route Type ID</span>
+            <span class="info-card-desc">Search by the unique numeric identifier</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#fff7ed;"><mat-icon style="color:#E8834A;">label</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Route Type Name</span>
+            <span class="info-card-desc">Search by the descriptive name of the route type</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#ecfdf5;"><mat-icon style="color:#059669;">date_range</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Created Date</span>
+            <span class="info-card-desc">Filter by when the route type was originally created</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- What You Can Do -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>touch_app</mat-icon> What You Can Do</h3>
+      <p class="help-text">Use these actions to manage your route types:</p>
+      <div class="action-card-grid">
+        <div class="action-card">
+          <div class="ac-icon" style="background:#eff6ff;"><mat-icon style="color:#2563eb;">add_circle</mat-icon></div>
+          <div class="ac-body">
+            <span class="ac-title">Add Route Type</span>
+            <p class="ac-desc">Create a new route type by giving it a name and description. The ID is automatically assigned by the system.</p>
+          </div>
+        </div>
+        <div class="action-card">
+          <div class="ac-icon" style="background:#ecfdf5;"><mat-icon style="color:#059669;">edit</mat-icon></div>
+          <div class="ac-body">
+            <span class="ac-title">Edit Route Type</span>
+            <p class="ac-desc">Update the name or description of an existing route type. Routes already using this type are not affected.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Common Route Types -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>list</mat-icon> Common Route Types</h3>
+      <p class="help-text">Here are some of the most frequently used route types in the system:</p>
+      <div class="status-card-grid">
+        <div class="status-card status-card-blue">
+          <div class="sc-header"><mat-icon>shopping_cart</mat-icon><span>Order Import</span></div>
+          <p>Pulls new orders from a marketplace and brings them into your system for processing.</p>
+        </div>
+        <div class="status-card status-card-green">
+          <div class="sc-header"><mat-icon>inventory_2</mat-icon><span>Inventory Feed</span></div>
+          <p>Sends your warehouse stock levels to a marketplace so product availability stays up to date.</p>
+        </div>
+        <div class="status-card status-card-purple">
+          <div class="sc-header"><mat-icon>attach_money</mat-icon><span>Price Sync</span></div>
+          <p>Uploads product pricing to a marketplace to keep your listed prices current.</p>
+        </div>
+        <div class="status-card status-card-teal">
+          <div class="sc-header"><mat-icon>local_shipping</mat-icon><span>ASN / Shipment</span></div>
+          <p>Sends shipment notifications to the marketplace so they know when orders are on their way.</p>
+        </div>
+        <div class="status-card status-card-amber">
+          <div class="sc-header"><mat-icon>cancel</mat-icon><span>Cancellation</span></div>
+          <p>Sends order line cancellations to the marketplace when items cannot be fulfilled.</p>
+        </div>
+        <div class="status-card status-card-gray">
+          <div class="sc-header"><mat-icon>receipt_long</mat-icon><span>Place Order</span></div>
+          <p>Sends imported marketplace orders to your ERP for sales order creation.</p>
+        </div>
+      </div>
+    </section>
+
+  </mat-dialog-content>
+</div>

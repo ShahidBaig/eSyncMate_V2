@@ -1,4 +1,135 @@
 
+/* ===== MODE TOGGLE — fancy, right side ===== */
+.mode-toggle-right {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.mode-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 28px;
+  border: 2px solid #e5e7eb;
+  border-radius: 10px;
+  cursor: pointer;
+  font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  transition: all 0.2s;
+  background: #fff;
+  color: #9ca3af;
+  letter-spacing: 0.2px;
+
+  mat-icon { font-size: 20px; width: 20px; height: 20px; }
+
+  &.active {
+    background: #E8834A;
+    color: #fff;
+    border-color: #E8834A;
+    box-shadow: 0 2px 10px rgba(232, 131, 74, 0.35);
+  }
+
+  &:not(.active):hover {
+    border-color: #E8834A;
+    color: #E8834A;
+    background: #fff8f4;
+  }
+}
+
+/* 3-Column Controls Grid */
+.controls-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0;
+}
+
+.controls-grid > .control-section {
+  padding: 0 20px;
+  border-right: 1px solid #e2e8f0;
+
+  &:first-child { padding-left: 0; }
+  &:last-child { border-right: none; padding-right: 0; }
+}
+
+/* ===== FILE UPLOAD ROW — file zone + upload btn inline ===== */
+.file-upload-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+
+  .file-drop-zone { flex: 1; }
+}
+
+/* ===== DOWNLOAD MODE ===== */
+.download-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.download-header-icon {
+  font-size: 18px !important;
+  width: 18px !important;
+  height: 18px !important;
+  color: #E8834A;
+}
+
+.download-header-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  -webkit-font-smoothing: antialiased;
+}
+
+.download-card {
+  width: 50%;
+}
+
+.download-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.download-field {
+  flex: 1;
+  ::ng-deep .mat-mdc-form-field-subscript-wrapper { display: none; }
+  ::ng-deep .mdc-text-field { height: 44px !important; }
+  ::ng-deep .mat-mdc-form-field-infix { padding: 8px 0 !important; min-height: unset !important; }
+  ::ng-deep .mat-mdc-floating-label { top: 22px !important; }
+  ::ng-deep .mdc-floating-label--float-above { top: 28px !important; }
+  ::ng-deep input.mat-mdc-input-element { font-size: 13px !important; }
+  ::ng-deep .mat-mdc-select-value-text { font-size: 13px !important; }
+}
+
+.download-field-wide {
+}
+
+.btn-download-csv {
+  height: 38px;
+  padding: 0 16px !important;
+  background: #E8834A !important;
+  color: #fff !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  border-radius: 10px !important;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  box-shadow: 0 1px 3px rgba(232, 131, 74, 0.3);
+  transition: all 0.15s ease;
+
+  &:hover { background: #d4722e !important; box-shadow: 0 2px 6px rgba(232, 131, 74, 0.4); }
+  mat-icon { font-size: 18px; width: 18px; height: 18px; }
+}
+
 .spinner-overlay {
   position: fixed;
   top: 50%;
@@ -13,27 +144,11 @@
   height: 100vh;
 }
 
-// Collapse toggle
-.collapse-toggle {
-  margin-left: auto;
-  width: 28px;
-  height: 28px;
-  color: #64748b;
-
-  .mat-icon {
-    font-size: 20px;
-    width: 20px;
-    height: 20px;
-  }
-
-  &:hover {
-    color: #1e293b;
-  }
-}
 
 // Section cards
 .section-card {
   margin-bottom: 12px;
+  border-radius: 10px;
 }
 
 .section-header {
@@ -45,189 +160,323 @@
   border-bottom: 1px solid #e2e8f0;
 
   .section-icon {
-    color: #64748b;
+    color: #2563eb;
     font-size: 20px;
     width: 20px;
     height: 20px;
   }
 
   .section-title {
-    font-size: 14px;
-    font-weight: 600;
-    color: #334155;
+    font-size: 13px;
+    font-weight: 700;
+    color: #1e293b;
     text-transform: uppercase;
-    letter-spacing: 0.3px;
+    letter-spacing: 0.5px;
   }
 }
 
-.upload-row,
-.search-row {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
+// ===== FANCY SEARCH STYLES =====
+.search-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.search-header-left { display: flex; align-items: center; gap: 8px; }
+.search-header-icon { font-size: 18px !important; width: 18px !important; height: 18px !important; color: #E8834A; }
+.search-header-title { font-size: 13px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; -webkit-font-smoothing: antialiased; }
+
+.search-field {
+  min-width: 140px; flex: 1;
+  ::ng-deep .mat-mdc-form-field-subscript-wrapper { display: none; }
+  ::ng-deep .mdc-text-field { height: 44px !important; }
+  ::ng-deep .mat-mdc-form-field-infix { padding: 8px 0 !important; min-height: unset !important; }
+  ::ng-deep .mat-mdc-floating-label { top: 22px !important; }
+  ::ng-deep .mdc-floating-label--float-above { top: 28px !important; }
+  ::ng-deep input.mat-mdc-input-element { font-size: 13px !important; }
+  ::ng-deep .mat-mdc-select-value-text { font-size: 13px !important; }
+  ::ng-deep .mat-mdc-form-field-icon-prefix { padding-right: 4px !important; .mat-icon { font-size: 18px !important; width: 18px !important; height: 18px !important; color: #94a3b8; } }
+  ::ng-deep .mat-datepicker-toggle .mat-mdc-icon-button { width: 32px !important; height: 32px !important; padding: 0 !important; }
 }
 
-.search-actions-wrapper {
-  display: flex;
-  gap: 20px;
-  align-items: flex-start;
-
-  .search-side {
-    flex: 1;
-    min-width: 0;
-  }
-
-  .actions-side {
-    flex: 1;
-    min-width: 0;
-    border-left: 1px solid #e2e8f0;
-    padding-left: 20px;
-  }
+.search-btn {
+  height: 44px; padding: 0 22px !important; background: #E8834A !important; color: #fff !important;
+  font-size: 13px !important; font-weight: 700 !important; border-radius: 10px !important;
+  display: flex; align-items: center; gap: 6px; white-space: nowrap; letter-spacing: 0.2px;
+  box-shadow: 0 1px 3px rgba(232, 131, 74, 0.3); transition: all 0.15s ease;
+  &:hover { background: #d4722e !important; box-shadow: 0 2px 6px rgba(232, 131, 74, 0.4); }
+  mat-icon { font-size: 18px; width: 18px; height: 18px; }
 }
 
-.action-row {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
+.control-section {
+  padding: 0;
 }
 
-.file-upload-group {
+.control-body {
   display: flex;
-  align-items: center;
-  gap: 4px;
+  flex-direction: column;
+  gap: 8px;
 }
 
-.grid-container {
+.control-row {
   display: flex;
-  align-items: center;
-  flex-direction: row;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
-.custom-width {
-  width: 400px;
+.ctrl-field {
+  flex: 1;
+  min-width: 120px;
 }
 
+.ctrl-field-wide {
+  flex: 2;
+}
 
+.btn-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
 
-/*.custom-input-wrapper .custom-border {
-  border: 2px solid #000;*/ /* Adjust the border width and color as needed */
-  /*padding: 5px;*/ /* Optional: adjust padding for better appearance */
-  /*border-radius: 4px;*/ /* Optional: add border radius for rounded corners */
-/*}*/
+.btn-row-spread {
+  justify-content: space-between;
+  align-items: center;
+}
 
-.grid-containerRejected {
+.btn-group-left {
+  display: flex;
+  gap: 8px;
+}
+
+// ===== FANCY FILE DROP ZONE =====
+.file-drop-zone {
   display: flex;
   align-items: center;
-  justify-content: right;
-  flex-direction: row;
-  gap: 10px; /* Ensures there is space between the input and button */
-  padding: 10px; /* Adds padding for smaller screens */
-  margin-top:-90px;
+  gap: 10px;
+  padding: 10px 16px;
+  background: #f8fafc;
+  border: 2px dashed #cbd5e1;
+  border-radius: 10px;
+  cursor: pointer;
+  flex: 1;
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: #2563eb;
+    background: #eff6ff;
+  }
 }
 
-// Status chips — modern pill style (same as inventory)
+.file-hidden {
+  display: none;
+}
+
+.drop-icon {
+  color: #94a3b8;
+  font-size: 24px;
+  width: 24px;
+  height: 24px;
+
+  .file-drop-zone:hover & {
+    color: #2563eb;
+  }
+}
+
+.drop-text {
+  font-size: 13px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.drop-file {
+  font-size: 13px;
+  color: #059669;
+  font-weight: 600;
+}
+
+.drop-hint {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-left: auto;
+}
+
+// Responsive
+@media (max-width: 1200px) {
+  .controls-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .controls-grid > .control-section {
+    padding: 16px 0;
+    border-right: none;
+    border-bottom: 1px solid #e2e8f0;
+    &:last-child { border-bottom: none; }
+  }
+}
+
+// ===== STATUS PILLS — Meaningful colors =====
 %status-base {
   display: inline-flex;
   align-items: center;
-  padding: 4px 12px;
+  justify-content: center;
+  padding: 4px 14px;
   border-radius: 9999px;
   font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.3px;
-  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.4px;
   white-space: nowrap;
   cursor: default;
+  min-width: 70px;
+  text-align: center;
 }
 
+// NEW — blue (fresh, ready to process)
 .new-status {
   @extend %status-base;
   background: #eff6ff;
-  color: #1d4ed8;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
 }
 
-.syncerror-status {
-  @extend %status-base;
-  background: #fef2f2;
-  color: #b91c1c;
-}
-
-.sysced-status {
-  @extend %status-base;
-  background: #f0f9ff;
-  color: #0369a1;
-}
-
-.processed-status {
-  @extend %status-base;
-  background: #f0fdf4;
-  color: #15803d;
-}
-
-.asngen-status {
-  @extend %status-base;
-  background: #fff7ed;
-  color: #c2410c;
-}
-
-.asnmark-status {
-  @extend %status-base;
-  background: #f8fafc;
-  color: #475569;
-}
-
-.invoiced-status {
-  @extend %status-base;
-  background: #faf5ff;
-  color: #7e22ce;
-}
-
-.complete-status {
-  @extend %status-base;
-  background: #f1f5f9;
-  color: #334155;
-}
-
-.finished-status {
-  @extend %status-base;
-  background: #f0fdf4;
-  color: #166534;
-}
-
-.splited-status {
-  @extend %status-base;
-  background: #fef2f2;
-  color: #991b1b;
-}
-
-.invedi-status {
+// UPDATED — indigo (modified, needs re-sync)
+.updated-status {
   @extend %status-base;
   background: #eef2ff;
-  color: #3730a3;
+  color: #4f46e5;
+  border: 1px solid #c7d2fe;
 }
 
-.acknowledged-status {
+// PENDING — amber (waiting for approval)
+.pending-status {
   @extend %status-base;
-  background: #eff6ff;
-  color: #1e40af;
+  background: #fffbeb;
+  color: #d97706;
+  border: 1px solid #fde68a;
 }
 
+// APPROVED — green (live on marketplace)
+.approved-status {
+  @extend %status-base;
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+}
+
+// PUBLISHED — dark green (fully synced)
+.published-status {
+  @extend %status-base;
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #86efac;
+}
+
+// REJECTED — red (marketplace rejected)
 .rejected-status {
   @extend %status-base;
   background: #fef2f2;
-  color: #b91c1c;
+  color: #dc2626;
+  border: 1px solid #fecaca;
 }
 
+// ERROR — red (processing failed)
+.error-status {
+  @extend %status-base;
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+// SUSPENDED — orange (marketplace suspended)
 .suspended-status {
   @extend %status-base;
   background: #fff7ed;
-  color: #c2410c;
+  color: #ea580c;
+  border: 1px solid #fed7aa;
 }
 
+// UNLISTED — pink (removed from listing)
 .unlisted-status {
   @extend %status-base;
   background: #fdf2f8;
   color: #9d174d;
+  border: 1px solid #fbcfe8;
 }
+
+// SYNCED — teal (synced to ERP)
+.synced-status {
+  @extend %status-base;
+  background: #f0fdfa;
+  color: #0d9488;
+  border: 1px solid #99f6e4;
+}
+
+// Fallback for old class names used elsewhere
+.syncerror-status { @extend .error-status; }
+.sysced-status { @extend .synced-status; }
+.processed-status { @extend .approved-status; }
+.finished-status { @extend .published-status; }
+.splited-status { @extend .pending-status; }
+.acknowledged-status { @extend .approved-status; }
+.asngen-status { @extend .suspended-status; }
+.asnmark-status { @extend %status-base; background: #f8fafc; color: #475569; border: 1px solid #e2e8f0; }
+.invoiced-status { @extend %status-base; background: #faf5ff; color: #7e22ce; border: 1px solid #e9d5ff; }
+.complete-status { @extend %status-base; background: #f1f5f9; color: #334155; border: 1px solid #e2e8f0; }
+.invedi-status { @extend %status-base; background: #eef2ff; color: #3730a3; border: 1px solid #c7d2fe; }
+
+// ===== GRID TABLE STYLING =====
+::ng-deep .mat-mdc-table {
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+
+  .mat-mdc-header-row {
+    background: #f8fafc;
+  }
+
+  .mat-mdc-header-cell {
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid #e2e8f0;
+  }
+
+  .mat-mdc-cell {
+    font-size: 13px;
+    color: #1e293b;
+    border-bottom: 1px solid #f1f5f9;
+  }
+
+  .mat-mdc-row:hover .mat-mdc-cell {
+    background: #f8fafc;
+  }
+}
+
+// ===== DISTINCT BUTTON COLORS =====
+%btn-base {
+  height: 36px; padding: 0 16px !important; font-size: 12px !important; font-weight: 700 !important;
+  border-radius: 8px !important; display: flex; align-items: center; gap: 5px; white-space: nowrap;
+  mat-icon { font-size: 16px; width: 16px; height: 16px; }
+  &:disabled { background: #cbd5e1 !important; color: #94a3b8 !important; }
+}
+
+.btn-sample { @extend %btn-base; background: #2563eb !important; color: white !important; &:hover { background: #1d4ed8 !important; } }
+.btn-upload { @extend %btn-base; background: #059669 !important; color: white !important; &:hover { background: #047857 !important; } }
+
+.btn-rejected {
+  background: #dc2626 !important; color: white !important;
+  &:hover { background: #b91c1c !important; }
+}
+
+.btn-clear-file {
+  color: #94a3b8;
+  &:hover { color: #dc2626; }
+}
+
+.btn-download-data {
+  background: #7c3aed !important; color: white !important;
+  &:hover { background: #6d28d9 !important; }
+}
+
+.btn-clear-errors {
+  background: #ea580c !important; color: white !important;
+  &:hover { background: #c2410c !important; }
+}
+

@@ -24,6 +24,8 @@ using System.Security.Claims;
 using MySqlX.XDevAPI.Common;
 using System.Diagnostics;
 using Result = eSyncMate.DB.Result;
+using OtpNet;
+using QRCoder;
 
 namespace eSyncMate.Processor.Controllers
 {
@@ -96,6 +98,8 @@ namespace eSyncMate.Processor.Controllers
                         Company = row["Company"].ToString(),
                         CustomerName = row["CustomerName"] != DBNull.Value ? row["CustomerName"].ToString() : "",
                         IsSetupAllowed= row["IsSetupAllowed"] != DBNull.Value ?  Convert.ToBoolean(row["IsSetupAllowed"]): false,
+                        MFAEnabled = row.Table.Columns.Contains("MFAEnabled") && row["MFAEnabled"] != DBNull.Value ? Convert.ToBoolean(row["MFAEnabled"]) : false,
+                        MFASecret = row.Table.Columns.Contains("MFASecret") && row["MFASecret"] != DBNull.Value ? Convert.ToString(row["MFASecret"]) : "",
                         UserID = row["UserID"] != DBNull.Value ? Convert.ToString(row["UserID"]) : "",
                     };
                 }
@@ -112,19 +116,74 @@ namespace eSyncMate.Processor.Controllers
            
             if (user !=null)
             {
-                var tokenString = GenerateJSONWebToken(user);
-                Declarations.g_UserNo = user.Id;
+                if (user.MFAEnabled)
+                {
+                    // 2FA enabled for this user — same pattern as BizMate
+                    string secretKey = user.MFASecret;
+                    string qrImage = "";
+                    bool requiresSetup = false;
 
-                // Fetch user menus based on role, filtered by company
-                var userMenus = GetUserMenuTree(user.Id, user.Company);
+                    if (string.IsNullOrEmpty(secretKey))
+                    {
+                        // First time: generate secret + QR code
+                        requiresSetup = true;
+                        secretKey = GenerateSecretKey();
+                        qrImage = GenerateQRCode(user.Email, secretKey);
 
-                response = Ok(new { Token = tokenString, Message = "Success", Menus = userMenus });
+                        // Store secret in DB
+                        Users l_users = new Users();
+                        l_users.UseConnection(CommonUtils.ConnectionString);
+                        l_users.Connection.Execute($"UPDATE Users SET MFASecret = '{secretKey}' WHERE Id = {user.Id}");
+                    }
+
+                    response = Ok(new
+                    {
+                        requiresMfa = true,
+                        requiresSetup = requiresSetup,
+                        secretKey = secretKey,
+                        qrImage = qrImage,
+                        userId = user.UserID,
+                        userIdNum = user.Id,
+                        email = user.Email,
+                        message = requiresSetup ? "MFA setup required." : "MFA verification required."
+                    });
+                }
+                else
+                {
+                    // No 2FA — normal login (original flow)
+                    var tokenString = GenerateJSONWebToken(user);
+                    Declarations.g_UserNo = user.Id;
+                    var userMenus = GetUserMenuTree(user.Id, user.Company);
+
+                    response = Ok(new { token = tokenString, message = "Success", menus = userMenus });
+                }
             }
             else
             {
-                response = Ok(new { Token = "Invalid", Message = "Either you dont have permission or Invalid Credentials!" });
+                response = Ok(new { token = "Invalid", message = "Either you dont have permission or Invalid Credentials!" });
             }
             return response;
+        }
+
+        // Exact BizMate AuthManager.GenerateSecretKey()
+        private string GenerateSecretKey()
+        {
+            byte[] secretKey = KeyGeneration.GenerateRandomKey(20);
+            return OtpNet.Base32Encoding.ToString(secretKey);
+        }
+
+        // Exact BizMate AuthManager.GenerateQRCode()
+        private string GenerateQRCode(string email, string secret)
+        {
+            string issuer = "eSyncMate";
+            string protocol = $"otpauth://totp/{issuer}:{email}?secret={secret}&issuer={issuer}";
+
+            QRCodeGenerator qrGenerator = new QRCodeGenerator();
+            QRCodeData qrCodeData = qrGenerator.CreateQrCode(protocol, QRCodeGenerator.ECCLevel.Q);
+
+            PngByteQRCode qrCode = new PngByteQRCode(qrCodeData);
+            byte[] qrCodeImage = qrCode.GetGraphic(20);
+            return Convert.ToBase64String(qrCodeImage);
         }
 
         private GetUserMenusResponseModel GetUserMenuTree(int userId, string company)
@@ -346,5 +405,70 @@ namespace eSyncMate.Processor.Controllers
             return response;
         }
 
+        // Exact BizMate VerifyOTP pattern with wider window for clock drift
+        [HttpPost("VerifyMFA")]
+        public async Task<IActionResult> VerifyMFA([FromBody] VerifyMFARequest request)
+        {
+            try
+            {
+                // Exact BizMate 3 lines + VerificationWindow(10,10) for clock drift
+                var secretBytes = OtpNet.Base32Encoding.ToBytes(request.SecretKey);
+                var totp = new Totp(secretBytes);
+                bool result = totp.VerifyTotp(request.Code, out long timeStepMatched, new VerificationWindow(10, 10));
+
+                if (result)
+                {
+                    // Get user data for JWT
+                    Users l_users = new Users();
+                    l_users.UseConnection(CommonUtils.ConnectionString);
+                    DataTable userData = new DataTable();
+
+                    if (!l_users.GetViewList($"UserID = '{request.UserID}' AND Status = 'ACTIVE'", "", ref userData) || userData.Rows.Count == 0)
+                    {
+                        return Ok(new { code = 900, token = "Invalid", message = "User not found." });
+                    }
+
+                    DataRow row = userData.Rows[0];
+                    LoginModel user = new LoginModel
+                    {
+                        Id = Convert.ToInt32(row["Id"]),
+                        FirstName = row["FirstName"].ToString(),
+                        LastName = row["LastName"].ToString(),
+                        Mobile = row["Mobile"].ToString(),
+                        Email = row["Email"].ToString(),
+                        Status = row["Status"].ToString(),
+                        CreatedDate = DateTime.Parse(row["createdDate"].ToString()),
+                        UserType = row["UserType"].ToString(),
+                        Company = row["Company"].ToString(),
+                        CustomerName = row["CustomerName"] != DBNull.Value ? row["CustomerName"].ToString() : "",
+                        IsSetupAllowed = row["IsSetupAllowed"] != DBNull.Value ? Convert.ToBoolean(row["IsSetupAllowed"]) : false,
+                        UserID = row["UserID"] != DBNull.Value ? Convert.ToString(row["UserID"]) : "",
+                    };
+
+                    var tokenString = GenerateJSONWebToken(user);
+                    Declarations.g_UserNo = user.Id;
+                    var userMenus = GetUserMenuTree(user.Id, user.Company);
+
+                    return Ok(new { code = 100, token = tokenString, message = "OTP is verified.", menus = userMenus });
+                }
+                else
+                {
+                    return Ok(new { code = 900, token = "Invalid", message = "OTP is either wrong or expired." });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"[VerifyMFA] Error: {ex}");
+                return Ok(new { code = 900, token = "Invalid", message = "An error occurred during verification." });
+            }
+        }
+    }
+
+    // Simple request model for VerifyMFA
+    public class VerifyMFARequest
+    {
+        public string SecretKey { get; set; } = "";
+        public string Code { get; set; } = "";
+        public string UserID { get; set; } = "";
     }
 }

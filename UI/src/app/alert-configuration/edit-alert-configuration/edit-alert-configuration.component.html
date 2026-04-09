@@ -1,6 +1,12 @@
-
-<div mat-dialog-content class="dialog-content">
-  <h1 class="dialog-title">{{ viewMode ? 'View Alert Configuration' : 'Edit Alert Configuration' }}</h1>
+<div class="dialog-container">
+  <div class="dialog-header">
+    <div class="dialog-header-left">
+      <mat-icon class="dialog-header-icon">{{ viewMode ? 'visibility' : 'edit' }}</mat-icon>
+      <h2 class="dialog-header-title">{{ viewMode ? 'View Alert Configuration' : 'Edit Alert Configuration' }}</h2>
+    </div>
+    <button mat-icon-button class="dialog-close-btn" (click)="onCancel()"><mat-icon>close</mat-icon></button>
+  </div>
+  <div mat-dialog-content class="dialog-body">
 
   <mat-tab-group>
     <!-- ==================== General Tab ==================== -->
@@ -271,14 +277,14 @@
       </div>
     </mat-tab>
   </mat-tab-group>
-</div>
-
-<div mat-dialog-actions class="dialog-actions">
-  <button mat-button class="cancel-button" (click)="onCancel()">{{ viewMode ? 'Close' : 'Cancel' }}</button>
-  <button *ngIf="!viewMode" mat-raised-button color="primary"
-          [disabled]="!updateAlertForm.valid || saving"
-          (click)="updateAlertConfiguration()">
-    <mat-spinner *ngIf="saving" diameter="18" class="btn-spinner"></mat-spinner>
-    <span *ngIf="!saving">Update</span>
-  </button>
+  </div>
+  <div mat-dialog-actions class="dialog-footer">
+    <button *ngIf="!viewMode" mat-raised-button class="btn-save"
+            [disabled]="!updateAlertForm.valid || saving"
+            (click)="updateAlertConfiguration()">
+      <mat-spinner *ngIf="saving" diameter="18" class="btn-spinner"></mat-spinner>
+      <mat-icon *ngIf="!saving">save</mat-icon>
+      <span *ngIf="!saving">Update</span>
+    </button>
+  </div>
 </div>

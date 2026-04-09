@@ -1,4 +1,10 @@
-<h2 class="page-title"><mat-icon>security</mat-icon><span class="title-text">{{ 'nav.roleManagement' | translate }}</span></h2>
+<h2 class="page-title">
+  <mat-icon>security</mat-icon>
+  <span class="title-text">{{ 'nav.roleManagement' | translate }}</span>
+  <button mat-icon-button class="help-btn" matTooltip="Help Guide" (click)="openHelp()">
+    <mat-icon>help_outline</mat-icon>
+  </button>
+</h2>
 <div class="role-management-container">
   <mat-tab-group>
     <!-- Roles Tab -->

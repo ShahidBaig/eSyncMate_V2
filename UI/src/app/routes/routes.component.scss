@@ -1,0 +1,36 @@
+.spinner-overlay { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: rgba(255,255,255,0.8); z-index: 1000; display: flex; justify-content: center; align-items: center; width: 100vw; height: 100vh; }
+.section-card { margin-bottom: 12px; border-radius: 10px; }
+
+/* Search Card */
+.search-card { border-radius: 12px !important; }
+.search-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.search-header-left { display: flex; align-items: center; gap: 8px; }
+.search-header-icon { font-size: 18px !important; width: 18px !important; height: 18px !important; color: #E8834A; }
+.search-header-title { font-size: 13px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; -webkit-font-smoothing: antialiased; }
+
+.search-group { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+.search-field {
+  min-width: 140px; max-width: 260px; flex: 1;
+  ::ng-deep .mat-mdc-form-field-subscript-wrapper { display: none; }
+  ::ng-deep .mdc-text-field { height: 38px !important; }
+  ::ng-deep .mat-mdc-form-field-infix { padding: 8px 0 !important; min-height: unset !important; }
+  ::ng-deep .mat-mdc-floating-label { top: 22px !important; }
+  ::ng-deep .mdc-floating-label--float-above { top: 28px !important; }
+  ::ng-deep input.mat-mdc-input-element { font-size: 13px !important; }
+  ::ng-deep .mat-mdc-select-value-text { font-size: 13px !important; }
+  ::ng-deep .mat-mdc-form-field-icon-prefix { padding-right: 4px !important; .mat-icon { font-size: 18px !important; width: 18px !important; height: 18px !important; color: #94a3b8; } }
+  ::ng-deep .mat-datepicker-toggle .mat-mdc-icon-button { width: 32px !important; height: 32px !important; padding: 0 !important; }
+}
+
+.search-btn {
+  height: 38px; padding: 0 16px !important; background: #E8834A !important; color: #fff !important;
+  font-size: 13px !important; font-weight: 700 !important; border-radius: 10px !important;
+  display: flex; align-items: center; gap: 6px; white-space: nowrap; letter-spacing: 0.2px;
+  box-shadow: 0 1px 3px rgba(232, 131, 74, 0.3); transition: all 0.15s ease;
+  &:hover { background: #d4722e !important; box-shadow: 0 2px 6px rgba(232, 131, 74, 0.4); }
+  mat-icon { font-size: 18px; width: 18px; height: 18px; }
+}
+
+.btn-add { background: #059669 !important; color: white !important; }
+.btn-add:hover { background: #047857 !important; }

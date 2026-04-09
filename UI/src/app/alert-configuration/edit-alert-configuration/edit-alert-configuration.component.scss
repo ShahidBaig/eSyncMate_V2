@@ -1,192 +1,21 @@
-.dialog-content {
-  padding: 24px;
-  max-height: 80vh;
-  overflow: auto;
-}
+@import "../../shared-dialog.scss";
 
-.dialog-title {
-  margin-bottom: 20px;
-  font-size: 24px;
-  font-weight: bold;
-}
-
-.tab-content {
-  padding: 20px 0;
-}
-
-.connector-form {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.form-row {
-  display: flex;
-  gap: 20px;
-  flex-wrap: wrap;
-}
-
-.form-field {
-  flex: 1 1 0;
-  min-width: 200px;
-}
-
-.full-width {
-  flex: 1 1 100%;
-}
-
-.action-row {
-  gap: 12px;
-  align-items: center;
-
-  &.right-align {
-    justify-content: flex-end;
-  }
-}
-
-.weekdays-container {
-  flex: 1 1 100%;
-  margin-bottom: 8px;
-}
-
-.weekdays-checkboxes {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin-top: 8px;
-}
-
-.add-alert-btn-row {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 16px;
-}
-
-.grid-section {
-  margin-top: 24px;
-  border-top: 1px solid #e0e0e0;
-  padding-top: 16px;
-  max-height: 250px;
-  overflow-y: auto;
-
-  &.no-border {
-    margin-top: 0;
-    border-top: none;
-    padding-top: 0;
-  }
-}
-
-.alerts-table {
-  width: 100%;
-  overflow-x: auto;
-}
-
-.spinner-container {
-  display: flex;
-  justify-content: center;
-  padding: 20px;
-}
-
-.no-data {
-  text-align: center;
-  padding: 20px;
-  color: #888;
-  font-style: italic;
-}
-
-.freq-detail {
-  display: block;
-  font-size: 11px;
-  color: #666;
-  margin-top: 2px;
-}
-
-.badge {
-  display: inline-block;
-  font-size: 10px;
-  font-weight: 600;
-  padding: 2px 6px;
-  border-radius: 4px;
-  margin-left: 6px;
-  vertical-align: middle;
-}
-
-.badge-new {
-  background-color: #e8f5e9;
-  color: #2e7d32;
-}
-
-.badge-edited {
-  background-color: #fff3e0;
-  color: #e65100;
-}
-
-.btn-spinner {
-  display: inline-block;
-}
-
-.dialog-actions {
-  display: flex;
-  justify-content: space-between;
-  padding: 16px 24px 24px;
-  border-top: 1px solid #eee;
-}
-
-.cancel-button {
-  color: #666;
-}
-
-::ng-deep .email-chip-field .mat-mdc-form-field-infix {
-  max-height: 100px;
-  overflow-y: auto;
-}
-
-mat-form-field {
-  width: 100%;
-}
-
-input[matInput] {
-  padding: 8px 12px;
-}
-
-/* Responsive breakpoints */
-@media only screen and (max-width: 960px) {
-  .dialog-content {
-    padding: 16px;
-  }
-
-  .form-row {
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .form-field {
-    flex: 1 1 100%;
-    min-width: unset;
-  }
-
-  .weekdays-checkboxes {
-    gap: 8px;
-  }
-}
-
-@media only screen and (max-width: 600px) {
-  .dialog-content {
-    padding: 12px;
-    max-height: 70vh;
-  }
-
-  .dialog-title {
-    font-size: 18px;
-    margin-bottom: 12px;
-  }
-
-  .dialog-actions {
-    padding: 12px 16px 16px;
-  }
-
-  .weekdays-checkboxes {
-    flex-direction: column;
-    gap: 4px;
-  }
-}
+.tab-content { padding: 16px 0; }
+.add-alert-btn-row { margin-bottom: 12px; }
+.weekdays-container { margin-bottom: 12px; }
+.weekdays-checkboxes { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 4px; }
+.grid-section { margin-top: 16px; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; }
+.grid-section.no-border { border: none; }
+.alerts-table { width: 100%; }
+.alerts-table th { background: #f8fafc; color: #64748b; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+.alerts-table td { font-size: 13px; color: #1e293b; }
+.alerts-table tr:hover td { background: #f8fafc; }
+.spinner-container { display: flex; align-items: center; justify-content: center; min-height: 60px; }
+.no-data { display: flex; align-items: center; justify-content: center; min-height: 60px; color: #64748b; font-size: 14px; }
+.badge { padding: 2px 8px; border-radius: 9999px; font-size: 10px; font-weight: 700; margin-left: 6px; }
+.badge-new { background: #ecfdf5; color: #059669; }
+.badge-edited { background: #eff6ff; color: #2563eb; }
+.freq-detail { color: #64748b; font-size: 12px; margin-left: 4px; }
+.right-align { justify-content: flex-end; }
+.btn-spinner { display: inline-block; margin-right: 6px; }
+.email-chip-field { min-height: 60px; }

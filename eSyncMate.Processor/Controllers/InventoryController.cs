@@ -312,7 +312,7 @@ namespace eSyncMate.Processor.Controllers
 
         [HttpGet]
         [Route("getRouteTypes")]
-        public async Task<GetInventoryResponseModel> getRouteTypes()
+        public async Task<GetInventoryResponseModel> getRouteTypes([FromQuery] string customerID = "")
         {
             MethodBase l_Me = MethodBase.GetCurrentMethod();
             GetInventoryResponseModel l_Response = new GetInventoryResponseModel();
@@ -335,6 +335,21 @@ namespace eSyncMate.Processor.Controllers
             try
             {
                 string l_Criteria = !(string.IsNullOrEmpty(userData.Customers)) && userData.UserType?.ToUpper() != "ADMIN" ? $"CustomerID IN ({userData.Customers})" : string.Empty;
+
+                // Filter by specific customer if provided
+                if (!string.IsNullOrEmpty(customerID))
+                {
+                    l_Criteria = string.IsNullOrEmpty(l_Criteria)
+                        ? $"CustomerID = '{customerID}'"
+                        : $"{l_Criteria} AND CustomerID = '{customerID}'";
+                }
+
+                // Only include inventory-related route types, exclude price routes
+                string l_InventoryFilter = "RouteType LIKE '%inventory%' OR RouteType LIKE '%feed%' OR RouteType LIKE '%Full%' OR RouteType LIKE '%Differential%' OR RouteType LIKE '%Portal%'";
+                l_Criteria = string.IsNullOrEmpty(l_Criteria)
+                    ? $"({l_InventoryFilter})"
+                    : $"{l_Criteria} AND ({l_InventoryFilter})";
+
                 SCSInventoryFeedData l_InventoryData = new SCSInventoryFeedData();
 
                 l_Response.Code = (int)ResponseCodes.Error;

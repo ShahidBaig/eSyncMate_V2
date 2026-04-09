@@ -1,5 +1,6 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -7,6 +8,10 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatTabsModule } from '@angular/material/tabs';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatNativeDateModule } from '@angular/material/core';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
 import { ApiService } from '../services/api.service';
 import { InventoryService } from '../services/inventory.service';
 import { TranslateModule } from '@ngx-translate/core';
@@ -38,6 +43,7 @@ interface InventoryCustomerStat {
   standalone: true,
   imports: [
     CommonModule,
+    FormsModule,
     MatCardModule,
     MatIconModule,
     MatButtonModule,
@@ -45,10 +51,22 @@ interface InventoryCustomerStat {
     MatTableModule,
     MatTooltipModule,
     MatTabsModule,
+    MatDatepickerModule,
+    MatNativeDateModule,
+    MatFormFieldModule,
+    MatInputModule,
     TranslateModule
   ],
 })
 export class DashboardComponent implements OnInit, OnDestroy {
+  today = new Date();
+  yesterday = new Date(new Date().setDate(new Date().getDate() - 1));
+  filterFrom: Date = new Date(new Date().setDate(new Date().getDate() - 1));
+  filterTo: Date = new Date();
+  activePreset: string = '24h';
+  expandedPartner: string | null = null;
+  partnerStatuses: { [key: string]: StatusStat[] } = {};
+  partnerStatusLoading: { [key: string]: boolean } = {};
   totalOrders = 0;
   customerStats: CustomerStat[] = [];
   statusStats: StatusStat[] = [];
@@ -59,12 +77,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
   statusConfig: { [key: string]: { icon: string; color: string; bg: string } } = {
     'NEW': { icon: 'fiber_new', color: '#0d47a1', bg: '#e3f2fd' },
     'SYNCED': { icon: 'check_circle', color: '#2e7d32', bg: '#e8f5e9' },
-    'SHIPPED': { icon: 'local_shipping', color: '#33691e', bg: '#f1f8e9' },
+    'SHIPPED': { icon: 'local_shipping', color: '#3f51b5', bg: '#e8eaf6' },
     'PROCESSED': { icon: 'done_all', color: '#1b5e20', bg: '#e8f5e9' },
-    'ERROR': { icon: 'error', color: '#c62828', bg: '#ffebee' },
+    'ERROR': { icon: 'warning_amber', color: '#c62828', bg: '#ffebee' },
     'SYNCERROR': { icon: 'sync_problem', color: '#c62828', bg: '#ffebee' },
     'ACKERROR': { icon: 'report_problem', color: '#bf360c', bg: '#fbe9e7' },
-    'ASNERROR': { icon: 'warning', color: '#e65100', bg: '#fff3e0' },
+    'ASNERROR': { icon: 'warning_amber', color: '#e65100', bg: '#fff3e0' },
     'CANCELLED': { icon: 'cancel', color: '#4e342e', bg: '#efebe9' },
     'INPROGRESS': { icon: 'hourglass_empty', color: '#01579b', bg: '#e1f5fe' },
     'ACKNOWLEDGED': { icon: 'thumb_up', color: '#01579b', bg: '#e1f5fe' },
@@ -72,6 +90,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     'ASNGEN': { icon: 'inventory', color: '#e65100', bg: '#fff3e0' },
     'ASNMARK': { icon: 'bookmark', color: '#37474f', bg: '#eceff1' },
     'DUPLICATE': { icon: 'content_copy', color: '#424242', bg: '#f5f5f5' },
+    'Partially Shipped': { icon: 'local_shipping', color: '#0277bd', bg: '#e1f5fe' },
+    'Partially Cancelled': { icon: 'cancel', color: '#d84315', bg: '#fbe9e7' },
   };
 
   // Inventory stats
@@ -112,12 +132,22 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   loadStats(): void {
     this.loading = true;
-    this.api.getDashboardStats().subscribe({
+    const from = this.formatDate(this.filterFrom);
+    const to = this.formatDate(this.filterTo);
+    this.api.getDashboardStats(from, to).subscribe({
       next: (res: any) => {
         if (res.code === 200) {
           this.totalOrders = res.totalOrders || 0;
           this.customerStats = res.customerWise || [];
           this.statusStats = res.statusWise || [];
+
+          // Load partner-wise status breakdown from same response
+          this.partnerStatuses = {};
+          if (res.partnerStatusWise) {
+            for (const key of Object.keys(res.partnerStatusWise)) {
+              this.partnerStatuses[key] = res.partnerStatusWise[key] || [];
+            }
+          }
         }
         this.loading = false;
       },
@@ -125,6 +155,50 @@ export class DashboardComponent implements OnInit, OnDestroy {
         this.loading = false;
       }
     });
+  }
+
+  setPreset(preset: string): void {
+    this.activePreset = preset;
+    const now = new Date();
+    this.filterTo = new Date(now);
+
+    switch (preset) {
+      case '24h':
+        this.filterFrom = new Date(new Date().setDate(now.getDate() - 1));
+        break;
+      case '7d':
+        this.filterFrom = new Date(new Date().setDate(now.getDate() - 7));
+        break;
+      case '30d':
+        this.filterFrom = new Date(new Date().setDate(now.getDate() - 30));
+        break;
+    }
+
+    this.applyDateFilter();
+  }
+
+  onCustomDate(): void {
+    this.activePreset = 'custom';
+  }
+
+  onRangeClose(): void {
+    if (this.filterFrom && this.filterTo) {
+      this.activePreset = 'custom';
+      this.applyDateFilter();
+    }
+  }
+
+  applyDateFilter(): void {
+    this.expandedPartner = null;
+    this.partnerStatuses = {};
+    this.loadStats();
+    this.loadInventoryStats();
+  }
+
+  formatDate(date: Date): string {
+    if (!date) return '';
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
   }
 
   getStatusIcon(status: string): string {
@@ -238,5 +312,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   getStatusCount(status: string): number {
     return this.statusStats.find(s => s.status === status)?.statusCount || 0;
+  }
+
+  togglePartnerDetail(erpCustomerID: string): void {
+    this.expandedPartner = this.expandedPartner === erpCustomerID ? null : erpCustomerID;
+  }
+
+  getPartnerStatusTotal(erpCustomerID: string): number {
+    return (this.partnerStatuses[erpCustomerID] || []).reduce((sum: number, s: StatusStat) => sum + s.statusCount, 0);
   }
 }

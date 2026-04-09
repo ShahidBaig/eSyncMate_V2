@@ -1,69 +1,28 @@
-/* Same base styles as Add/Modify Customer dialog */
-.dialog-content {
-  padding: 24px;
+@import '../../shared-dialog.scss';
+
+.alerts-body { min-width: 700px; max-height: 60vh; overflow-y: auto; }
+
+.table-wrapper {
+  border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden;
 }
 
-.dialog-title {
-  margin-bottom: 20px;
-  font-size: 24px;
-  font-weight: bold;
-}
-
-/* Toolbar with Add button */
-.alerts-toolbar {
-  display: flex;
-  justify-content: flex-start;
-  margin-bottom: 16px;
-}
-
-/* Table */
 .alerts-table {
   width: 100%;
-  border-collapse: collapse;
+  th { background: #f8fafc; color: #64748b; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+  td { font-size: 13px; color: #1e293b; border-bottom: 1px solid #f1f5f9; }
+  tr:hover td { background: #f8fafc; }
 }
 
-.alerts-table th.mat-header-cell {
-  font-weight: 600;
+.spinner-container {
+  display: flex; align-items: center; justify-content: center; min-height: 80px;
 }
 
-/* Loading / empty state */
-.spinner-container,
 .no-data {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 80px;
-  color: #666;
-  font-style: italic;
-}
-
-/* Footer actions */
-.dialog-actions {
-  display: flex;
-  justify-content: flex-end;
-  padding: 0 24px 16px;
-}
-
-.cancel-button {
-  color: #666;
-}
-
-/* Optional: limit internal height so whole dialog doesn’t grow too much */
-.alerts-dialog-content {
-  min-width: 700px;
-  max-height: 60vh;
-  overflow-y: auto;
-}
-
-/* Ensure form-fields / table take full width */
-mat-form-field {
-  width: 100%;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 80px; color: #64748b; font-size: 14px;
+  mat-icon { color: #94a3b8; }
 }
 
 .truncate-text {
-  max-width: 250px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: block;
+  max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;
 }

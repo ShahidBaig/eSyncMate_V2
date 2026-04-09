@@ -126,6 +126,12 @@ namespace eSyncMate.Processor.Managers
                             l_KnotShipment.tracking.carrier_name = l_VRow["LevelOfService"].ToString();
                             l_KnotShipment.tracking.tracking_number = l_VRow["TrackingNo"].ToString();
 
+                            // Set shipped flag from SP (true = last batch, false = more lines pending)
+                            if (l_VRow.Row.Table.Columns.Contains("Shipped"))
+                            {
+                                l_KnotShipment.shipped = l_VRow["Shipped"] != DBNull.Value && Convert.ToBoolean(l_VRow["Shipped"]);
+                            }
+
                             KnotShipment_Lines.offer_sku = l_VRow["ItemID"].ToString();
                             KnotShipment_Lines.quantity = Convert.ToInt32(l_VRow["LineQty"]);
                             l_KnotShipment.shipment_lines.Add(KnotShipment_Lines);
@@ -133,7 +139,7 @@ namespace eSyncMate.Processor.Managers
                             l_KnotAsnRequestModel.shipments.Add(l_KnotShipment);
 
                             trackings += $"{l_VRow["TrackingNo"].ToString()},";
-                            
+
                         }
 
                         l_Row["Trackings"] = trackings;

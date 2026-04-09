@@ -1,128 +1,184 @@
 <div class="login-page">
-  <!-- Left Column: Login Form -->
-  <div class="login-column">
-    <div class="login-card">
-      <!-- Logo -->
-      <div class="login-logo">
+  <!-- Left Column -->
+  <div class="login-column" [class.mfa-column-wide]="!isLoginView">
+    <div class="login-card" [class.mfa-card-wide]="!isLoginView">
+      <!-- Logo (always visible) -->
+      <div class="login-logo" [class.mfa-logo-centered]="!isLoginView">
         <img src="/assets/images/Bizmate.png" alt="eSyncMate">
         <span class="logo-caption">eSyncMate</span>
       </div>
 
-      <!-- Title -->
-      <h1 class="login-title">{{ 'login' | translate }}</h1>
+      <!-- ========== VIEW 1: LOGIN FORM ========== -->
+      <ng-container *ngIf="isLoginView">
+        <h1 class="login-title">{{ 'login' | translate }}</h1>
 
-      <!-- Error Message -->
-      <div class="login-error" *ngIf="responseMsg">
-        <mat-icon class="error-icon">error_outline</mat-icon>
-        <span>{{responseMsg}}</span>
-      </div>
-
-      <!-- Form -->
-      <form [formGroup]="loginForm" (keydown)="handleKeyDown($event)" class="login-form">
-        <!-- User ID -->
-        <div class="field-group">
-          <label class="field-label">{{ 'userID' | translate }}</label>
-          <mat-form-field appearance="outline" class="login-field">
-            <input matInput formControlName="userID" autocomplete="username">
-            <mat-icon matPrefix class="field-icon">person_outline</mat-icon>
-          </mat-form-field>
+        <div class="login-error" *ngIf="responseMsg">
+          <mat-icon class="error-icon">error_outline</mat-icon>
+          <span>{{responseMsg}}</span>
         </div>
 
-        <!-- Password -->
-        <div class="field-group">
-          <label class="field-label">{{ 'password' | translate }}</label>
-          <mat-form-field appearance="outline" class="login-field">
-            <input matInput type="password" formControlName="password" autocomplete="current-password">
-            <mat-icon matPrefix class="field-icon">lock_outline</mat-icon>
-            <mat-error *ngIf="this.Password.invalid" style="font-size: 11px;">{{getPasswordErrors()}}</mat-error>
-          </mat-form-field>
+        <form [formGroup]="loginForm" (keydown)="handleKeyDown($event)" class="login-form">
+          <div class="field-group">
+            <label class="field-label">{{ 'userID' | translate }}</label>
+            <mat-form-field appearance="outline" class="login-field">
+              <input matInput formControlName="userID" autocomplete="username">
+              <mat-icon matPrefix class="field-icon">person_outline</mat-icon>
+            </mat-form-field>
+          </div>
+
+          <div class="field-group">
+            <label class="field-label">{{ 'password' | translate }}</label>
+            <mat-form-field appearance="outline" class="login-field">
+              <input matInput type="password" formControlName="password" autocomplete="current-password">
+              <mat-icon matPrefix class="field-icon">lock_outline</mat-icon>
+              <mat-error *ngIf="this.Password.invalid" style="font-size: 11px;">{{getPasswordErrors()}}</mat-error>
+            </mat-form-field>
+          </div>
+
+          <div class="field-group">
+            <label class="field-label">{{ 'language' | translate }}</label>
+            <mat-form-field appearance="outline" class="login-field">
+              <mat-icon matPrefix class="field-icon">language</mat-icon>
+              <mat-select (selectionChange)="languageService.setLanguage($event.value)" [value]="languageService.currentLanguage">
+                <mat-option [value]="'en'">English</mat-option>
+                <mat-option [value]="'es'">Español</mat-option>
+              </mat-select>
+            </mat-form-field>
+          </div>
+
+          <mat-progress-bar *ngIf="isLoading" mode="indeterminate" color="accent" class="login-progress"></mat-progress-bar>
+          <button class="login-submit-btn" [disabled]="loginForm.invalid || isLoading" (click)="login()" type="button">
+            <mat-icon class="btn-icon">lock_open</mat-icon>
+            <span>{{ 'login' | translate }}</span>
+          </button>
+
+          <button class="login-submit-btn login-cancel-btn" (click)="cancel()" type="button">
+            <mat-icon class="btn-icon">refresh</mat-icon>
+            <span>Clear</span>
+          </button>
+        </form>
+
+        <p class="login-terms">
+          By clicking on the Log In button, you understand and agree to
+          <a routerLink="/terms-of-use" target="_blank">Terms of Use</a> and <a routerLink="/privacy-policy" target="_blank">Privacy Policy</a>
+        </p>
+      </ng-container>
+
+      <!-- ========== VIEW 2: SCAN QR CODE (First Time Setup) ========== -->
+      <ng-container *ngIf="isScanQRView && authResult">
+        <div class="mfa-section">
+          <!-- Icon + Title -->
+          <div class="mfa-icon-circle mfa-icon-orange">
+            <mat-icon>qr_code_scanner</mat-icon>
+          </div>
+          <h1 class="mfa-title">Set Up Two-Factor Authentication</h1>
+          <p class="mfa-subtitle">Scan the QR code below with your authenticator app to link your account securely</p>
+
+          <!-- QR Code Card -->
+          <div class="qr-card">
+            <div class="qr-frame">
+              <img [src]="'data:image/png;base64,' + authResult.qrCodeImage" alt="QR Code" class="qr-image">
+            </div>
+            <div class="qr-instructions">
+              <div class="qr-step"><span class="qr-step-num">1</span><span>Open <strong>Google Authenticator</strong> or <strong>Microsoft Authenticator</strong></span></div>
+              <div class="qr-step"><span class="qr-step-num">2</span><span>Tap the <strong>+</strong> button and select <strong>Scan QR Code</strong></span></div>
+              <div class="qr-step"><span class="qr-step-num">3</span><span>Point your camera at the QR code above</span></div>
+            </div>
+          </div>
+
+          <!-- Divider -->
+          <div class="mfa-divider">
+            <div class="mfa-divider-line"></div>
+            <span class="mfa-divider-text">Enter Verification Code</span>
+            <div class="mfa-divider-line"></div>
+          </div>
+
+          <!-- OTP Digit Boxes -->
+          <form [formGroup]="otpForm" class="otp-form">
+            <div class="otp-digits" [class.otp-invalid]="isOtpInvalid" (paste)="onDigitPaste($event)">
+              <input type="text" maxlength="1" formControlName="d1" data-index="1" class="otp-digit" inputmode="numeric" pattern="[0-9]*" (input)="onDigitInput($event, 1)" (keydown)="onDigitKeydown($event, 1)" autofocus>
+              <input type="text" maxlength="1" formControlName="d2" data-index="2" class="otp-digit" inputmode="numeric" pattern="[0-9]*" (input)="onDigitInput($event, 2)" (keydown)="onDigitKeydown($event, 2)">
+              <input type="text" maxlength="1" formControlName="d3" data-index="3" class="otp-digit" inputmode="numeric" pattern="[0-9]*" (input)="onDigitInput($event, 3)" (keydown)="onDigitKeydown($event, 3)">
+              <div class="otp-separator"></div>
+              <input type="text" maxlength="1" formControlName="d4" data-index="4" class="otp-digit" inputmode="numeric" pattern="[0-9]*" (input)="onDigitInput($event, 4)" (keydown)="onDigitKeydown($event, 4)">
+              <input type="text" maxlength="1" formControlName="d5" data-index="5" class="otp-digit" inputmode="numeric" pattern="[0-9]*" (input)="onDigitInput($event, 5)" (keydown)="onDigitKeydown($event, 5)">
+              <input type="text" maxlength="1" formControlName="d6" data-index="6" class="otp-digit" inputmode="numeric" pattern="[0-9]*" (input)="onDigitInput($event, 6)" (keydown)="onDigitKeydown($event, 6)">
+            </div>
+
+            <mat-progress-bar *ngIf="isOTPVerifyProgress" mode="indeterminate" color="accent" class="mfa-progress"></mat-progress-bar>
+
+            <button class="mfa-submit-btn" [disabled]="otpForm.invalid || isOTPVerifyProgress" (click)="onVerifyOtp()" type="button">
+              <mat-icon>verified</mat-icon>
+              <span>Verify & Continue</span>
+            </button>
+          </form>
         </div>
+      </ng-container>
 
-        <!-- Language -->
-        <div class="field-group">
-          <label class="field-label">{{ 'language' | translate }}</label>
-          <mat-form-field appearance="outline" class="login-field">
-            <mat-icon matPrefix class="field-icon">language</mat-icon>
-            <mat-select (selectionChange)="languageService.setLanguage($event.value)" [value]="languageService.currentLanguage">
-              <mat-option [value]="'en'">English</mat-option>
-              <mat-option [value]="'es'">Español</mat-option>
-            </mat-select>
-          </mat-form-field>
+      <!-- ========== VIEW 3: VERIFY OTP (Subsequent Logins) ========== -->
+      <ng-container *ngIf="isVerifyOTPView && authResult">
+        <div class="mfa-section">
+          <!-- Icon + Title -->
+          <div class="mfa-icon-circle mfa-icon-blue">
+            <mat-icon>shield</mat-icon>
+          </div>
+          <h1 class="mfa-title">Two-Factor Authentication</h1>
+          <p class="mfa-subtitle">Enter the 6-digit code from your authenticator app to verify your identity</p>
+
+          <!-- OTP Digit Boxes -->
+          <form [formGroup]="otpForm" class="otp-form">
+            <div class="otp-digits" [class.otp-invalid]="isOtpInvalid" (paste)="onDigitPaste($event)">
+              <input type="text" maxlength="1" formControlName="d1" data-index="1" class="otp-digit" inputmode="numeric" pattern="[0-9]*" (input)="onDigitInput($event, 1)" (keydown)="onDigitKeydown($event, 1)" autofocus>
+              <input type="text" maxlength="1" formControlName="d2" data-index="2" class="otp-digit" inputmode="numeric" pattern="[0-9]*" (input)="onDigitInput($event, 2)" (keydown)="onDigitKeydown($event, 2)">
+              <input type="text" maxlength="1" formControlName="d3" data-index="3" class="otp-digit" inputmode="numeric" pattern="[0-9]*" (input)="onDigitInput($event, 3)" (keydown)="onDigitKeydown($event, 3)">
+              <div class="otp-separator"></div>
+              <input type="text" maxlength="1" formControlName="d4" data-index="4" class="otp-digit" inputmode="numeric" pattern="[0-9]*" (input)="onDigitInput($event, 4)" (keydown)="onDigitKeydown($event, 4)">
+              <input type="text" maxlength="1" formControlName="d5" data-index="5" class="otp-digit" inputmode="numeric" pattern="[0-9]*" (input)="onDigitInput($event, 5)" (keydown)="onDigitKeydown($event, 5)">
+              <input type="text" maxlength="1" formControlName="d6" data-index="6" class="otp-digit" inputmode="numeric" pattern="[0-9]*" (input)="onDigitInput($event, 6)" (keydown)="onDigitKeydown($event, 6)">
+            </div>
+
+            <mat-progress-bar *ngIf="isOTPVerifyProgress" mode="indeterminate" color="accent" class="mfa-progress"></mat-progress-bar>
+
+            <button class="mfa-submit-btn" [disabled]="otpForm.invalid || isOTPVerifyProgress" (click)="onVerifyOtp()" type="button">
+              <mat-icon>verified</mat-icon>
+              <span>Verify & Continue</span>
+            </button>
+          </form>
+
+          <!-- Help -->
+          <div class="mfa-help">
+            <mat-icon>info_outline</mat-icon>
+            <span>Open <strong>Google Authenticator</strong> or <strong>Microsoft Authenticator</strong> on your phone to get the code</span>
+          </div>
         </div>
-
-        <!-- Login Button -->
-        <mat-progress-bar *ngIf="isLoading" mode="indeterminate" color="accent" class="login-progress"></mat-progress-bar>
-        <button class="login-submit-btn" [disabled]="loginForm.invalid || isLoading" (click)="login()" type="button">
-          <mat-icon class="btn-icon">lock_open</mat-icon>
-          <span>{{ 'login' | translate }}</span>
-        </button>
-
-        <!-- Cancel Button -->
-        <button class="login-submit-btn login-cancel-btn" (click)="cancel()" type="button">
-          <mat-icon class="btn-icon">refresh</mat-icon>
-          <span>Clear</span>
-        </button>
-      </form>
-
-      <!-- Terms -->
-      <p class="login-terms">
-        By clicking on the Log In button, you understand and agree to
-        <a routerLink="/terms-of-use" target="_blank">Terms of Use</a> and <a routerLink="/privacy-policy" target="_blank">Privacy Policy</a>
-      </p>
+      </ng-container>
 
       <!-- Footer -->
       <div class="login-footer">
         <span>Powered by <strong>eSyncMate</strong></span>
       </div>
     </div>
-
   </div>
 
-  <!-- Right Column: Promo Cards -->
-  <div class="promo-column">
-    <!-- Card 1: Main Feature -->
+  <!-- Right Column: Promo Cards (login view only) -->
+  <div class="promo-column" *ngIf="isLoginView">
     <div class="promo-card promo-card-primary">
       <div class="promo-card-content">
         <h2 class="promo-title">Seamless API Integration</h2>
         <div class="promo-features">
-          <div class="promo-feature">
-            <div class="promo-feature-icon">
-              <mat-icon>sync_alt</mat-icon>
-            </div>
-            <span>Real-time data sync</span>
-          </div>
-          <div class="promo-feature">
-            <div class="promo-feature-icon">
-              <mat-icon>inventory_2</mat-icon>
-            </div>
-            <span>Inventory management</span>
-          </div>
-          <div class="promo-feature">
-            <div class="promo-feature-icon">
-              <mat-icon>local_shipping</mat-icon>
-            </div>
-            <span>Order & shipment tracking</span>
-          </div>
+          <div class="promo-feature"><div class="promo-feature-icon"><mat-icon>sync_alt</mat-icon></div><span>Real-time data sync</span></div>
+          <div class="promo-feature"><div class="promo-feature-icon"><mat-icon>inventory_2</mat-icon></div><span>Inventory management</span></div>
+          <div class="promo-feature"><div class="promo-feature-icon"><mat-icon>local_shipping</mat-icon></div><span>Order & shipment tracking</span></div>
         </div>
       </div>
-      <div class="promo-card-graphic">
-        <div class="graphic-circle">
-          <mat-icon class="graphic-icon">hub</mat-icon>
-        </div>
-      </div>
+      <div class="promo-card-graphic"><div class="graphic-circle"><mat-icon class="graphic-icon">hub</mat-icon></div></div>
     </div>
-
-    <!-- Card 2: Secondary Feature -->
     <div class="promo-card promo-card-secondary">
       <div class="promo-card-content">
         <h2 class="promo-title">Multi-Platform Support</h2>
-        <p class="promo-desc">
-          Connect with ShipStation, Amazon, and other platforms for unified order processing and inventory control.
-        </p>
+        <p class="promo-desc">Connect with ShipStation, Amazon, and other platforms for unified order processing and inventory control.</p>
       </div>
-      <div class="promo-card-badge">
-        <mat-icon class="badge-icon">cloud_done</mat-icon>
-      </div>
+      <div class="promo-card-badge"><mat-icon class="badge-icon">cloud_done</mat-icon></div>
     </div>
   </div>
 </div>

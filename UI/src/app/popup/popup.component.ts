@@ -1,6 +1,6 @@
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { Component, OnInit, Inject } from '@angular/core';
-import { DatePipe, NgIf, NgFor} from '@angular/common';
+import { DatePipe, NgIf, NgFor, CommonModule} from '@angular/common';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatInputModule } from '@angular/material/input';
@@ -86,6 +86,7 @@ const typeMap: TypeMap = {
     MatProgressSpinnerModule,
     MatSelectModule,
     NgFor,
+    CommonModule,
     MatGridListModule,
     FormsModule,
     TranslateModule
@@ -104,7 +105,7 @@ export class PopupComponent {
     'type',
     'createdDate',
     'data',
-    'fileName',
+    // 'fileName',
     'DownloadFile',
   ];
 
@@ -165,6 +166,30 @@ export class PopupComponent {
 
   closeDialog(): void {
     this.dialogRef.close();
+  }
+
+  getTypeIcon(type: string): string {
+    if (!type) return 'description';
+    const t = type.toUpperCase();
+    if (t.includes('ACK')) return 'check_circle';
+    if (t.includes('ERP') && t.includes('ERR')) return 'error';
+    if (t.includes('ERP')) return 'cloud_upload';
+    if (t.includes('ASN') && t.includes('ERR')) return 'error';
+    if (t.includes('ASN')) return 'local_shipping';
+    if (t.includes('CANCEL') || t.includes('CANLN')) return 'cancel';
+    if (t.includes('JSON') || t.includes('API')) return 'receipt_long';
+    return 'description';
+  }
+
+  getTypeIconClass(type: string): string {
+    if (!type) return 'icon-default';
+    const t = type.toUpperCase();
+    if (t.includes('ERR') || t.includes('ERROR')) return 'icon-error';
+    if (t.includes('ACK')) return 'icon-success';
+    if (t.includes('ASN')) return 'icon-shipping';
+    if (t.includes('ERP')) return 'icon-erp';
+    if (t.includes('CANCEL') || t.includes('CANLN')) return 'icon-cancel';
+    return 'icon-default';
   }
 
   viewFile(data: string, filename: any) {

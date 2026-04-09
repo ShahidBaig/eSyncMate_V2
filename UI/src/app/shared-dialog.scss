@@ -1,0 +1,43 @@
+// ===== SHARED DIALOG STYLES =====
+
+.dialog-container { font-family: 'Poppins', sans-serif; }
+
+.dialog-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 24px; border-bottom: 1px solid #e2e8f0;
+}
+
+.dialog-header-left { display: flex; align-items: center; gap: 10px; }
+
+.dialog-header-icon { font-size: 24px; width: 24px; height: 24px; color: #2563eb; }
+
+.dialog-header-title { margin: 0; font-size: 17px; font-weight: 700; color: #1e293b; }
+
+.dialog-close-btn { color: #94a3b8; &:hover { color: #1e293b; } }
+
+.dialog-body { padding: 20px 24px !important; }
+
+.dialog-form { display: flex; flex-direction: column; gap: 6px; }
+
+.form-row {
+  display: flex; gap: 14px; flex-wrap: wrap;
+  mat-form-field { flex: 1; min-width: 200px; }
+}
+
+.full-width { flex: 0 0 100% !important; }
+
+.dialog-footer {
+  display: flex; justify-content: flex-end; gap: 8px;
+  padding: 14px 24px !important; border-top: 1px solid #e2e8f0;
+}
+
+.btn-save {
+  background: #2563eb !important; color: white !important;
+  &:hover { background: #1d4ed8 !important; }
+  &:disabled { background: #cbd5e1 !important; color: #94a3b8 !important; }
+}
+
+.btn-cancel {
+  color: #64748b !important;
+  &:hover { color: #1e293b !important; }
+}

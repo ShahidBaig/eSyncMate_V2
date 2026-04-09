@@ -48,7 +48,7 @@ a {
 // Page Layout
 // ============================================================
 .mat-table-container {
-  padding: 20px 24px;
+  padding: 16px 24px 20px 24px;
 }
 
 // ============================================================
@@ -107,14 +107,16 @@ table.mat-mdc-table {
   border-bottom: 2px solid #c9d5e3 !important;
 
   .mat-mdc-header-cell {
-    color: $gray-700 !important;
+    color: #1a1a2e !important;
     font-size: 12px !important;
-    font-weight: 600 !important;
+    font-weight: 700 !important;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     border-bottom: none !important;
     padding: 0 14px !important;
     white-space: nowrap;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 }
 
@@ -132,10 +134,13 @@ table.mat-mdc-table {
   }
 
   .mat-mdc-cell {
-    font-size: 13px;
-    color: $text-primary;
+    font-size: 13.5px;
+    font-weight: 500;
+    color: #1a1a2e;
     border-bottom: 1px solid $border-light !important;
     padding: 0 14px !important;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 }
 
@@ -391,26 +396,70 @@ router-outlet + * {
 // V2-specific: Page Title
 // ============================================================
 .page-title {
-  margin: 8px 10px 0 10px;
-  padding: 8px 14px;
-  font-size: 15px;
-  font-weight: 700;
-  letter-spacing: 0.3px;
-  color: $gray-800;
+  margin: 0;
+  padding: 20px 24px 0 24px;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0;
+  color: #1a1a2e;
   font-family: "Poppins", "Roboto", sans-serif;
-  background: $bg-card;
-  border-radius: $radius-sm;
-  box-shadow: $shadow-xs;
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
 }
 
-.page-title mat-icon {
-  color: #E8834A;
+// Page icon — 42x42 orange box (only the direct icon, not icons inside buttons)
+.page-title > mat-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 8px;
+  background: #E8834A;
+  color: #fff;
+  font-size: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.page-title .title-text {
   font-size: 22px;
-  width: 22px;
-  height: 22px;
+  font-weight: 800;
+  color: #1a1a2e;
+}
+
+// Help button — smaller circle, sits next to title text
+.page-title .help-btn {
+  margin-left: 4px;
+  width: 30px !important;
+  height: 30px !important;
+  min-width: 30px !important;
+  background: #E8834A !important;
+  border-radius: 50% !important;
+  color: #fff !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 !important;
+
+  &:hover {
+    background: #E8834A !important;
+  }
+
+  mat-icon {
+    width: 18px !important;
+    height: 18px !important;
+    font-size: 18px !important;
+    background: transparent !important;
+    color: #fff !important;
+    border-radius: 0 !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
 }
 
 // ============================================================
@@ -464,6 +513,20 @@ router-outlet + * {
 
 .batch-wise-dialog-panel .mat-mdc-dialog-actions {
   flex-shrink: 0;
+}
+
+// Batch-wise table: sticky header row stays visible on vertical scroll
+.batch-wise-dialog-panel .mat-mdc-header-row {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 10 !important;
+
+  .mat-mdc-header-cell {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 10 !important;
+    background: #e8eef6 !important;
+  }
 }
 
 // ============================================================

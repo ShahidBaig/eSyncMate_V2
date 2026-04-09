@@ -43,7 +43,9 @@ export class InventoryService {
     return this.http.get(`${this.apiUrl}api/CustomerProductCatalog/getERPCustomers`);
   }
 
-  getRouteTypes(): Observable<any> {
-    return this.http.get(`${this.apiUrl}api/v1/inventory/getRouteTypes`);
+  getRouteTypes(customerID: string = ''): Observable<any> {
+    let params = new HttpParams();
+    if (customerID) params = params.set('customerID', customerID);
+    return this.http.get(`${this.apiUrl}api/v1/inventory/getRouteTypes`, { params });
   }
 }

@@ -1,13 +1,132 @@
-.notepad-like {
-  font-family: 'Consolas', 'Monaco', 'Lucida Console', monospace;
-  background-color: white;
-  color: black;
-  border: 1px solid #ccc;
-  padding: 10px;
-  width: 100%;
-  height: 400px;
-  overflow: auto; 
-  resize: none;
-  width: 100%; 
-  box-sizing: border-box; 
+.viewer-container {
+  font-family: 'Poppins', sans-serif;
 }
+
+.viewer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.header-icon {
+  font-size: 22px;
+  width: 22px;
+  height: 22px;
+  color: #2563eb;
+}
+
+.viewer-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.viewer-subtitle {
+  font-size: 11px;
+  color: #64748b;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.file-badge {
+  padding: 3px 10px;
+  border-radius: 9999px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.badge-json {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+}
+
+.badge-text {
+  background: #fff7ed;
+  color: #ea580c;
+  border: 1px solid #fed7aa;
+}
+
+.close-btn {
+  color: #94a3b8;
+
+  &:hover {
+    color: #1e293b;
+  }
+}
+
+.viewer-content {
+  padding: 16px 20px !important;
+  max-height: 480px;
+  overflow: auto;
+  background: #f8fafc;
+}
+
+.json-wrapper {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 14px;
+  overflow: auto;
+  max-height: 450px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+
+  ::ng-deep .ngx-json-viewer {
+    font-family: 'Consolas', 'Monaco', 'Lucida Console', monospace;
+    font-size: 14px;
+    line-height: 1.7;
+  }
+
+  ::ng-deep .ngx-json-viewer .segment-key {
+    color: #2563eb;
+  }
+
+  ::ng-deep .ngx-json-viewer .segment-value-string {
+    color: #059669;
+  }
+
+  ::ng-deep .ngx-json-viewer .segment-value-number {
+    color: #ea580c;
+  }
+
+  ::ng-deep .ngx-json-viewer .segment-value-boolean {
+    color: #7c3aed;
+  }
+
+  ::ng-deep .ngx-json-viewer .segment-value-null {
+    color: #94a3b8;
+  }
+}
+
+.code-block {
+  font-family: 'Consolas', 'Monaco', 'Lucida Console', monospace;
+  font-size: 14px;
+  background: #ffffff;
+  color: #1e293b;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 14px;
+  margin: 0;
+  overflow: auto;
+  max-height: 450px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  line-height: 1.6;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+

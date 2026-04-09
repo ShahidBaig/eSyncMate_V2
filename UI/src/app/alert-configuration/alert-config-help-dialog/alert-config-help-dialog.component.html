@@ -1,0 +1,188 @@
+<div class="help-container">
+  <!-- Header -->
+  <div class="help-header">
+    <div class="header-left">
+      <mat-icon class="header-icon">notifications_active</mat-icon>
+      <div>
+        <h2 class="header-title">Alert Configuration — Help Guide</h2>
+        <span class="header-subtitle">Set up automated email notifications for your integration events</span>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button mat-icon-button class="download-btn" matTooltip="Download Help Guide" (click)="downloadHelp()"><mat-icon>download</mat-icon></button>
+      <button mat-icon-button class="close-btn" (click)="close()">
+      <mat-icon>close</mat-icon>
+        </button>
+    </div>
+  </div>
+
+  <mat-dialog-content #helpContent class="help-content">
+
+    <!-- How Alerts Work -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>route</mat-icon> How Alerts Work</h3>
+      <p class="help-text">Alerts automatically send email notifications when important events happen in your integrations:</p>
+      <div class="flow-diagram">
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#2563eb;"><mat-icon>bolt</mat-icon></div>
+          <span class="flow-label">Event Occurs</span>
+          <span class="flow-desc">Order, shipment, error, etc.</span>
+        </div>
+        <div class="flow-arrow"><mat-icon>arrow_forward</mat-icon></div>
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#E8834A;"><mat-icon>notifications_active</mat-icon></div>
+          <span class="flow-label">Alert Triggers</span>
+          <span class="flow-desc">Matches your alert rules</span>
+        </div>
+        <div class="flow-arrow"><mat-icon>arrow_forward</mat-icon></div>
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#059669;"><mat-icon>email</mat-icon></div>
+          <span class="flow-label">Email Sent</span>
+          <span class="flow-desc">Notifies your team</span>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Finding Alerts -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>search</mat-icon> Finding Alerts</h3>
+      <p class="help-text">Use any of these filters to quickly locate the alert you need:</p>
+      <div class="card-grid">
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#eff6ff;"><mat-icon style="color:#2563eb;">tag</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Alert ID</span>
+            <span class="info-card-desc">Search by the unique alert identifier</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#fff7ed;"><mat-icon style="color:#E8834A;">label</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Alert Name</span>
+            <span class="info-card-desc">Search by the descriptive name of the alert</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#f5f3ff;"><mat-icon style="color:#7c3aed;">person</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Customer</span>
+            <span class="info-card-desc">Filter by which marketplace partner the alert applies to</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#ecfdf5;"><mat-icon style="color:#059669;">date_range</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Created Date</span>
+            <span class="info-card-desc">Filter alerts by when they were originally created</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- What You Can Do -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>touch_app</mat-icon> What You Can Do</h3>
+      <p class="help-text">Use these actions to manage your alerts:</p>
+      <div class="action-card-grid">
+        <div class="action-card">
+          <div class="ac-icon" style="background:#eff6ff;"><mat-icon style="color:#2563eb;">add_circle</mat-icon></div>
+          <div class="ac-body">
+            <span class="ac-title">Add Alert</span>
+            <p class="ac-desc">Create a new alert configuration. Give it a name, assign it to a customer, set up the notification query, and add the email addresses that should receive the alert.</p>
+          </div>
+        </div>
+        <div class="action-card">
+          <div class="ac-icon" style="background:#ecfdf5;"><mat-icon style="color:#059669;">edit</mat-icon></div>
+          <div class="ac-body">
+            <span class="ac-title">Edit Alert</span>
+            <p class="ac-desc">Update the alert name, customer assignment, notification query, or email recipients. Changes take effect on the next alert check.</p>
+          </div>
+        </div>
+        <div class="action-card">
+          <div class="ac-icon" style="background:#fef2f2;"><mat-icon style="color:#dc2626;">delete</mat-icon></div>
+          <div class="ac-body">
+            <span class="ac-title">Delete Alert</span>
+            <p class="ac-desc">Remove an alert configuration permanently. The alert will stop sending notifications immediately after deletion.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Alert Setup -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>settings</mat-icon> Alert Setup</h3>
+      <p class="help-text">When adding or editing an alert, you will work with these fields:</p>
+      <div class="card-grid">
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#eff6ff;"><mat-icon style="color:#2563eb;">label</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Alert Name</span>
+            <span class="info-card-desc">A clear, descriptive name so you can easily identify what this alert monitors</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#fff7ed;"><mat-icon style="color:#E8834A;">code</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Query</span>
+            <span class="info-card-desc">The notification query that determines when this alert should fire</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#f5f3ff;"><mat-icon style="color:#7c3aed;">person</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Customer Assignment</span>
+            <span class="info-card-desc">Which marketplace partner this alert is linked to</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#ecfdf5;"><mat-icon style="color:#059669;">email</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Email Recipients</span>
+            <span class="info-card-desc">The email addresses that will receive notifications when this alert fires</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Common Alert Types -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>mail</mat-icon> Common Alert Types</h3>
+      <p class="help-text">Here are some of the most frequently configured alert types:</p>
+      <div class="status-card-grid">
+        <div class="status-card status-card-blue">
+          <div class="sc-header"><mat-icon>shopping_cart</mat-icon><span>Order Received</span></div>
+          <p>Sends a notification when new orders are successfully imported from a marketplace.</p>
+        </div>
+        <div class="status-card status-card-red">
+          <div class="sc-header"><mat-icon>error</mat-icon><span>Order Error</span></div>
+          <p>Alerts your team when an order fails to process, so issues can be resolved quickly.</p>
+        </div>
+        <div class="status-card status-card-green">
+          <div class="sc-header"><mat-icon>local_shipping</mat-icon><span>ASN Sent</span></div>
+          <p>Confirms when a shipment notification has been successfully sent to the marketplace.</p>
+        </div>
+        <div class="status-card status-card-amber">
+          <div class="sc-header"><mat-icon>warning</mat-icon><span>ASN Error</span></div>
+          <p>Alerts when a shipment notification fails to send, so you can investigate and retry.</p>
+        </div>
+        <div class="status-card status-card-teal">
+          <div class="sc-header"><mat-icon>inventory_2</mat-icon><span>Inventory Sync</span></div>
+          <p>Sends a status update after an inventory upload completes, with success or failure details.</p>
+        </div>
+        <div class="status-card status-card-purple">
+          <div class="sc-header"><mat-icon>cancel</mat-icon><span>Cancellation</span></div>
+          <p>Notifies your team when an order cancellation has been processed at the marketplace.</p>
+        </div>
+      </div>
+    </section>
+
+  </mat-dialog-content>
+</div>

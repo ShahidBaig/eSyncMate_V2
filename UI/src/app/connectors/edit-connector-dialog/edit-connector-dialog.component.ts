@@ -93,9 +93,18 @@ export class EditConnectorDialogComponent implements OnInit {
 
   initializeForm() {
 
-    const jsonObject: any = JSON.parse(this.data.data);
+    let jsonObject: any = {};
+    try {
+      if (this.data.data && this.data.data.trim() !== '') {
+        jsonObject = JSON.parse(this.data.data);
+      }
+    } catch (e) {
+      jsonObject = {};
+    }
 
-    if (jsonObject.ConnectivityType == 'SqlServer')
+    const connectivityType = jsonObject.ConnectivityType || '';
+
+    if (connectivityType === 'SqlServer')
     {
       this.updateConnectorForm = this.formBuilder.group({
         id: [this.data.id, Validators.required],
@@ -127,7 +136,7 @@ export class EditConnectorDialogComponent implements OnInit {
       });
     }
 
-    if (jsonObject.ConnectivityType == 'Rest')
+    if (connectivityType === 'Rest' || connectivityType === '')
     {
       this.updateConnectorForm = this.formBuilder.group({
         id: [this.data.id, Validators.required],

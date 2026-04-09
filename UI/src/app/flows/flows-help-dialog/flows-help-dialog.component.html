@@ -1,0 +1,286 @@
+<div class="help-container">
+  <!-- Header -->
+  <div class="help-header">
+    <div class="header-left">
+      <mat-icon class="header-icon">account_tree</mat-icon>
+      <div>
+        <h2 class="header-title">Flows — Help Guide</h2>
+        <span class="header-subtitle">Everything you need to know about automated data exchange flows</span>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button mat-icon-button class="download-btn" matTooltip="Download Help Guide" (click)="downloadHelp()"><mat-icon>download</mat-icon></button>
+      <button mat-icon-button class="close-btn" (click)="close()">
+      <mat-icon>close</mat-icon>
+        </button>
+    </div>
+  </div>
+
+  <mat-dialog-content #helpContent class="help-content">
+
+    <!-- How Flows Work — Visual Flow Diagram -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>route</mat-icon> How Flows Work</h3>
+      <p class="help-text">Flows automate the data exchange between you and your trading partners. Here's how it works:</p>
+      <div class="flow-diagram">
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#2563eb;"><mat-icon>storefront</mat-icon></div>
+          <span class="flow-label">Select Partner</span>
+          <span class="flow-desc">Choose trading partner</span>
+        </div>
+        <div class="flow-arrow"><mat-icon>arrow_forward</mat-icon></div>
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#E8834A;"><mat-icon>account_tree</mat-icon></div>
+          <span class="flow-label">Create Flow</span>
+          <span class="flow-desc">Name & configure</span>
+        </div>
+        <div class="flow-arrow"><mat-icon>arrow_forward</mat-icon></div>
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#7c3aed;"><mat-icon>alt_route</mat-icon></div>
+          <span class="flow-label">Add Routes</span>
+          <span class="flow-desc">Pick data routes</span>
+        </div>
+        <div class="flow-arrow"><mat-icon>arrow_forward</mat-icon></div>
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#059669;"><mat-icon>schedule</mat-icon></div>
+          <span class="flow-label">Set Schedule</span>
+          <span class="flow-desc">Define frequency</span>
+        </div>
+        <div class="flow-arrow"><mat-icon>arrow_forward</mat-icon></div>
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#0891b2;"><mat-icon>play_circle</mat-icon></div>
+          <span class="flow-label">Auto-Execute</span>
+          <span class="flow-desc">Runs on schedule</span>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Finding Your Flows -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>search</mat-icon> Finding Your Flows</h3>
+      <p class="help-text">Use these filters to quickly find the flows you're looking for:</p>
+      <div class="card-grid">
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#eff6ff;"><mat-icon style="color:#2563eb;">storefront</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Partner Name</span>
+            <span class="info-card-desc">Select a trading partner from the dropdown to load their flows. Supports search-as-you-type filtering</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#ecfdf5;"><mat-icon style="color:#059669;">search</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Search</span>
+            <span class="info-card-desc">Click the Search button after selecting a partner to retrieve all flows for that partner</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Understanding Flow Status -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>label</mat-icon> Understanding Flow Status</h3>
+      <p class="help-text">Each flow has a status that tells you whether it's currently running or paused:</p>
+      <div class="status-card-grid">
+        <div class="status-card status-card-green">
+          <div class="sc-header"><mat-icon>check_circle</mat-icon><span>Active</span></div>
+          <p>The flow is live and running on schedule. All active routes within this flow will execute automatically at their configured times.</p>
+        </div>
+        <div class="status-card status-card-gray">
+          <div class="sc-header"><mat-icon>pause_circle</mat-icon><span>In-Active</span></div>
+          <p>The flow is paused. No routes will run until the flow is reactivated. Existing schedules are preserved but not executed.</p>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- What You Can Do -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>touch_app</mat-icon> What You Can Do</h3>
+      <p class="help-text">These action buttons let you manage your partner flows:</p>
+      <div class="action-card-grid">
+        <div class="action-card">
+          <div class="ac-icon" style="background:#eff6ff;"><mat-icon style="color:#2563eb;">add</mat-icon></div>
+          <div class="ac-body">
+            <span class="ac-title">Add Partner Flow</span>
+            <p class="ac-desc">Create a new flow for the selected partner. Configure the flow name, description, and add one or more data routes with scheduling options.</p>
+          </div>
+        </div>
+        <div class="action-card">
+          <div class="ac-icon" style="background:#f0fdfa;"><mat-icon style="color:#0891b2;">visibility</mat-icon></div>
+          <div class="ac-body">
+            <span class="ac-title">View Flow</span>
+            <p class="ac-desc">Open a read-only view of the flow showing route details, a visual flow diagram, and the hub-and-spoke data map. You can also trigger a <strong>Test Run</strong> for any active route.</p>
+          </div>
+        </div>
+        <div class="action-card">
+          <div class="ac-icon" style="background:#ecfdf5;"><mat-icon style="color:#059669;">edit</mat-icon></div>
+          <div class="ac-body">
+            <span class="ac-title">Edit Flow</span>
+            <p class="ac-desc">Modify the flow name, description, status, or update route details and their schedules. Changes take effect on the next scheduled run.</p>
+          </div>
+        </div>
+        <div class="action-card">
+          <div class="ac-icon" style="background:#fef2f2;"><mat-icon style="color:#dc2626;">delete</mat-icon></div>
+          <div class="ac-body">
+            <span class="ac-title">Delete Flow</span>
+            <p class="ac-desc">Remove the flow and all its scheduled jobs. A confirmation dialog will show you how many routes will be affected before you confirm.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Setting Up Schedules -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>schedule</mat-icon> Setting Up Schedules</h3>
+      <p class="help-text">Each route in a flow can be scheduled to run at different intervals:</p>
+      <div class="card-grid">
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#eff6ff;"><mat-icon style="color:#2563eb;">timer</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Minutely</span>
+            <span class="info-card-desc">Runs every few minutes based on the repeat count (e.g., every 5 minutes)</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#f5f3ff;"><mat-icon style="color:#7c3aed;">hourglass_top</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Hourly</span>
+            <span class="info-card-desc">Runs every few hours, optionally at specific times you choose</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#ecfdf5;"><mat-icon style="color:#059669;">today</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Daily</span>
+            <span class="info-card-desc">Runs every day at the specific times you set (e.g., 8:00 AM, 2:30 PM)</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#fff7ed;"><mat-icon style="color:#E8834A;">date_range</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Weekly</span>
+            <span class="info-card-desc">Runs on selected days of the week (Mon, Tue, Wed, etc.) at your chosen times</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#f0fdfa;"><mat-icon style="color:#0891b2;">calendar_month</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Monthly</span>
+            <span class="info-card-desc">Runs on specific days of the month (e.g., 1st and 15th) at your chosen times</span>
+          </div>
+        </div>
+      </div>
+      <div class="tip-box">
+        <mat-icon>lightbulb</mat-icon>
+        <span>Each route can only belong to one flow. The schedule determines when data exchanges happen automatically.</span>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Inside the View Flow Dialog -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>preview</mat-icon> Inside the View Flow Dialog</h3>
+      <p class="help-text">When you click <strong>View Flow</strong>, you'll see three tabs:</p>
+      <div class="tab-preview">
+        <div class="tab-card">
+          <div class="tab-card-header">
+            <mat-icon>list_alt</mat-icon>
+            <span>Route Details</span>
+          </div>
+          <div class="tab-card-body">
+            <p>Shows each route's frequency, start date, next run time, and current status. Active routes have a <strong>Test Run</strong> button for immediate one-time execution.</p>
+          </div>
+        </div>
+        <div class="tab-card">
+          <div class="tab-card-header">
+            <mat-icon>schema</mat-icon>
+            <span>Flow Diagram</span>
+          </div>
+          <div class="tab-card-body">
+            <p>A visual pipeline showing Source, Route, and Destination for each step. You can download the diagram as PDF or expand it to fullscreen.</p>
+          </div>
+        </div>
+        <div class="tab-card">
+          <div class="tab-card-header">
+            <mat-icon>hub</mat-icon>
+            <span>Hub & Spoke</span>
+          </div>
+          <div class="tab-card-body">
+            <p>A hub-and-spoke map with eSyncMate at the center, your ERP on the left, and the trading partner on the right. Shows data flow direction for each route.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Flow Lifecycle -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>sync</mat-icon> Flow Lifecycle</h3>
+      <p class="help-text">Every flow goes through these stages from creation to completion:</p>
+      <div class="flow-diagram">
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#2563eb;"><mat-icon>add_circle</mat-icon></div>
+          <span class="flow-label">Create</span>
+          <span class="flow-desc">Set up new flow</span>
+        </div>
+        <div class="flow-arrow"><mat-icon>arrow_forward</mat-icon></div>
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#E8834A;"><mat-icon>settings</mat-icon></div>
+          <span class="flow-label">Configure</span>
+          <span class="flow-desc">Add routes & rules</span>
+        </div>
+        <div class="flow-arrow"><mat-icon>arrow_forward</mat-icon></div>
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#7c3aed;"><mat-icon>schedule</mat-icon></div>
+          <span class="flow-label">Scheduled</span>
+          <span class="flow-desc">Jobs are queued</span>
+        </div>
+        <div class="flow-arrow"><mat-icon>arrow_forward</mat-icon></div>
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#059669;"><mat-icon>play_circle</mat-icon></div>
+          <span class="flow-label">Running</span>
+          <span class="flow-desc">Routes execute</span>
+        </div>
+        <div class="flow-arrow"><mat-icon>arrow_forward</mat-icon></div>
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#0891b2;"><mat-icon>check_circle</mat-icon></div>
+          <span class="flow-label">Complete</span>
+          <span class="flow-desc">Data exchanged</span>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Notifications -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>notifications</mat-icon> Notifications</h3>
+      <p class="help-text">When a route runs, you'll receive a notification with one of these statuses:</p>
+      <div class="status-card-grid">
+        <div class="status-card status-card-amber">
+          <div class="sc-header"><mat-icon>hourglass_top</mat-icon><span>Running</span></div>
+          <p>The route is currently executing. You'll see an update once it finishes.</p>
+        </div>
+        <div class="status-card status-card-green">
+          <div class="sc-header"><mat-icon>check_circle</mat-icon><span>Completed</span></div>
+          <p>The route finished successfully. Data was exchanged without any issues.</p>
+        </div>
+        <div class="status-card status-card-red">
+          <div class="sc-header"><mat-icon>error</mat-icon><span>Failed</span></div>
+          <p>Something went wrong during execution. Check the Exception Logs for details on what happened.</p>
+        </div>
+      </div>
+    </section>
+
+  </mat-dialog-content>
+</div>

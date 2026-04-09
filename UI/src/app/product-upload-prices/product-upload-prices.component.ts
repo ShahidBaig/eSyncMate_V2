@@ -14,6 +14,7 @@ import { NgToastService } from 'ng-angular-popup';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialog } from '@angular/material/dialog';
+import { UploadPricesHelpDialogComponent } from './upload-prices-help-dialog/upload-prices-help-dialog.component';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { CommonModule } from '@angular/common';
@@ -74,7 +75,14 @@ export class ProductUploadPricesComponent {
   selectedFile: File | null = null;
   isButtonDisabled: boolean = false;
   erpCustomerID: string = '';
+  actionsErpCustomerID: string = '';
   customersOptions: Customers[] | undefined;
+  // Upload dropdown search
+  uploadCustomerSearch: string = '';
+  uploadFilteredCustomers: Customers[] = [];
+  // Actions dropdown search
+  actionsCustomerSearch: string = '';
+  actionsFilteredCustomers: Customers[] = [];
   isAdminUser: boolean = false;
   canAdd = false;
   canEdit = false;
@@ -85,7 +93,6 @@ export class ProductUploadPricesComponent {
 
   columns: string[] =
     [
-      'id',
       'CustomerID',
       'ItemID',
       'ListPrice',
@@ -133,12 +140,44 @@ export class ProductUploadPricesComponent {
     this.api.getERPCustomers().subscribe({
       next: (res: any) => {
         this.customersOptions = res.customers;
+        this.uploadFilteredCustomers = this.customersOptions || [];
+        this.actionsFilteredCustomers = this.customersOptions || [];
       },
     });
   }
 
   onCustomerSelectionChange(event: MatSelectChange) {
     this.erpCustomerID = event.value;
+  }
+
+  // Upload dropdown search
+  filterUploadCustomers() {
+    const search = (this.uploadCustomerSearch || '').toLowerCase();
+    this.uploadFilteredCustomers = (this.customersOptions || []).filter(c =>
+      c.erpCustomerID.toLowerCase().includes(search)
+    );
+  }
+
+  onUploadSelectOpened(opened: boolean) {
+    if (opened) { this.uploadCustomerSearch = ''; this.uploadFilteredCustomers = this.customersOptions || []; }
+  }
+
+  // Actions dropdown search
+  filterActionsCustomers() {
+    const search = (this.actionsCustomerSearch || '').toLowerCase();
+    this.actionsFilteredCustomers = (this.customersOptions || []).filter(c =>
+      c.erpCustomerID.toLowerCase().includes(search)
+    );
+  }
+
+  onActionsSelectOpened(opened: boolean) {
+    if (opened) { this.actionsCustomerSearch = ''; this.actionsFilteredCustomers = this.customersOptions || []; }
+  }
+
+  isValidDate(date: any): boolean {
+    if (!date) return false;
+    const d = new Date(date);
+    return !isNaN(d.getTime()) && d.getFullYear() > 1900;
   }
 
   onFileSelected(event: Event) {
@@ -305,6 +344,10 @@ export class ProductUploadPricesComponent {
           }
         });
     }
+  }
+
+  openHelp(): void {
+    this.dialog.open(UploadPricesHelpDialogComponent, { width: '90%', maxWidth: '1200px', maxHeight: '90vh' });
   }
 
   priceDescripencies(customerID: any) {

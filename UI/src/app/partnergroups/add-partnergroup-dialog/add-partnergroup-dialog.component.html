@@ -1,43 +1,49 @@
-<div mat-dialog-content class="dialog-content">
-  <h1 class="dialog-title">{{ 'addNewPartnerGroup' | translate }}</h1>
-  <form [formGroup]="newPartnerGroupForm" class="partnerGroup-form">
+<div class="dialog-container">
+  <div class="dialog-header">
+    <div class="dialog-header-left">
+      <mat-icon class="dialog-header-icon">add_circle</mat-icon>
+      <h2 class="dialog-header-title">{{ 'addNewPartnerGroup' | translate }}</h2>
+    </div>
+    <button mat-icon-button class="dialog-close-btn" (click)="onCancel()"><mat-icon>close</mat-icon></button>
+  </div>
 
-    <!-- Row 1: Name -->
-    <div class="form-row">
-      <!-- Row 1: Name -->
+  <div mat-dialog-content class="dialog-body">
+    <form [formGroup]="newPartnerGroupForm" class="dialog-form">
       <div class="form-row">
-        <mat-form-field class="form-field">
+        <mat-form-field appearance="outline">
           <mat-label>{{ 'sourceParty' | translate }}</mat-label>
           <mat-select formControlName="sourceParty">
             <mat-option *ngFor="let customers of customerOptions" [value]="customers.id">
               {{ customers.name }}
             </mat-option>
           </mat-select>
+          <mat-icon matPrefix>storefront</mat-icon>
         </mat-form-field>
 
-        <mat-form-field class="form-field">
+        <mat-form-field appearance="outline">
           <mat-label>{{ 'destinationParty' | translate }}</mat-label>
           <mat-select formControlName="destinationParty">
             <mat-option *ngFor="let customers of customerOptions" [value]="customers.id">
               {{ customers.name }}
             </mat-option>
           </mat-select>
+          <mat-icon matPrefix>store</mat-icon>
         </mat-form-field>
       </div>
-    </div>
 
-    <!-- Row 2: Data -->
-    <div class="form-row">
-      <mat-form-field class="full-width" style="width: 100%;">
-        <mat-label>{{ 'description' | translate }}</mat-label>
-        <textarea  matInput formControlName="description" style="height: 300px;"></textarea>
-      </mat-form-field>
-    </div>
+      <div class="form-row">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>{{ 'description' | translate }}</mat-label>
+          <textarea matInput formControlName="description" rows="6"></textarea>
+          <mat-icon matPrefix>description</mat-icon>
+        </mat-form-field>
+      </div>
+    </form>
+  </div>
 
-  </form>
-</div>
-
-<div mat-dialog-actions class="dialog-actions">
-  <button mat-button class="cancel-button" (click)="onCancel()">{{ 'cancel' | translate }}</button>
-  <button mat-raised-button color="primary" [disabled]="!newPartnerGroupForm.valid" (click)="onSave()">{{ 'save' | translate }}</button>
+  <div mat-dialog-actions class="dialog-footer">
+    <button mat-raised-button class="btn-save" [disabled]="!newPartnerGroupForm.valid" (click)="onSave()">
+      <mat-icon>save</mat-icon> {{ 'save' | translate }}
+    </button>
+  </div>
 </div>

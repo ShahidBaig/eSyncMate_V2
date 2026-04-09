@@ -1,31 +1,43 @@
-<div mat-dialog-content class="dialog-content">
-  <h1 class="dialog-title">{{ 'addCustomer' | translate }}</h1>
-  <form [formGroup]="newCustomerForm" class="customer-form">
-
-    <!-- Row 1: Customer Name and ERP Customer ID -->
-    <div class="form-row">
-      <mat-form-field class="form-field">
-        <mat-label>{{ 'customerName' | translate }}</mat-label>
-        <input matInput formControlName="name">
-      </mat-form-field>
-
-      <mat-form-field class="form-field">
-        <mat-label>{{ 'erpCustomerID' | translate }}</mat-label>
-        <input matInput formControlName="erpCustomerId">
-      </mat-form-field>
+<div class="dialog-container">
+  <div class="dialog-header">
+    <div class="dialog-header-left">
+      <mat-icon class="dialog-header-icon">person_add</mat-icon>
+      <h2 class="dialog-header-title">{{ 'addCustomer' | translate }}</h2>
     </div>
+    <button mat-icon-button class="dialog-close-btn" (click)="onCancel()">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
 
-    <!-- Row 2: Marketplace -->
-    <div class="form-row">
-      <mat-form-field class="form-field full-width">
-        <mat-label>{{ 'marketPlace' | translate }}</mat-label>
-        <input matInput formControlName="marketplace">
-      </mat-form-field>
-    </div>
-  </form>
-</div>
+  <div mat-dialog-content class="dialog-body">
+    <form [formGroup]="newCustomerForm" class="dialog-form">
+      <div class="form-row">
+        <mat-form-field appearance="outline">
+          <mat-label>{{ 'customerName' | translate }}</mat-label>
+          <input matInput formControlName="name" placeholder="Enter customer name">
+          <mat-icon matPrefix>business</mat-icon>
+        </mat-form-field>
 
-<div mat-dialog-actions class="dialog-actions">
-  <button mat-button class="cancel-button" (click)="onCancel()">{{ 'cancel' | translate }}</button>
-  <button mat-raised-button color="primary" [disabled]="!newCustomerForm.valid" (click)="onSave()">{{ 'save' | translate }}</button>
+        <mat-form-field appearance="outline">
+          <mat-label>{{ 'erpCustomerID' | translate }}</mat-label>
+          <input matInput formControlName="erpCustomerId" placeholder="e.g. KNO8068">
+          <mat-icon matPrefix>badge</mat-icon>
+        </mat-form-field>
+      </div>
+
+      <div class="form-row">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>{{ 'marketPlace' | translate }}</mat-label>
+          <input matInput formControlName="marketplace" placeholder="e.g. Mirakl, Target Plus, Amazon">
+          <mat-icon matPrefix>storefront</mat-icon>
+        </mat-form-field>
+      </div>
+    </form>
+  </div>
+
+  <div mat-dialog-actions class="dialog-footer">
+    <button mat-raised-button class="btn-save" [disabled]="!newCustomerForm.valid" (click)="onSave()">
+      <mat-icon>save</mat-icon> {{ 'save' | translate }}
+    </button>
+  </div>
 </div>

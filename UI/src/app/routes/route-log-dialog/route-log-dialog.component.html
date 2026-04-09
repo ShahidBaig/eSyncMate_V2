@@ -56,7 +56,7 @@
               <!-- Column definitions -->
               <ng-container matColumnDef="CreatedDate">
                 <th mat-header-cell *matHeaderCellDef>{{ 'logDate' | translate }}</th>
-                <td mat-cell *matCellDef="let element"> {{element.createdDate | date:'MMM-dd-yyyy HH:mm:ss'}} </td>
+                <td mat-cell *matCellDef="let element"> {{element.createdDate | date:'MM/dd/yyyy hh:mm a'}} </td>
               </ng-container>
 
               <ng-container matColumnDef="Message">

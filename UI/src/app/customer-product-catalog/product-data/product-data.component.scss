@@ -1,74 +1,26 @@
-.custom-css {
-  height: 400px;
-  overflow: scroll;
-  overflow-x: hidden;
+@import '../../shared-dialog.scss';
+
+.table-wrapper {
+  border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden;
+  max-height: 400px; overflow-y: auto;
 }
 
-.dialog-content {
-  padding: 24px;
-}
-
-.dialog-title {
-  margin-bottom: 20px;
-  font-size: 24px;
-  font-weight: bold;
-}
-
-
-/*.form-row {
-  display: flex;
-  gap: 20px;
-  flex-wrap: wrap;*/ /* Allows fields to wrap on smaller screens */
-/*}*/
-
-.form-field {
-  flex: 1; /* Each field takes equal space */
-  max-width: 500px; /* Increase max-width as needed */
-}
-
-.full-width {
-  flex: 0 0 98%; /* Full width for single field rows */
-}
-
-.dialog-actions {
-  display: flex;
-  justify-content: space-between;
-  padding: 16px 24px 24px;
-  border-top: 1px solid #eee;
-}
-
-.cancel-button {
-  color: #666;
-}
-
-/* Additional global styles */
-/*mat-form-field {
+.data-table {
   width: 100%;
-}*/
-
-input[matInput] {
-  padding: 8px 12px;
+  th { background: #f8fafc; color: #64748b; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #e2e8f0; }
+  td { font-size: 13px; color: #1e293b; border-bottom: 1px solid #f1f5f9; }
+  tr:hover td { background: #f8fafc; }
 }
 
-.checkbox-container {
-  display: flex;
-}
+.type-text { font-weight: 600; color: #1e293b; }
 
-.checkbox-label {
-  margin-right: 20px;
-}
+.file-name { font-size: 12px; color: #64748b; font-family: 'Consolas', 'Monaco', monospace; }
 
+.action-buttons { display: flex; gap: 2px; }
 
-.form-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center; /* This ensures that all form elements are vertically aligned */
-  gap: 16px; /* Provides space between items */
-}
+.download-btn { color: #2563eb; &:hover { background: #eff6ff; } }
+.view-btn { color: #059669; &:hover { background: #ecfdf5; } }
 
-.mat-form-field {
-  flex-grow: 1; /* Allows each field to expand to fill available space */
-  min-width: 120px;
-  /*height: 55px;
-    width: 168px;*/ /* Prevents the fields from becoming too small on narrow screens */
-}
+.table-wrapper::-webkit-scrollbar { width: 6px; }
+.table-wrapper::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+.table-wrapper::-webkit-scrollbar-track { background: #f1f5f9; }

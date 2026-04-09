@@ -55,13 +55,11 @@ export class InventorypopupComponent {
 
   columns: string[] = [
     'id',
+    'data',
+    'DownloadFile',
     'CustomerId',
     'ItemId',
-    'type',
     'createdDate',
-    'data',
-    'fileName',
-    'DownloadFile',
   ];
 
   constructor(@Inject(MAT_DIALOG_DATA) public data: any, public dialogRef: MatDialogRef<InventorypopupComponent>,

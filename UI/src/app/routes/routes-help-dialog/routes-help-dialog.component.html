@@ -1,0 +1,180 @@
+<div class="help-container">
+  <!-- Header -->
+  <div class="help-header">
+    <div class="header-left">
+      <mat-icon class="header-icon">alt_route</mat-icon>
+      <div>
+        <h2 class="header-title">Routes — Help Guide</h2>
+        <span class="header-subtitle">Configure integration routes that move data between your systems</span>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button mat-icon-button class="download-btn" matTooltip="Download Help Guide" (click)="downloadHelp()"><mat-icon>download</mat-icon></button>
+      <button mat-icon-button class="close-btn" (click)="close()">
+      <mat-icon>close</mat-icon>
+        </button>
+    </div>
+  </div>
+
+  <mat-dialog-content #helpContent class="help-content">
+
+    <!-- How Routes Work -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>route</mat-icon> How Routes Work</h3>
+      <p class="help-text">A route is an automated pipeline that reads data from one system, transforms it, and sends it to another:</p>
+      <div class="flow-diagram">
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#2563eb;"><mat-icon>storage</mat-icon></div>
+          <span class="flow-label">Source</span>
+          <span class="flow-desc">Reads data from ERP or API</span>
+        </div>
+        <div class="flow-arrow"><mat-icon>arrow_forward</mat-icon></div>
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#7c3aed;"><mat-icon>transform</mat-icon></div>
+          <span class="flow-label">Map</span>
+          <span class="flow-desc">Transforms the data</span>
+        </div>
+        <div class="flow-arrow"><mat-icon>arrow_forward</mat-icon></div>
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#059669;"><mat-icon>storefront</mat-icon></div>
+          <span class="flow-label">Destination</span>
+          <span class="flow-desc">Sends to marketplace or ERP</span>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Finding Routes -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>search</mat-icon> Finding Routes</h3>
+      <p class="help-text">Use any of these filters to quickly locate the route you need:</p>
+      <div class="card-grid">
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#eff6ff;"><mat-icon style="color:#2563eb;">tag</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Route ID</span>
+            <span class="info-card-desc">Search by the unique route identifier</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#fff7ed;"><mat-icon style="color:#E8834A;">label</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Route Name</span>
+            <span class="info-card-desc">Search by the descriptive route name</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#f5f3ff;"><mat-icon style="color:#7c3aed;">person</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">ERP Customer ID</span>
+            <span class="info-card-desc">Filter by marketplace partner</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#ecfdf5;"><mat-icon style="color:#059669;">toggle_on</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Status</span>
+            <span class="info-card-desc">Filter by Active or In-Active routes</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- What You Can Do -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>touch_app</mat-icon> What You Can Do</h3>
+      <p class="help-text">Use these actions to manage your routes:</p>
+      <div class="action-card-grid">
+        <div class="action-card">
+          <div class="ac-icon" style="background:#eff6ff;"><mat-icon style="color:#2563eb;">add_circle</mat-icon></div>
+          <div class="ac-body">
+            <span class="ac-title">Add Route</span>
+            <p class="ac-desc">Create a new integration route. Choose the route type, pick source and destination connectors, assign a map, and link a partner group.</p>
+          </div>
+        </div>
+        <div class="action-card">
+          <div class="ac-icon" style="background:#ecfdf5;"><mat-icon style="color:#059669;">edit</mat-icon></div>
+          <div class="ac-body">
+            <span class="ac-title">Edit Route</span>
+            <p class="ac-desc">Update the route name, connectors, map, partner group, or status. Changes take effect on the next scheduled run.</p>
+          </div>
+        </div>
+        <div class="action-card">
+          <div class="ac-icon" style="background:#f5f3ff;"><mat-icon style="color:#7c3aed;">history</mat-icon></div>
+          <div class="ac-body">
+            <span class="ac-title">Route Log</span>
+            <p class="ac-desc">View the execution history for this route including timestamps, success or failure status, and any error messages.</p>
+          </div>
+        </div>
+        <div class="action-card">
+          <div class="ac-icon" style="background:#fff7ed;"><mat-icon style="color:#E8834A;">read_more</mat-icon></div>
+          <div class="ac-body">
+            <span class="ac-title">Route Data</span>
+            <p class="ac-desc">View the raw data that was sent and received during route execution for troubleshooting purposes.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Route Components -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>settings</mat-icon> Route Components</h3>
+      <p class="help-text">Every route is made up of these key building blocks:</p>
+      <div class="card-grid">
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#eff6ff;"><mat-icon style="color:#2563eb;">cable</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Source Connector</span>
+            <span class="info-card-desc">Where data is read from — a database, API, or file server</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#ecfdf5;"><mat-icon style="color:#059669;">cable</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Destination Connector</span>
+            <span class="info-card-desc">Where data is sent to — a marketplace API or your ERP</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#f5f3ff;"><mat-icon style="color:#7c3aed;">map</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Map</span>
+            <span class="info-card-desc">The transformation that converts data between source and destination formats</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#fff7ed;"><mat-icon style="color:#E8834A;">category</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Route Type</span>
+            <span class="info-card-desc">Determines what the route does — orders, inventory, shipments, prices, etc.</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#f0fdfa;"><mat-icon style="color:#0891b2;">group_work</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Partner Group</span>
+            <span class="info-card-desc">Identifies which trading partners are involved in this data exchange</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Route Execution -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>play_circle</mat-icon> Route Execution</h3>
+      <p class="help-text">Routes do not run on their own. They are triggered by Flows:</p>
+      <div class="tip-box">
+        <mat-icon>lightbulb</mat-icon>
+        <span>Routes define <strong>what</strong> data gets moved and <strong>how</strong> it is transformed. Flows control <strong>when</strong> routes run by assigning schedules. To activate a route, add it as a route detail inside a Flow and set the schedule to your desired frequency (minutely, hourly, daily, weekly, or monthly).</span>
+      </div>
+    </section>
+
+  </mat-dialog-content>
+</div>

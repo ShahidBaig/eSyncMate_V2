@@ -13,6 +13,7 @@
         {
             public string order_id { get; set; }
             public string invoice_reference { get; set; }
+            public bool shipped { get; set; }
             public Tracking tracking { get; set; }
             public List<KnotShipment_Lines> shipment_lines { get; set; }
 
@@ -20,6 +21,7 @@
             {
                 this.shipment_lines = new List<KnotShipment_Lines>();
                 this.tracking = new Tracking();
+                this.shipped = true;
             }
         }
 

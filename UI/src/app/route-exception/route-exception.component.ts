@@ -70,7 +70,7 @@ export class RouteExceptionComponent implements OnInit {
   routeOptions: any[] = [];
   filteredRouteOptions: any[] = [];
   routeSearchText = '';
-  loadingStates = new Map<number, boolean>();
+  loadingStates: { [key: number]: boolean } = {};
   isAdminUser: boolean = false;
   canAdd = false;
   canEdit = false;
@@ -83,7 +83,6 @@ export class RouteExceptionComponent implements OnInit {
     'name',
     'Message',
     'CreatedDate',
-    'Status',
     'DownloadFile'
   ];
 
@@ -239,50 +238,49 @@ export class RouteExceptionComponent implements OnInit {
   }
 
   isLoading(fileId: number): boolean {
-    // Retrieve loading state for a specific fileId
-    return this.loadingStates.get(fileId) || false;
+    return this.loadingStates[fileId] || false;
   }
 
   viewFile(id: number) {
     let parsedData: any;
     let l_data: string = "";
-    this.loadingStates.set(id, true);
+    this.loadingStates[id] = true;
 
     this.routeLogApi.getRouteLog(id).subscribe({
       next: (res: any) => {
-        this.listOfRouteExceptions = res.routeLog;
+        let routeLogData = res.routeLog;
         this.msg = res.message;
         this.code = res.code;
 
         this.showSpinnerforSearch = false;
-        this.loadingStates.set(id, false);
-        if (this.listOfRouteExceptions == null || this.listOfRouteExceptions.length === 0) {
+        this.loadingStates[id] = false;
+        if (routeLogData == null || routeLogData.length === 0) {
           this.toast.info({ detail: "INFO", summary: this.languageService.getTranslation('provideFieldMessage'), duration: 5000, /*sticky: true,*/ position: 'topRight' });
-          this.loadingStates.set(id, false);
+          this.loadingStates[id] = false;
 
           return;
         }
 
         if (this.code === 200) {
           //this.toast.success({ detail: "SUCCESS", summary: this.msg, duration: 5000, position: 'topRight' });
-          this.loadingStates.set(id, false);
+          this.loadingStates[id] = false;
         }
         else if (this.code === 400) {
           this.toast.error({ detail: "ERROR", summary: this.msg, duration: 5000, /*sticky: true,*/ position: 'topRight' });
-          this.loadingStates.set(id, false);
+          this.loadingStates[id] = false;
         } else {
           this.toast.info({ detail: "INFO", summary: this.msg, duration: 5000, /*sticky: true,*/ position: 'topRight' });
-          this.loadingStates.set(id, false);
+          this.loadingStates[id] = false;
         }
 
-        l_data = res.routeLog[0].details;
+        l_data = routeLogData[0].details;
 
         parsedData = l_data;
 
         if (parsedData)
         {
           this.dialog.open(FileContentViewerDialogComponent, {
-            data: { content: parsedData, type: "txt", routeName: res.routeLog[0].name },
+            data: { content: parsedData, type: "txt", routeName: routeLogData[0].name },
             width: '800px',
           });
         }
@@ -292,7 +290,7 @@ export class RouteExceptionComponent implements OnInit {
       },
       error: (err: any) => {
         this.toast.error({ detail: "ERROR", summary: err.message, duration: 5000, /*sticky: true,*/ position: 'topRight' });
-        this.loadingStates.set(id, false);
+        this.loadingStates[id] = false;
       },
     });
   }

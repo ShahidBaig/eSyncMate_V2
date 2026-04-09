@@ -29,6 +29,7 @@ import { ApiService } from '../services/api.service';
 import { UserService } from '../services/user.service';
 import { EditUsersDialogComponent } from './edit-users-dialog/edit-users-dialog.component';
 import { DeleteUserDialogComponent } from './delete-user-dialog/delete-user-dialog.component';
+import { UsersHelpDialogComponent } from './users-help-dialog/users-help-dialog.component';
 import { RouterLink } from '@angular/router';
 
 @Component({
@@ -155,6 +156,10 @@ export class UsersComponent {
         this.toast.error({ detail: "ERROR", summary: err.message, duration: 5000, position: 'topRight' });
       }
     });
+  }
+
+  openHelp(): void {
+    this.dialog.open(UsersHelpDialogComponent, { width: '90%', maxWidth: '1200px', maxHeight: '90vh' });
   }
 
   openEditDialog(connectorData: any) {

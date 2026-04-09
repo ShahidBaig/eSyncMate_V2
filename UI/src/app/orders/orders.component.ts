@@ -29,6 +29,7 @@ import { TranslateService } from '@ngx-translate/core';
 import { environment } from 'src/environments/environment';
 import { CustomerProductCatalogService } from '../services/customerProductCatalogDialog.service';
 import { OrderDetailComponent } from './order-detail/order-detail.component';
+import { OrderHelpDialogComponent } from './order-help-dialog/order-help-dialog.component';
 import { LiveAnnouncer } from '@angular/cdk/a11y';
 import { AfterViewInit, inject } from '@angular/core';
 import { MatSort, Sort, MatSortModule } from '@angular/material/sort';
@@ -82,7 +83,28 @@ export class OrdersComponent implements OnInit {
   showSpinnerforSearch: boolean = false;
   showSpinner: boolean = false;
   listOfStoresOrder: Order[] = [];
-  statusOptions = ['Select Status', 'ACKNOWLEDGED', 'ASNGEN', 'ASNMARK', 'COMPLETE', 'FINISHED', 'INVEDI', 'INVOICED', 'NEW', 'PROCESSED', 'SYNCERROR', 'SYNCED', 'SPLITED', 'CANCELLED', 'SHIPPED', 'Partially Shipped', 'Partially Cancelled', 'ERROR', 'ASNERROR','INPROGRESS'];
+  statusOptions = ['Select Status', 'Acknowledged', 'Asn Gen', 'Asn Mark', 'Complete', 'Finished', 'Inv EDI', 'Invoiced', 'New', 'Processed', 'Sync Error', 'Synced', 'Splited', 'Cancelled', 'Shipped', 'Partially Shipped', 'Partially Cancelled', 'Error', 'Asn Error', 'In Progress'];
+
+  // Map display names back to API values
+  statusDisplayToValue: { [key: string]: string } = {
+    'Acknowledged': 'ACKNOWLEDGED', 'Asn Gen': 'ASNGEN', 'Asn Mark': 'ASNMARK',
+    'Complete': 'COMPLETE', 'Finished': 'FINISHED', 'Inv EDI': 'INVEDI',
+    'Invoiced': 'INVOICED', 'New': 'NEW', 'Processed': 'PROCESSED',
+    'Sync Error': 'SYNCERROR', 'Synced': 'SYNCED', 'Splited': 'SPLITED',
+    'Cancelled': 'CANCELLED', 'Shipped': 'SHIPPED', 'Partially Shipped': 'Partially Shipped',
+    'Partially Cancelled': 'Partially Cancelled', 'Error': 'ERROR', 'Asn Error': 'ASNERROR',
+    'In Progress': 'INPROGRESS'
+  };
+
+  statusValueToDisplay: { [key: string]: string } = {
+    'ACKNOWLEDGED': 'Acknowledged', 'ASNGEN': 'Asn Gen', 'ASNMARK': 'Asn Mark',
+    'COMPLETE': 'Complete', 'FINISHED': 'Finished', 'INVEDI': 'Inv EDI',
+    'INVOICED': 'Invoiced', 'NEW': 'New', 'PROCESSED': 'Processed',
+    'SYNCERROR': 'Sync Error', 'SYNCED': 'Synced', 'SPLITED': 'Splited',
+    'CANCELLED': 'Cancelled', 'SHIPPED': 'Shipped', 'Partially Shipped': 'Partially Shipped',
+    'Partially Cancelled': 'Partially Cancelled', 'ERROR': 'Error', 'ASNERROR': 'Asn Error',
+    'INPROGRESS': 'In Progress', 'DUPLICATE': 'Duplicate', 'ACKERROR': 'Ack Error'
+  };
   isAdminUser: boolean = false;
   canAdd = false;
   canEdit = false;
@@ -117,7 +139,7 @@ export class OrdersComponent implements OnInit {
 
   statusToRemove: string[] =
     [
-       'ASNGEN', 'ASNMARK', 'COMPLETE', 'FINISHED', 'INVEDI', 'PROCESSED', 'SYNCERROR', 'SPLITED'
+       'Asn Gen', 'Asn Mark', 'Complete', 'Finished', 'Inv EDI', 'Processed', 'Sync Error', 'Splited'
     ];
 
   constructor(private ERPApi: CustomerProductCatalogService, private translate: TranslateService, private api: ApiService, private fb: FormBuilder, private toast: NgToastService, private dialog: MatDialog, public languageService: LanguageService) {
@@ -336,9 +358,18 @@ export class OrdersComponent implements OnInit {
     }
   }
 
+  openHelp(): void {
+    this.dialog.open(OrderHelpDialogComponent, {
+      width: '90%',
+      maxWidth: '1200px',
+      maxHeight: '90vh',
+    });
+  }
+
   editOrder(data: any) {
     const dialogRef = this.dialog.open(OrderDetailComponent, {
-      // width: 'auto',
+      width: '85%',
+      maxWidth: '1100px',
       disableClose: true,
       data: {
         orderData: data
@@ -584,7 +615,8 @@ export class OrdersComponent implements OnInit {
         }
 
         const dialogRef = this.dialog.open(PopupComponent, {
-          width: '70%',
+          width: '85%',
+          maxWidth: '1200px',
           disableClose: true,
           data: {
             listOfOrderFiles: this.listOfOrderFiles,
@@ -641,6 +673,11 @@ export class OrdersComponent implements OnInit {
     });
   }
 
+  formatStatus(status: string): string {
+    if (!status) return '';
+    return this.statusValueToDisplay[status] || status;
+  }
+
   getFormattedDate(date: any) {
     let year = date.getFullYear();
     let month = (1 + date.getMonth()).toString().padStart(2, '0');
@@ -682,6 +719,8 @@ export class OrdersComponent implements OnInit {
 
     if (status == '' || status.toLocaleLowerCase() == 'select status') {
       status = 'EMPTY'
+    } else {
+      status = this.statusDisplayToValue[status] || status;
     }
     if (customerName == '' || customerName.toLocaleLowerCase() == 'select status') {
       customerName = 'EMPTY'

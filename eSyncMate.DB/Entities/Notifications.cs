@@ -32,7 +32,8 @@ namespace eSyncMate.DB.Entities
         {
             var conn = new DBConnector(connectionString);
             string utcNow = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
-            conn.Execute($@"UPDATE Notifications SET [Status] = '{status}', [Message] = '{message.Replace("'", "''")}', CompletedDate = '{utcNow}' WHERE Id = {notificationId}");
+            // Mark as unread (IsRead = 0) so updated notification surfaces to top for the user
+            conn.Execute($@"UPDATE Notifications SET [Status] = '{status}', [Message] = '{message.Replace("'", "''")}', CompletedDate = '{utcNow}', IsRead = 0 WHERE Id = {notificationId}");
         }
 
         public static void MarkAsRead(string connectionString, long notificationId, int userId)
@@ -47,12 +48,15 @@ namespace eSyncMate.DB.Entities
             conn.Execute($"UPDATE Notifications SET IsRead = 1 WHERE UserId = {userId} AND IsRead = 0");
         }
 
-        public static DataTable GetUserNotifications(string connectionString, int userId, int limit = 20)
+        public static DataTable GetUserNotifications(string connectionString, int userId, int limit = 50)
         {
             var conn = new DBConnector(connectionString);
             var dt = new DataTable();
+            // 24-hour filter + sort unread first, then by date
             string query = $@"SELECT TOP {limit} Id, UserId, RouteId, RouteName, [Type], [Status], [Message], IsRead, CreatedDate, CompletedDate
-                FROM Notifications WHERE UserId = {userId} ORDER BY CreatedDate DESC";
+                FROM Notifications
+                WHERE UserId = {userId} AND CreatedDate >= DATEADD(HOUR, -24, GETUTCDATE())
+                ORDER BY IsRead ASC, CreatedDate DESC";
             conn.GetData(query, ref dt);
             return dt;
         }
@@ -61,7 +65,8 @@ namespace eSyncMate.DB.Entities
         {
             var conn = new DBConnector(connectionString);
             var dt = new DataTable();
-            conn.GetData($"SELECT COUNT(*) FROM Notifications WHERE UserId = {userId} AND IsRead = 0", ref dt);
+            // Only count unread within last 24 hours
+            conn.GetData($"SELECT COUNT(*) FROM Notifications WHERE UserId = {userId} AND IsRead = 0 AND CreatedDate >= DATEADD(HOUR, -24, GETUTCDATE())", ref dt);
             return dt.Rows.Count > 0 ? Convert.ToInt32(dt.Rows[0][0]) : 0;
         }
     }

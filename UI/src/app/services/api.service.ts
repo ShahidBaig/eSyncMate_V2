@@ -219,8 +219,15 @@ export class ApiService {
     return this.http.get<any>(this.apiUrl + 'EDIProcessor/api/v1/orders/getOrders/' + orderId + '/' + fromDate + '/' + toDate + '/' + orderNumber + '/' + status + '/' + ExternalId + '/' + CustomerId, { params });
   }
 
-  getDashboardStats() {
-    return this.http.get<any>(this.apiUrl + 'EDIProcessor/api/v1/orders/getDashboardStats');
+  verifyMFADirect(data: any): Observable<any> {
+    return this.http.post(this.apiUrl + 'VerifyMFA', data);
+  }
+
+  getDashboardStats(fromDate: string = '', toDate: string = '') {
+    let params = new HttpParams();
+    if (fromDate) params = params.append('fromDate', fromDate);
+    if (toDate) params = params.append('toDate', toDate);
+    return this.http.get<any>(this.apiUrl + 'EDIProcessor/api/v1/orders/getDashboardStats', { params });
   }
 
   getRouteExceptions(name: string, message: string, fromDate: string, toDate: string, status: string, pageNumber: number = 1, pageSize: number = 10) {

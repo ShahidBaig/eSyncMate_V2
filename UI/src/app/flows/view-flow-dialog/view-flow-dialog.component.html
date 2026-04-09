@@ -11,6 +11,7 @@
             <mat-icon class="status-icon">{{ data.status === 'Active' ? 'check_circle' : 'cancel' }}</mat-icon>
             {{ data.status }}
         </span>
+        <button mat-icon-button class="dialog-close-btn" (click)="onClose()"><mat-icon>close</mat-icon></button>
     </div>
 
     <!-- Description -->
@@ -22,11 +23,11 @@
     <div class="info-row" *ngIf="isValidDate(data.createdDate) || isValidDate(data.modifiedDate)">
         <div class="info-chip" *ngIf="isValidDate(data.createdDate)">
             <mat-icon>calendar_today</mat-icon>
-            <span>Created: {{ data.createdDate | date:'MMM dd, yyyy' }}</span>
+            <span>Created: {{ data.createdDate | date:'MM/dd/yyyy hh:mm a' }}</span>
         </div>
         <div class="info-chip" *ngIf="isValidDate(data.modifiedDate)">
             <mat-icon>update</mat-icon>
-            <span>Modified: {{ data.modifiedDate | date:'MMM dd, yyyy' }}</span>
+            <span>Modified: {{ data.modifiedDate | date:'MM/dd/yyyy hh:mm a' }}</span>
         </div>
     </div>
 
@@ -70,7 +71,7 @@
                                         <mat-icon class="route-detail-icon">play_arrow</mat-icon>
                                         <div>
                                             <label>Start Date</label>
-                                            <span>{{ isValidDate(detail.get('startDate')?.value) ? (detail.get('startDate')?.value | date:'MMM dd, yyyy') : 'Not set' }}</span>
+                                            <span>{{ isValidDate(detail.get('startDate')?.value) ? (detail.get('startDate')?.value | date:'MM/dd/yyyy hh:mm a') : 'Not set' }}</span>
                                         </div>
                                     </div>
                                     <div class="route-detail-item">
@@ -85,11 +86,11 @@
                                     <div class="route-detail-action">
                                         <button mat-flat-button color="primary" class="test-run-btn"
                                                 [disabled]="isTestRunning(detail.get('routeId')?.value) || detail.get('status')?.value !== 'Active'"
-                                                [matTooltip]="detail.get('status')?.value !== 'Active' ? 'Route is Inactive' : isTestRunning(detail.get('routeId')?.value) ? 'Running...' : 'Test Run'"
+                                                [matTooltip]="detail.get('status')?.value !== 'Active' ? 'Route is Inactive' : isTestRunning(detail.get('routeId')?.value) ? 'Running...' : 'Run Now'"
                                                 (click)="testRunRoute(detail.get('routeId')?.value, detail.get('routeName')?.value)">
                                             <mat-icon *ngIf="!isTestRunning(detail.get('routeId')?.value)">play_circle</mat-icon>
                                             <mat-spinner *ngIf="isTestRunning(detail.get('routeId')?.value)" diameter="18" class="btn-spinner"></mat-spinner>
-                                            <span>{{ isTestRunning(detail.get('routeId')?.value) ? 'Running...' : 'Test Run' }}</span>
+                                            <span>{{ isTestRunning(detail.get('routeId')?.value) ? 'Running...' : 'Run Now' }}</span>
                                         </button>
                                     </div>
                                 </div>
@@ -292,9 +293,6 @@
     </mat-tab-group>
 </div>
 
-<div mat-dialog-actions class="dialog-actions">
-    <button mat-raised-button color="primary" (click)="onClose()">Close</button>
-</div>
 
 <!-- Popup Diagram Overlay -->
 <div class="popup-backdrop" *ngIf="showFullscreen" (click)="showFullscreen = false">

@@ -571,7 +571,7 @@ namespace eSyncMate.Processor.Controllers
 
         [HttpGet]
         [Route("getDashboardStats")]
-        public Task<object> GetDashboardStats()
+        public Task<object> GetDashboardStats([FromQuery] string fromDate = "", [FromQuery] string toDate = "")
         {
             try
             {
@@ -587,10 +587,17 @@ namespace eSyncMate.Processor.Controllers
                 if (userData.UserType?.ToUpper() != "ADMIN" && !string.IsNullOrEmpty(userData.Customers))
                     l_CustomerFilter = $" AND ERPCustomerID IN ({userData.Customers})";
 
-                // Customer-wise order counts (last 24h)
+                // Date filter — defaults to last 24 hours if not provided
+                string l_DateFilter;
+                if (!string.IsNullOrEmpty(fromDate) && !string.IsNullOrEmpty(toDate))
+                    l_DateFilter = $" CreatedDate >= '{fromDate}' AND CreatedDate < DATEADD(DAY, 1, CAST('{toDate}' AS DATE))";
+                else
+                    l_DateFilter = " CreatedDate >= DATEADD(HOUR, -24, GETDATE())";
+
+                // Customer-wise order counts
                 string l_CustomerQuery = $@"SELECT ISNULL(CustomerName,'') as CustomerName, ISNULL(ERPCustomerID,'') as ERPCustomerID, COUNT(*) as OrderCount
                     FROM VW_Orders
-                    WHERE CreatedDate >= DATEADD(HOUR, -24, GETDATE()) AND Status <> 'DELETED'{l_CustomerFilter}
+                    WHERE {l_DateFilter} AND Status <> 'DELETED'{l_CustomerFilter}
                     GROUP BY CustomerName, ERPCustomerID ORDER BY OrderCount DESC";
 
                 DataTable l_CustomerDT = new DataTable();
@@ -604,10 +611,10 @@ namespace eSyncMate.Processor.Controllers
                     customerWise.Add(new { customerName = row["CustomerName"]?.ToString(), erpCustomerID = row["ERPCustomerID"]?.ToString(), orderCount = count });
                 }
 
-                // Status-wise order counts (last 24h)
+                // Status-wise order counts
                 string l_StatusQuery = $@"SELECT ISNULL(Status,'') as Status, COUNT(*) as StatusCount
                     FROM VW_Orders
-                    WHERE CreatedDate >= DATEADD(HOUR, -24, GETDATE()) AND Status <> 'DELETED'{l_CustomerFilter}
+                    WHERE {l_DateFilter} AND Status <> 'DELETED'{l_CustomerFilter}
                     GROUP BY Status ORDER BY StatusCount DESC";
 
                 DataTable l_StatusDT = new DataTable();
@@ -618,7 +625,63 @@ namespace eSyncMate.Processor.Controllers
                     statusWise.Add(new { status = row["Status"]?.ToString(), statusCount = Convert.ToInt32(row["StatusCount"]) });
                 }
 
-                return Task.FromResult<object>(new { code = 200, message = "Success", customerWise, statusWise, totalOrders });
+                // Partner + Status breakdown (for expandable detail)
+                string l_PartnerStatusQuery = $@"SELECT ISNULL(ERPCustomerID,'') as ERPCustomerID, ISNULL(Status,'') as Status, COUNT(*) as StatusCount
+                    FROM VW_Orders
+                    WHERE {l_DateFilter} AND Status <> 'DELETED'{l_CustomerFilter}
+                    GROUP BY ERPCustomerID, Status ORDER BY ERPCustomerID, StatusCount DESC";
+
+                DataTable l_PartnerStatusDT = new DataTable();
+                l_Conn.GetData(l_PartnerStatusQuery, ref l_PartnerStatusDT);
+                var partnerStatusWise = new Dictionary<string, List<object>>();
+                foreach (DataRow row in l_PartnerStatusDT.Rows)
+                {
+                    string custId = row["ERPCustomerID"]?.ToString() ?? "";
+                    if (!partnerStatusWise.ContainsKey(custId))
+                        partnerStatusWise[custId] = new List<object>();
+                    partnerStatusWise[custId].Add(new { status = row["Status"]?.ToString(), statusCount = Convert.ToInt32(row["StatusCount"]) });
+                }
+
+                return Task.FromResult<object>(new { code = 200, message = "Success", customerWise, statusWise, totalOrders, partnerStatusWise });
+            }
+            catch (Exception ex)
+            {
+                return Task.FromResult<object>(new { code = 500, message = ex.Message });
+            }
+        }
+
+        [HttpGet]
+        [Route("getPartnerStatusBreakdown")]
+        public Task<object> GetPartnerStatusBreakdown([FromQuery] string erpCustomerID = "", [FromQuery] string fromDate = "", [FromQuery] string toDate = "")
+        {
+            try
+            {
+                var claimsIdentity = User.Identity as ClaimsIdentity;
+                if (claimsIdentity?.Claims == null)
+                    return Task.FromResult<object>(new { code = 401, message = "Not Authorized" });
+
+                DBConnector l_Conn = new DBConnector(CommonUtils.ConnectionString);
+
+                string l_DateFilter;
+                if (!string.IsNullOrEmpty(fromDate) && !string.IsNullOrEmpty(toDate))
+                    l_DateFilter = $" CreatedDate >= '{fromDate}' AND CreatedDate < DATEADD(DAY, 1, CAST('{toDate}' AS DATE))";
+                else
+                    l_DateFilter = " CreatedDate >= DATEADD(HOUR, -24, GETDATE())";
+
+                string l_Query = $@"SELECT ISNULL(Status,'') as Status, COUNT(*) as StatusCount
+                    FROM VW_Orders
+                    WHERE {l_DateFilter} AND Status <> 'DELETED' AND ERPCustomerID = '{erpCustomerID}'
+                    GROUP BY Status ORDER BY StatusCount DESC";
+
+                DataTable l_DT = new DataTable();
+                l_Conn.GetData(l_Query, ref l_DT);
+                var statuses = new List<object>();
+                foreach (DataRow row in l_DT.Rows)
+                {
+                    statuses.Add(new { status = row["Status"]?.ToString(), statusCount = Convert.ToInt32(row["StatusCount"]) });
+                }
+
+                return Task.FromResult<object>(new { code = 200, statuses });
             }
             catch (Exception ex)
             {
@@ -681,7 +744,7 @@ namespace eSyncMate.Processor.Controllers
 
                 if (!string.IsNullOrEmpty(Status))
                 {
-                    l_Criteria += $" AND (Status LIKE '%{Status}%' OR DisplayStatus LIKE '%{Status}%')";
+                    l_Criteria += $" AND (Status = '{Status}' OR DisplayStatus = '{Status}')";
                 }
 
                 if (!string.IsNullOrEmpty(FromDate))

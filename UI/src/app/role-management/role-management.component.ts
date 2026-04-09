@@ -16,6 +16,8 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { ApiService } from '../services/api.service';
 import { NgToastService } from 'ng-angular-popup';
 import { TranslateModule } from '@ngx-translate/core';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { RoleHelpDialogComponent } from './role-help-dialog/role-help-dialog.component';
 
 interface RoleItem {
   id: number;
@@ -56,7 +58,8 @@ interface MenuAssignment {
     MatCardModule,
     MatTabsModule,
     MatSlideToggleModule,
-    TranslateModule
+    TranslateModule,
+    MatTooltipModule
   ],
 })
 export class RoleManagementComponent implements OnInit {
@@ -71,7 +74,7 @@ export class RoleManagementComponent implements OnInit {
   editingRole: RoleItem = { id: 0, name: '', description: '', isActive: true, createdDate: '', createdBy: 0 };
   showRoleForm = false;
 
-  constructor(private api: ApiService, private toast: NgToastService) {}
+  constructor(private api: ApiService, private toast: NgToastService, private dialog: MatDialog) {}
 
   ngOnInit(): void {
     this.loadRoles();
@@ -193,6 +196,10 @@ export class RoleManagementComponent implements OnInit {
         m.canEdit = checked;
         m.canDelete = checked;
       });
+  }
+
+  openHelp(): void {
+    this.dialog.open(RoleHelpDialogComponent, { width: '90%', maxWidth: '1200px', maxHeight: '90vh' });
   }
 
   saveMenuAssignments(): void {
