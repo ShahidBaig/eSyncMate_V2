@@ -2,7 +2,6 @@
 using eSyncMate.DB.Entities;
 using eSyncMate.Processor.Models;
 using Hangfire;
-using System.Collections.Concurrent;
 using System.Diagnostics;
 
 namespace eSyncMate.Processor.Managers
@@ -11,7 +10,7 @@ namespace eSyncMate.Processor.Managers
     {
         private readonly IConfiguration _config;
 
-        private static ConcurrentDictionary<int, Routes> currentRoutes = new ConcurrentDictionary<int, Routes>();
+        private static DB.Entities.RouteExecutionLock _routeLock = new DB.Entities.RouteExecutionLock();
 
         // Configuration flag to switch between in-process and external process execution
         private bool UseExternalProcess => _config?.GetValue<bool>("RouteEngine:UseExternalProcess") ?? false;
@@ -44,6 +43,7 @@ namespace eSyncMate.Processor.Managers
         public void ExecuteExternal(int routeId)
         {
             Routes route = new Routes();
+            string dbLockToken = null;
 
             try
             {
@@ -61,10 +61,12 @@ namespace eSyncMate.Processor.Managers
                     return;
                 }
 
-                // Check if route is already running (TryAdd is atomic - returns false if key exists)
-                if (!currentRoutes.TryAdd(routeId, route))
+                // DB-based lock: prevents re-dispatch if Processor restarts while RouteWorker is running
+                _routeLock.UseConnection(CommonUtils.ConnectionString);
+                dbLockToken = _routeLock.AcquireLock(route.CustomerName, route.TypeId, routeId);
+                if (dbLockToken == null)
                 {
-                    route.SaveLog(Declarations.LogTypeEnum.Info, "This route is already in execution.", "", 1);
+                    route.SaveLog(Declarations.LogTypeEnum.RouteInfo, $"Route [{routeId}] is already running (DB lock held), skipping.", "", 1);
                     return;
                 }
 
@@ -128,7 +130,21 @@ namespace eSyncMate.Processor.Managers
             }
             finally
             {
-                currentRoutes.TryRemove(routeId, out _);
+                // Release DB lock
+                if (!string.IsNullOrEmpty(dbLockToken))
+                {
+                    try { _routeLock.ReleaseLock(dbLockToken); }
+                    catch
+                    {
+                        try
+                        {
+                            var fallback = new DB.Entities.RouteExecutionLock();
+                            fallback.UseConnection(CommonUtils.ConnectionString);
+                            fallback.ReleaseLock(dbLockToken);
+                        }
+                        catch { /* stale lock cleanup will handle */ }
+                    }
+                }
             }
         }
 
@@ -156,6 +172,7 @@ namespace eSyncMate.Processor.Managers
             }
 
             Routes route = new Routes();
+            string dbLockToken = null;
 
             try
             {
@@ -172,10 +189,12 @@ namespace eSyncMate.Processor.Managers
                     return;
                 }
 
-                // Check if route is already running (TryAdd is atomic - returns false if key exists)
-                if (!currentRoutes.TryAdd(routeId, route))
+                // DB-based lock: cross-process self-lock for all routes
+                _routeLock.UseConnection(CommonUtils.ConnectionString);
+                dbLockToken = _routeLock.AcquireLock(route.CustomerName, route.TypeId, routeId);
+                if (dbLockToken == null)
                 {
-                    route.SaveLog(Declarations.LogTypeEnum.Info, "This route is already in execution.", "", 1);
+                    route.SaveLog(Declarations.LogTypeEnum.RouteInfo, $"Route [{routeId}] is already running (DB lock held), skipping.", "", 1);
                     return;
                 }
 
@@ -521,6 +540,10 @@ namespace eSyncMate.Processor.Managers
                 {
                     AmazonUploadWarehouseWiseInventoryRoute.Execute(_config, route);
                 }
+                else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.StaleLockCleanup))
+                {
+                    StaleLockCleanupRoute.Execute(_config, route);
+                }
             }
             catch (Exception ex)
             {
@@ -528,7 +551,21 @@ namespace eSyncMate.Processor.Managers
             }
             finally
             {
-                currentRoutes.TryRemove(routeId, out _);
+                // Release DB lock
+                if (!string.IsNullOrEmpty(dbLockToken))
+                {
+                    try { _routeLock.ReleaseLock(dbLockToken); }
+                    catch
+                    {
+                        try
+                        {
+                            var fallback = new DB.Entities.RouteExecutionLock();
+                            fallback.UseConnection(CommonUtils.ConnectionString);
+                            fallback.ReleaseLock(dbLockToken);
+                        }
+                        catch { /* stale lock cleanup will handle */ }
+                    }
+                }
             }
         }
 

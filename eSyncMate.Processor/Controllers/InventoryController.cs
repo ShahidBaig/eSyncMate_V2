@@ -79,7 +79,7 @@ namespace eSyncMate.Processor.Controllers
                 }
 
                 if (CustomerID == "EMPTY")
-                    CustomerID = !(string.IsNullOrEmpty(userData.Customers)) && userData.UserType?.ToUpper() != "ADMIN" ? userData.Customers : "";
+                    CustomerID = !(string.IsNullOrEmpty(userData.Customers)) && !userData.IsSuperAdmin ? userData.Customers : "";
 
                 l_Response.Code = (int)ResponseCodes.Error;
 
@@ -334,7 +334,7 @@ namespace eSyncMate.Processor.Controllers
 
             try
             {
-                string l_Criteria = !(string.IsNullOrEmpty(userData.Customers)) && userData.UserType?.ToUpper() != "ADMIN" ? $"CustomerID IN ({userData.Customers})" : string.Empty;
+                string l_Criteria = !(string.IsNullOrEmpty(userData.Customers)) && !userData.IsSuperAdmin ? $"CustomerID IN ({userData.Customers})" : string.Empty;
 
                 // Filter by specific customer if provided
                 if (!string.IsNullOrEmpty(customerID))

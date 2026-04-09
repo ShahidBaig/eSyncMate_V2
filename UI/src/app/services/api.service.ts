@@ -172,6 +172,7 @@ export class ApiService {
       isSetupMenu: token.isSetupAllowed,
       userID: token.userID,
       roleName: token.roleName || '',
+      mfaEnabled: token.mfaEnabled || false,
     };
     return user;
   }

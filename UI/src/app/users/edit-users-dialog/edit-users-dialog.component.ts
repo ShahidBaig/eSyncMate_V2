@@ -111,7 +111,8 @@ export class EditUsersDialogComponent implements OnInit {
         userType: [this.data.userType],
         status: [this.data.status, Validators.required],
         customerName: [this.data.customerName ? this.data.customerName.split(',') : [], Validators.required],
-        isSetupMenu: [this.data.isSetupAllowed]
+        isSetupMenu: [this.data.isSetupAllowed],
+        mfaEnabled: [this.data.mfaEnabled || false]
       },
       {
         validators: [repeatPasswordValidator],
@@ -206,6 +207,7 @@ export class EditUsersDialogComponent implements OnInit {
       company: this.data.company,
       customerName: '',
       isSetupAllowed: this.updateUserForm.get('isSetupMenu')?.value,
+      mfaEnabled: this.updateUserForm.get('mfaEnabled')?.value,
       createdDate: this.data.createdDate,
       userID: this.data.userID,
     };

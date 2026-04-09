@@ -14,9 +14,9 @@
     <div class="dashboard-actions">
       <!-- Customer Filter -->
       <div class="cust-filter">
-        <button class="cust-trigger" (click)="customerDropdownOpen = !customerDropdownOpen">
+        <button class="cust-trigger-btn" (click)="customerDropdownOpen = !customerDropdownOpen">
           <mat-icon class="cust-trigger-icon">storefront</mat-icon>
-          <span class="cust-trigger-text">{{ selectedCustomerIDs.length > 0 ? selectedCustomerIDs.length + ' Selected' : 'All Customers' }}</span>
+          <span class="cust-trigger-label">{{ selectedCustomerIDs.length > 0 ? selectedCustomerIDs.length + ' Customers' : 'All Customers' }}</span>
           <mat-icon class="cust-trigger-arrow" [class.rotated]="customerDropdownOpen">expand_more</mat-icon>
         </button>
 
@@ -27,18 +27,6 @@
             <mat-icon class="cust-search-icon">search</mat-icon>
             <input class="cust-search-input" placeholder="Search customers..." [(ngModel)]="customerSearchText" (input)="filterCustomerOptions()" (keydown)="$event.stopPropagation()">
             <mat-icon class="cust-search-clear" *ngIf="customerSearchText" (click)="customerSearchText = ''; filterCustomerOptions()">close</mat-icon>
-          </div>
-
-          <!-- Selected Chips inside dropdown -->
-          <div class="cust-dropdown-chips" *ngIf="selectedCustomerIDs.length > 0">
-            <div class="cust-chip" *ngFor="let id of selectedCustomerIDs">
-              <span class="cust-chip-text">{{ id }}</span>
-              <mat-icon class="cust-chip-x" (click)="removeCustomer(id); $event.stopPropagation()">close</mat-icon>
-            </div>
-            <button class="cust-clear-all" (click)="clearAllCustomers(); $event.stopPropagation()" matTooltip="Clear all">
-              <mat-icon>delete_sweep</mat-icon>
-              <span>Clear All</span>
-            </button>
           </div>
 
           <!-- Customer List -->
@@ -85,6 +73,18 @@
         <mat-icon [class.spinning]="loading || inventoryLoading">sync</mat-icon>
       </button>
     </div>
+  </div>
+
+  <!-- Selected Customers Bar -->
+  <div class="cust-chips-bar" *ngIf="selectedCustomerIDs.length > 0">
+    <div class="cust-trigger-chip" *ngFor="let id of selectedCustomerIDs">
+      <span>{{ id }}</span>
+      <mat-icon class="cust-trigger-chip-x" (click)="removeCustomer(id)">close</mat-icon>
+    </div>
+    <button class="cust-trigger-clear" *ngIf="selectedCustomerIDs.length > 1" (click)="clearAllCustomers()">
+      <mat-icon>delete_sweep</mat-icon>
+      <span>Clear All</span>
+    </button>
   </div>
 
   <!-- Loading -->

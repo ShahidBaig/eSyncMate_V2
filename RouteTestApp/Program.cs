@@ -33,12 +33,18 @@ using Azure.Identity;
 using Microsoft.Graph;
 using Microsoft.Graph.Models;
 using Microsoft.Graph.Users.Item.SendMail;
+using RouteTestApp;
+
+// ======== Route Execution Lock Tests ========
+string testConnectionString = "<<SET_CONNECTION_STRING>>";
+RouteExecutionLockTests.RunAllTests(testConnectionString).GetAwaiter().GetResult();
+return;
 
 static void Main()
 {
     // ======== Amazon Missing Orders Report ========
-    FindMissingAmazonOrders().GetAwaiter().GetResult();
-    return;
+    // FindMissingAmazonOrders().GetAwaiter().GetResult();
+    // return;
 
     // Test Microsoft Graph Email
     //TestGraphEmailAsync().GetAwaiter().GetResult();

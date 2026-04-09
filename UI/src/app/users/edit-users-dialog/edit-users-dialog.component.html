@@ -113,9 +113,12 @@
         </mat-select>
       </mat-form-field>
 
-      <div class="form-row" *ngIf="updateUserForm.get('userType')?.value === 'WRITER' && updateUserForm.get('userType')?.value !== ''">
-        <div class="form-field">
+      <div class="form-row">
+        <div class="form-field" *ngIf="updateUserForm.get('userType')?.value === 'WRITER'">
           <mat-checkbox formControlName="isSetupMenu">{{ 'showSetupMenu' | translate }}</mat-checkbox>
+        </div>
+        <div class="form-field">
+          <mat-checkbox formControlName="mfaEnabled">Enable Two-Factor Authentication (MFA)</mat-checkbox>
         </div>
       </div>
     </form>

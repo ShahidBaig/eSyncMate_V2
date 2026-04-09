@@ -1,0 +1,58 @@
+<div class="reset-mfa-dialog">
+  <!-- Confirm State -->
+  <div class="dialog-state" *ngIf="!isSuccess && !isLoading">
+    <div class="dialog-icon-wrap warning">
+      <mat-icon>qr_code_2</mat-icon>
+    </div>
+    <h2 class="dialog-title">Reset MFA</h2>
+    <p class="dialog-subtitle">Are you sure you want to reset Two-Factor Authentication for this user?</p>
+
+    <div class="user-card">
+      <div class="user-card-row">
+        <mat-icon class="user-card-icon">person</mat-icon>
+        <div class="user-card-info">
+          <span class="user-card-name">{{ data.firstName }} {{ data.lastName }}</span>
+          <span class="user-card-id">{{ data.userID }} &bull; {{ data.email }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="dialog-warning">
+      <mat-icon>info</mat-icon>
+      <span>The user will need to scan a new QR code on their next login.</span>
+    </div>
+
+    <div class="dialog-actions">
+      <button class="btn-cancel" (click)="onCancel()">
+        Cancel
+      </button>
+      <button class="btn-reset" (click)="onConfirm()">
+        <mat-icon>restart_alt</mat-icon>
+        Reset MFA
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div class="dialog-state" *ngIf="isLoading">
+    <mat-spinner diameter="48"></mat-spinner>
+    <h2 class="dialog-title" style="margin-top: 20px;">Resetting MFA...</h2>
+    <p class="dialog-subtitle">Please wait while we clear the authentication secret.</p>
+  </div>
+
+  <!-- Success State -->
+  <div class="dialog-state" *ngIf="isSuccess">
+    <div class="dialog-icon-wrap success">
+      <mat-icon>check_circle</mat-icon>
+    </div>
+    <h2 class="dialog-title">MFA Reset Successfully</h2>
+    <p class="dialog-subtitle"><strong>{{ data.firstName }} {{ data.lastName }}</strong> will need to scan a new QR code on their next login.</p>
+
+    <div class="dialog-actions">
+      <button class="btn-done" (click)="onCancel()">
+        <mat-icon>done</mat-icon>
+        Done
+      </button>
+    </div>
+  </div>
+</div>

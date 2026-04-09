@@ -105,6 +105,10 @@
               matTooltip="Delete User" matTooltipPosition="above">
               <mat-icon>delete</mat-icon>
             </button>
+            <button *ngIf="element.mfaEnabled" mat-icon-button aria-label="rescan mfa" (click)="resetMFA(element)"
+              matTooltip="Reset MFA (Rescan QR)" matTooltipPosition="above" style="color: #E8834A;">
+              <mat-icon>qr_code_2</mat-icon>
+            </button>
           </td>
         </ng-container>
 

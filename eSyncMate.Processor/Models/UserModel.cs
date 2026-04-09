@@ -24,6 +24,7 @@ namespace eSyncMate.Processor.Models
         public DateTime CreatedDate { get; set; }
         public int CreatedBy { get; set; }
         public string RoleName { get; set; } = string.Empty;
+        public bool MFAEnabled { get; set; }
     }
 
     public class UpdateUserDataModel
@@ -42,6 +43,7 @@ namespace eSyncMate.Processor.Models
         public string UserID { get; set; }
         public DateTime CreatedDate { get; set; }
         public int CreatedBy { get; set; }
+        public bool MFAEnabled { get; set; }
     }
 
     public class UserSearchModel
@@ -57,5 +59,8 @@ namespace eSyncMate.Processor.Models
         public string UserType { get; set; }
         public string Customers { get; set; }
         public string Flows { get; set; }
+        public string RoleName { get; set; } = string.Empty;
+
+        public bool IsSuperAdmin => RoleName?.Equals("SuperAdmin", StringComparison.OrdinalIgnoreCase) == true;
     }
 }

@@ -33,6 +33,9 @@ namespace eSyncMate.RouteWorker
 
         static async Task ExecuteRoute(int routeId)
         {
+            string dbLockToken = null;
+            DB.Entities.RouteExecutionLock routeLock = new DB.Entities.RouteExecutionLock();
+
             try
             {
                 // Build configuration - use executable directory, not current directory
@@ -44,7 +47,7 @@ namespace eSyncMate.RouteWorker
                     .Build();
 
                 CommonUtils.ConnectionString = configuration.GetConnectionString("DefaultConnection");
-               
+
                 Routes route = new Routes();
                 route.UseConnection(CommonUtils.ConnectionString);
                 route.Id = routeId;
@@ -55,14 +58,22 @@ namespace eSyncMate.RouteWorker
                     return;
                 }
 
-                
                 if (route.Status.ToUpper() == "IN-ACTIVE")
                 {
                     Environment.ExitCode = 0;
                     return;
                 }
 
-              
+                // DB-based lock: prevents execution if same route is already running
+                routeLock.UseConnection(CommonUtils.ConnectionString);
+                dbLockToken = routeLock.AcquireLock(route.CustomerName, route.TypeId, routeId);
+                if (dbLockToken == null)
+                {
+                    route.SaveLog(Declarations.LogTypeEnum.RouteInfo, $"[RouteWorker] Route [{routeId}] is already running (DB lock held), skipping.", "", 1);
+                    Environment.ExitCode = 0;
+                    return;
+                }
+
                 ExecuteRouteByType(configuration, route);
 
                 Environment.ExitCode = 0;
@@ -70,6 +81,24 @@ namespace eSyncMate.RouteWorker
             catch (Exception ex)
             {
                 Environment.ExitCode = 1;
+            }
+            finally
+            {
+                // Release DB lock
+                if (!string.IsNullOrEmpty(dbLockToken))
+                {
+                    try { routeLock.ReleaseLock(dbLockToken); }
+                    catch
+                    {
+                        try
+                        {
+                            var fallback = new DB.Entities.RouteExecutionLock();
+                            fallback.UseConnection(CommonUtils.ConnectionString);
+                            fallback.ReleaseLock(dbLockToken);
+                        }
+                        catch { /* stale lock cleanup will handle */ }
+                    }
+                }
             }
         }
 
@@ -433,6 +462,10 @@ namespace eSyncMate.RouteWorker
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.TargetPlusInventoryFeedWHSWise))
                 {
                     TargetPlusInventoryFeedWHSWiseRoute.Execute(config, route);
+                }
+                else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.StaleLockCleanup))
+                {
+                    StaleLockCleanupRoute.Execute(config, route);
                 }
                 else
                 {

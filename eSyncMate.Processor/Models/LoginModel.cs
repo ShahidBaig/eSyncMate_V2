@@ -21,5 +21,6 @@ namespace eSyncMate.Processor.Models
         public DateTime CreatedDate { get; set; }
         public int CreatedBy { get; set; }
         public int RoleId { get; set; }
+        public string RoleName { get; set; } = string.Empty;
     }
 }

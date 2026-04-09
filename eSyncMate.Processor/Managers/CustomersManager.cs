@@ -15,6 +15,7 @@ namespace eSyncMate.Processor.Managers
             string[] valuesArray = customerNameClaim.Split(',').Select(id => $"'{id.Trim()}'").ToArray();
             userData.Customers = string.Join(",", valuesArray);
             userData.UserType = claimsIdentity.FindFirst("userType")?.Value;
+            userData.RoleName = claimsIdentity.FindFirst("roleName")?.Value ?? "";
 
             return userData;
         }

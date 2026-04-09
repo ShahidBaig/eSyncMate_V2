@@ -123,7 +123,7 @@ namespace eSyncMate.Processor.Controllers
                     l_Criteria = $" CustomerName = '{searchModel.SearchValue}'";
                 }
 
-                if (!string.IsNullOrEmpty(userData?.Customers) && userData?.UserType?.ToUpper() != "ADMIN" && searchModel.SearchOption.ToUpper() != "ERP CustomerID")
+                if (!string.IsNullOrEmpty(userData?.Customers) && !userData.IsSuperAdmin && searchModel.SearchOption.ToUpper() != "ERP CustomerID")
                     l_Criteria = !string.IsNullOrWhiteSpace(l_Criteria)? l_Criteria + $" AND CustomerName IN ({userData?.Customers})": $"CustomerName IN ({userData?.Customers})";
 
                 this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Search criteria ready ({l_Criteria}).");

@@ -84,6 +84,7 @@ namespace eSyncMate.DB
             Exception = 3,
             Debug = 4,
             Error = 5,
+            RouteInfo = 6,
         }
 
         public enum UserGroups

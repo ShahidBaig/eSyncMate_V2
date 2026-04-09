@@ -1,109 +1,110 @@
 <h2 class="page-title"><mat-icon>account_tree</mat-icon><span class="title-text">{{ 'nav.flows' | translate }}</span></h2>
 <div class="mat-table-container">
 
-    <mat-card>
-        <mat-card-content>
-            <mat-form-field appearance="fill" color="accent">
-                <mat-label>{{ 'partnerName' | translate }}</mat-label>
-                <mat-select [(ngModel)]="selectedCustomer" (selectionChange)="onCustomerChange()" (openedChange)="onCustomerSelectOpened($event)">
-                    <div class="select-search-container">
-                        <input matInput
-                               class="select-search-input"
-                               placeholder="Search Partner..."
-                               [(ngModel)]="customerSearchText"
-                               (input)="filterCustomerOptions()"
-                               (keydown)="$event.stopPropagation()">
-                    </div>
-                    <mat-option [value]="'EMPTY'"
-                        [style.display]="customerOptions && customerOptions.length === 1 ? 'none' : 'block'">
-                        Select Partner
-                    </mat-option>
-                    <mat-option *ngFor="let customer of filteredCustomerOptions" [value]="customer.erpCustomerID">
-                        {{ customer.name }}
-                    </mat-option>
-                </mat-select>
-            </mat-form-field>
+  <mat-card class="search-card">
+    <mat-card-content>
+      <div class="search-header">
+        <div class="search-header-left">
+          <mat-icon class="search-header-icon">filter_list</mat-icon>
+          <span class="search-header-title">Search & Filter</span>
+        </div>
+      </div>
+      <div class="search-row">
+        <mat-form-field appearance="outline" class="search-field partner-field">
+          <mat-icon matPrefix>storefront</mat-icon>
+          <mat-label>{{ 'partnerName' | translate }}</mat-label>
+          <mat-select [(ngModel)]="selectedCustomer" (selectionChange)="onCustomerChange()" (openedChange)="onCustomerSelectOpened($event)">
+            <div class="select-search-container">
+              <input matInput
+                     class="select-search-input"
+                     placeholder="Search Partner..."
+                     [(ngModel)]="customerSearchText"
+                     (input)="filterCustomerOptions()"
+                     (keydown)="$event.stopPropagation()">
+            </div>
+            <mat-option [value]="'EMPTY'"
+                [style.display]="customerOptions && customerOptions.length === 1 ? 'none' : 'block'">
+                Select Partner
+            </mat-option>
+            <mat-option *ngFor="let customer of filteredCustomerOptions" [value]="customer.erpCustomerID">
+                {{ customer.name }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
 
-            &nbsp;
-            <button mat-flat-button color="accent" (click)="getFlows()">
-                <span *ngIf="!showSpinnerforSearch">{{ 'search' | translate }}</span>
-                <mat-spinner *ngIf="showSpinnerforSearch" diameter="20"></mat-spinner>
-            </button>
+        <button mat-flat-button class="search-btn" (click)="getFlows()">
+          <mat-icon>search</mat-icon>
+          <span>Search</span>
+        </button>
 
-            &nbsp;
+        <button mat-flat-button class="btn-add" (click)="openAddFlowDialog()" *ngIf="canAdd">
+          <mat-icon>add</mat-icon>
+          <span>Add</span>
+        </button>
+      </div>
+    </mat-card-content>
+  </mat-card>
 
-            <button mat-flat-button color="accent" (click)="openAddFlowDialog()" *ngIf="canAdd">
-                <span>{{ 'Add Partner Flow' | translate }}</span>
-            </button>
-        </mat-card-content>
-    </mat-card>
+  <mat-card>
+    <mat-card-content>
+      <mat-progress-bar [style.visibility]="isLoading ? 'visible' : 'hidden'" mode="indeterminate" color="accent"></mat-progress-bar>
+      <table mat-table [dataSource]="dataSource">
 
+        <ng-container matColumnDef="CustomerID">
+          <th mat-header-cell *matHeaderCellDef>{{ 'Partner ID' | translate }}</th>
+          <td mat-cell *matCellDef="let element">{{element.customerID}}</td>
+        </ng-container>
 
-    &nbsp;
-    <mat-card>
-        <mat-card-content>
-            <mat-progress-bar [style.visibility]="isLoading ? 'visible' : 'hidden'" mode="indeterminate" color="accent"></mat-progress-bar>
-            <table mat-table [dataSource]="dataSource">
+        <ng-container matColumnDef="Title">
+          <th mat-header-cell *matHeaderCellDef>{{ 'Flow Name' | translate }}</th>
+          <td mat-cell *matCellDef="let element">{{element.title}}</td>
+        </ng-container>
 
-                <ng-container matColumnDef="CustomerID">
-                    <th mat-header-cell *matHeaderCellDef>{{ 'Partner ID' | translate }}</th>
-                    <td mat-cell *matCellDef="let element"> {{element.customerID}} </td>
-                </ng-container>
+        <ng-container matColumnDef="Status">
+          <th mat-header-cell *matHeaderCellDef>{{ 'Status' | translate }}</th>
+          <td mat-cell *matCellDef="let element" [matTooltip]="getTooltipWithTranslation(element)">
+            <span [ngClass]="getStatusClass(element.status)">{{element.status}}</span>
+          </td>
+        </ng-container>
 
-                <ng-container matColumnDef="Title">
-                    <th mat-header-cell *matHeaderCellDef>{{ 'Flow Name' | translate }}</th>
-                    <td mat-cell *matCellDef="let element"> {{element.title}} </td>
-                </ng-container>
+        <ng-container matColumnDef="ActivityDate">
+          <th mat-header-cell *matHeaderCellDef>Activity Date</th>
+          <td mat-cell *matCellDef="let element">
+            {{ isValidDate(element.modifiedDate) ? (element.modifiedDate | date:'MM/dd/yyyy hh:mm a') : (isValidDate(element.createdDate) ? (element.createdDate | date:'MM/dd/yyyy hh:mm a') : '') }}
+          </td>
+        </ng-container>
 
-                <ng-container matColumnDef="Status">
-                    <th mat-header-cell *matHeaderCellDef>{{ 'Status' | translate }}</th>
-                    <td mat-cell *matCellDef="let element"
-                        [matTooltip]="getTooltipWithTranslation(element)">
-                        <span [ngClass]="getStatusClass(element.status)">{{element.status}}</span>
-                    </td>
-                </ng-container>
+        <ng-container *ngIf="canEdit">
+          <ng-container matColumnDef="Edit">
+            <th mat-header-cell *matHeaderCellDef>{{ 'Actions' | translate }}</th>
+            <td mat-cell *matCellDef="let element">
+              <div style="display: flex; align-items: center;">
+                <button mat-icon-button (click)="openViewDialog(element)" color="primary" matTooltip="View Partner Flow" matTooltipPosition="above">
+                  <mat-icon>visibility</mat-icon>
+                </button>
+                <button mat-icon-button (click)="openEditDialog(element)" color="accent" matTooltip="Edit Partner Flow" matTooltipPosition="above">
+                  <mat-icon>edit</mat-icon>
+                </button>
+                <button mat-icon-button (click)="deleteFlow(element)" color="warn" matTooltip="Delete Partner Flow" matTooltipPosition="above">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </div>
+            </td>
+          </ng-container>
+        </ng-container>
 
-                <ng-container matColumnDef="ActivityDate">
-                    <th mat-header-cell *matHeaderCellDef>Activity Date</th>
-                    <td mat-cell *matCellDef="let element">
-                        {{ isValidDate(element.modifiedDate) ? (element.modifiedDate | date:'MM/dd/yyyy') : (isValidDate(element.createdDate) ? (element.createdDate | date:'MM/dd/yyyy') : '') }}
-                    </td>
-                </ng-container>
+        <tr mat-header-row *matHeaderRowDef="columns"></tr>
+        <tr mat-row *matRowDef="let row; columns: columns"></tr>
 
-                <ng-container *ngIf="canEdit">
-                    <ng-container matColumnDef="Edit">
-                        <th mat-header-cell *matHeaderCellDef> {{ 'Actions' | translate }}</th>
-                        <td mat-cell *matCellDef="let element">
-                            <div style="display: flex; align-items: center;">
-                                <button mat-icon-button aria-label="normal button" (click)="openViewDialog(element)"
-                                    color="primary" matTooltip="View Partner Flow" matTooltipPosition="above">
-                                    <mat-icon>visibility</mat-icon>
-                                </button>
-                                <button mat-icon-button aria-label="normal button" (click)="openEditDialog(element)"
-                                    color="accent" matTooltip="Edit Partner Flow" matTooltipPosition="above">
-                                    <mat-icon>edit</mat-icon>
-                                </button>
-                                <button mat-icon-button aria-label="delete button" (click)="deleteFlow(element)"
-                                    color="warn" matTooltip="Delete Partner Flow" matTooltipPosition="above">
-                                    <mat-icon>delete</mat-icon>
-                                </button>
-                            </div>
-                        </td>
-                    </ng-container>
-                </ng-container>
+      </table>
 
-                <tr mat-header-row *matHeaderRowDef="columns"></tr>
-                <tr mat-row *matRowDef="let row; columns: columns"></tr>
+      <mat-paginator [pageSize]="10" [pageSizeOptions]="[5, 10, 25, 100]" showFirstLastButtons>
+      </mat-paginator>
 
-            </table>
-
-            <mat-paginator [pageSize]="10" [pageSizeOptions]="[5, 10, 25, 100]" showFirstLastButtons>
-            </mat-paginator>
-
-        </mat-card-content>
-    </mat-card>
+    </mat-card-content>
+  </mat-card>
 </div>
 
 <div *ngIf="showSpinner" class="spinner-overlay">
-    <mat-spinner></mat-spinner>
+  <mat-spinner></mat-spinner>
 </div>

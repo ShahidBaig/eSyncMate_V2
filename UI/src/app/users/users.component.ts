@@ -30,6 +30,7 @@ import { UserService } from '../services/user.service';
 import { EditUsersDialogComponent } from './edit-users-dialog/edit-users-dialog.component';
 import { DeleteUserDialogComponent } from './delete-user-dialog/delete-user-dialog.component';
 import { UsersHelpDialogComponent } from './users-help-dialog/users-help-dialog.component';
+import { ResetMfaDialogComponent } from './reset-mfa-dialog/reset-mfa-dialog.component';
 import { RouterLink } from '@angular/router';
 
 @Component({
@@ -160,6 +161,20 @@ export class UsersComponent {
 
   openHelp(): void {
     this.dialog.open(UsersHelpDialogComponent, { width: '90%', maxWidth: '1200px', maxHeight: '90vh' });
+  }
+
+  resetMFA(user: any): void {
+    const dialogRef = this.dialog.open(ResetMfaDialogComponent, {
+      width: '460px',
+      disableClose: true,
+      data: user
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result === true) {
+        this.getUsers();
+      }
+    });
   }
 
   openEditDialog(connectorData: any) {

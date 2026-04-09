@@ -104,7 +104,7 @@ namespace eSyncMate.Processor.Controllers
                 }
 
                 // Always filter by assigned customers for non-admin users
-                if (!string.IsNullOrEmpty(userData?.Customers) && userData?.UserType?.ToUpper() != "ADMIN")
+                if (!string.IsNullOrEmpty(userData?.Customers) && !userData.IsSuperAdmin)
                 {
                     string customerFilter = $"ERPCustomerID IN ({userData?.Customers})";
                     l_Criteria = string.IsNullOrEmpty(l_Criteria) ? customerFilter : $"{l_Criteria} AND {customerFilter}";

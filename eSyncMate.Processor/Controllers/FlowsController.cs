@@ -157,7 +157,7 @@ namespace eSyncMate.Processor.Controllers
 
                 if (string.IsNullOrEmpty(l_Criteria) &&
                     !string.IsNullOrEmpty(userData?.Flows) &&
-                    userData?.UserType?.ToUpper() != "ADMIN")
+                    !userData.IsSuperAdmin)
                 {
                     l_Criteria = $" CustomerID IN ({userData?.Flows})";
                 }

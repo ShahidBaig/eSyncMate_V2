@@ -57,7 +57,8 @@ namespace eSyncMate.Processor.Controllers
                 new Claim("company", user.Company.ToString()),
 				new Claim("customerName", user.CustomerName.ToString()),
                 new Claim("isSetupAllowed", user.IsSetupAllowed.ToString()),
-                new Claim("userID", user.UserID.ToString())
+                new Claim("userID", user.UserID.ToString()),
+                new Claim("roleName", user.RoleName ?? "")
 
             };
 
@@ -101,6 +102,7 @@ namespace eSyncMate.Processor.Controllers
                         MFAEnabled = row.Table.Columns.Contains("MFAEnabled") && row["MFAEnabled"] != DBNull.Value ? Convert.ToBoolean(row["MFAEnabled"]) : false,
                         MFASecret = row.Table.Columns.Contains("MFASecret") && row["MFASecret"] != DBNull.Value ? Convert.ToString(row["MFASecret"]) : "",
                         UserID = row["UserID"] != DBNull.Value ? Convert.ToString(row["UserID"]) : "",
+                        RoleName = row.Table.Columns.Contains("RoleName") && row["RoleName"] != DBNull.Value ? Convert.ToString(row["RoleName"]) : "",
                     };
                 }
             }
@@ -443,6 +445,7 @@ namespace eSyncMate.Processor.Controllers
                         CustomerName = row["CustomerName"] != DBNull.Value ? row["CustomerName"].ToString() : "",
                         IsSetupAllowed = row["IsSetupAllowed"] != DBNull.Value ? Convert.ToBoolean(row["IsSetupAllowed"]) : false,
                         UserID = row["UserID"] != DBNull.Value ? Convert.ToString(row["UserID"]) : "",
+                        RoleName = row.Table.Columns.Contains("RoleName") && row["RoleName"] != DBNull.Value ? Convert.ToString(row["RoleName"]) : "",
                     };
 
                     var tokenString = GenerateJSONWebToken(user);

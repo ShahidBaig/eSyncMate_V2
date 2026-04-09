@@ -228,7 +228,7 @@ namespace eSyncMate.Processor.Controllers
                 if (claimsIdentity != null)
                 {
                     var userData = CustomersManager.GetCustomerNames(claimsIdentity);
-                    if (userData.UserType?.ToUpper() != "ADMIN" && !string.IsNullOrEmpty(userData.Customers))
+                    if (!userData.IsSuperAdmin && !string.IsNullOrEmpty(userData.Customers))
                     {
                         l_CustomerFilter = $" AND c.ERPCustomerID IN ({userData.Customers})";
                     }
@@ -302,7 +302,7 @@ namespace eSyncMate.Processor.Controllers
                 if (claimsIdentity != null)
                 {
                     var userData = CustomersManager.GetCustomerNames(claimsIdentity);
-                    if (userData.UserType?.ToUpper() != "ADMIN" && !string.IsNullOrEmpty(userData.Customers))
+                    if (!userData.IsSuperAdmin && !string.IsNullOrEmpty(userData.Customers))
                     {
                         l_CustomerFilter = $" AND ERPCustomerID IN ({userData.Customers})";
                     }

@@ -6,11 +6,11 @@
                 <mat-icon>storefront</mat-icon>
                 <span>{{ getPartnerDisplayName() }} — {{ data.title }}</span>
             </div>
+            <span class="status-badge" [ngClass]="data.status === 'Active' ? 'badge-active' : 'badge-inactive'">
+                <mat-icon class="status-icon">{{ data.status === 'Active' ? 'check_circle' : 'cancel' }}</mat-icon>
+                {{ data.status }}
+            </span>
         </div>
-        <span class="status-badge" [ngClass]="data.status === 'Active' ? 'badge-active' : 'badge-inactive'">
-            <mat-icon class="status-icon">{{ data.status === 'Active' ? 'check_circle' : 'cancel' }}</mat-icon>
-            {{ data.status }}
-        </span>
         <button mat-icon-button class="dialog-close-btn" (click)="onClose()"><mat-icon>close</mat-icon></button>
     </div>
 

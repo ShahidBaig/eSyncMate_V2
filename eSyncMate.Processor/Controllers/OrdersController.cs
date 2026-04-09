@@ -584,7 +584,7 @@ namespace eSyncMate.Processor.Controllers
                 DBConnector l_Conn = new DBConnector(CommonUtils.ConnectionString);
 
                 string l_CustomerFilter = "";
-                if (userData.UserType?.ToUpper() != "ADMIN" && !string.IsNullOrEmpty(userData.Customers))
+                if (!userData.IsSuperAdmin && !string.IsNullOrEmpty(userData.Customers))
                     l_CustomerFilter = $" AND ERPCustomerID IN ({userData.Customers})";
 
                 // Filter by specific customer(s) if provided
@@ -729,7 +729,7 @@ namespace eSyncMate.Processor.Controllers
                 OrderNumber = OrderNumber == "EMPTY" ? string.Empty : OrderNumber;
                 Status = Status == "EMPTY" ? string.Empty : Status;
                 ExternalId = ExternalId == "EMPTY" ? string.Empty : ExternalId;
-                CustomerId = CustomerId == "EMPTY" ? ((!string.IsNullOrEmpty(userData.Customers) && userData.UserType?.ToUpper() != "ADMIN" ? userData.Customers : string.Empty)) : CustomerId;
+                CustomerId = CustomerId == "EMPTY" ? ((!string.IsNullOrEmpty(userData.Customers) && !userData.IsSuperAdmin ? userData.Customers : string.Empty)) : CustomerId;
 
                 l_Response.Code = (int)ResponseCodes.Error;
 

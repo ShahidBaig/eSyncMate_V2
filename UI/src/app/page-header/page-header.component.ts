@@ -70,7 +70,11 @@ export class PageHeaderComponent implements OnInit, OnDestroy {
         }
       }
     }
-    return ["ADMIN"].includes(this.api.getTokenUserInfo()?.userType || '');
+    return this.isSuperAdmin;
+  }
+
+  get isSuperAdmin(): boolean {
+    return (this.api.getTokenUserInfo()?.roleName || '').toLowerCase() === 'superadmin';
   }
 
   constructor(

@@ -188,12 +188,14 @@ namespace eSyncMate.Processor.Models
         RepaintGenerate855 = 502,
         Download856FromShipStation = 503,
         GenerateEDI856ForRepaintRoute = 504,
-        GenerateEDI810ForRepaintRoute = 505
+        GenerateEDI810ForRepaintRoute = 505,
+        // System/Maintenance Routes
+        StaleLockCleanup = 600
     }
 
     public enum AlertTypesEnum
-    { 
-        Customer=1,
+    {
+        Customer = 1,
     }
     public enum ConnectorTypesEnum
     {
@@ -205,13 +207,12 @@ namespace eSyncMate.Processor.Models
 
     public class CommonUtils
     {
-        // Connection strings — set via appsettings.json on target server
-        public static string ConnectionString { get; set; } = "";
-        public static string MySqlConnectionString { get; set; } = "";
+        public static string ConnectionString { get; set; } = "Server=110.93.227.0,1433;Database=ESYNCMATE_TEST;UID=sa;PWD=eSoft#123456;";
+        public static string MySqlConnectionString { get; set; } = "Server=162.241.63.30;Database=geckote1_edi;User=geckote1_esyncmate;Password=Gecko8079;";
         public static string SMTPHost { get; set; } = "smtp.office365.com";
         public static int SMTPPort { get; set; } = 587;
-        public static string FromEmailAccount { get; set; } = "";
-        public static string FromEmailPWD { get; set; } = "";
+        public static string FromEmailAccount { get; set; } = "alerts@SAFAVIEH.COM";
+        public static string FromEmailPWD { get; set; } = "J&510502696059ob";
 
         public static string Company = "eSyncMate";
 
@@ -220,7 +221,7 @@ namespace eSyncMate.Processor.Models
         {
             RestSharp.Method l_Method = RestSharp.Method.Get;
 
-            if(p_Method.Trim().ToLower() == "post")
+            if (p_Method.Trim().ToLower() == "post")
             {
                 l_Method = RestSharp.Method.Post;
             }
@@ -256,19 +257,19 @@ namespace eSyncMate.Processor.Models
 
             foreach (string line in fileData.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries))
             {
-                if(index > 0)
+                if (index > 0)
                 {
                     string[] rows = line.Split(',');
                     dataTable.Rows.Add(rows);
                 }
 
-                index ++;
+                index++;
             }
 
             return dataTable;
         }
 
-        
+
     }
 
     public static class Extensions

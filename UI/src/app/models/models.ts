@@ -27,6 +27,7 @@ export interface User {
   isSetupMenu: string;
   userID: string;
   roleName: string;
+  mfaEnabled: boolean;
 }
 
 // RBAC Models

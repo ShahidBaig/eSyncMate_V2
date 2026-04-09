@@ -130,7 +130,7 @@ namespace eSyncMate.Processor.Controllers
                     l_Criteria = $" ItemID = '{searchModel.SearchValue}'";
                 }
 
-                if (string.IsNullOrEmpty(l_Criteria) && userData.UserType?.ToUpper() != "ADMIN")
+                if (string.IsNullOrEmpty(l_Criteria) && !userData.IsSuperAdmin)
                 {
                     l_Criteria = $" CustomerID IN ({userData.Customers})";
                 }
@@ -400,7 +400,7 @@ namespace eSyncMate.Processor.Controllers
 
             try
             {
-                string l_Criteria = !(string.IsNullOrEmpty(userData.Customers)) && userData.UserType.ToUpper() != "ADMIN" ? $"ERPCustomerID IN ({userData.Customers})" : string.Empty;
+                string l_Criteria = !(string.IsNullOrEmpty(userData.Customers)) && !userData.IsSuperAdmin ? $"ERPCustomerID IN ({userData.Customers})" : string.Empty;
                 
                 Customers l_Customers = new Customers();
 

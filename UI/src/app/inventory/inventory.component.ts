@@ -130,6 +130,13 @@ export class InventoryComponent implements OnInit {
       next: (res: any) => {
         this.customersOptions = res.customers;
         this.filteredCustomerOptions = this.customersOptions || [];
+
+        // Auto-select and load data if user has only 1 customer assigned
+        if (this.customersOptions && this.customersOptions.length === 1) {
+          this.InventoryForm.get('customerID')?.setValue(this.customersOptions[0].erpCustomerID);
+          this.onCustomerChanged();
+          this.getInventory(true);
+        }
       },
     });
   }

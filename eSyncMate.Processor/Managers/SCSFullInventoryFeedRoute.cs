@@ -32,38 +32,68 @@ namespace eSyncMate.Processor.Managers
             int l_CurrentPage = 0;
             bool l_Process = false;
             InventoryBatchWise l_InventoryBatchWise = new InventoryBatchWise();
-            l_InventoryBatchWise.BatchID = Guid.NewGuid().ToString();   
+            l_InventoryBatchWise.BatchID = Guid.NewGuid().ToString();
+            DB.Entities.RouteExecutionLock l_RouteLock = new DB.Entities.RouteExecutionLock();
 
             try
             {
                 ConnectorDataModel? l_SourceConnector = JsonConvert.DeserializeObject<ConnectorDataModel>(route.SourceConnectorObject.Data);
                 ConnectorDataModel? l_DestinationConnector = JsonConvert.DeserializeObject<ConnectorDataModel>(route.DestinationConnectorObject.Data);
 
-                int currentHour = DateTime.Now.Hour;
-
-                if ((currentHour == 5 || currentHour == 6) && route.TypeId == Convert.ToInt32(RouteTypesEnum.SCSDifferentialInventoryFeed))
-                {
-                    route.SaveLog(LogTypeEnum.Debug, "SPARS Full Inventory Feed is in Processing", string.Empty, userNo);
-                    return;
-                }
-
-                SCSFullInventoryFeedRoute.PrepareDataTableColumn(ref l_dataTable);
-
-                route.SaveLog(LogTypeEnum.Info, $"Started executing route [{route.Id}]", string.Empty, userNo);
-
+                // ========== CONNECTOR VALIDATION ==========
                 if (l_SourceConnector == null)
                 {
-                    
                     route.SaveLog(LogTypeEnum.Error, "Source Connector is not setup properly", string.Empty, userNo);
                     return;
                 }
 
                 if (l_DestinationConnector == null)
                 {
-                    //
                     route.SaveLog(LogTypeEnum.Error, "Destination Connector is not setup properly", string.Empty, userNo);
                     return;
                 }
+
+                // ========== CROSS-ROUTE CHECK ==========
+                // Self-lock and same-route overlap already handled by RouteEngine/RouteWorker (Level 1)
+                // Here we only CHECK if the other feed type is running for the same customer (Level 2)
+                //
+                // Full Feed running  → Differential Feed skips (IsLocked check on Full TypeId)
+                // Diff Feed running  → Full Feed skips (IsLocked check on Diff TypeId)
+                // Different customer → no blocking (per-customer lock in RouteEngine)
+                //
+                l_RouteLock.UseConnection(l_DestinationConnector.ConnectionString);
+                string customerID = l_DestinationConnector.CustomerID;
+
+                if (route.TypeId == Convert.ToInt32(RouteTypesEnum.SCSFullInventoryFeed))
+                {
+                    // Full Feed: check if Differential Feed is running for this customer
+                    bool isDiffFeedRunning = l_RouteLock.IsLocked(
+                        customerID,
+                        Convert.ToInt32(RouteTypesEnum.SCSDifferentialInventoryFeed));
+
+                    if (isDiffFeedRunning)
+                    {
+                        route.SaveLog(LogTypeEnum.RouteInfo, $"Differential Feed is running for customer [{customerID}], skipping Full Feed", string.Empty, userNo);
+                        return;
+                    }
+                }
+                else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.SCSDifferentialInventoryFeed))
+                {
+                    // Differential Feed: check if Full Feed is running for this customer
+                    bool isFullFeedRunning = l_RouteLock.IsLocked(
+                        customerID,
+                        Convert.ToInt32(RouteTypesEnum.SCSFullInventoryFeed));
+
+                    if (isFullFeedRunning)
+                    {
+                        route.SaveLog(LogTypeEnum.RouteInfo, $"Full Inventory Feed is running for customer [{customerID}], skipping Differential Feed", string.Empty, userNo);
+                        return;
+                    }
+                }
+
+                SCSFullInventoryFeedRoute.PrepareDataTableColumn(ref l_dataTable);
+
+                route.SaveLog(LogTypeEnum.Info, $"Started executing route [{route.Id}]", string.Empty, userNo);
 
                 if (l_SourceConnector.Parmeters != null)
                 {
@@ -237,8 +267,9 @@ namespace eSyncMate.Processor.Managers
 
                 route.SaveLog(LogTypeEnum.Exception, $"Error executing the route [{route.Id}]", ex.ToString(), userNo);
             }
-            finally 
+            finally
             {
+                // Lock release is handled by RouteEngine/RouteWorker (Level 1)
                 l_dataTable.Dispose();
             }
         }

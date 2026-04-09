@@ -100,7 +100,7 @@
         <mat-icon>lock</mat-icon>
         <span>{{ 'changePassword' | translate }}</span>
       </button>
-      <button mat-menu-item routerLink="/register" *ngIf="isAdminUser">
+      <button mat-menu-item routerLink="/register" *ngIf="isSuperAdmin">
         <mat-icon>person_add</mat-icon>
         <span>{{ 'addUser' | translate }}</span>
       </button>

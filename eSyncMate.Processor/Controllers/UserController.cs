@@ -141,9 +141,17 @@ namespace eSyncMate.Processor.Controllers
                 DB.Entities.Users l_User = new DB.Entities.Users();
                 l_User.UseConnection(CommonUtils.ConnectionString);
 
+                // Load existing user to preserve MFASecret
+                l_User.Id = UserModel.Id;
+                l_User.GetObject();
+                string existingMFASecret = l_User.MFASecret;
+
                 PublicFunctions.CopyTo(UserModel, l_User);
 
                 l_User.Password =  PublicFunctions.Encrypt(l_User.Password);
+
+                // Preserve MFASecret — only resetMFA endpoint should clear it
+                l_User.MFASecret = existingMFASecret;
 
                 l_Result = l_User.Modify();
 
@@ -167,6 +175,38 @@ namespace eSyncMate.Processor.Controllers
             finally
             {
 
+            }
+
+            return l_Response;
+        }
+
+        [HttpPost]
+        [Route("resetMFA/{userId}")]
+        public async Task<ResponseModel> ResetMFA(int userId)
+        {
+            ResponseModel l_Response = new ResponseModel();
+
+            try
+            {
+                DBConnector l_Conn = new DBConnector(CommonUtils.ConnectionString);
+                bool result = l_Conn.Execute($"UPDATE Users SET MFASecret = '' WHERE Id = {userId}");
+
+                if (result)
+                {
+                    l_Response.Code = (int)ResponseCodes.Success;
+                    l_Response.Message = "MFA has been reset successfully. User will need to scan QR code on next login.";
+                    l_Response.Description = $"MFA reset for User [{userId}]";
+                }
+                else
+                {
+                    l_Response.Code = (int)ResponseCodes.Error;
+                    l_Response.Message = "Failed to reset MFA.";
+                }
+            }
+            catch (Exception ex)
+            {
+                l_Response.Code = (int)ResponseCodes.Exception;
+                l_Response.Message = ex.Message;
             }
 
             return l_Response;

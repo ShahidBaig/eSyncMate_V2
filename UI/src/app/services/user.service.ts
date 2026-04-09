@@ -36,4 +36,8 @@ export class UserService {
     return this.http.get(`${this.apiUrl}api/ProductUploadPrices/getERPCustomers`);
   }
 
+  resetMFA(userId: number): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}api/User/resetMFA/${userId}`, {});
+  }
+
 }
