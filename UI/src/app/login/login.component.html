@@ -1,4 +1,4 @@
-<!-- Animated background shapes -->
+<!-- Animated background bubbles -->
 <div class="bg-shape bg-shape-1"></div>
 <div class="bg-shape bg-shape-2"></div>
 <div class="bg-shape bg-shape-3"></div>
@@ -9,11 +9,11 @@
     <div class="login-card" [class.mfa-card-wide]="!isLoginView">
       <!-- Logo (always visible) -->
       <div class="login-logo" [class.mfa-logo-centered]="!isLoginView">
-        <svg class="logo-svg" width="40" height="32" viewBox="0 0 50 40" xmlns="http://www.w3.org/2000/svg">
-          <polygon points="5,0 30,20 5,40" fill="#a0644a"/>
-          <polygon points="18,0 43,20 18,40" fill="#E8834A"/>
+        <svg class="logo-svg" width="50" height="40" viewBox="0 0 50 40" xmlns="http://www.w3.org/2000/svg">
+          <polygon points="5,0 30,20 5,40" fill="#E8834A"/>
+          <polygon points="18,0 43,20 18,40" fill="#a0644a"/>
         </svg>
-        <span class="logo-caption">e<span class="logo-highlight">Sync</span>Mate</span>
+        <span class="logo-caption">eSyncMate</span>
       </div>
 
       <!-- ========== VIEW 1: LOGIN FORM ========== -->
@@ -62,7 +62,7 @@
 
           <button class="login-submit-btn login-cancel-btn" (click)="cancel()" type="button">
             <mat-icon class="btn-icon">refresh</mat-icon>
-            <span>Clear</span>
+            <span>{{ 'clear' | translate }}</span>
           </button>
         </form>
 
@@ -70,21 +70,21 @@
         <div class="trust-section">
           <div class="trust-item">
             <mat-icon class="trust-icon">verified_user</mat-icon>
-            <span>Secured with JWT Authentication</span>
+            <span>{{ 'trust.jwt' | translate }}</span>
           </div>
           <div class="trust-item">
             <mat-icon class="trust-icon">lock</mat-icon>
-            <span>Two-Factor Authentication (MFA)</span>
+            <span>{{ 'trust.mfa' | translate }}</span>
           </div>
           <div class="trust-item">
             <mat-icon class="trust-icon">shield</mat-icon>
-            <span>Role-Based Access Control</span>
+            <span>{{ 'trust.rbac' | translate }}</span>
           </div>
         </div>
 
         <p class="login-terms">
-          By clicking Log In, you agree to our
-          <a routerLink="/terms-of-use" target="_blank">Terms of Use</a> and <a routerLink="/privacy-policy" target="_blank">Privacy Policy</a>
+          {{ 'loginTerms' | translate }}
+          <a routerLink="/terms-of-use" target="_blank">{{ 'termsOfUse' | translate }}</a> and <a routerLink="/privacy-policy" target="_blank">{{ 'privacyPolicy' | translate }}</a>
         </p>
       </ng-container>
 
@@ -179,7 +179,7 @@
 
       <!-- Footer -->
       <div class="login-footer">
-        <span>&copy; 2026 eSyncMate by eSoftage. All rights reserved.</span>
+        <span>&copy; {{ 'loginFooter' | translate }}</span>
       </div>
     </div>
   </div>
@@ -189,50 +189,50 @@
 
     <div class="feature-header">
       <div class="feature-header-top">
-        <svg width="36" height="28" viewBox="0 0 50 40" xmlns="http://www.w3.org/2000/svg">
-          <polygon points="5,0 30,20 5,40" fill="#a0644a"/>
-          <polygon points="18,0 43,20 18,40" fill="#E8834A"/>
+        <svg class="feature-logo-svg" width="40" height="32" viewBox="0 0 50 40" xmlns="http://www.w3.org/2000/svg">
+          <polygon points="5,0 30,20 5,40" fill="#E8834A"/>
+          <polygon points="18,0 43,20 18,40" fill="#a0644a"/>
         </svg>
-        <h2>API Integration Platform</h2>
+        <h2>{{ 'feature.title' | translate }}</h2>
       </div>
-      <p>Seamless marketplace connectivity</p>
+      <p>{{ 'feature.subtitle' | translate }}</p>
     </div>
 
     <div class="feature-card">
       <div class="feature-card-header">
         <div class="feature-card-icon"><mat-icon>storefront</mat-icon></div>
-        <span class="feature-card-badge">Marketplaces</span>
+        <span class="feature-card-badge">{{ 'feature.badgeMarketplaces' | translate }}</span>
       </div>
-      <h3>Multi-Partner Integration</h3>
-      <p>Connect with Amazon, Walmart, Target, Lowe's, Macy's, Michaels, Knot and more through a unified platform.</p>
+      <h3>{{ 'feature.multiPartnerTitle' | translate }}</h3>
+      <p>{{ 'feature.multiPartnerDesc' | translate }}</p>
     </div>
 
     <div class="feature-card">
       <div class="feature-card-header">
         <div class="feature-card-icon"><mat-icon>inventory_2</mat-icon></div>
-        <span class="feature-card-badge">Automation</span>
+        <span class="feature-card-badge">{{ 'feature.badgeAutomation' | translate }}</span>
       </div>
-      <h3>Real-Time Inventory Sync</h3>
-      <p>Automated inventory feeds, order processing, ASN shipments and catalog management across all channels.</p>
+      <h3>{{ 'feature.inventorySyncTitle' | translate }}</h3>
+      <p>{{ 'feature.inventorySyncDesc' | translate }}</p>
     </div>
 
     <div class="feature-card">
       <div class="feature-card-header">
         <div class="feature-card-icon"><mat-icon>dashboard</mat-icon></div>
-        <span class="feature-card-badge">Analytics</span>
+        <span class="feature-card-badge">{{ 'feature.badgeAnalytics' | translate }}</span>
       </div>
-      <h3>Live Dashboard & Alerts</h3>
-      <p>Monitor order status, track inventory feeds and receive instant email alerts for exceptions.</p>
+      <h3>{{ 'feature.dashboardAlertsTitle' | translate }}</h3>
+      <p>{{ 'feature.dashboardAlertsDesc' | translate }}</p>
     </div>
 
     <div class="stats-row">
       <div class="stat-card">
-        <span class="stat-value">8+</span>
-        <span class="stat-label">Partners</span>
+        <span class="stat-value">80+</span>
+        <span class="stat-label">{{ 'feature.partners' | translate }}</span>
       </div>
       <div class="stat-card">
         <span class="stat-value">24/7</span>
-        <span class="stat-label">Monitoring</span>
+        <span class="stat-label">{{ 'feature.monitoring' | translate }}</span>
       </div>
     </div>
 

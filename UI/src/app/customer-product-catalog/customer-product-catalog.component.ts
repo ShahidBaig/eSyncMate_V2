@@ -121,6 +121,8 @@ export class CustomerProductCatalogComponent {
   listOfHistoryCustomerProductCatalog: HistoryCustomerProductCatalog[] = [];
   historyCustomerProductCatalogToDisplay: HistoryCustomerProductCatalog[] = [];
   customersOptions: Customers[] | undefined;
+  filteredCustomersOptions: Customers[] = [];
+  customerSearchText: string = '';
   isAdminUser: boolean = false;
   canAdd = false;
   canEdit = false;
@@ -209,8 +211,23 @@ export class CustomerProductCatalogComponent {
     this.api.getERPCustomers().subscribe({
       next: (res: any) => {
         this.customersOptions = res.customers;
+        this.filteredCustomersOptions = this.customersOptions || [];
       },
     });
+  }
+
+  filterCustomers(): void {
+    const search = (this.customerSearchText || '').toLowerCase();
+    this.filteredCustomersOptions = (this.customersOptions || []).filter(c =>
+      c.erpCustomerID.toLowerCase().includes(search)
+    );
+  }
+
+  onCustomerDropdownOpened(opened: boolean): void {
+    if (opened) {
+      this.customerSearchText = '';
+      this.filteredCustomersOptions = this.customersOptions || [];
+    }
   }
 
   // Upload section handlers

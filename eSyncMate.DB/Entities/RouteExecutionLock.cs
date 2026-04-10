@@ -26,6 +26,9 @@ namespace eSyncMate.DB.Entities
         /// </summary>
         public string AcquireLock(string customerID, int routeTypeId, int routeId)
         {
+            // Safety check: ensure table exists on client DB
+            if (!EnsureTableExists()) return null;
+
             string lockToken = Guid.NewGuid().ToString();
             string machineName = Environment.MachineName;
 
@@ -49,11 +52,13 @@ namespace eSyncMate.DB.Entities
                 new SqlParameter("@MachineName", SqlDbType.VarChar, 100) { Value = machineName }
             };
 
-            bool result = _connection.Execute(query, p_SQLParams: parameters);
+            _connection.Execute(query, p_SQLParams: parameters);
 
             // Check if the row was actually inserted by querying for our token
-            string checkQuery = "SELECT COUNT(1) FROM [RouteExecutionLock] WHERE [LockToken] = @LockToken AND [IsActive] = 1";
-            object checkResult = _connection.ExecuteScalar(checkQuery.Replace("@LockToken", "'" + lockToken + "'"));
+            // Note: ExecuteScalar doesn't support SqlParameter, so use sanitized literal
+            string safeToken = lockToken.Replace("'", "''");
+            string checkQuery = $"SELECT COUNT(1) FROM [RouteExecutionLock] WHERE [LockToken] = '{safeToken}' AND [IsActive] = 1";
+            object checkResult = _connection.ExecuteScalar(checkQuery);
             int count = Convert.ToInt32(checkResult ?? 0);
 
             return count > 0 ? lockToken : null;
@@ -82,9 +87,12 @@ namespace eSyncMate.DB.Entities
         /// </summary>
         public bool IsLocked(string customerID, int routeTypeId)
         {
+            if (!EnsureTableExists()) return false;
+
+            string safeCustomerID = (customerID ?? "").Replace("'", "''");
             string query = $@"
                 SELECT COUNT(1) FROM [RouteExecutionLock] WITH (NOLOCK)
-                WHERE [CustomerID] = '{customerID}'
+                WHERE [CustomerID] = '{safeCustomerID}'
                   AND [RouteTypeId] = {routeTypeId}
                   AND [IsActive] = 1
                   AND DATEDIFF(MINUTE, [AcquiredAt], GETDATE()) <= 60";
@@ -101,7 +109,8 @@ namespace eSyncMate.DB.Entities
         /// </summary>
         public int CleanStaleLocks(int timeoutMinutes = 60)
         {
-            // Combined query: update and return count in single execution
+            if (!EnsureTableExists()) return 0;
+
             string query = $@"
                 UPDATE [RouteExecutionLock]
                 SET [IsActive] = 0
@@ -111,6 +120,40 @@ namespace eSyncMate.DB.Entities
 
             object result = _connection.ExecuteScalar(query);
             return Convert.ToInt32(result ?? 0);
+        }
+
+        /// <summary>
+        /// Verifies RouteExecutionLock table exists. If missing, auto-creates it.
+        /// Prevents silent failures on client deployments where migration was not run.
+        /// </summary>
+        private bool EnsureTableExists()
+        {
+            try
+            {
+                string checkQuery = @"
+                    IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'RouteExecutionLock')
+                    BEGIN
+                        CREATE TABLE [RouteExecutionLock] (
+                            [Id] BIGINT IDENTITY(1,1) PRIMARY KEY,
+                            [CustomerID] VARCHAR(50) NOT NULL,
+                            [RouteTypeId] INT NOT NULL,
+                            [RouteId] INT NOT NULL,
+                            [LockToken] VARCHAR(50) NOT NULL,
+                            [AcquiredAt] DATETIME NOT NULL DEFAULT GETDATE(),
+                            [MachineName] VARCHAR(100) NULL,
+                            [IsActive] BIT NOT NULL DEFAULT 1
+                        );
+                        CREATE INDEX IX_RouteExecutionLock_Active ON [RouteExecutionLock] ([CustomerID], [RouteTypeId], [IsActive]) WHERE [IsActive] = 1;
+                    END
+                    SELECT 1;";
+
+                _connection.ExecuteScalar(checkQuery);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
         }
     }
 }

@@ -42,8 +42,11 @@
                 <mat-form-field appearance="outline" class="search-field">
                   <mat-label>Select Customer</mat-label>
                   <mat-icon matPrefix>inventory_2</mat-icon>
-                  <mat-select [(ngModel)]="searchValue">
-                    <mat-option *ngFor="let customer of customersOptions" [value]="customer.erpCustomerID">
+                  <mat-select [(ngModel)]="searchValue" (openedChange)="onCustomerDropdownOpened($event)">
+                    <div class="select-search-container">
+                      <input class="select-search-input" placeholder="Search customers..." [(ngModel)]="customerSearchText" (input)="filterCustomers()" (keydown)="$event.stopPropagation()">
+                    </div>
+                    <mat-option *ngFor="let customer of filteredCustomersOptions" [value]="customer.erpCustomerID">
                       {{ customer.erpCustomerID }}
                     </mat-option>
                   </mat-select>
@@ -91,8 +94,11 @@
             <div class="control-row">
               <mat-form-field appearance="outline" class="search-field">
                 <mat-label>ERP Customer ID</mat-label>
-                <mat-select [(ngModel)]="erpCustomerID" (selectionChange)="onCustomerSelectionChange($event)">
-                  <mat-option *ngFor="let customers of customersOptions" [value]="customers.erpCustomerID">
+                <mat-select [(ngModel)]="erpCustomerID" (selectionChange)="onCustomerSelectionChange($event)" (openedChange)="onCustomerDropdownOpened($event)">
+                  <div class="select-search-container">
+                    <input class="select-search-input" placeholder="Search customers..." [(ngModel)]="customerSearchText" (input)="filterCustomers()" (keydown)="$event.stopPropagation()">
+                  </div>
+                  <mat-option *ngFor="let customers of filteredCustomersOptions" [value]="customers.erpCustomerID">
                     {{ customers.erpCustomerID }}
                   </mat-option>
                 </mat-select>
@@ -137,8 +143,11 @@
             <div class="control-row">
               <mat-form-field appearance="outline" class="search-field">
                 <mat-label>ERP Customer ID</mat-label>
-                <mat-select [(ngModel)]="actionsErpCustomerID" (selectionChange)="onActionsCustomerChange($event)">
-                  <mat-option *ngFor="let customers of customersOptions" [value]="customers.erpCustomerID">
+                <mat-select [(ngModel)]="actionsErpCustomerID" (selectionChange)="onActionsCustomerChange($event)" (openedChange)="onCustomerDropdownOpened($event)">
+                  <div class="select-search-container">
+                    <input class="select-search-input" placeholder="Search customers..." [(ngModel)]="customerSearchText" (input)="filterCustomers()" (keydown)="$event.stopPropagation()">
+                  </div>
+                  <mat-option *ngFor="let customers of filteredCustomersOptions" [value]="customers.erpCustomerID">
                     {{ customers.erpCustomerID }}
                   </mat-option>
                 </mat-select>
@@ -188,8 +197,11 @@
       <div class="download-controls">
         <mat-form-field appearance="outline" class="download-field">
           <mat-label>ERP Customer ID</mat-label>
-          <mat-select [(ngModel)]="downloadErpCustomerID" (selectionChange)="onDownloadCustomerChange($event)">
-            <mat-option *ngFor="let customers of customersOptions" [value]="customers.erpCustomerID">
+          <mat-select [(ngModel)]="downloadErpCustomerID" (selectionChange)="onDownloadCustomerChange($event)" (openedChange)="onCustomerDropdownOpened($event)">
+            <div class="select-search-container">
+              <input class="select-search-input" placeholder="Search customers..." [(ngModel)]="customerSearchText" (input)="filterCustomers()" (keydown)="$event.stopPropagation()">
+            </div>
+            <mat-option *ngFor="let customers of filteredCustomersOptions" [value]="customers.erpCustomerID">
               {{ customers.erpCustomerID }}
             </mat-option>
           </mat-select>

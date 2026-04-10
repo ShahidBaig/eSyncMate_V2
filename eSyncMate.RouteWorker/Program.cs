@@ -33,9 +33,6 @@ namespace eSyncMate.RouteWorker
 
         static async Task ExecuteRoute(int routeId)
         {
-            string dbLockToken = null;
-            DB.Entities.RouteExecutionLock routeLock = new DB.Entities.RouteExecutionLock();
-
             try
             {
                 // Build configuration - use executable directory, not current directory
@@ -54,6 +51,7 @@ namespace eSyncMate.RouteWorker
 
                 if (!route.GetObject().IsSuccess)
                 {
+                    Console.Error.WriteLine($"[RouteWorker] Route [{routeId}] not found in database.");
                     Environment.ExitCode = 1;
                     return;
                 }
@@ -64,15 +62,9 @@ namespace eSyncMate.RouteWorker
                     return;
                 }
 
-                // DB-based lock: prevents execution if same route is already running
-                routeLock.UseConnection(CommonUtils.ConnectionString);
-                dbLockToken = routeLock.AcquireLock(route.CustomerName, route.TypeId, routeId);
-                if (dbLockToken == null)
-                {
-                    route.SaveLog(Declarations.LogTypeEnum.RouteInfo, $"[RouteWorker] Route [{routeId}] is already running (DB lock held), skipping.", "", 1);
-                    Environment.ExitCode = 0;
-                    return;
-                }
+                // NOTE: DB lock is already held by the parent Processor (RouteEngine.ExecuteExternal).
+                // RouteWorker must NOT acquire its own lock — it would fail because the parent lock exists.
+                // The parent Processor releases the lock after this process exits.
 
                 ExecuteRouteByType(configuration, route);
 
@@ -80,25 +72,8 @@ namespace eSyncMate.RouteWorker
             }
             catch (Exception ex)
             {
+                Console.Error.WriteLine($"[RouteWorker] Fatal error executing route [{routeId}]: {ex.Message}");
                 Environment.ExitCode = 1;
-            }
-            finally
-            {
-                // Release DB lock
-                if (!string.IsNullOrEmpty(dbLockToken))
-                {
-                    try { routeLock.ReleaseLock(dbLockToken); }
-                    catch
-                    {
-                        try
-                        {
-                            var fallback = new DB.Entities.RouteExecutionLock();
-                            fallback.UseConnection(CommonUtils.ConnectionString);
-                            fallback.ReleaseLock(dbLockToken);
-                        }
-                        catch { /* stale lock cleanup will handle */ }
-                    }
-                }
             }
         }
 

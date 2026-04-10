@@ -298,16 +298,23 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
   }
 
+  getStatusConfig(status: string): { icon: string; color: string; bg: string } {
+    // Case-insensitive lookup: try exact match first, then uppercase match
+    if (this.allStatusConfig[status]) return this.allStatusConfig[status];
+    const key = Object.keys(this.allStatusConfig).find(k => k.toUpperCase() === (status || '').toUpperCase());
+    return key ? this.allStatusConfig[key] : { icon: 'info', color: '#424242', bg: '#f5f5f5' };
+  }
+
   getStatusIcon(status: string): string {
-    return this.allStatusConfig[status]?.icon || 'info';
+    return this.getStatusConfig(status).icon;
   }
 
   getStatusColor(status: string): string {
-    return this.allStatusConfig[status]?.color || '#424242';
+    return this.getStatusConfig(status).color;
   }
 
   getStatusBg(status: string): string {
-    return this.allStatusConfig[status]?.bg || '#f5f5f5';
+    return this.getStatusConfig(status).bg;
   }
 
   loadInventoryStats(): void {
@@ -402,32 +409,38 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   buildStatusTiles(): void {
+    // Always show the same statusConfig statuses, with count from API or 0
+    // Case-insensitive match to handle DB returning 'New' vs config 'NEW'
     this.statusTiles = Object.keys(this.statusConfig).map(key => {
       const config = this.statusConfig[key];
-      const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase()).trim();
+      const label = key;
+      const keyUpper = key.toUpperCase();
+      const found = this.statusStats.find(s => (s.status || '').toUpperCase() === keyUpper);
       return {
         key,
         label,
         icon: config.icon,
         color: config.color,
         bg: config.bg,
-        count: this.getStatusCount(key)
+        count: found ? found.statusCount : 0
       };
     });
   }
 
   getPartnerAllStatuses(erpCustomerID: string): StatusStat[] {
+    // Always show the same statusConfig statuses per partner, with count or 0
+    // Case-insensitive match
     const existing = this.partnerStatuses[erpCustomerID] || [];
-    const allKeys = Object.keys(this.statusConfig);
-    return allKeys.map(key => {
-      const found = existing.find(s => s.status === key);
+    return Object.keys(this.statusConfig).map(key => {
+      const keyUpper = key.toUpperCase();
+      const found = existing.find(s => (s.status || '').toUpperCase() === keyUpper);
       return { status: key, statusCount: found ? found.statusCount : 0 };
     });
   }
 
   openStatusDrilldown(status: string, customerID: string = ''): void {
-    const config = this.allStatusConfig[status] || { icon: 'info', color: '#424242' };
-    const label = status.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase()).trim();
+    const config = this.getStatusConfig(status);
+    const label = status;
     const partnerLabel = customerID ? ` — ${customerID}` : '';
 
     this.dialog.open(OrdersDrilldownDialogComponent, {

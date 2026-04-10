@@ -573,3 +573,36 @@
   &:hover { color: #1d4ed8; }
 }
 
+/* ===== SEARCHABLE DROPDOWN ===== */
+::ng-deep .select-search-container {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #fff;
+  padding: 8px 10px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+::ng-deep .select-search-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: 'Poppins', sans-serif;
+  outline: none;
+  box-sizing: border-box;
+  background: #f8fafc;
+  transition: all 0.15s;
+
+  &:focus {
+    border-color: #E8834A;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(232, 131, 74, 0.1);
+  }
+
+  &::placeholder {
+    color: #94a3b8;
+  }
+}
+

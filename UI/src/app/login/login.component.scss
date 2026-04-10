@@ -22,23 +22,53 @@ $green:         #16a34a;
   height: 100vh;
   overflow: hidden;
   box-sizing: border-box;
-  background: linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 30%, #fce8db 60%, #f0f4f8 100%);
+  background: #f4ede7;
   font-family: 'Poppins', 'Segoe UI', sans-serif;
   position: relative;
+
+  // Layered mesh gradient — fancy modern look
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background:
+      radial-gradient(ellipse 800px 600px at 0% 0%, rgba(232,131,74,0.18), transparent 60%),
+      radial-gradient(ellipse 600px 500px at 100% 100%, rgba(59,130,246,0.12), transparent 60%),
+      radial-gradient(ellipse 500px 400px at 80% 0%, rgba(168,85,247,0.08), transparent 60%),
+      radial-gradient(ellipse 400px 500px at 0% 100%, rgba(59,130,246,0.06), transparent 60%),
+      radial-gradient(ellipse 300px 300px at 50% 50%, rgba(232,131,74,0.06), transparent 60%);
+    z-index: 0;
+    animation: meshShift 30s infinite ease-in-out alternate;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background:
+      radial-gradient(circle 250px at 15% 70%, rgba(232,131,74,0.1), transparent),
+      radial-gradient(circle 200px at 85% 25%, rgba(59,130,246,0.08), transparent),
+      radial-gradient(circle 180px at 50% 90%, rgba(168,85,247,0.06), transparent);
+    z-index: 0;
+    animation: meshShift 25s infinite ease-in-out alternate-reverse;
+  }
+
+  @keyframes meshShift {
+    0% { transform: scale(1) translate(0, 0); }
+    50% { transform: scale(1.05) translate(20px, -15px); }
+    100% { transform: scale(1) translate(-10px, 10px); }
+  }
 }
 
-// ============================================================
-// Animated Background Shapes
-// ============================================================
+// Animated background shapes
 .bg-shape {
   position: absolute;
   border-radius: 50%;
-  opacity: 0.06;
   animation: float 20s infinite ease-in-out;
 }
-.bg-shape-1 { width: 600px; height: 600px; background: $orange; top: -200px; left: -100px; animation-delay: 0s; opacity: 0.08; }
-.bg-shape-2 { width: 400px; height: 400px; background: #3b82f6; bottom: -150px; right: -100px; animation-delay: -7s; opacity: 0.06; }
-.bg-shape-3 { width: 300px; height: 300px; background: $orange; top: 50%; right: 20%; animation-delay: -14s; opacity: 0.07; }
+.bg-shape-1 { width: 600px; height: 600px; background: radial-gradient(circle, #e8a87a 0%, #d4884e 50%, #b8651a 100%); top: -200px; left: -100px; animation-delay: 0s; opacity: 0.4; }
+.bg-shape-2 { width: 400px; height: 400px; background: radial-gradient(circle, #8ab6e0 0%, #5a94cc 50%, #3570a8 100%); bottom: -150px; right: -100px; animation-delay: -7s; opacity: 0.35; }
+.bg-shape-3 { width: 300px; height: 300px; background: radial-gradient(circle, #e8a87a 0%, #d4884e 50%, #b8651a 100%); top: 50%; right: 20%; animation-delay: -14s; opacity: 0.35; }
 
 @keyframes float {
   0%, 100% { transform: translate(0, 0) rotate(0deg); }
@@ -52,13 +82,13 @@ $green:         #16a34a;
 .login-page {
   display: grid;
   grid-template-columns: 480px 1fr;
-  gap: 0;
-  max-width: 1000px;
+  gap: 32px;
+  max-width: 1060px;
   width: 95%;
   min-height: 620px;
-  border-radius: 20px;
-  overflow: hidden;
-  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.15);
+  border-radius: 0;
+  overflow: visible;
+  box-shadow: none;
   position: relative;
   z-index: 1;
 }
@@ -91,10 +121,13 @@ $green:         #16a34a;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  background: $white;
+  background: linear-gradient(180deg, #f0ebe6 0%, #faf8f6 40%, $white 100%);
   padding: 50px 48px;
   width: 100%;
   flex: 1;
+  border-radius: 20px;
+  border: 1.5px solid rgba(0, 0, 0, 0.12);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.12);
 }
 
 .login-form {
@@ -121,10 +154,6 @@ $green:         #16a34a;
     color: #1a1a2e;
     letter-spacing: -0.3px;
   }
-
-  .logo-highlight {
-    color: $orange;
-  }
 }
 
 // Title
@@ -132,7 +161,7 @@ $green:         #16a34a;
   font-size: 28px;
   font-weight: 800;
   color: #1a1a2e;
-  margin: 0 0 6px;
+  margin: 0 0 20px;
   letter-spacing: -0.3px;
 }
 
@@ -170,7 +199,7 @@ $green:         #16a34a;
 // Form
 // ============================================================
 .field-group {
-  margin-bottom: 4px;
+  margin-bottom: 14px;
 }
 
 .field-label {
@@ -317,7 +346,7 @@ $green:         #16a34a;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s ease;
-  margin-top: 8px;
+  margin-top: 16px;
   box-shadow: 0 4px 16px rgba(232, 131, 74, 0.35);
   letter-spacing: 0.3px;
 
@@ -369,8 +398,8 @@ $green:         #16a34a;
 .trust-section {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin-top: 28px;
+  gap: 12px;
+  margin-top: 32px;
   padding: 20px;
   background: $gray-50;
   border-radius: 10px;
@@ -395,7 +424,7 @@ $green:         #16a34a;
 
 // Terms
 .login-terms {
-  margin: 20px 0 0;
+  margin: 24px 0 0;
   font-size: 12px;
   color: $gray-600;
   line-height: 1.6;
@@ -415,8 +444,8 @@ $green:         #16a34a;
 
 // Footer
 .login-footer {
-  margin-top: 10px;
-  padding-top: 16px;
+  margin-top: 20px;
+  padding-top: 18px;
   border-top: 1px solid $gray-100;
   font-size: 11px;
   color: $gray-500;
@@ -427,14 +456,17 @@ $green:         #16a34a;
 // Right Column: Feature Panel
 // ============================================================
 .feature-panel {
-  background: linear-gradient(160deg, #fff5ee 0%, #fde8d8 100%);
-  padding: 36px 32px;
+  background: linear-gradient(180deg, #e8d5c4 0%, #f5ece4 40%, #fdf8f4 100%);
+  padding: 40px 36px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 18px;
   position: relative;
   overflow: hidden;
   justify-content: center;
+  border-radius: 20px;
+  border: 1.5px solid rgba(0, 0, 0, 0.12);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.12);
 
   &::before {
     content: '';
@@ -473,6 +505,10 @@ $green:         #16a34a;
   align-items: center;
   gap: 10px;
   margin-bottom: 6px;
+
+  .feature-logo-svg {
+    flex-shrink: 0;
+  }
 }
 
 // Feature cards
@@ -543,34 +579,37 @@ $green:         #16a34a;
   color: $orange-dark;
 }
 
-// Stats row
+// Stats row — fills remaining space at bottom
 .stats-row {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
+  gap: 12px;
   margin-top: auto;
   position: relative;
   z-index: 1;
+  flex: 1;
+  align-content: end;
 }
 
 .stat-card {
   background: $white;
   border: 1px solid #f0d5c0;
-  border-radius: 10px;
-  padding: 16px 14px;
+  border-radius: 14px;
+  padding: 24px 14px;
   text-align: center;
   box-shadow: 0 2px 8px rgba(232, 131, 74, 0.08);
 }
 
 .stat-value {
-  font-size: 22px;
+  font-size: 28px;
   font-weight: 800;
   color: $orange;
   display: block;
+  margin-bottom: 4px;
 }
 
 .stat-label {
-  font-size: 11px;
+  font-size: 12px;
   color: $gray-600;
   text-transform: uppercase;
   letter-spacing: 0.5px;

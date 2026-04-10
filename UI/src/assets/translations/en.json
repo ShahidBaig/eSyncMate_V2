@@ -377,5 +377,30 @@
   "frequencyType": "Frequency Type",
   "repeatCount": "Repeat Count",
   "executionTime": "Execution Time",
-  "onDay": "On Day"
+  "onDay": "On Day",
+  "feature": {
+    "title": "API Integration Platform",
+    "subtitle": "Seamless marketplace connectivity",
+    "badgeMarketplaces": "Marketplaces",
+    "badgeAutomation": "Automation",
+    "badgeAnalytics": "Analytics",
+    "multiPartnerTitle": "Multi-Partner Integration",
+    "multiPartnerDesc": "Connect with Amazon, Walmart, Target, Lowe's, Macy's, Michaels, Knot and more through a unified platform.",
+    "inventorySyncTitle": "Real-Time Inventory Sync",
+    "inventorySyncDesc": "Automated inventory feeds, order processing, ASN shipments and catalog management across all channels.",
+    "dashboardAlertsTitle": "Live Dashboard & Alerts",
+    "dashboardAlertsDesc": "Monitor order status, track inventory feeds and receive instant email alerts for exceptions.",
+    "partners": "Partners",
+    "monitoring": "Monitoring"
+  },
+  "trust": {
+    "jwt": "Secured with JWT Authentication",
+    "mfa": "Two-Factor Authentication (MFA)",
+    "rbac": "Role-Based Access Control"
+  },
+  "loginTerms": "By clicking Log In, you agree to our",
+  "termsOfUse": "Terms of Use",
+  "privacyPolicy": "Privacy Policy",
+  "loginFooter": "2026 eSyncMate by eSoftage. All rights reserved.",
+  "clear": "Clear"
 }

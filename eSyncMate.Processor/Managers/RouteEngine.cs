@@ -10,8 +10,6 @@ namespace eSyncMate.Processor.Managers
     {
         private readonly IConfiguration _config;
 
-        private static DB.Entities.RouteExecutionLock _routeLock = new DB.Entities.RouteExecutionLock();
-
         // Configuration flag to switch between in-process and external process execution
         private bool UseExternalProcess => _config?.GetValue<bool>("RouteEngine:UseExternalProcess") ?? false;
         private string ExternalProcessPath
@@ -44,6 +42,7 @@ namespace eSyncMate.Processor.Managers
         {
             Routes route = new Routes();
             string dbLockToken = null;
+            var routeLock = new DB.Entities.RouteExecutionLock();
 
             try
             {
@@ -62,8 +61,8 @@ namespace eSyncMate.Processor.Managers
                 }
 
                 // DB-based lock: prevents re-dispatch if Processor restarts while RouteWorker is running
-                _routeLock.UseConnection(CommonUtils.ConnectionString);
-                dbLockToken = _routeLock.AcquireLock(route.CustomerName, route.TypeId, routeId);
+                routeLock.UseConnection(CommonUtils.ConnectionString);
+                dbLockToken = routeLock.AcquireLock(route.CustomerName, route.TypeId, routeId);
                 if (dbLockToken == null)
                 {
                     route.SaveLog(Declarations.LogTypeEnum.RouteInfo, $"Route [{routeId}] is already running (DB lock held), skipping.", "", 1);
@@ -133,7 +132,7 @@ namespace eSyncMate.Processor.Managers
                 // Release DB lock
                 if (!string.IsNullOrEmpty(dbLockToken))
                 {
-                    try { _routeLock.ReleaseLock(dbLockToken); }
+                    try { routeLock.ReleaseLock(dbLockToken); }
                     catch
                     {
                         try
@@ -173,6 +172,7 @@ namespace eSyncMate.Processor.Managers
 
             Routes route = new Routes();
             string dbLockToken = null;
+            var routeLock = new DB.Entities.RouteExecutionLock();
 
             try
             {
@@ -190,8 +190,8 @@ namespace eSyncMate.Processor.Managers
                 }
 
                 // DB-based lock: cross-process self-lock for all routes
-                _routeLock.UseConnection(CommonUtils.ConnectionString);
-                dbLockToken = _routeLock.AcquireLock(route.CustomerName, route.TypeId, routeId);
+                routeLock.UseConnection(CommonUtils.ConnectionString);
+                dbLockToken = routeLock.AcquireLock(route.CustomerName, route.TypeId, routeId);
                 if (dbLockToken == null)
                 {
                     route.SaveLog(Declarations.LogTypeEnum.RouteInfo, $"Route [{routeId}] is already running (DB lock held), skipping.", "", 1);
@@ -554,7 +554,7 @@ namespace eSyncMate.Processor.Managers
                 // Release DB lock
                 if (!string.IsNullOrEmpty(dbLockToken))
                 {
-                    try { _routeLock.ReleaseLock(dbLockToken); }
+                    try { routeLock.ReleaseLock(dbLockToken); }
                     catch
                     {
                         try

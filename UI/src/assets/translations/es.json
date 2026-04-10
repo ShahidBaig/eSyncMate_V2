@@ -348,5 +348,30 @@
   "country": "País",
   "shippingAddress": "Dirección de envío",
   "details": "Detalles",
-  "shipViaCode": "Código de envío"
+  "shipViaCode": "Código de envío",
+  "feature": {
+    "title": "Plataforma de Integración API",
+    "subtitle": "Conectividad fluida con marketplaces",
+    "badgeMarketplaces": "Marketplaces",
+    "badgeAutomation": "Automatización",
+    "badgeAnalytics": "Analítica",
+    "multiPartnerTitle": "Integración Multi-Socio",
+    "multiPartnerDesc": "Conéctese con Amazon, Walmart, Target, Lowe's, Macy's, Michaels, Knot y más a través de una plataforma unificada.",
+    "inventorySyncTitle": "Sincronización de Inventario en Tiempo Real",
+    "inventorySyncDesc": "Feeds de inventario automatizados, procesamiento de pedidos, envíos ASN y gestión de catálogos en todos los canales.",
+    "dashboardAlertsTitle": "Panel en Vivo y Alertas",
+    "dashboardAlertsDesc": "Monitoree el estado de pedidos, rastree feeds de inventario y reciba alertas por correo electrónico de excepciones.",
+    "partners": "Socios",
+    "monitoring": "Monitoreo"
+  },
+  "trust": {
+    "jwt": "Asegurado con Autenticación JWT",
+    "mfa": "Autenticación de Dos Factores (MFA)",
+    "rbac": "Control de Acceso Basado en Roles"
+  },
+  "loginTerms": "Al hacer clic en Iniciar sesión, acepta nuestros",
+  "termsOfUse": "Términos de Uso",
+  "privacyPolicy": "Política de Privacidad",
+  "loginFooter": "2026 eSyncMate por eSoftage. Todos los derechos reservados.",
+  "clear": "Limpiar"
 }
