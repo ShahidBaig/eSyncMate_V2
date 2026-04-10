@@ -27,6 +27,7 @@ import { InventorypopupComponent } from './inventory-popup/inventory-popup.compo
 import { TranslateService } from '@ngx-translate/core';
 import { environment } from 'src/environments/environment';
 import { InventoryBatchwiseComponent } from './inventory-batchwise/inventory-batchwise.component';
+import { InventoryHelpDialogComponent } from './inventory-help-dialog/inventory-help-dialog.component';
 
 interface Customers {
   erpCustomerID: string;
@@ -286,6 +287,10 @@ export class InventoryComponent implements OnInit {
     let day = date.getDate().toString().padStart(2, '0');
 
     return year + '-' + month + '-' + day;
+  }
+
+  openHelp(): void {
+    this.dialog.open(InventoryHelpDialogComponent, { width: '90%', maxWidth: '1200px', maxHeight: '90vh' });
   }
 
   getInventory(resetPage: boolean = false) {

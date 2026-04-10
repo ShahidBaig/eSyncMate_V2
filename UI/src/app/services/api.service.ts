@@ -232,6 +232,17 @@ export class ApiService {
     return this.http.get<any>(this.apiUrl + 'EDIProcessor/api/v1/orders/getDashboardStats', { params });
   }
 
+  getDashboardOrders(status: string = '', customerID: string = '', fromDate: string = '', toDate: string = '', pageNumber: number = 1, pageSize: number = 10) {
+    let params = new HttpParams()
+      .set('pageNumber', pageNumber.toString())
+      .set('pageSize', pageSize.toString());
+    if (status && status !== 'EMPTY') params = params.set('status', status);
+    if (customerID && customerID !== 'EMPTY') params = params.set('erpCustomerID', customerID);
+    if (fromDate) params = params.set('fromDate', fromDate);
+    if (toDate) params = params.set('toDate', toDate);
+    return this.http.get<any>(this.apiUrl + 'EDIProcessor/api/v1/orders/getDashboardOrders', { params });
+  }
+
   getRouteExceptions(name: string, message: string, fromDate: string, toDate: string, status: string, pageNumber: number = 1, pageSize: number = 10) {
     const params = new HttpParams()
       .set('pageNumber', pageNumber.toString())

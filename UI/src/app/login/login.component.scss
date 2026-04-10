@@ -1,9 +1,6 @@
 // Color tokens
-$primary:       #2563eb;
-$primary-dark:  #1d4ed8;
-$primary-light: #eff6ff;
-$teal:          #0d9488;
-$teal-light:    #f0fdfa;
+$orange:        #E8834A;
+$orange-dark:   #d4722e;
 $gray-50:       #f8fafc;
 $gray-100:      #f1f5f9;
 $gray-200:      #e2e8f0;
@@ -16,6 +13,7 @@ $gray-800:      #1e293b;
 $gray-900:      #0f172a;
 $white:         #ffffff;
 $red:           #dc2626;
+$green:         #16a34a;
 
 :host {
   display: flex;
@@ -24,23 +22,60 @@ $red:           #dc2626;
   height: 100vh;
   overflow: hidden;
   box-sizing: border-box;
-  background-image: url('/assets/images/eSyncmate.png');
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
+  background: linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 30%, #fce8db 60%, #f0f4f8 100%);
   font-family: 'Poppins', 'Segoe UI', sans-serif;
+  position: relative;
 }
 
 // ============================================================
-// Page Layout: Two columns
+// Animated Background Shapes
+// ============================================================
+.bg-shape {
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0.06;
+  animation: float 20s infinite ease-in-out;
+}
+.bg-shape-1 { width: 600px; height: 600px; background: $orange; top: -200px; left: -100px; animation-delay: 0s; opacity: 0.08; }
+.bg-shape-2 { width: 400px; height: 400px; background: #3b82f6; bottom: -150px; right: -100px; animation-delay: -7s; opacity: 0.06; }
+.bg-shape-3 { width: 300px; height: 300px; background: $orange; top: 50%; right: 20%; animation-delay: -14s; opacity: 0.07; }
+
+@keyframes float {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  33% { transform: translate(30px, -30px) rotate(5deg); }
+  66% { transform: translate(-20px, 20px) rotate(-3deg); }
+}
+
+// ============================================================
+// Page Layout
 // ============================================================
 .login-page {
+  display: grid;
+  grid-template-columns: 480px 1fr;
+  gap: 0;
+  max-width: 1000px;
+  width: 95%;
+  min-height: 620px;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.15);
+  position: relative;
+  z-index: 1;
+}
+
+// MFA mode — single centered column, no grid
+.login-page-mfa {
   display: flex;
-  min-height: 100%;
-  padding: 24px;
-  gap: 24px;
-  box-sizing: border-box;
-  max-width: 1600px;
+  justify-content: center;
+  align-items: center;
+  grid-template-columns: none;
+  max-width: none;
+  width: auto;
+  min-height: auto;
+  border-radius: 0;
+  overflow: visible;
+  box-shadow: none;
+  background: transparent;
 }
 
 // ============================================================
@@ -50,8 +85,6 @@ $red:           #dc2626;
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  flex: 0 0 38%;
-  min-width: 340px;
 }
 
 .login-card {
@@ -59,11 +92,9 @@ $red:           #dc2626;
   flex-direction: column;
   justify-content: center;
   background: $white;
-  border-radius: 16px;
-  padding: 40px 36px 32px;
+  padding: 50px 48px;
   width: 100%;
   flex: 1;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 4px 16px rgba(0, 0, 0, 0.04);
 }
 
 .login-form {
@@ -77,29 +108,40 @@ $red:           #dc2626;
 .login-logo {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 28px;
+  gap: 14px;
+  margin-bottom: 40px;
 
-  img {
-    height: 36px;
-    width: auto;
+  .logo-svg {
+    flex-shrink: 0;
   }
 
   .logo-caption {
     font-size: 22px;
-    font-weight: 700;
-    color: $gray-800;
-    letter-spacing: -0.5px;
+    font-weight: 800;
+    color: #1a1a2e;
+    letter-spacing: -0.3px;
+  }
+
+  .logo-highlight {
+    color: $orange;
   }
 }
 
 // Title
 .login-title {
-  font-size: 24px;
-  font-weight: 600;
-  color: $gray-900;
-  margin: 0 0 24px;
+  font-size: 28px;
+  font-weight: 800;
+  color: #1a1a2e;
+  margin: 0 0 6px;
   letter-spacing: -0.3px;
+}
+
+// Subtitle text (if used)
+.login-subtitle {
+  font-size: 14px;
+  color: $gray-400;
+  margin-bottom: 32px;
+  font-weight: 400;
 }
 
 // Error
@@ -114,6 +156,7 @@ $red:           #dc2626;
   margin-bottom: 16px;
   color: $red;
   font-size: 13px;
+  font-weight: 600;
 
   .error-icon {
     font-size: 18px;
@@ -126,7 +169,6 @@ $red:           #dc2626;
 // ============================================================
 // Form
 // ============================================================
-
 .field-group {
   margin-bottom: 4px;
 }
@@ -134,9 +176,11 @@ $red:           #dc2626;
 .field-label {
   display: block;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 700;
   color: $gray-700;
   margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .login-field {
@@ -150,10 +194,9 @@ $red:           #dc2626;
     margin-right: 4px;
   }
 
-  // Override Material outline styling for clean look
   ::ng-deep {
     .mat-mdc-text-field-wrapper {
-      background: $white !important;
+      background: $gray-50 !important;
     }
 
     .mdc-notched-outline__leading,
@@ -173,11 +216,15 @@ $red:           #dc2626;
     }
 
     .mdc-text-field--focused {
+      .mat-mdc-text-field-wrapper {
+        background: $white !important;
+      }
+
       .mdc-notched-outline__leading,
       .mdc-notched-outline__notch,
       .mdc-notched-outline__trailing {
-        border-color: $primary !important;
-        border-width: 2px !important;
+        border-color: $orange !important;
+        border-width: 1.5px !important;
       }
     }
 
@@ -188,17 +235,16 @@ $red:           #dc2626;
     }
 
     .mdc-notched-outline {
-      border-radius: 8px;
+      border-radius: 10px;
 
       .mdc-notched-outline__leading {
-        border-radius: 8px 0 0 8px;
+        border-radius: 10px 0 0 10px;
       }
       .mdc-notched-outline__trailing {
-        border-radius: 0 8px 8px 0;
+        border-radius: 0 10px 10px 0;
       }
     }
 
-    // Hide the floating label
     .mdc-notched-outline__notch {
       border-top: 1px solid;
     }
@@ -213,20 +259,22 @@ $red:           #dc2626;
     input.mat-mdc-input-element {
       font-family: 'Poppins', 'Segoe UI', sans-serif;
       font-size: 14px;
+      font-weight: 500;
       color: $gray-800;
 
       &::placeholder {
-        color: $gray-400;
+        color: $gray-300;
+        font-weight: 400;
       }
     }
 
     .mat-mdc-select-value-text {
       font-family: 'Poppins', 'Segoe UI', sans-serif;
       font-size: 14px;
+      font-weight: 500;
       color: $gray-800;
     }
 
-    // Suffix icon button
     .mat-mdc-icon-button {
       width: 36px;
       height: 36px;
@@ -234,6 +282,12 @@ $red:           #dc2626;
       color: $gray-400;
     }
   }
+}
+
+// Focused field icon turns orange
+.login-field ::ng-deep .mdc-text-field--focused + .mat-mdc-form-field-icon-prefix .field-icon,
+.login-field ::ng-deep .mdc-text-field--focused .field-icon {
+  color: $orange;
 }
 
 // ============================================================
@@ -245,7 +299,7 @@ $red:           #dc2626;
 }
 
 // ============================================================
-// Login Button
+// Login Button — Orange gradient matching mockup
 // ============================================================
 .login-submit-btn {
   display: flex;
@@ -253,17 +307,19 @@ $red:           #dc2626;
   justify-content: center;
   gap: 8px;
   width: 100%;
-  height: 46px;
+  height: 48px;
   border: none;
-  border-radius: 8px;
-  background: $gray-600;
+  border-radius: 10px;
+  background: linear-gradient(135deg, $orange, $orange-dark);
   color: $white;
   font-family: 'Poppins', 'Segoe UI', sans-serif;
   font-size: 15px;
-  font-weight: 500;
+  font-weight: 700;
   cursor: pointer;
   transition: all 0.2s ease;
   margin-top: 8px;
+  box-shadow: 0 4px 16px rgba(232, 131, 74, 0.35);
+  letter-spacing: 0.3px;
 
   .btn-icon {
     font-size: 20px;
@@ -272,85 +328,281 @@ $red:           #dc2626;
   }
 
   &:hover:not(:disabled) {
-    background: $gray-700;
+    box-shadow: 0 6px 24px rgba(232, 131, 74, 0.45);
+    transform: translateY(-1px);
   }
 
   &:active:not(:disabled) {
-    background: $gray-800;
-    transform: scale(0.99);
+    transform: translateY(0);
   }
 
   &:disabled {
     background: $gray-300;
     color: $gray-500;
     cursor: not-allowed;
+    box-shadow: none;
   }
 }
 
-// Cancel Button
+// Cancel Button — outline style
 .login-cancel-btn {
   margin-top: 10px !important;
-  background: $teal !important;
-  color: $white !important;
-  border: none !important;
+  background: transparent !important;
+  border: 1.5px solid $gray-200 !important;
+  color: $gray-600 !important;
+  box-shadow: none !important;
 
   &:hover:not(:disabled) {
-    background: #0f766e !important;
+    background: $gray-50 !important;
+    border-color: $gray-300 !important;
+    color: $gray-700 !important;
   }
 
   &:active:not(:disabled) {
-    background: #115e59 !important;
+    background: $gray-100 !important;
+  }
+}
+
+// ============================================================
+// Trust Badges
+// ============================================================
+.trust-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 28px;
+  padding: 20px;
+  background: $gray-50;
+  border-radius: 10px;
+  border: 1px solid $gray-100;
+}
+
+.trust-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: $gray-700;
+  font-weight: 600;
+
+  .trust-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    color: $green;
   }
 }
 
 // Terms
 .login-terms {
-  margin: 16px 0 0;
-  font-size: 14px;
+  margin: 20px 0 0;
+  font-size: 12px;
   color: $gray-600;
   line-height: 1.6;
-  text-align: center;
+  font-weight: 500;
 
   a {
-    color: $primary;
-    text-decoration: underline;
-    font-weight: 500;
+    color: $orange;
+    text-decoration: none;
+    font-weight: 700;
 
     &:hover {
-      color: $primary-dark;
+      text-decoration: underline;
+      color: $orange-dark;
     }
   }
 }
 
+// Footer
+.login-footer {
+  margin-top: 10px;
+  padding-top: 16px;
+  border-top: 1px solid $gray-100;
+  font-size: 11px;
+  color: $gray-500;
+  font-weight: 500;
+}
+
 // ============================================================
-// MFA Views — Professional 2FA UI
+// Right Column: Feature Panel
+// ============================================================
+.feature-panel {
+  background: linear-gradient(160deg, #fff5ee 0%, #fde8d8 100%);
+  padding: 36px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  position: relative;
+  overflow: hidden;
+  justify-content: center;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -30%;
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, rgba(232, 131, 74, 0.1) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+}
+
+.feature-header {
+  margin-bottom: 8px;
+  position: relative;
+  z-index: 1;
+
+  h2 {
+    font-size: 24px;
+    font-weight: 800;
+    color: #1a1a2e;
+    margin: 0;
+  }
+
+  p {
+    font-size: 13px;
+    color: $gray-600;
+    margin: 4px 0 0;
+    font-weight: 500;
+  }
+}
+
+.feature-header-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+// Feature cards
+.feature-card {
+  background: $white;
+  border: 1px solid #f0d5c0;
+  border-radius: 14px;
+  padding: 18px 20px;
+  position: relative;
+  z-index: 1;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(232, 131, 74, 0.08);
+
+  &:hover {
+    border-color: $orange;
+    box-shadow: 0 6px 20px rgba(232, 131, 74, 0.15);
+    transform: translateY(-2px);
+  }
+
+  h3 {
+    font-size: 16px;
+    font-weight: 800;
+    color: #1a1a2e;
+    margin: 0 0 6px;
+  }
+
+  p {
+    font-size: 12px;
+    color: $gray-600;
+    line-height: 1.6;
+    margin: 0;
+    font-weight: 500;
+  }
+}
+
+.feature-card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.feature-card-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: #fef0e6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  mat-icon {
+    font-size: 22px;
+    width: 22px;
+    height: 22px;
+    color: $orange;
+  }
+}
+
+.feature-card-badge {
+  font-size: 10px;
+  font-weight: 800;
+  padding: 4px 12px;
+  border-radius: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: rgba(232, 131, 74, 0.18);
+  color: $orange-dark;
+}
+
+// Stats row
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-top: auto;
+  position: relative;
+  z-index: 1;
+}
+
+.stat-card {
+  background: $white;
+  border: 1px solid #f0d5c0;
+  border-radius: 10px;
+  padding: 16px 14px;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(232, 131, 74, 0.08);
+}
+
+.stat-value {
+  font-size: 22px;
+  font-weight: 800;
+  color: $orange;
+  display: block;
+}
+
+.stat-label {
+  font-size: 11px;
+  color: $gray-600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 700;
+}
+
+// ============================================================
+// MFA Views
 // ============================================================
 
-// Wider card when MFA is active (no promo column)
+// Wider layout when MFA is active (no feature panel)
 .mfa-column-wide {
-  flex: none !important;
-  width: 540px !important;
-  min-width: 500px !important;
-  max-width: 580px;
-  margin: 32px auto !important;
-  align-items: center !important;
+  width: 560px;
+  min-width: 500px;
+  max-width: 600px;
+  align-items: center;
 }
 .mfa-card-wide {
-  padding: 44px 52px 40px !important;
-  flex: none !important;
-  align-items: center !important;
-  margin-bottom: 32px;
+  padding: 44px 52px 40px;
+  align-items: center;
+  border-radius: 20px;
+  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.15);
 }
 
 // Centered logo for MFA views
 .mfa-logo-centered {
-  justify-content: center !important;
+  justify-content: center;
   margin-bottom: 32px !important;
   padding-bottom: 24px;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid $gray-100;
   width: 100%;
 
-  img { height: 40px !important; margin-left: -77px; }
   .logo-caption { font-size: 24px !important; font-weight: 800 !important; letter-spacing: -0.3px !important; }
 }
 
@@ -371,7 +623,7 @@ $red:           #dc2626;
   mat-icon { font-size: 38px; width: 38px; height: 38px; color: #fff; }
 }
 .mfa-icon-orange {
-  background: linear-gradient(135deg, #E8834A, #f0a070);
+  background: linear-gradient(135deg, $orange, #f0a070);
   box-shadow: 0 10px 30px rgba(232, 131, 74, 0.3);
 }
 .mfa-icon-blue {
@@ -387,7 +639,7 @@ $red:           #dc2626;
 
 // Subtitle
 .mfa-subtitle {
-  font-size: 14px; color: #64748b; text-align: center;
+  font-size: 14px; color: $gray-500; text-align: center;
   margin: 0 0 28px; line-height: 1.7; max-width: 380px; font-weight: 500;
 }
 
@@ -395,13 +647,13 @@ $red:           #dc2626;
 .qr-card {
   display: flex; align-items: flex-start; gap: 28px;
   width: 100%; padding: 24px;
-  background: #f8fafc; border-radius: 16px; border: 1px solid #e2e8f0;
+  background: $gray-50; border-radius: 16px; border: 1px solid $gray-200;
   margin-bottom: 28px;
 }
 
 .qr-frame {
   flex-shrink: 0; padding: 10px; background: #fff; border-radius: 14px;
-  border: 2px solid #e2e8f0; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+  border: 2px solid $gray-200; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
   .qr-image { width: 160px; height: 160px; border-radius: 8px; display: block; }
 }
 
@@ -414,13 +666,13 @@ $red:           #dc2626;
 }
 .qr-step-num {
   width: 24px; height: 24px; border-radius: 50%;
-  background: linear-gradient(135deg, #E8834A, #f0a070);
+  background: linear-gradient(135deg, $orange, #f0a070);
   color: #fff; font-size: 12px; font-weight: 800;
   display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
 .qr-step span {
-  font-size: 13px; color: #475569; line-height: 1.5; font-weight: 500;
-  strong { font-weight: 700; color: #1e293b; }
+  font-size: 13px; color: $gray-600; line-height: 1.5; font-weight: 500;
+  strong { font-weight: 700; color: $gray-800; }
 }
 
 // Divider
@@ -428,9 +680,9 @@ $red:           #dc2626;
   display: flex; align-items: center; gap: 16px;
   width: 100%; margin-bottom: 24px;
 }
-.mfa-divider-line { flex: 1; height: 1px; background: #e2e8f0; }
+.mfa-divider-line { flex: 1; height: 1px; background: $gray-200; }
 .mfa-divider-text {
-  font-size: 11px; font-weight: 800; color: #94a3b8;
+  font-size: 11px; font-weight: 800; color: $gray-400;
   text-transform: uppercase; letter-spacing: 1.2px; white-space: nowrap;
 }
 
@@ -446,27 +698,26 @@ $red:           #dc2626;
 
 .otp-digit {
   width: 52px; height: 60px;
-  border: 2px solid #e2e8f0;
+  border: 2px solid $gray-200;
   border-radius: 14px;
-  background: #f8fafc;
+  background: $gray-50;
   font-size: 26px;
   font-weight: 800;
   color: #0f172a;
   text-align: center;
   outline: none;
   transition: all 0.2s ease;
-  caret-color: #E8834A;
-  -webkit-font-smoothing: antialiased;
+  caret-color: $orange;
 
   &:focus {
-    border-color: #E8834A;
+    border-color: $orange;
     background: #fff;
     box-shadow: 0 0 0 4px rgba(232, 131, 74, 0.12);
     transform: translateY(-2px);
   }
 
   &:not([value=""]):not(:placeholder-shown) {
-    border-color: #E8834A;
+    border-color: $orange;
     background: #fff;
   }
 }
@@ -492,7 +743,7 @@ $red:           #dc2626;
 
 .otp-separator {
   width: 16px; height: 3px; border-radius: 2px;
-  background: #cbd5e1; margin: 0 4px;
+  background: $gray-300; margin: 0 4px;
 }
 
 // Error
@@ -512,7 +763,7 @@ $red:           #dc2626;
 .mfa-submit-btn {
   width: 100%; height: 50px;
   border: none; border-radius: 14px;
-  background: linear-gradient(135deg, #E8834A, #d4722e);
+  background: linear-gradient(135deg, $orange, $orange-dark);
   color: #fff; font-size: 15px; font-weight: 700;
   cursor: pointer;
   display: flex; align-items: center; justify-content: center; gap: 10px;
@@ -523,7 +774,7 @@ $red:           #dc2626;
   mat-icon { font-size: 20px; width: 20px; height: 20px; }
 
   &:hover:not(:disabled) {
-    background: linear-gradient(135deg, #d4722e, #c0621e);
+    background: linear-gradient(135deg, $orange-dark, #c0621e);
     box-shadow: 0 8px 28px rgba(232, 131, 74, 0.4);
     transform: translateY(-1px);
   }
@@ -535,162 +786,11 @@ $red:           #dc2626;
 .mfa-help {
   display: flex; align-items: flex-start; gap: 10px;
   margin-top: 12px; padding: 14px 18px;
-  background: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0;
+  background: $gray-50; border-radius: 12px; border: 1px solid $gray-200;
   width: 100%;
 
-  mat-icon { font-size: 18px; width: 18px; height: 18px; color: #94a3b8; flex-shrink: 0; margin-top: 1px; }
-  span { font-size: 12px; color: #64748b; font-weight: 500; line-height: 1.5; strong { font-weight: 700; color: #475569; } }
-}
-
-// Footer
-.login-footer {
-  margin-top: 24px;
-  padding-top: 18px;
-  border-top: 1px solid $gray-100;
-  text-align: center;
-  font-size: 11px;
-  color: $gray-400;
-  width: 100%;
-
-  strong {
-    color: $gray-500;
-    font-weight: 600;
-  }
-}
-
-// ============================================================
-// Right Column: Promo Cards
-// ============================================================
-.promo-column {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  min-width: 0;
-  overflow: hidden;
-}
-
-.promo-card {
-  border-radius: 16px;
-  padding: 32px;
-  display: flex;
-  align-items: center;
-  overflow: hidden;
-  position: relative;
-  min-height: 0;
-}
-
-// Primary card — teal/green gradient (like "It's Suite to Refer")
-.promo-card-primary {
-  flex: 1;
-  background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
-  color: $white;
-
-  .promo-card-content {
-    flex: 1;
-    z-index: 1;
-  }
-
-  .promo-title {
-    font-size: 22px;
-    font-weight: 600;
-    margin: 0 0 20px;
-    letter-spacing: -0.3px;
-  }
-
-  .promo-features {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-  }
-
-  .promo-feature {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    font-size: 14px;
-    font-weight: 400;
-
-    .promo-feature-icon {
-      width: 34px;
-      height: 34px;
-      border-radius: 50%;
-      background: rgba(255, 255, 255, 0.15);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-
-      .mat-icon {
-        font-size: 18px;
-        width: 18px;
-        height: 18px;
-        color: $white;
-      }
-    }
-  }
-
-  .promo-card-graphic {
-    margin-left: 24px;
-    flex-shrink: 0;
-
-    .graphic-circle {
-      width: 140px;
-      height: 140px;
-      border-radius: 50%;
-      background: rgba(255, 255, 255, 0.08);
-      border: 2px solid rgba(255, 255, 255, 0.15);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-
-      .graphic-icon {
-        font-size: 56px;
-        width: 56px;
-        height: 56px;
-        color: rgba(255, 255, 255, 0.6);
-      }
-    }
-  }
-}
-
-// Secondary card — light neutral (like "Enable Rebates")
-.promo-card-secondary {
-  flex: 1;
-  background: linear-gradient(135deg, $gray-50 0%, $gray-100 100%);
-  border: 1px solid $gray-200;
-
-  .promo-card-content {
-    flex: 1;
-  }
-
-  .promo-title {
-    font-size: 19px;
-    font-weight: 600;
-    color: $gray-800;
-    margin: 0 0 10px;
-    letter-spacing: -0.2px;
-  }
-
-  .promo-desc {
-    font-size: 13.5px;
-    color: $gray-500;
-    line-height: 1.6;
-    margin: 0;
-  }
-
-  .promo-card-badge {
-    margin-left: 24px;
-    flex-shrink: 0;
-
-    .badge-icon {
-      font-size: 64px;
-      width: 64px;
-      height: 64px;
-      color: $primary;
-      opacity: 0.3;
-    }
-  }
+  mat-icon { font-size: 18px; width: 18px; height: 18px; color: $gray-400; flex-shrink: 0; margin-top: 1px; }
+  span { font-size: 12px; color: $gray-500; font-weight: 500; line-height: 1.5; strong { font-weight: 700; color: $gray-600; } }
 }
 
 // ============================================================
@@ -698,17 +798,11 @@ $red:           #dc2626;
 // ============================================================
 @media (max-width: 900px) {
   .login-page {
-    flex-direction: column;
-    padding: 16px;
-    overflow-y: auto;
+    grid-template-columns: 1fr;
+    max-width: 480px;
   }
 
-  .login-column {
-    flex: 0 0 auto;
-    min-width: unset;
-  }
-
-  .promo-column {
+  .feature-panel {
     display: none;
   }
 }

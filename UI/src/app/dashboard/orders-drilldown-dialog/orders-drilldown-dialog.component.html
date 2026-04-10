@@ -1,0 +1,74 @@
+<div class="drilldown-dialog">
+  <!-- Header -->
+  <div class="drilldown-header">
+    <div class="drilldown-header-left">
+      <div class="drilldown-icon" [style.background]="data.color">
+        <mat-icon>{{ data.icon }}</mat-icon>
+      </div>
+      <div class="drilldown-title-wrap">
+        <h2 class="drilldown-title">{{ data.title }}</h2>
+        <span class="drilldown-subtitle">{{ totalCount }} order(s) found</span>
+      </div>
+    </div>
+    <button mat-icon-button class="drilldown-close" (click)="onClose()"><mat-icon>close</mat-icon></button>
+  </div>
+
+  <!-- Loading -->
+  <mat-progress-bar [style.visibility]="isLoading ? 'visible' : 'hidden'" mode="indeterminate" color="accent"></mat-progress-bar>
+
+  <!-- Table -->
+  <div class="drilldown-body">
+    <table mat-table [dataSource]="orders" *ngIf="orders.length > 0">
+
+      <ng-container matColumnDef="orderNumber">
+        <th mat-header-cell *matHeaderCellDef>Order Number</th>
+        <td mat-cell *matCellDef="let row">{{ row.orderNumber }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="erpCustomerID">
+        <th mat-header-cell *matHeaderCellDef>Customer ID</th>
+        <td mat-cell *matCellDef="let row">{{ row.erpCustomerID }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="displayStatus">
+        <th mat-header-cell *matHeaderCellDef>Status</th>
+        <td mat-cell *matCellDef="let row">
+          <span class="status-chip" [style.color]="data.color" [style.borderColor]="data.color">{{ row.displayStatus || row.status }}</span>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="orderDate">
+        <th mat-header-cell *matHeaderCellDef>Order Date</th>
+        <td mat-cell *matCellDef="let row">{{ row.orderDate | date:'MM/dd/yyyy' }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="createdDate">
+        <th mat-header-cell *matHeaderCellDef>eSyncMate Date</th>
+        <td mat-cell *matCellDef="let row">{{ row.createdDate | date:'MM/dd/yyyy hh:mm a' }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="actions" *ngIf="isErrorStatus">
+        <th mat-header-cell *matHeaderCellDef>Actions</th>
+        <td mat-cell *matCellDef="let row">
+          <button mat-icon-button class="reprocess-btn" matTooltip="Re-Process Order" (click)="reprocessOrder(row)"
+                  [disabled]="reprocessingId === row.id">
+            <mat-icon *ngIf="reprocessingId !== row.id">refresh</mat-icon>
+            <mat-icon *ngIf="reprocessingId === row.id" class="spinning">sync</mat-icon>
+          </button>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="columns"></tr>
+      <tr mat-row *matRowDef="let row; columns: columns"></tr>
+    </table>
+
+    <div class="drilldown-empty" *ngIf="orders.length === 0 && !isLoading">
+      <mat-icon>inbox</mat-icon>
+      <p>No orders found</p>
+    </div>
+
+    <mat-paginator [length]="totalCount" [pageSize]="pageSize" [pageSizeOptions]="[10, 25, 50]"
+      (page)="onPageChange($event)" showFirstLastButtons>
+    </mat-paginator>
+  </div>
+</div>

@@ -17,6 +17,8 @@ import { ApiService } from '../services/api.service';
 import { InventoryService } from '../services/inventory.service';
 import { CustomerProductCatalogService } from '../services/customerProductCatalogDialog.service';
 import { TranslateModule } from '@ngx-translate/core';
+import { MatDialog } from '@angular/material/dialog';
+import { OrdersDrilldownDialogComponent } from './orders-drilldown-dialog/orders-drilldown-dialog.component';
 
 interface CustomerOption {
   erpCustomerID: string;
@@ -77,7 +79,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
   totalOrders = 0;
   customerStats: CustomerStat[] = [];
   statusStats: StatusStat[] = [];
+  statusTiles: { key: string; label: string; icon: string; color: string; bg: string; count: number }[] = [];
   loading = true;
+  refreshing = false;
   private refreshInterval: any;
 
   // Customer filter
@@ -87,25 +91,40 @@ export class DashboardComponent implements OnInit, OnDestroy {
   customerSearchText: string = '';
   customerDropdownOpen: boolean = false;
 
-  // Status config for cards
+  // Status config for tiles (only statuses shown as KPI tiles)
   statusConfig: { [key: string]: { icon: string; color: string; bg: string } } = {
     'NEW': { icon: 'fiber_new', color: '#0d47a1', bg: '#e3f2fd' },
     'SYNCED': { icon: 'check_circle', color: '#2e7d32', bg: '#e8f5e9' },
     'SHIPPED': { icon: 'local_shipping', color: '#3f51b5', bg: '#e8eaf6' },
-    'PROCESSED': { icon: 'done_all', color: '#1b5e20', bg: '#e8f5e9' },
     'ERROR': { icon: 'warning_amber', color: '#c62828', bg: '#ffebee' },
-    'SYNCERROR': { icon: 'sync_problem', color: '#c62828', bg: '#ffebee' },
     'ACKERROR': { icon: 'report_problem', color: '#bf360c', bg: '#fbe9e7' },
     'ASNERROR': { icon: 'warning_amber', color: '#e65100', bg: '#fff3e0' },
     'CANCELLED': { icon: 'cancel', color: '#4e342e', bg: '#efebe9' },
-    'INPROGRESS': { icon: 'hourglass_empty', color: '#01579b', bg: '#e1f5fe' },
-    'ACKNOWLEDGED': { icon: 'thumb_up', color: '#01579b', bg: '#e1f5fe' },
-    'INVOICED': { icon: 'receipt', color: '#6a1b9a', bg: '#f3e5f5' },
-    'ASNGEN': { icon: 'inventory', color: '#e65100', bg: '#fff3e0' },
-    'ASNMARK': { icon: 'bookmark', color: '#37474f', bg: '#eceff1' },
-    'DUPLICATE': { icon: 'content_copy', color: '#424242', bg: '#f5f5f5' },
     'Partially Shipped': { icon: 'local_shipping', color: '#0277bd', bg: '#e1f5fe' },
     'Partially Cancelled': { icon: 'cancel', color: '#d84315', bg: '#fbe9e7' },
+  };
+
+  // Full status config (used for partner breakdown icons/colors)
+  allStatusConfig: { [key: string]: { icon: string; color: string; bg: string } } = {
+    ...{
+      'NEW': { icon: 'fiber_new', color: '#0d47a1', bg: '#e3f2fd' },
+      'SYNCED': { icon: 'check_circle', color: '#2e7d32', bg: '#e8f5e9' },
+      'SHIPPED': { icon: 'local_shipping', color: '#3f51b5', bg: '#e8eaf6' },
+      'PROCESSED': { icon: 'done_all', color: '#1b5e20', bg: '#e8f5e9' },
+      'ERROR': { icon: 'warning_amber', color: '#c62828', bg: '#ffebee' },
+      'SYNCERROR': { icon: 'sync_problem', color: '#c62828', bg: '#ffebee' },
+      'ACKERROR': { icon: 'report_problem', color: '#bf360c', bg: '#fbe9e7' },
+      'ASNERROR': { icon: 'warning_amber', color: '#e65100', bg: '#fff3e0' },
+      'CANCELLED': { icon: 'cancel', color: '#4e342e', bg: '#efebe9' },
+      'INPROGRESS': { icon: 'hourglass_empty', color: '#01579b', bg: '#e1f5fe' },
+      'ACKNOWLEDGED': { icon: 'thumb_up', color: '#01579b', bg: '#e1f5fe' },
+      'INVOICED': { icon: 'receipt', color: '#6a1b9a', bg: '#f3e5f5' },
+      'ASNGEN': { icon: 'inventory', color: '#e65100', bg: '#fff3e0' },
+      'ASNMARK': { icon: 'bookmark', color: '#37474f', bg: '#eceff1' },
+      'DUPLICATE': { icon: 'content_copy', color: '#424242', bg: '#f5f5f5' },
+      'Partially Shipped': { icon: 'local_shipping', color: '#0277bd', bg: '#e1f5fe' },
+      'Partially Cancelled': { icon: 'cancel', color: '#d84315', bg: '#fbe9e7' },
+    }
   };
 
   // Inventory stats
@@ -122,7 +141,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   customerColumns = ['customerName', 'erpCustomerID', 'orderCount'];
 
-  constructor(private api: ApiService, private inventoryApi: InventoryService, private customerApi: CustomerProductCatalogService) {}
+  constructor(private api: ApiService, private inventoryApi: InventoryService, private customerApi: CustomerProductCatalogService, private dialog: MatDialog) {}
 
   ngOnInit(): void {
     this.loadCustomers();
@@ -197,7 +216,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   loadStats(): void {
-    this.loading = true;
+    // First load: show full loading screen. Subsequent: show subtle spinner overlay
+    const isInitial = this.loading && this.customerStats.length === 0;
+    if (isInitial) {
+      this.loading = true;
+    } else {
+      this.refreshing = true;
+    }
+
     const from = this.formatDate(this.filterFrom);
     const to = this.formatDate(this.filterTo);
     const customerFilter = this.selectedCustomerIDs.length > 0 ? this.selectedCustomerIDs.join(',') : '';
@@ -216,10 +242,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
             }
           }
         }
+        this.buildStatusTiles();
         this.loading = false;
+        this.refreshing = false;
       },
       error: () => {
+        this.buildStatusTiles();
         this.loading = false;
+        this.refreshing = false;
       }
     });
   }
@@ -269,15 +299,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   getStatusIcon(status: string): string {
-    return this.statusConfig[status]?.icon || 'info';
+    return this.allStatusConfig[status]?.icon || 'info';
   }
 
   getStatusColor(status: string): string {
-    return this.statusConfig[status]?.color || '#424242';
+    return this.allStatusConfig[status]?.color || '#424242';
   }
 
   getStatusBg(status: string): string {
-    return this.statusConfig[status]?.bg || '#f5f5f5';
+    return this.allStatusConfig[status]?.bg || '#f5f5f5';
   }
 
   loadInventoryStats(): void {
@@ -369,6 +399,71 @@ export class DashboardComponent implements OnInit, OnDestroy {
       'TAR6266P': 'Target', 'TAR6266PAH': 'Target SEI', 'WAL4001MP': 'Walmart'
     };
     return map[customerID] || customerID;
+  }
+
+  buildStatusTiles(): void {
+    this.statusTiles = Object.keys(this.statusConfig).map(key => {
+      const config = this.statusConfig[key];
+      const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase()).trim();
+      return {
+        key,
+        label,
+        icon: config.icon,
+        color: config.color,
+        bg: config.bg,
+        count: this.getStatusCount(key)
+      };
+    });
+  }
+
+  getPartnerAllStatuses(erpCustomerID: string): StatusStat[] {
+    const existing = this.partnerStatuses[erpCustomerID] || [];
+    const allKeys = Object.keys(this.statusConfig);
+    return allKeys.map(key => {
+      const found = existing.find(s => s.status === key);
+      return { status: key, statusCount: found ? found.statusCount : 0 };
+    });
+  }
+
+  openStatusDrilldown(status: string, customerID: string = ''): void {
+    const config = this.allStatusConfig[status] || { icon: 'info', color: '#424242' };
+    const label = status.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase()).trim();
+    const partnerLabel = customerID ? ` — ${customerID}` : '';
+
+    this.dialog.open(OrdersDrilldownDialogComponent, {
+      width: '85%',
+      maxWidth: '1000px',
+      maxHeight: '85vh',
+      disableClose: false,
+      data: {
+        status: status,
+        customerID: customerID,
+        fromDate: this.formatDate(this.filterFrom),
+        toDate: this.formatDate(this.filterTo),
+        title: `${label} Orders${partnerLabel}`,
+        color: config.color,
+        icon: config.icon
+      }
+    });
+  }
+
+  openTotalDrilldown(customerID: string = ''): void {
+    const partnerLabel = customerID ? ` — ${customerID}` : '';
+    this.dialog.open(OrdersDrilldownDialogComponent, {
+      width: '85%',
+      maxWidth: '1000px',
+      maxHeight: '85vh',
+      disableClose: false,
+      data: {
+        status: '',
+        customerID: customerID,
+        fromDate: this.formatDate(this.filterFrom),
+        toDate: this.formatDate(this.filterTo),
+        title: `All Orders${partnerLabel}`,
+        color: '#3f51b5',
+        icon: 'shopping_cart'
+      }
+    });
   }
 
   getErrorCount(): number {

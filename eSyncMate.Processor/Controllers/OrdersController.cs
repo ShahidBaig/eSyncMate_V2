@@ -697,6 +697,69 @@ namespace eSyncMate.Processor.Controllers
         }
 
         [HttpGet]
+        [Route("getDashboardOrders")]
+        public async Task<GetOrdersResponseModel> GetDashboardOrders([FromQuery] string status = "", [FromQuery] string erpCustomerID = "", [FromQuery] string fromDate = "", [FromQuery] string toDate = "", [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
+        {
+            GetOrdersResponseModel l_Response = new GetOrdersResponseModel();
+            DataTable l_Data = new DataTable();
+
+            var claimsIdentity = User.Identity as ClaimsIdentity;
+            if (claimsIdentity?.Claims == null)
+            {
+                l_Response.Code = StatusCodes.Status401Unauthorized;
+                l_Response.Message = "Not Authorized";
+                return l_Response;
+            }
+
+            var userData = eSyncMate.Processor.Managers.CustomersManager.GetCustomerNames(claimsIdentity);
+
+            try
+            {
+                Orders l_Order = new Orders();
+                l_Order.UseConnection(CommonUtils.ConnectionString);
+
+                string l_Criteria = "Status <> 'DELETED'";
+
+                // Customer filter (user-assigned + optional specific customer)
+                string l_CustomerFilter = "";
+                if (!userData.IsSuperAdmin && !string.IsNullOrEmpty(userData.Customers))
+                    l_CustomerFilter = $" AND ERPCustomerID IN ({userData.Customers})";
+
+                if (!string.IsNullOrEmpty(erpCustomerID))
+                    l_CustomerFilter += $" AND ERPCustomerID = '{erpCustomerID}'";
+
+                l_Criteria += l_CustomerFilter;
+
+                // Date filter on CreatedDate (matches dashboard stats)
+                if (!string.IsNullOrEmpty(fromDate) && !string.IsNullOrEmpty(toDate))
+                    l_Criteria += $" AND CreatedDate >= '{fromDate}' AND CreatedDate < DATEADD(DAY, 1, CAST('{toDate}' AS DATE))";
+
+                // Status filter
+                if (!string.IsNullOrEmpty(status))
+                    l_Criteria += $" AND (Status = '{status}' OR DisplayStatus = '{status}')";
+
+                int totalCount = 0;
+                l_Order.GetViewListPaged(l_Criteria, string.Empty, ref l_Data, "CreatedDate DESC", pageNumber, pageSize, out totalCount);
+
+                l_Response.OrdersData = l_Data;
+                l_Response.TotalCount = totalCount;
+                l_Response.Code = (int)ResponseCodes.Success;
+                l_Response.Message = "Dashboard orders fetched successfully!";
+            }
+            catch (Exception ex)
+            {
+                l_Response.Code = (int)ResponseCodes.Exception;
+                l_Response.Message = ex.Message;
+            }
+            finally
+            {
+                l_Data.Dispose();
+            }
+
+            return l_Response;
+        }
+
+        [HttpGet]
         [Route("getOrders/{OrderId}/{FromDate}/{ToDate}/{OrderNumber}/{Status}/{ExternalId}/{CustomerId}")]
         public async Task<GetOrdersResponseModel> GetOrders(int? OrderId = 0, string FromDate = "", string ToDate = "", string OrderNumber = "", string Status = "", string ExternalId = "", string CustomerId = "", [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {

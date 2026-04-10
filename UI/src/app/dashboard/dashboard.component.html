@@ -87,7 +87,7 @@
     </button>
   </div>
 
-  <!-- Loading -->
+  <!-- Initial Loading -->
   <div class="loading-overlay" *ngIf="loading">
     <div class="loading-content">
       <mat-spinner diameter="44"></mat-spinner>
@@ -95,43 +95,31 @@
     </div>
   </div>
 
-  <div class="dashboard-body" *ngIf="!loading">
+  <!-- Refresh Spinner Overlay (no blink — content stays visible) -->
+  <div class="refresh-overlay" *ngIf="refreshing && !loading">
+    <div class="refresh-spinner">
+      <mat-spinner diameter="32"></mat-spinner>
+    </div>
+  </div>
 
-    <!-- KPI Tiles — 5 individual cards -->
+  <div class="dashboard-body" [class.refreshing-dimmed]="refreshing && !loading" *ngIf="!loading">
+
+    <!-- KPI Tiles — Total + All Statuses -->
     <div class="kpi-tiles">
-      <div class="kpi-tile kpi-total">
+      <div class="kpi-tile kpi-total kpi-clickable" (click)="openTotalDrilldown()">
         <div class="kpi-tile-icon"><mat-icon>shopping_cart</mat-icon></div>
         <div class="kpi-tile-data">
           <span class="kpi-tile-value">{{ totalOrders }}</span>
           <span class="kpi-tile-label">Total Orders</span>
         </div>
       </div>
-      <div class="kpi-tile kpi-new">
-        <div class="kpi-tile-icon"><mat-icon>fiber_new</mat-icon></div>
-        <div class="kpi-tile-data">
-          <span class="kpi-tile-value" style="color:#E8834A;">{{ getStatusCount('NEW') }}</span>
-          <span class="kpi-tile-label">New</span>
+      <div class="kpi-tile kpi-clickable" *ngFor="let tile of statusTiles" [style.--tile-color]="tile.color" (click)="openStatusDrilldown(tile.key)">
+        <div class="kpi-tile-icon" [style.background]="tile.color">
+          <mat-icon>{{ tile.icon }}</mat-icon>
         </div>
-      </div>
-      <div class="kpi-tile kpi-synced">
-        <div class="kpi-tile-icon"><mat-icon>check_circle</mat-icon></div>
         <div class="kpi-tile-data">
-          <span class="kpi-tile-value" style="color:#2e7d32;">{{ getStatusCount('SYNCED') }}</span>
-          <span class="kpi-tile-label">Synced</span>
-        </div>
-      </div>
-      <div class="kpi-tile kpi-shipped">
-        <div class="kpi-tile-icon"><mat-icon>local_shipping</mat-icon></div>
-        <div class="kpi-tile-data">
-          <span class="kpi-tile-value" style="color:#3f51b5;">{{ getStatusCount('SHIPPED') }}</span>
-          <span class="kpi-tile-label">Shipped</span>
-        </div>
-      </div>
-      <div class="kpi-tile kpi-error">
-        <div class="kpi-tile-icon"><mat-icon>warning_amber</mat-icon></div>
-        <div class="kpi-tile-data">
-          <span class="kpi-tile-value" style="color:#c62828;">{{ getErrorCount() }}</span>
-          <span class="kpi-tile-label">Errors</span>
+          <span class="kpi-tile-value" [style.color]="tile.color">{{ tile.count }}</span>
+          <span class="kpi-tile-label">{{ tile.label }}</span>
         </div>
       </div>
     </div>
@@ -179,23 +167,16 @@
                 <span class="pdh-title">{{ getPartnerName(row.erpCustomerID) }} — Status Breakdown</span>
                 <span class="pdh-total">{{ row.orderCount }} orders</span>
               </div>
-              <div class="partner-status-grid" *ngIf="(partnerStatuses[row.erpCustomerID] || []).length > 0">
-                <div class="partner-status-chip" *ngFor="let stat of partnerStatuses[row.erpCustomerID]"
-                     [style.borderLeftColor]="getStatusColor(stat.status)"
-                     [style.background]="getStatusBg(stat.status)">
-                  <div class="psc-icon-wrap" [style.background]="getStatusColor(stat.status)">
-                    <mat-icon class="psc-icon">{{ getStatusIcon(stat.status) }}</mat-icon>
+              <div class="partner-kpi-tiles" *ngIf="(partnerStatuses[row.erpCustomerID] || []).length > 0">
+                <div class="kpi-tile kpi-clickable partner-kpi" *ngFor="let stat of getPartnerAllStatuses(row.erpCustomerID)"
+                     [style.--tile-color]="getStatusColor(stat.status)"
+                     (click)="openStatusDrilldown(stat.status, row.erpCustomerID)">
+                  <div class="kpi-tile-icon" [style.background]="getStatusColor(stat.status)">
+                    <mat-icon>{{ getStatusIcon(stat.status) }}</mat-icon>
                   </div>
-                  <div class="psc-data">
-                    <span class="psc-count" [style.color]="getStatusColor(stat.status)">{{ stat.statusCount }}</span>
-                    <span class="psc-label">{{ stat.status }}</span>
-                  </div>
-                  <div class="psc-right">
-                    <span class="psc-pct" [style.color]="getStatusColor(stat.status)">{{ row.orderCount > 0 ? (stat.statusCount / row.orderCount * 100).toFixed(0) : 0 }}%</span>
-                    <div class="psc-bar">
-                      <div class="psc-bar-fill" [style.width.%]="row.orderCount > 0 ? (stat.statusCount / row.orderCount * 100) : 0"
-                           [style.background]="getStatusColor(stat.status)"></div>
-                    </div>
+                  <div class="kpi-tile-data">
+                    <span class="kpi-tile-value" [style.color]="getStatusColor(stat.status)">{{ stat.statusCount }}</span>
+                    <span class="kpi-tile-label">{{ stat.status }}</span>
                   </div>
                 </div>
               </div>

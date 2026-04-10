@@ -1,11 +1,19 @@
-<div class="login-page">
+<!-- Animated background shapes -->
+<div class="bg-shape bg-shape-1"></div>
+<div class="bg-shape bg-shape-2"></div>
+<div class="bg-shape bg-shape-3"></div>
+
+<div class="login-page" [class.login-page-mfa]="!isLoginView">
   <!-- Left Column -->
   <div class="login-column" [class.mfa-column-wide]="!isLoginView">
     <div class="login-card" [class.mfa-card-wide]="!isLoginView">
       <!-- Logo (always visible) -->
       <div class="login-logo" [class.mfa-logo-centered]="!isLoginView">
-        <img src="/assets/images/Bizmate.png" alt="eSyncMate">
-        <span class="logo-caption">eSyncMate</span>
+        <svg class="logo-svg" width="40" height="32" viewBox="0 0 50 40" xmlns="http://www.w3.org/2000/svg">
+          <polygon points="5,0 30,20 5,40" fill="#a0644a"/>
+          <polygon points="18,0 43,20 18,40" fill="#E8834A"/>
+        </svg>
+        <span class="logo-caption">e<span class="logo-highlight">Sync</span>Mate</span>
       </div>
 
       <!-- ========== VIEW 1: LOGIN FORM ========== -->
@@ -48,7 +56,7 @@
 
           <mat-progress-bar *ngIf="isLoading" mode="indeterminate" color="accent" class="login-progress"></mat-progress-bar>
           <button class="login-submit-btn" [disabled]="loginForm.invalid || isLoading" (click)="login()" type="button">
-            <mat-icon class="btn-icon">lock_open</mat-icon>
+            <mat-icon class="btn-icon">login</mat-icon>
             <span>{{ 'login' | translate }}</span>
           </button>
 
@@ -58,8 +66,24 @@
           </button>
         </form>
 
+        <!-- Trust Badges -->
+        <div class="trust-section">
+          <div class="trust-item">
+            <mat-icon class="trust-icon">verified_user</mat-icon>
+            <span>Secured with JWT Authentication</span>
+          </div>
+          <div class="trust-item">
+            <mat-icon class="trust-icon">lock</mat-icon>
+            <span>Two-Factor Authentication (MFA)</span>
+          </div>
+          <div class="trust-item">
+            <mat-icon class="trust-icon">shield</mat-icon>
+            <span>Role-Based Access Control</span>
+          </div>
+        </div>
+
         <p class="login-terms">
-          By clicking on the Log In button, you understand and agree to
+          By clicking Log In, you agree to our
           <a routerLink="/terms-of-use" target="_blank">Terms of Use</a> and <a routerLink="/privacy-policy" target="_blank">Privacy Policy</a>
         </p>
       </ng-container>
@@ -155,30 +179,62 @@
 
       <!-- Footer -->
       <div class="login-footer">
-        <span>Powered by <strong>eSyncMate</strong></span>
+        <span>&copy; 2026 eSyncMate by eSoftage. All rights reserved.</span>
       </div>
     </div>
   </div>
 
-  <!-- Right Column: Promo Cards (login view only) -->
-  <div class="promo-column" *ngIf="isLoginView">
-    <div class="promo-card promo-card-primary">
-      <div class="promo-card-content">
-        <h2 class="promo-title">Seamless API Integration</h2>
-        <div class="promo-features">
-          <div class="promo-feature"><div class="promo-feature-icon"><mat-icon>sync_alt</mat-icon></div><span>Real-time data sync</span></div>
-          <div class="promo-feature"><div class="promo-feature-icon"><mat-icon>inventory_2</mat-icon></div><span>Inventory management</span></div>
-          <div class="promo-feature"><div class="promo-feature-icon"><mat-icon>local_shipping</mat-icon></div><span>Order & shipment tracking</span></div>
-        </div>
+  <!-- Right Column: Feature Panel (login view only) -->
+  <div class="feature-panel" *ngIf="isLoginView">
+
+    <div class="feature-header">
+      <div class="feature-header-top">
+        <svg width="36" height="28" viewBox="0 0 50 40" xmlns="http://www.w3.org/2000/svg">
+          <polygon points="5,0 30,20 5,40" fill="#a0644a"/>
+          <polygon points="18,0 43,20 18,40" fill="#E8834A"/>
+        </svg>
+        <h2>API Integration Platform</h2>
       </div>
-      <div class="promo-card-graphic"><div class="graphic-circle"><mat-icon class="graphic-icon">hub</mat-icon></div></div>
+      <p>Seamless marketplace connectivity</p>
     </div>
-    <div class="promo-card promo-card-secondary">
-      <div class="promo-card-content">
-        <h2 class="promo-title">Multi-Platform Support</h2>
-        <p class="promo-desc">Connect with ShipStation, Amazon, and other platforms for unified order processing and inventory control.</p>
+
+    <div class="feature-card">
+      <div class="feature-card-header">
+        <div class="feature-card-icon"><mat-icon>storefront</mat-icon></div>
+        <span class="feature-card-badge">Marketplaces</span>
       </div>
-      <div class="promo-card-badge"><mat-icon class="badge-icon">cloud_done</mat-icon></div>
+      <h3>Multi-Partner Integration</h3>
+      <p>Connect with Amazon, Walmart, Target, Lowe's, Macy's, Michaels, Knot and more through a unified platform.</p>
     </div>
+
+    <div class="feature-card">
+      <div class="feature-card-header">
+        <div class="feature-card-icon"><mat-icon>inventory_2</mat-icon></div>
+        <span class="feature-card-badge">Automation</span>
+      </div>
+      <h3>Real-Time Inventory Sync</h3>
+      <p>Automated inventory feeds, order processing, ASN shipments and catalog management across all channels.</p>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-card-header">
+        <div class="feature-card-icon"><mat-icon>dashboard</mat-icon></div>
+        <span class="feature-card-badge">Analytics</span>
+      </div>
+      <h3>Live Dashboard & Alerts</h3>
+      <p>Monitor order status, track inventory feeds and receive instant email alerts for exceptions.</p>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-card">
+        <span class="stat-value">8+</span>
+        <span class="stat-label">Partners</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-value">24/7</span>
+        <span class="stat-label">Monitoring</span>
+      </div>
+    </div>
+
   </div>
 </div>
