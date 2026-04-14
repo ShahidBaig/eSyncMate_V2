@@ -46,39 +46,14 @@ interface Customers {
     MatPaginatorModule, TranslateModule, FormsModule
   ],
   animations: [
+    // State-based expand — content stays in DOM, animates between two states.
+    // This is the Angular Material recommended pattern for expandable table rows
+    // and gives the smoothest possible result.
     trigger('detailExpand', [
-      transition(':enter', [
-        style({ height: '0', opacity: 0, overflow: 'hidden' }),
-        animate('360ms cubic-bezier(0.25, 0.8, 0.25, 1)',
-          style({ height: '*', opacity: 1 }))
-      ]),
-      transition(':leave', [
-        style({ height: '*', opacity: 1, overflow: 'hidden' }),
-        animate('240ms cubic-bezier(0.4, 0.0, 0.2, 1)',
-          style({ height: '0', opacity: 0 }))
-      ])
-    ]),
-    trigger('cardFadeIn', [
-      transition(':enter', [
-        style({ opacity: 0, transform: 'translateY(-8px) scale(0.985)' }),
-        animate('420ms 80ms cubic-bezier(0.25, 0.8, 0.25, 1)',
-          style({ opacity: 1, transform: 'translateY(0) scale(1)' }))
-      ])
-    ]),
-    trigger('statStagger', [
-      transition(':enter', [
-        style({ opacity: 0, transform: 'translateY(6px)' }),
-        animate('320ms 160ms cubic-bezier(0.25, 0.8, 0.25, 1)',
-          style({ opacity: 1, transform: 'translateY(0)' }))
-      ])
-    ]),
-    trigger('expandIconRotate', [
-      transition('collapsed => expanded', [
-        animate('280ms cubic-bezier(0.25, 0.8, 0.25, 1)')
-      ]),
-      transition('expanded => collapsed', [
-        animate('240ms cubic-bezier(0.4, 0.0, 0.2, 1)')
-      ])
+      state('collapsed, void', style({ height: '0px', minHeight: '0', opacity: 0 })),
+      state('expanded', style({ height: '*', opacity: 1 })),
+      transition('expanded <=> collapsed',
+        animate('400ms cubic-bezier(0.4, 0, 0.2, 1)'))
     ])
   ]
 })
@@ -263,9 +238,23 @@ export class InventoryComponent implements OnInit {
       ? Array.from(typeSet)[0]
       : `Latest Inventory Snapshot (consolidated from ${sorted.length} feeds)`;
 
+    // Per-type breakdown with friendly display names
+    // (e.g. SCSFullInventoryFeed → "Full Inventory Feed Received")
+    const typeCounts = new Map<string, number>();
+    for (const b of sorted) {
+      const t = (b.routeType || b.RouteType || 'Unknown').toString();
+      typeCounts.set(t, (typeCounts.get(t) || 0) + 1);
+    }
+    const typeBreakdown = Array.from(typeCounts.entries()).map(([type, count]) => ({
+      type,
+      displayName: this.getFeedDisplayName(type),
+      count
+    }));
+
     return [{
       batchID: batchIDs[batchIDs.length - 1], // representative ID for any single-batch fallback
       mergedBatchIDs: batchIDs,
+      typeBreakdown: typeBreakdown,
       isMerged: true,
       mergedCount: sorted.length,
       routeType: typeLabel,
@@ -274,6 +263,18 @@ export class InventoryComponent implements OnInit {
       finishDate: last.finishDate || last.FinishDate,
       customerID: customerID
     }];
+  }
+
+  /**
+   * Map internal route type names to friendly display names for the
+   * consolidated feed breakdown chips.
+   */
+  private getFeedDisplayName(routeType: string): string {
+    const t = (routeType || '').toLowerCase();
+    if (t.includes('full')) return 'Full Inventory Feed Received';
+    if (t.includes('differential')) return 'Differential Inventory Feed Received';
+    if (t.includes('portal')) return 'Portal Inventory Feed Received';
+    return routeType; // fallback — show raw name
   }
 
   private formatDateISO(date: any): string {

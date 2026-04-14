@@ -86,7 +86,7 @@
 
         <!-- Expand Toggle -->
         <ng-container matColumnDef="Expand">
-          <th mat-header-cell *matHeaderCellDef style="width:40px;"></th>
+          <th mat-header-cell *matHeaderCellDef class="expand-col-header"></th>
           <td mat-cell *matCellDef="let element" class="expand-cell" (click)="toggleExpand(element); $event.stopPropagation()">
             <mat-icon class="expand-icon" [class.expanded]="expandedBatchID === element.batchID">expand_more</mat-icon>
           </td>
@@ -113,57 +113,71 @@
 
         <ng-container matColumnDef="StartDate">
           <th mat-header-cell *matHeaderCellDef>{{ 'start_Date' | translate }}</th>
-          <td mat-cell *matCellDef="let element">{{ element.startDate | date:'MM/dd/yyyy hh:mm a' }}</td>
+          <td mat-cell *matCellDef="let element">{{ element.startDate | date:'MM/dd/yyyy hh:mm:ss a' }}</td>
         </ng-container>
 
         <ng-container matColumnDef="FinishDate">
           <th mat-header-cell *matHeaderCellDef>{{ 'finish_Date' | translate }}</th>
-          <td mat-cell *matCellDef="let element">{{ element.finishDate | date:'MM/dd/yyyy hh:mm a' }}</td>
+          <td mat-cell *matCellDef="let element">{{ element.finishDate | date:'MM/dd/yyyy hh:mm:ss a' }}</td>
         </ng-container>
 
         <ng-container matColumnDef="File">
           <th mat-header-cell *matHeaderCellDef>{{ 'actions' | translate }}</th>
           <td mat-cell *matCellDef="let element">
-            <button mat-icon-button color="accent" matTooltip="Show Inventory" matTooltipPosition="above"
+            <button mat-flat-button
+                    class="action-btn action-upload"
+                    matTooltip="View Uploaded Data (sent to Partner)"
+                    matTooltipPosition="above"
                     (click)="getBatchiWiseInventory(element); $event.stopPropagation()">
-              <mat-icon>read_more</mat-icon>
+              <mat-icon>outbox</mat-icon>
+              <span class="action-btn-label">Uploaded</span>
             </button>
           </td>
         </ng-container>
 
-        <!-- Expanded Download Row -->
+        <!-- Expanded Download Row — state-based animation, content always in DOM -->
         <ng-container matColumnDef="expandedDetail">
-          <td mat-cell *matCellDef="let element" [attr.colspan]="columns.length">
-            <div class="download-section" *ngIf="expandedBatchID === element.batchID" [@detailExpand]>
+          <td mat-cell *matCellDef="let element" [attr.colspan]="columns.length" class="detail-cell">
+            <!-- Outer animator: ZERO padding — animates height/opacity only -->
+            <div class="download-animator"
+                 [@detailExpand]="expandedBatchID === element.batchID ? 'expanded' : 'collapsed'">
+            <!-- Inner container: holds the padding so the animation is jank-free -->
+            <div class="download-section">
 
               <!-- Loading -->
               <div class="snapshot-loading" *ngIf="downloadLoading">
                 <mat-spinner diameter="22"></mat-spinner>
-                <span>Loading inventory data received from ERP...</span>
+                <span>Loading inventory data received from ERP</span>
               </div>
 
               <!-- Snapshot Card — consolidated ERP inventory before this upload -->
-              <div class="snapshot-card" *ngIf="!downloadLoading && downloadBatches.length > 0" [@cardFadeIn]>
+              <div class="snapshot-card" *ngIf="!downloadLoading && downloadBatches.length > 0">
                 <div class="snapshot-card-header">
                   <div class="snapshot-card-icon"><mat-icon>inventory</mat-icon></div>
                   <div class="snapshot-card-heading">
-                    <div class="snapshot-card-title">Inventory Data Received from ERP</div>
+                    <div class="snapshot-card-title">Consolidated Inventory Received from ERP</div>
                     <div class="snapshot-card-subtitle">
                       This is the consolidated inventory pulled from ERP before this upload was sent to the partner.
                     </div>
                   </div>
-                  <button mat-icon-button color="accent" matTooltip="Show Inventory" matTooltipPosition="above"
+                  <button mat-flat-button
+                          class="action-btn action-download"
+                          matTooltip="View Downloaded Data (received from ERP)"
+                          matTooltipPosition="above"
                           (click)="getBatchiWiseInventory(downloadBatches[0]); $event.stopPropagation()">
-                    <mat-icon>read_more</mat-icon>
+                    <mat-icon>inbox</mat-icon>
+                    <span class="action-btn-label">Downloaded</span>
                   </button>
                 </div>
 
-                <div class="snapshot-stats" [@statStagger]>
-                  <div class="snapshot-stat">
+                <div class="snapshot-stats">
+                  <div class="snapshot-stat snapshot-stat-feeds">
                     <mat-icon class="stat-icon">layers</mat-icon>
-                    <div class="stat-text">
-                      <div class="stat-label">ERP Feeds Consolidated</div>
-                      <div class="stat-value">{{ downloadBatches[0].mergedCount || 1 }}</div>
+                    <div class="type-breakdown" *ngIf="downloadBatches[0].typeBreakdown?.length">
+                      <span class="type-chip" *ngFor="let tb of downloadBatches[0].typeBreakdown">
+                        <span class="type-chip-name">{{ tb.displayName }}</span>
+                        <span class="type-chip-count">{{ tb.count }}</span>
+                      </span>
                     </div>
                   </div>
                   <div class="snapshot-stat">
@@ -171,9 +185,9 @@
                     <div class="stat-text">
                       <div class="stat-label">Received Between</div>
                       <div class="stat-value">
-                        {{ downloadBatches[0].startDate | date:'MM/dd/yyyy hh:mm a' }}
+                        {{ downloadBatches[0].startDate | date:'MM/dd/yyyy hh:mm:ss a' }}
                         <span class="stat-arrow">→</span>
-                        {{ downloadBatches[0].finishDate | date:'MM/dd/yyyy hh:mm a' }}
+                        {{ downloadBatches[0].finishDate | date:'MM/dd/yyyy hh:mm:ss a' }}
                       </div>
                     </div>
                   </div>
@@ -197,7 +211,8 @@
                 </div>
               </div>
 
-            </div>
+            </div><!-- /download-section -->
+            </div><!-- /download-animator -->
           </td>
         </ng-container>
 
@@ -207,10 +222,7 @@
             [class.expanded-row]="expandedBatchID === row.batchID"
             (click)="toggleExpand(row)">
         </tr>
-        <tr mat-row *matRowDef="let row; columns: ['expandedDetail']"
-            class="detail-row"
-            [class.detail-row-hidden]="expandedBatchID !== row.batchID">
-        </tr>
+        <tr mat-row *matRowDef="let row; columns: ['expandedDetail']" class="detail-row"></tr>
 
       </table>
       <mat-paginator [length]="totalCount" [pageSize]="pageSize" [pageSizeOptions]="[5, 10, 25, 100]"

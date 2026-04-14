@@ -142,14 +142,17 @@ table {
   border-collapse: collapse !important;
 }
 
-// Header — soft, compact
+// Header — clean, balanced
 ::ng-deep tr.mat-mdc-header-row {
-  height: 36px !important;
+  height: 44px !important;
   background: #fafaf9 !important;
 }
 
+// Default header cell — identical padding/alignment to data cells below
 ::ng-deep th.mat-mdc-header-cell {
-  padding: 6px 20px !important;
+  padding: 0 18px !important;
+  text-align: left !important;
+  vertical-align: middle !important;
   font-size: 11px !important;
   font-weight: 600 !important;
   color: #64748b !important;
@@ -161,20 +164,32 @@ table {
   -moz-osx-font-smoothing: grayscale;
 }
 
-// Data row — normal, connected, no gaps
+// Expand column — narrow, no padding so it doesn't push subsequent columns
+::ng-deep th.mat-mdc-header-cell.expand-col-header,
+::ng-deep td.mat-mdc-cell.expand-cell {
+  width: 44px !important;
+  max-width: 44px !important;
+  padding: 0 !important;
+  text-align: center !important;
+}
+
+// Data row — consistent height, comfortable spacing
 ::ng-deep tr.mat-mdc-row.upload-row {
-  height: 44px !important;
+  height: 52px !important;
   background: #fff !important;
-  transition: background 0.15s ease !important;
+  transition: background 0.2s ease !important;
 
   &:hover {
     background: #fefcfa !important;
   }
 }
 
-// Normal, readable cells — standard row spacing
+// Data cells — IDENTICAL padding + alignment to header cells
+// so the column name and the data below it start at the SAME X position.
 ::ng-deep tr.mat-mdc-row.upload-row td.mat-mdc-cell {
-  padding: 8px 20px !important;
+  padding: 0 18px !important;
+  text-align: left !important;
+  vertical-align: middle !important;
   font-size: 13px !important;
   font-weight: 500 !important;
   color: #334155 !important;
@@ -190,8 +205,8 @@ table {
   }
 }
 
-// Hover background accent
-::ng-deep tr.mat-mdc-row:hover td.mat-mdc-cell {
+// Hover background accent — SCOPED to upload rows only (not detail row)
+::ng-deep tr.mat-mdc-row.upload-row:hover td.mat-mdc-cell {
   background: #fefcfa !important;
 }
 
@@ -199,6 +214,113 @@ table {
   color: red;
   white-space: nowrap;
   margin-left: -15px;
+}
+
+/* ===== DISTINCT ACTION BUTTONS — Uploaded vs Downloaded (icon + text label) ===== */
+::ng-deep .action-btn.mat-mdc-button-base {
+  height: 34px !important;
+  min-width: 0 !important;
+  padding: 0 16px !important;
+  border-radius: 9999px !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.2px !important;
+  text-transform: none !important;
+  line-height: 1 !important;
+  transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease !important;
+  -webkit-font-smoothing: antialiased;
+  white-space: nowrap !important;
+
+  // Material wraps content in .mdc-button__label. Let it be inline-flex
+  // centered — let Material's default mat-icon margins handle spacing.
+  .mdc-button__label {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: auto !important;
+    height: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    line-height: 1 !important;
+  }
+
+  // Ripple / touch-target overlays — keep them absolute, don't let them
+  // affect layout of the label
+  .mat-mdc-button-touch-target,
+  .mat-mdc-button-persistent-ripple,
+  .mat-mdc-button-ripple {
+    pointer-events: none !important;
+  }
+
+  // Let Material's default mat-icon margin-right provide the natural spacing
+  // between icon and text (same as before). Only override sizing.
+  mat-icon,
+  .mat-icon,
+  .mat-mdc-button-icon {
+    font-size: 18px !important;
+    width: 18px !important;
+    height: 18px !important;
+    line-height: 1 !important;
+    padding: 0 !important;
+    vertical-align: middle !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex-shrink: 0;
+  }
+
+  // Text label — MUST share the same baseline/center line as the icon.
+  // The 5px margin-top compensates for the font's default ascender/descender
+  // imbalance, pulling the text visually into the center of the icon.
+  .action-btn-label {
+    display: inline-flex !important;
+    align-items: center !important;
+    height: 18px !important;
+    line-height: 1 !important;
+    font-size: 12px;
+    font-weight: 700;
+    margin-top: 5px !important;
+  }
+
+  &:hover {
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+// UPLOADED — warm orange pill (data that was sent to the partner)
+::ng-deep .action-btn.action-upload.mat-mdc-button-base {
+  background: #fff7ed !important;
+  color: #9a3412 !important;
+  border: 1px solid #fed7aa !important;
+  box-shadow: 0 1px 2px rgba(232, 131, 74, 0.18);
+
+  mat-icon { color: #c2410c !important; }
+
+  &:hover {
+    background: #ffedd5 !important;
+    border-color: #fdba74 !important;
+    box-shadow: 0 3px 8px rgba(232, 131, 74, 0.3);
+  }
+}
+
+// DOWNLOADED — cool blue pill (data that was received from the ERP)
+::ng-deep .action-btn.action-download.mat-mdc-button-base {
+  background: #eff6ff !important;
+  color: #1e3a8a !important;
+  border: 1px solid #bfdbfe !important;
+  box-shadow: 0 1px 2px rgba(59, 130, 246, 0.18);
+
+  mat-icon { color: #1d4ed8 !important; }
+
+  &:hover {
+    background: #dbeafe !important;
+    border-color: #93c5fd !important;
+    box-shadow: 0 3px 8px rgba(59, 130, 246, 0.3);
+  }
 }
 
 /* Search form layout */
@@ -292,9 +414,7 @@ table {
 
 /* ===== EXPANDABLE UPLOAD ROWS — soft ===== */
 .expand-cell {
-  width: 40px;
   cursor: pointer;
-  text-align: center;
 }
 
 .expand-icon {
@@ -336,35 +456,47 @@ table {
   border-bottom: 1px solid #f1d7c3 !important;
 }
 
-// Detail row — container for the snapshot card; zero height when collapsed
+// Detail row — CRITICAL: Material MDC sets min-height: 52px on .mat-mdc-row.
+// We MUST override min-height to 0 or the collapsed detail row reserves
+// 52px of empty vertical space between every data row (the "weird gap").
 ::ng-deep tr.mat-mdc-row.detail-row {
   background: transparent !important;
   box-shadow: none !important;
   height: auto !important;
+  min-height: 0 !important;      // <-- the fix for weird spacing
+  line-height: 0 !important;     // <-- prevents baseline residue
+  display: table-row !important;
 
-  &:hover { background: transparent !important; transform: none !important; box-shadow: none !important; }
+  &:hover {
+    background: transparent !important;
+    transform: none !important;
+    box-shadow: none !important;
+  }
 
-  td.mat-mdc-cell {
+  td.mat-mdc-cell,
+  td.detail-cell {
     background: transparent !important;
     border: none !important;
     padding: 0 !important;
     border-radius: 0 !important;
+    height: auto !important;
+    min-height: 0 !important;
+    line-height: normal !important; // restore inside content
   }
 }
 
-// Collapsed detail — fully hidden, zero height
-::ng-deep tr.mat-mdc-row.detail-row.detail-row-hidden {
-  height: 0 !important;
-
-  td.mat-mdc-cell {
-    padding: 0 !important;
-    border: none !important;
-    height: 0 !important;
-    overflow: hidden !important;
-  }
-}
 
 /* ===== DOWNLOAD SECTION (inside expanded row) ===== */
+
+// Outer animator — animates height/opacity. ZERO padding so height:0
+// really is 0 (no padding residue causing a jump at the end of collapse).
+.download-animator {
+  overflow: hidden;
+  will-change: height, opacity;
+  background: #fdfbf8;
+}
+
+// Inner container — holds the padding, fully unconstrained by the animation
 .download-section {
   padding: 14px 24px 18px 56px;
   background: #fdfbf8;
@@ -386,8 +518,8 @@ table {
   display: flex;
   align-items: flex-start;
   gap: 14px;
-  padding-bottom: 14px;
-  border-bottom: 1px dashed #ece8e2;
+  padding-bottom: 10px;
+  border-bottom: none;
 }
 
 .snapshot-card-icon {
@@ -460,7 +592,7 @@ table {
 
 .snapshot-stats {
   display: grid;
-  grid-template-columns: minmax(180px, 1fr) minmax(320px, 2fr) minmax(180px, 1fr);
+  grid-template-columns: minmax(440px, 2fr) minmax(320px, 2fr) minmax(180px, 1fr);
   gap: 18px;
   padding-top: 14px;
   align-items: stretch;
@@ -471,7 +603,7 @@ table {
   align-items: center;
   gap: 10px;
   min-width: 0;
-  padding: 10px 14px;
+  padding: 12px 14px;
   background: #fafaf9;
   border: 1px solid #f1efe9;
   border-radius: 8px;
@@ -515,6 +647,56 @@ table {
     color: #cbd5e1;
     font-weight: 600;
     margin: 0 2px;
+  }
+}
+
+// ERP Feeds Consolidated — type breakdown chips on one line
+.snapshot-stat.snapshot-stat-feeds {
+  align-items: center;
+  padding: 12px 14px;
+
+  .type-breakdown {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 8px;
+    align-items: center;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .type-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 4px 3px 10px;
+    background: #fff7ed;
+    border: 1px solid #fed7aa;
+    border-radius: 9999px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #9a3412;
+    line-height: 1;
+    -webkit-font-smoothing: antialiased;
+    white-space: nowrap;
+
+    .type-chip-name {
+      letter-spacing: 0.1px;
+    }
+
+    .type-chip-count {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 18px;
+      height: 18px;
+      padding: 0 6px;
+      background: #E8834A;
+      color: #fff;
+      border-radius: 9999px;
+      font-size: 10px;
+      font-weight: 700;
+      line-height: 1;
+    }
   }
 }
 
