@@ -62,6 +62,8 @@ export class InventoryBatchwiseComponent implements OnInit {
   batchStatus: string = '';
   routeType: string = '';
   customerID: string = '';
+  isMerged: boolean = false;
+  mergedBatchIDs: string[] = [];
   dateColumnLabel: string = 'Sent Date';
   showSpinner: boolean = false;
   isLoading: boolean = false;
@@ -87,6 +89,8 @@ export class InventoryBatchwiseComponent implements OnInit {
     this.batchStatus = data.batchStatus || '';
     this.routeType = data.routeType || '';
     this.customerID = data.customerID || '';
+    this.isMerged = !!data.isMerged;
+    this.mergedBatchIDs = data.mergedBatchIDs || [];
     this.dateColumnLabel = this.isReceivedType() ? 'Received Date' : 'Sent Date';
 
     this.batchWiseInventoryForm = this.fb.group({
@@ -129,7 +133,12 @@ export class InventoryBatchwiseComponent implements OnInit {
   loadBatchData() {
     this.isLoading = true;
     const itemID = this.batchWiseInventoryForm.get('itemID')?.value || '';
-    this.api.getbatchWise(this.batchID, itemID, this.pageNumber, this.pageSize).subscribe({
+
+    const obs = (this.isMerged && this.mergedBatchIDs.length > 0)
+      ? this.api.getMergedDownloadItems(this.mergedBatchIDs, itemID, this.pageNumber, this.pageSize)
+      : this.api.getbatchWise(this.batchID, itemID, this.pageNumber, this.pageSize);
+
+    obs.subscribe({
       next: (res: any) => {
         this.dataSource = res.batchWiseInventory ?? [];
         this.totalCount = res.totalCount ?? 0;

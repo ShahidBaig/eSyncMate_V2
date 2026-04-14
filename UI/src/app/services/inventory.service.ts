@@ -39,6 +39,25 @@ export class InventoryService {
 
   }
 
+  getMergedDownloadItems(batchIDs: string[], itemID: string = '', pageNumber: number = 1, pageSize: number = 10): Observable<any> {
+    let params = new HttpParams()
+      .set('batchIDs', batchIDs.join(','))
+      .set('pageNumber', pageNumber.toString())
+      .set('pageSize', pageSize.toString());
+    if (itemID) {
+      params = params.set('itemID', itemID);
+    }
+    return this.http.get<any>(`${this.apiUrl}api/v1/inventory/getMergedDownloadItems`, { params });
+  }
+
+  getDownloadBatches(customerID: string, fromDate: string, toDate: string): Observable<any> {
+    let params = new HttpParams()
+      .set('customerID', customerID)
+      .set('fromDate', fromDate)
+      .set('toDate', toDate);
+    return this.http.get<any>(`${this.apiUrl}api/v1/inventory/getDownloadBatches`, { params });
+  }
+
   getERPCustomers(): Observable<any> {
     return this.http.get(`${this.apiUrl}api/CustomerProductCatalog/getERPCustomers`);
   }

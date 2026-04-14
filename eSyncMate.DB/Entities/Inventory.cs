@@ -478,5 +478,40 @@ namespace eSyncMate.DB.Entities
             string l_SQL = $"SELECT * FROM VW_BatchWiseInventory WHERE {p_Criteria} ORDER BY Id DESC OFFSET {offset} ROWS FETCH NEXT {pageSize} ROWS ONLY";
             return Connection.GetData(l_SQL, ref p_Data);
         }
+
+        /// <summary>
+        /// Returns merged item-level data across multiple download batches.
+        /// Dedupes by ItemID — keeps only the latest row (last write wins) using ROW_NUMBER.
+        /// p_BatchIdsCsv must be a pre-quoted, comma-separated GUID list (caller sanitizes).
+        /// </summary>
+        public bool GetMergedDownloadItemsPaged(string p_BatchIdsCsv, string p_ItemIdFilter, ref DataTable p_Data, int pageNumber, int pageSize, out int totalCount)
+        {
+            totalCount = 0;
+            string itemFilter = string.IsNullOrEmpty(p_ItemIdFilter)
+                ? string.Empty
+                : $" AND ItemId LIKE '%{p_ItemIdFilter.Replace("'", "''")}%'";
+
+            string baseCte = $@"
+WITH MergedItems AS (
+    SELECT *,
+           ROW_NUMBER() OVER (PARTITION BY ItemId ORDER BY ISNULL(ModifiedDate, CreatedDate) DESC, Id DESC) AS rn
+    FROM VW_BatchWiseInventory WITH (NOLOCK)
+    WHERE BatchID IN ({p_BatchIdsCsv}){itemFilter}
+)";
+
+            string l_CountQuery = baseCte + " SELECT COUNT(*) FROM MergedItems WHERE rn = 1";
+            var l_CountData = new DataTable();
+            Connection.GetData(l_CountQuery, ref l_CountData);
+            if (l_CountData.Rows.Count > 0) totalCount = Convert.ToInt32(l_CountData.Rows[0][0]);
+            l_CountData.Dispose();
+
+            int offset = (pageNumber - 1) * pageSize;
+            string l_SQL = baseCte + $@"
+SELECT * FROM MergedItems
+WHERE rn = 1
+ORDER BY ItemId
+OFFSET {offset} ROWS FETCH NEXT {pageSize} ROWS ONLY";
+            return Connection.GetData(l_SQL, ref p_Data);
+        }
     }
 }

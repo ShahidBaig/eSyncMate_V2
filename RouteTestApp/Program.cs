@@ -35,9 +35,15 @@ using Microsoft.Graph.Models;
 using Microsoft.Graph.Users.Item.SendMail;
 using RouteTestApp;
 
-// ======== Route Execution Lock Tests ========
+// ======== Test Connection ========
 string testConnectionString = "<<SET_CONNECTION_STRING>>";
+
+// ======== Route Execution Lock Tests ========
 RouteExecutionLockTests.RunAllTests(testConnectionString).GetAwaiter().GetResult();
+
+// ======== Flow Inventory Coordination Tests ========
+FlowInventoryCoordinationTests.RunAllTests(testConnectionString).GetAwaiter().GetResult();
+
 return;
 
 static void Main()

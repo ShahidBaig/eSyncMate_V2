@@ -1,12 +1,12 @@
-import { Component, OnInit, Pipe, PipeTransform } from '@angular/core';
-import { BatchWiseInventory, Inventory, Order } from '../models/models';
+import { Component, OnInit } from '@angular/core';
+import { BatchWiseInventory, Inventory } from '../models/models';
 import { DatePipe, NgIf, formatDate } from '@angular/common';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatCardModule } from '@angular/material/card';
-import { FormGroup, FormControl, FormBuilder, Validators, ReactiveFormsModule, FormsModule } from '@angular/forms';
+import { FormGroup, FormControl, FormBuilder, ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
@@ -18,23 +18,18 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { CommonModule } from '@angular/common';
 import { MatSelectModule } from '@angular/material/select';
-import { MatPaginatorModule } from '@angular/material/paginator';
-import { PageEvent } from '@angular/material/paginator';
+import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { LanguageService } from '../services/language.service';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { InventoryService } from '../services/inventory.service';
 import { InventorypopupComponent } from './inventory-popup/inventory-popup.component';
-import { TranslateService } from '@ngx-translate/core';
 import { environment } from 'src/environments/environment';
 import { InventoryBatchwiseComponent } from './inventory-batchwise/inventory-batchwise.component';
 import { InventoryHelpDialogComponent } from './inventory-help-dialog/inventory-help-dialog.component';
+import { trigger, state, style, transition, animate } from '@angular/animations';
 
 interface Customers {
   erpCustomerID: string;
-}
-
-interface RouteTypes {
-  routeType: string;
 }
 
 @Component({
@@ -43,76 +38,71 @@ interface RouteTypes {
   styleUrls: ['./inventory.component.scss'],
   standalone: true,
   imports: [
-    MatButtonToggleModule,
-    MatTableModule,
-    DatePipe,
-    MatCardModule,
-    ReactiveFormsModule,
-    MatFormFieldModule,
-    MatInputModule,
-    NgIf,
-    MatButtonModule,
-    MatDatepickerModule,
-    MatNativeDateModule,
-    MatTooltipModule,
-    MatIconModule,
-    MatProgressSpinnerModule,
-    MatProgressBarModule,
-    CommonModule,
-    MatSelectModule,
-    MatPaginatorModule,
-    TranslateModule,
-    FormsModule
+    MatButtonToggleModule, MatTableModule, DatePipe, MatCardModule,
+    ReactiveFormsModule, MatFormFieldModule, MatInputModule, NgIf,
+    MatButtonModule, MatDatepickerModule, MatNativeDateModule,
+    MatTooltipModule, MatIconModule, MatProgressSpinnerModule,
+    MatProgressBarModule, CommonModule, MatSelectModule,
+    MatPaginatorModule, TranslateModule, FormsModule
   ],
+  animations: [
+    trigger('detailExpand', [
+      transition(':enter', [
+        style({ height: '0', opacity: 0, overflow: 'hidden' }),
+        animate('250ms ease-out', style({ height: '*', opacity: 1 }))
+      ]),
+      transition(':leave', [
+        animate('200ms ease-in', style({ height: '0', opacity: 0, overflow: 'hidden' }))
+      ])
+    ])
+  ]
 })
 export class InventoryComponent implements OnInit {
-  isLoading: boolean = false;
+  isLoading = false;
   mydate = environment.date;
 
   listOfInventory: Inventory[] = [];
-  listOfInventoryFiles: Inventory[] = []
-  listOfBatchWiseInventory: BatchWiseInventory[] = []
+  listOfInventoryFiles: Inventory[] = [];
+  listOfBatchWiseInventory: BatchWiseInventory[] = [];
   inventoryToDisplay: Inventory[] = [];
   customersOptions: Customers[] | undefined;
   filteredCustomerOptions: Customers[] = [];
   customerSearchText = '';
-  routeTypeOptions: RouteTypes[] | undefined;
-  filteredRouteTypeOptions: RouteTypes[] = [];
-  routeTypeSearchText = '';
   InventoryForm: FormGroup;
-  msg: string = '';
-  code: number = 0;
-  showSpinnerforSearch: boolean = false;
-  showSpinner: boolean = false;
-  statusOptions = ['Select Status', 'PROCESSING', 'COMPLETED','ERROR'];
-  totalCount: number = 0;
-  pageNumber: number = 1;
-  pageSize: number = 10;
+  msg = '';
+  code = 0;
+  showSpinnerforSearch = false;
+  showSpinner = false;
+  statusOptions = ['Select Status', 'PROCESSING', 'COMPLETED', 'ERROR'];
+  totalCount = 0;
+  pageNumber = 1;
+  pageSize = 10;
 
-  columns: string[] = [
-    'CustomerID',
-    'Status',
-    'StartDate',
-    'FinishDate',
-    'Type',
-    'File',
-  ];
+  // Expandable row state
+  expandedBatchID: string | null = null;
+  downloadBatches: any[] = [];
+  downloadLoading = false;
 
-  constructor(private translate: TranslateService, private api: InventoryService, private fb: FormBuilder, private toast: NgToastService, private dialog: MatDialog, public languageService: LanguageService) {
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  columns: string[] = ['Expand', 'CustomerID', 'Status', 'StartDate', 'FinishDate', 'File'];
 
+  constructor(
+    private translate: TranslateService,
+    private api: InventoryService,
+    private fb: FormBuilder,
+    private toast: NgToastService,
+    private dialog: MatDialog,
+    public languageService: LanguageService
+  ) {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
     const today = new Date();
-    today.setDate(today.getDate() + this.mydate);
 
     this.InventoryForm = this.fb.group({
-      //customerIDId: fb.control(''),
       itemID: fb.control(''),
-      startDate : new FormControl(formatDate(sevenDaysAgo, "yyyy-MM-dd", "en")),
+      startDate: new FormControl(formatDate(yesterday, "yyyy-MM-dd", "en")),
       finishDate: new FormControl(formatDate(today, "yyyy-MM-dd", "en")),
       status: fb.control(''),
       customerID: fb.control(''),
-      routeType: fb.control(''),
     });
   }
 
@@ -131,8 +121,6 @@ export class InventoryComponent implements OnInit {
       next: (res: any) => {
         this.customersOptions = res.customers;
         this.filteredCustomerOptions = this.customersOptions || [];
-
-        // Auto-select and load data if user has only 1 customer assigned
         if (this.customersOptions && this.customersOptions.length === 1) {
           this.InventoryForm.get('customerID')?.setValue(this.customersOptions[0].erpCustomerID);
           this.onCustomerChanged();
@@ -142,21 +130,10 @@ export class InventoryComponent implements OnInit {
     });
   }
 
-  getRouteTypes(customerID: string = '') {
-    this.api.getRouteTypes(customerID).subscribe({
-      next: (res: any) => {
-        this.routeTypeOptions = res.routeType;
-        this.filteredRouteTypeOptions = this.routeTypeOptions || [];
-      },
-    });
-  }
-
   onCustomerChanged() {
-    const customerID = this.InventoryForm.get('customerID')?.value || '';
-    // Reset route type when customer changes
-    this.InventoryForm.get('routeType')?.setValue('');
-    // Reload route types filtered by selected customer
-    this.getRouteTypes(customerID);
+    // Reset expanded row when customer changes
+    this.expandedBatchID = null;
+    this.downloadBatches = [];
   }
 
   filterCustomerOptions() {
@@ -173,30 +150,12 @@ export class InventoryComponent implements OnInit {
     }
   }
 
-  filterRouteTypeOptions() {
-    const search = this.routeTypeSearchText.toLowerCase();
-    this.filteredRouteTypeOptions = (this.routeTypeOptions || []).filter(r =>
-      r.routeType.toLowerCase().includes(search)
-    );
-  }
-
-  onRouteTypeSelectOpened(opened: boolean) {
-    if (opened) {
-      this.routeTypeSearchText = '';
-      this.filteredRouteTypeOptions = this.routeTypeOptions || [];
-    }
-  }
-
   getStatusTooltip(status: string, batchID: string): any {
     switch (status) {
-      case 'PROCESSING':
-        return { key: 'Batch Processing' };
-      case 'COMPLETED':
-        return { key: 'Batch Completed' };
-      case 'ERROR':
-        return { key: 'Batch Error', params: { batchID: batchID.toUpperCase() } };
-      default:
-        return { key: '' };
+      case 'PROCESSING': return { key: 'Batch Processing' };
+      case 'COMPLETED': return { key: 'Batch Completed' };
+      case 'ERROR': return { key: 'Batch Error', params: { batchID: batchID.toUpperCase() } };
+      default: return { key: '' };
     }
   }
 
@@ -205,23 +164,107 @@ export class InventoryComponent implements OnInit {
     return this.translate.instant(tooltipData.key, tooltipData.params);
   }
 
-
   getStatusClass(status: string): string {
-    if (status.toLocaleUpperCase() === 'PROCESSING') {
-      return 'new-status';
-    } else if (status.toLocaleUpperCase() === 'ERROR') {
-      return 'syncerror-status';
-    } else if (status.toLocaleUpperCase() === 'COMPLETED') {
-      return 'sysced-status';
-    } else {
-      return '';
-    }
+    const s = (status || '').toUpperCase();
+    if (s === 'PROCESSING') return 'new-status';
+    if (s === 'ERROR') return 'syncerror-status';
+    if (s === 'COMPLETED') return 'sysced-status';
+    if (s === 'ABORTED') return 'aborted-status';
+    return '';
   }
+
+  // ========== EXPANDABLE ROW LOGIC ==========
+
+  toggleExpand(element: any) {
+    if (this.expandedBatchID === element.batchID) {
+      // Collapse
+      this.expandedBatchID = null;
+      this.downloadBatches = [];
+      return;
+    }
+
+    // Expand — find previous upload's start date
+    this.expandedBatchID = element.batchID;
+    this.downloadBatches = [];
+    this.downloadLoading = true;
+
+    const currentIndex = this.inventoryToDisplay.findIndex((r: any) => r.batchID === element.batchID);
+    const prevUpload: any = currentIndex < this.inventoryToDisplay.length - 1
+      ? this.inventoryToDisplay[currentIndex + 1]
+      : null;
+
+    const fromDate = prevUpload ? this.formatDateISO(prevUpload.startDate || prevUpload.StartDate) : '2000-01-01';
+    const toDate = this.formatDateISO(element.startDate || element.StartDate);
+    const customerID = element.customerID || element.CustomerID;
+
+    // Store prev date for display
+    element._prevUploadDate = prevUpload ? (prevUpload.startDate || prevUpload.StartDate) : null;
+
+    this.api.getDownloadBatches(customerID, fromDate, toDate).subscribe({
+      next: (res: any) => {
+        const rawBatches = res.inventory || [];
+        this.downloadBatches = this.buildMergedDownloadRow(rawBatches, customerID);
+        this.downloadLoading = false;
+      },
+      error: () => {
+        this.downloadBatches = [];
+        this.downloadLoading = false;
+      }
+    });
+  }
+
+  /**
+   * Collapse multiple download batches into ONE merged row.
+   * - earliest StartDate, latest FinishDate
+   * - status hardcoded to 'Completed' (no merging of statuses)
+   * - keeps all underlying batchIDs for item-level merge
+   */
+  private buildMergedDownloadRow(rawBatches: any[], customerID: string): any[] {
+    if (!rawBatches || rawBatches.length === 0) return [];
+
+    const sorted = [...rawBatches].sort((a, b) => {
+      const da = new Date(a.startDate || a.StartDate || 0).getTime();
+      const db = new Date(b.startDate || b.StartDate || 0).getTime();
+      return da - db;
+    });
+
+    const first = sorted[0];
+    const last = sorted[sorted.length - 1];
+    const batchIDs = sorted.map((b: any) => b.batchID || b.BatchID).filter((x: any) => !!x);
+
+    // Build a meaningful label describing the consolidated inventory snapshot
+    const typeSet = new Set<string>(sorted.map((b: any) => (b.routeType || b.RouteType || '').toString()));
+    const typeLabel = typeSet.size === 1
+      ? Array.from(typeSet)[0]
+      : `Latest Inventory Snapshot (consolidated from ${sorted.length} feeds)`;
+
+    return [{
+      batchID: batchIDs[batchIDs.length - 1], // representative ID for any single-batch fallback
+      mergedBatchIDs: batchIDs,
+      isMerged: true,
+      mergedCount: sorted.length,
+      routeType: typeLabel,
+      status: 'Completed', // hardcoded — no status merging
+      startDate: first.startDate || first.StartDate,
+      finishDate: last.finishDate || last.FinishDate,
+      customerID: customerID
+    }];
+  }
+
+  private formatDateISO(date: any): string {
+    if (!date) return '';
+    const d = new Date(date);
+    // Format as local time (YYYY-MM-DDTHH:mm:ss) — do NOT convert to UTC
+    // The DB stores dates in local time, so we must send local time not UTC
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  }
+
+  // ========== EXISTING METHODS ==========
 
   getInventoryFiles(element: any) {
     let customerId = element.customerID;
     let itemId = element.itemId;
-
     this.showSpinner = false;
 
     this.api.getInventoryFiles(customerId, itemId).subscribe({
@@ -231,53 +274,38 @@ export class InventoryComponent implements OnInit {
         this.code = res.code;
 
         if (this.listOfInventoryFiles.length === 0) {
-          this.toast.info({ detail: "INFO", summary: this.languageService.getTranslation('noInventoryDataMsg'), duration: 5000, /*sticky: true,*/ position: 'topRight' });
+          this.toast.info({ detail: "INFO", summary: this.languageService.getTranslation('noInventoryDataMsg'), duration: 5000, position: 'topRight' });
           this.showSpinner = false;
-
           return;
         }
 
-        const dialogRef = this.dialog.open(InventorypopupComponent, {
-          width: '70%',
-          disableClose: true,
-          data: this.listOfInventoryFiles,
+        this.dialog.open(InventorypopupComponent, {
+          width: '70%', disableClose: true, data: this.listOfInventoryFiles,
         });
-
-        dialogRef.afterClosed().subscribe(result => {
-          console.log('The dialog was closed');
-        });
-
         this.showSpinner = false;
       },
       error: (err: any) => {
-        this.toast.error({ detail: "ERROR", summary: err.message, duration: 5000, /*sticky: true,*/ position: 'topRight' });
+        this.toast.error({ detail: "ERROR", summary: err.message, duration: 5000, position: 'topRight' });
         this.showSpinner = false;
       },
     });
   }
 
-
-
   getBatchiWiseInventory(element: any) {
     let itemID = (this.InventoryForm.get('itemID') as FormControl).value;
 
-    const dialogRef = this.dialog.open(InventoryBatchwiseComponent, {
-      width: '95vw',
-      maxWidth: '95vw',
-      height: '85vh',
-      panelClass: 'batch-wise-dialog-panel',
-      disableClose: true,
+    this.dialog.open(InventoryBatchwiseComponent, {
+      width: '95vw', maxWidth: '95vw', height: '85vh',
+      panelClass: 'batch-wise-dialog-panel', disableClose: true,
       data: {
         batchID: element.batchID,
+        mergedBatchIDs: element.mergedBatchIDs ?? null,
+        isMerged: element.isMerged ?? false,
         itemID: itemID ?? null,
         batchStatus: element.status ?? '',
         routeType: element.routeType ?? '',
         customerID: element.customerID ?? '',
       },
-    });
-
-    dialogRef.afterClosed().subscribe(result => {
-      console.log('The dialog was closed');
     });
   }
 
@@ -285,7 +313,6 @@ export class InventoryComponent implements OnInit {
     let year = date.getFullYear();
     let month = (1 + date.getMonth()).toString().padStart(2, '0');
     let day = date.getDate().toString().padStart(2, '0');
-
     return year + '-' + month + '-' + day;
   }
 
@@ -299,15 +326,15 @@ export class InventoryComponent implements OnInit {
     let finishDate = (this.InventoryForm.get('finishDate') as FormControl).value;
     let status = (this.InventoryForm.get('status') as FormControl).value;
     let customerID = (this.InventoryForm.get('customerID') as FormControl).value;
-    let routeType =  (this.InventoryForm.get('routeType') as FormControl).value;
     let stringFromDate = '';
     let stringToDate = '';
 
     if (resetPage) {
       this.pageNumber = 1;
+      this.expandedBatchID = null;
+      this.downloadBatches = [];
     }
 
-    // Customer is mandatory
     if (!customerID || customerID === '') {
       this.toast.warning({ detail: "INFO", summary: 'Please select a Customer', duration: 5000, position: 'topRight' });
       return;
@@ -316,7 +343,9 @@ export class InventoryComponent implements OnInit {
     if (itemID == '') { itemID = 'EMPTY' }
     if (status == '' || status.toLocaleLowerCase() == 'select status') { status = 'EMPTY' }
     if (customerID == '') { customerID = 'EMPTY' }
-    if (routeType == '') { routeType = 'EMPTY' }
+
+    // Route type fixed to upload types only
+    let routeType = 'EMPTY';
 
     if (startDate !== null) {
       stringFromDate = startDate.toLocaleString();
@@ -337,7 +366,6 @@ export class InventoryComponent implements OnInit {
       next: (res: any) => {
         this.msg = res.message;
         this.code = res.code;
-
         this.listOfInventory = res.inventory ?? [];
         this.totalCount = res.totalCount ?? 0;
         this.inventoryToDisplay = this.listOfInventory;

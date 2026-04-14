@@ -69,6 +69,107 @@ namespace eSyncMate.Processor.Managers
                     return;
                 }
 
+                // ========== FLOW-BASED INVENTORY COORDINATION (External) ==========
+                if (InventoryRouteHelper.IsInventoryRoute(route.TypeId))
+                {
+                    var flowCoord = new DB.Entities.RouteAbortFlag();
+                    flowCoord.UseConnection(CommonUtils.ConnectionString);
+                    long flowId = flowCoord.GetFlowIdForRoute(routeId);
+
+                    if (flowId > 0)
+                    {
+                        int[] inventoryTypeIds = InventoryRouteHelper.GetInventoryTypeIds();
+                        bool othersRunning = flowCoord.IsOtherFlowInventoryRouteRunning(flowId, routeId, inventoryTypeIds);
+
+                        if (othersRunning)
+                        {
+                            if (InventoryRouteHelper.IsFullFeedRoute(route.TypeId))
+                            {
+                                route.SaveLog(Declarations.LogTypeEnum.RouteInfo,
+                                    $"Route [{routeId}] (Full Feed) — other inventory routes in Flow [{flowId}] are running. Waiting.", "", 1);
+
+                                int pollSeconds = 30;
+                                int maxWaitSeconds = 30 * 60;
+                                int elapsed = 0;
+
+                                while (othersRunning && elapsed < maxWaitSeconds)
+                                {
+                                    Thread.Sleep(pollSeconds * 1000);
+                                    elapsed += pollSeconds;
+                                    othersRunning = flowCoord.IsOtherFlowInventoryRouteRunning(flowId, routeId, inventoryTypeIds);
+                                }
+
+                                if (othersRunning)
+                                {
+                                    route.SaveLog(Declarations.LogTypeEnum.RouteInfo,
+                                        $"Route [{routeId}] (Full Feed) — timed out after 30 minutes waiting. Skipping.", "", 1);
+                                    return;
+                                }
+
+                                route.SaveLog(Declarations.LogTypeEnum.Info,
+                                    $"Route [{routeId}] (Full Feed) — other routes finished after {elapsed}s. Proceeding.", "", 1);
+                            }
+                            else if (InventoryRouteHelper.IsUploadRoute(route.TypeId))
+                            {
+                                // Upload route — if a Full Feed is running, exit immediately (Full Feed has top priority).
+                                // Otherwise, if a Differential is running, WAIT for it to finish, then proceed.
+                                int[] fullFeedTypeIds = InventoryRouteHelper.GetFullFeedTypeIds();
+                                bool fullFeedRunning = flowCoord.IsOtherFlowInventoryRouteRunning(flowId, routeId, fullFeedTypeIds);
+
+                                if (fullFeedRunning)
+                                {
+                                    route.SaveLog(Declarations.LogTypeEnum.RouteInfo,
+                                        $"Route [{routeId}] (Upload) — a Full Feed is running in Flow [{flowId}]. Skipping.", "", 1);
+                                    return;
+                                }
+
+                                int[] diffTypeIds = InventoryRouteHelper.GetDifferentialTypeIds();
+                                bool diffRunning = flowCoord.IsOtherFlowInventoryRouteRunning(flowId, routeId, diffTypeIds);
+
+                                if (diffRunning)
+                                {
+                                    route.SaveLog(Declarations.LogTypeEnum.RouteInfo,
+                                        $"Route [{routeId}] (Upload) — a Differential is running in Flow [{flowId}]. Waiting for it to complete.", "", 1);
+
+                                    int pollSeconds = 30;
+                                    int maxWaitSeconds = 30 * 60;
+                                    int elapsed = 0;
+
+                                    while (diffRunning && elapsed < maxWaitSeconds)
+                                    {
+                                        Thread.Sleep(pollSeconds * 1000);
+                                        elapsed += pollSeconds;
+                                        diffRunning = flowCoord.IsOtherFlowInventoryRouteRunning(flowId, routeId, diffTypeIds);
+                                    }
+
+                                    if (diffRunning)
+                                    {
+                                        route.SaveLog(Declarations.LogTypeEnum.RouteInfo,
+                                            $"Route [{routeId}] (Upload) — timed out after 30 minutes waiting for Differential. Skipping.", "", 1);
+                                        return;
+                                    }
+
+                                    route.SaveLog(Declarations.LogTypeEnum.Info,
+                                        $"Route [{routeId}] (Upload) — Differential finished after {elapsed}s. Proceeding.", "", 1);
+                                }
+                                else
+                                {
+                                    // Neither Full Feed nor Differential is running — only other uploads. Skip as before.
+                                    route.SaveLog(Declarations.LogTypeEnum.RouteInfo,
+                                        $"Route [{routeId}] — another inventory route in Flow [{flowId}] is running. Skipping.", "", 1);
+                                    return;
+                                }
+                            }
+                            else
+                            {
+                                route.SaveLog(Declarations.LogTypeEnum.RouteInfo,
+                                    $"Route [{routeId}] — another inventory route in Flow [{flowId}] is running. Skipping.", "", 1);
+                                return;
+                            }
+                        }
+                    }
+                }
+
                 // Debug: Log paths
                 var exePath = ExternalProcessPath;
                 var workingDir = Path.GetDirectoryName(exePath) ?? Directory.GetCurrentDirectory();
@@ -196,6 +297,112 @@ namespace eSyncMate.Processor.Managers
                 {
                     route.SaveLog(Declarations.LogTypeEnum.RouteInfo, $"Route [{routeId}] is already running (DB lock held), skipping.", "", 1);
                     return;
+                }
+
+                // ========== FLOW-BASED INVENTORY COORDINATION ==========
+                // For inventory routes only:
+                // - Non-Full-Feed: SKIP if another inventory route in the same Flow is running
+                // - Full Feed (TypeId=7): WAIT for other inventory routes to finish, then proceed
+                if (InventoryRouteHelper.IsInventoryRoute(route.TypeId))
+                {
+                    var flowCoord = new DB.Entities.RouteAbortFlag();
+                    flowCoord.UseConnection(CommonUtils.ConnectionString);
+                    long flowId = flowCoord.GetFlowIdForRoute(routeId);
+
+                    if (flowId > 0)
+                    {
+                        int[] inventoryTypeIds = InventoryRouteHelper.GetInventoryTypeIds();
+                        bool othersRunning = flowCoord.IsOtherFlowInventoryRouteRunning(flowId, routeId, inventoryTypeIds);
+
+                        if (othersRunning)
+                        {
+                            if (InventoryRouteHelper.IsFullFeedRoute(route.TypeId))
+                            {
+                                // Full Feed has PRIORITY — wait for others to finish
+                                route.SaveLog(Declarations.LogTypeEnum.RouteInfo,
+                                    $"Route [{routeId}] (Full Feed) — other inventory routes in Flow [{flowId}] are running. Waiting for them to finish.", "", 1);
+
+                                int pollSeconds = 30;
+                                int maxWaitSeconds = 30 * 60; // 30 minutes
+                                int elapsed = 0;
+
+                                while (othersRunning && elapsed < maxWaitSeconds)
+                                {
+                                    Thread.Sleep(pollSeconds * 1000);
+                                    elapsed += pollSeconds;
+                                    othersRunning = flowCoord.IsOtherFlowInventoryRouteRunning(flowId, routeId, inventoryTypeIds);
+                                }
+
+                                if (othersRunning)
+                                {
+                                    route.SaveLog(Declarations.LogTypeEnum.RouteInfo,
+                                        $"Route [{routeId}] (Full Feed) — timed out after 30 minutes waiting. Skipping.", "", 1);
+                                    return;
+                                }
+
+                                route.SaveLog(Declarations.LogTypeEnum.Info,
+                                    $"Route [{routeId}] (Full Feed) — other routes finished after {elapsed}s. Proceeding.", "", 1);
+                            }
+                            else if (InventoryRouteHelper.IsUploadRoute(route.TypeId))
+                            {
+                                // Upload route — if a Full Feed is running, exit immediately (Full Feed has top priority).
+                                // Otherwise, if a Differential is running, WAIT for it to finish, then proceed.
+                                int[] fullFeedTypeIds = InventoryRouteHelper.GetFullFeedTypeIds();
+                                bool fullFeedRunning = flowCoord.IsOtherFlowInventoryRouteRunning(flowId, routeId, fullFeedTypeIds);
+
+                                if (fullFeedRunning)
+                                {
+                                    route.SaveLog(Declarations.LogTypeEnum.RouteInfo,
+                                        $"Route [{routeId}] (Upload) — a Full Feed is running in Flow [{flowId}]. Skipping.", "", 1);
+                                    return;
+                                }
+
+                                int[] diffTypeIds = InventoryRouteHelper.GetDifferentialTypeIds();
+                                bool diffRunning = flowCoord.IsOtherFlowInventoryRouteRunning(flowId, routeId, diffTypeIds);
+
+                                if (diffRunning)
+                                {
+                                    route.SaveLog(Declarations.LogTypeEnum.RouteInfo,
+                                        $"Route [{routeId}] (Upload) — a Differential is running in Flow [{flowId}]. Waiting for it to complete.", "", 1);
+
+                                    int pollSeconds = 30;
+                                    int maxWaitSeconds = 30 * 60;
+                                    int elapsed = 0;
+
+                                    while (diffRunning && elapsed < maxWaitSeconds)
+                                    {
+                                        Thread.Sleep(pollSeconds * 1000);
+                                        elapsed += pollSeconds;
+                                        diffRunning = flowCoord.IsOtherFlowInventoryRouteRunning(flowId, routeId, diffTypeIds);
+                                    }
+
+                                    if (diffRunning)
+                                    {
+                                        route.SaveLog(Declarations.LogTypeEnum.RouteInfo,
+                                            $"Route [{routeId}] (Upload) — timed out after 30 minutes waiting for Differential. Skipping.", "", 1);
+                                        return;
+                                    }
+
+                                    route.SaveLog(Declarations.LogTypeEnum.Info,
+                                        $"Route [{routeId}] (Upload) — Differential finished after {elapsed}s. Proceeding.", "", 1);
+                                }
+                                else
+                                {
+                                    // Neither Full Feed nor Differential is running — only other uploads. Skip as before.
+                                    route.SaveLog(Declarations.LogTypeEnum.RouteInfo,
+                                        $"Route [{routeId}] — another inventory route in Flow [{flowId}] is running. Skipping.", "", 1);
+                                    return;
+                                }
+                            }
+                            else
+                            {
+                                // Non-Full-Feed inventory route — SKIP
+                                route.SaveLog(Declarations.LogTypeEnum.RouteInfo,
+                                    $"Route [{routeId}] — another inventory route in Flow [{flowId}] is running. Skipping.", "", 1);
+                                return;
+                            }
+                        }
+                    }
                 }
 
                 if (route.TypeId == Convert.ToInt32(RouteTypesEnum.InventoryFeed))

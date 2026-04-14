@@ -122,6 +122,11 @@ namespace eSyncMate.Processor.Controllers
                 {
                     l_Criteria += $" AND RouteType = '{RouteType}'";
                 }
+                else
+                {
+                    // Default: show only Upload route types in main grid
+                    l_Criteria += " AND OrignalRouteType IN ('WalmartUploadInventory','TargetPlusInventoryFeedWHSWise','AmazonInventoryUpload','LowesWHSWInventoryUpload','MacysInventoryUpload','MichealInventoryUpload','KnotInventoryUpload','KnotWHSWInventoryUpload','AmazonWHSWInventoryUpload')";
+                }
 
                 this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Search criteria ready ({l_Criteria}).");
                 this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Staring Inventory search.");
@@ -301,6 +306,133 @@ namespace eSyncMate.Processor.Controllers
             {
                 l_Response.Code = (int)ResponseCodes.Exception;
                 this._logger.LogCritical($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - {ex}");
+            }
+            finally
+            {
+                l_Data.Dispose();
+            }
+
+            return l_Response;
+        }
+
+        /// <summary>
+        /// Get download batches between two upload dates for a customer.
+        /// Used by expandable upload rows in the Inventory Feed Summary.
+        /// </summary>
+        [HttpGet]
+        [Route("getDownloadBatches")]
+        public async Task<GetInventoryResponseModel> GetDownloadBatches(
+            [FromQuery] string customerID = "",
+            [FromQuery] string fromDate = "",
+            [FromQuery] string toDate = "")
+        {
+            GetInventoryResponseModel l_Response = new GetInventoryResponseModel();
+            DataTable l_Data = new DataTable();
+
+            try
+            {
+                var claimsIdentity = User.Identity as ClaimsIdentity;
+                if (claimsIdentity?.Claims == null)
+                {
+                    l_Response.Code = StatusCodes.Status401Unauthorized;
+                    l_Response.Message = "Not Authorized";
+                    return l_Response;
+                }
+
+                Inventory l_Inventory = new Inventory();
+                l_Inventory.UseConnection(CommonUtils.ConnectionString);
+
+                // Download/Feed route types (not upload)
+                string downloadFilter = "(RouteType LIKE '%Full%' OR RouteType LIKE '%Differential%' OR RouteType LIKE '%feed%' OR RouteType LIKE '%Portal%')";
+                string uploadFilter = "(RouteType NOT LIKE '%Upload%' AND RouteType NOT LIKE '%WHSW%')";
+
+                string l_Criteria = $"Status <> 'DELETED' AND {downloadFilter} AND {uploadFilter}";
+
+                if (!string.IsNullOrEmpty(customerID))
+                    l_Criteria += $" AND CustomerID = '{customerID}'";
+
+                if (!string.IsNullOrEmpty(fromDate))
+                    l_Criteria += $" AND ISNULL(StartDate, FinishDate) >= '{fromDate}'";
+
+                if (!string.IsNullOrEmpty(toDate))
+                    l_Criteria += $" AND ISNULL(StartDate, FinishDate) <= '{toDate}'";
+
+                l_Inventory.GetViewList(l_Criteria, string.Empty, ref l_Data, "StartDate ASC");
+
+                l_Response.Inventory = l_Data;
+                l_Response.TotalCount = l_Data.Rows.Count;
+                l_Response.Code = (int)ResponseCodes.Success;
+                l_Response.Message = "Download batches fetched successfully";
+            }
+            catch (Exception ex)
+            {
+                l_Response.Code = (int)ResponseCodes.Exception;
+                l_Response.Message = ex.Message;
+            }
+            finally
+            {
+                l_Data.Dispose();
+            }
+
+            return l_Response;
+        }
+
+        /// <summary>
+        /// Returns merged item-level data across multiple download batches.
+        /// One row per ItemID — latest value (last write wins).
+        /// </summary>
+        [HttpGet]
+        [Route("getMergedDownloadItems")]
+        public async Task<GetInventoryResponseModel> GetMergedDownloadItems(
+            [FromQuery] string batchIDs = "",
+            [FromQuery] string itemID = "",
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 10)
+        {
+            GetInventoryResponseModel l_Response = new GetInventoryResponseModel();
+            DataTable l_Data = new DataTable();
+            Inventory l_Inventory = new Inventory();
+
+            try
+            {
+                if (string.IsNullOrWhiteSpace(batchIDs))
+                {
+                    l_Response.Code = (int)ResponseCodes.Error;
+                    l_Response.Message = "batchIDs is required";
+                    return l_Response;
+                }
+
+                // Sanitize: only valid GUIDs allowed (prevents SQL injection)
+                var validIds = batchIDs.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                                       .Select(s => s.Trim())
+                                       .Where(s => Guid.TryParse(s, out _))
+                                       .Select(s => $"'{s}'")
+                                       .ToList();
+
+                if (validIds.Count == 0)
+                {
+                    l_Response.Code = (int)ResponseCodes.Error;
+                    l_Response.Message = "No valid batch IDs provided";
+                    return l_Response;
+                }
+
+                string batchIdsCsv = string.Join(",", validIds);
+
+                l_Inventory.UseConnection(CommonUtils.ConnectionString);
+
+                int totalCount = 0;
+                l_Inventory.GetMergedDownloadItemsPaged(batchIdsCsv, itemID, ref l_Data, pageNumber, pageSize, out totalCount);
+
+                l_Response.BatchWiseInventory = l_Data;
+                l_Response.TotalCount = totalCount;
+                l_Response.Code = (int)ResponseCodes.Success;
+                l_Response.Message = "Merged download items fetched successfully";
+            }
+            catch (Exception ex)
+            {
+                l_Response.Code = (int)ResponseCodes.Exception;
+                l_Response.Message = ex.Message;
+                _logger.LogCritical($"[GetMergedDownloadItems] - {ex}");
             }
             finally
             {
