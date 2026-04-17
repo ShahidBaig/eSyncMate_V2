@@ -646,7 +646,7 @@ namespace eSyncMate.Maps
             Orders l_Orders = new Orders();
             DataTable l_dt = new DataTable();
             string l_WHSID = string.Empty;
-            
+
             try
             {
                 l_Orders.UseConnection(CommonUtils.ConnectionString);
@@ -657,9 +657,34 @@ namespace eSyncMate.Maps
                 {
                     l_WHSID = l_dt.Rows[0]["WHSID"].ToString();
                 }
-                
+
                 return l_WHSID;
 
+            }
+            catch (Exception)
+            {
+                return l_WHSID = "";
+            }
+        }
+
+        public static string TransAmazonWarehouseID(string value, string customerID)
+        {
+            Orders l_Orders = new Orders();
+            DataTable l_dt = new DataTable();
+            string l_WHSID = string.Empty;
+
+            try
+            {
+                l_Orders.UseConnection(CommonUtils.ConnectionString);
+
+                l_Orders.GetAmazonWarehouseID(value, customerID, ref l_dt);
+
+                if (l_dt.Rows.Count > 0)
+                {
+                    l_WHSID = l_dt.Rows[0]["WHSID"].ToString();
+                }
+
+                return l_WHSID;
             }
             catch (Exception)
             {

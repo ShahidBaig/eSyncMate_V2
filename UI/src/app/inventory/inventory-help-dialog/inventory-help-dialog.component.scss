@@ -157,6 +157,12 @@
   p { color: #991b1b; }
 }
 
+.status-card-orange {
+  background: #fff7ed; border-color: #e65100;
+  .sc-header mat-icon, .sc-header span { color: #e65100; }
+  p { color: #bf360c; }
+}
+
 /* ===== Action Cards ===== */
 .action-card-grid { display: flex; flex-direction: column; gap: 10px; }
 

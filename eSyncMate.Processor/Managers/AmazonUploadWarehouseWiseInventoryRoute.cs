@@ -362,7 +362,7 @@ namespace eSyncMate.Processor.Managers
                     
                     feed.BulkNewInsertData(this.sourceConnector.ConnectionString, "SCSInventoryFeedData", bulkInsertTable);
                     this.feed.InsertInventoryBatchWiseFeedDetail(this.bacthID, "NEW", feedId, this.destinationConnector.CustomerID);
-                    this.feed.UpdateSCSAmazonFeedData(this.bacthID, feedId,l_Guid);
+                    //this.feed.UpdateSCSAmazonFeedData(this.bacthID, feedId,l_Guid);
                 }
             }
             catch (Exception ex)
@@ -493,15 +493,15 @@ namespace eSyncMate.Processor.Managers
                     bulkInsertTable.Rows.Add(bulkRow);
 
 
-                    DataRow bulkSCSAmazonFeedDataRow = bulkSCSAmazonFeedData.NewRow();
-                    bulkSCSAmazonFeedDataRow["BatchID"] = batchID;
-                    bulkSCSAmazonFeedDataRow["ItemId"] = row["ItemId"];
-                    bulkSCSAmazonFeedDataRow["CustomerId"] = row["CustomerId"];
-                    bulkSCSAmazonFeedDataRow["MessageID"] = messageId;
-                    bulkSCSAmazonFeedDataRow["FeedDocumentID"] = p_Guid;
-                    bulkSCSAmazonFeedDataRow["Data"] = perItemJson;
+                    //DataRow bulkSCSAmazonFeedDataRow = bulkSCSAmazonFeedData.NewRow();
+                    //bulkSCSAmazonFeedDataRow["BatchID"] = batchID;
+                    //bulkSCSAmazonFeedDataRow["ItemId"] = row["ItemId"];
+                    //bulkSCSAmazonFeedDataRow["CustomerId"] = row["CustomerId"];
+                    //bulkSCSAmazonFeedDataRow["MessageID"] = messageId;
+                    //bulkSCSAmazonFeedDataRow["FeedDocumentID"] = p_Guid;
+                    //bulkSCSAmazonFeedDataRow["Data"] = perItemJson;
 
-                    bulkSCSAmazonFeedData.Rows.Add(bulkSCSAmazonFeedDataRow);
+                    //bulkSCSAmazonFeedData.Rows.Add(bulkSCSAmazonFeedDataRow);
 
 
                     messageId++;
@@ -514,7 +514,7 @@ namespace eSyncMate.Processor.Managers
                     );
 
                 feed.BulkNewInsertData(ConnectionString, "SCSInventoryFeedData", bulkInsertTable);
-                feed.BulkAmazonFeedData(ConnectionString, "SCSAmazonFeedData", bulkSCSAmazonFeedData);
+                //feed.BulkAmazonFeedData(ConnectionString, "SCSAmazonFeedData", bulkSCSAmazonFeedData);
 
                 return fullFeedJson;
             }

@@ -940,6 +940,27 @@ namespace eSyncMate.DB.Entities
             return Connection.GetData(l_SQL, ref p_Data);
         }
 
+        public bool GetAmazonWarehouseID(string value, string customerID, ref DataTable p_Data)
+        {
+            string l_SQL = string.Empty;
+            string l_LocationParam = string.Empty;
+            string l_CustomerParam = string.Empty;
+
+            string l_TrimmedValue = (value ?? string.Empty).Trim();
+            string l_TrimmedCustomer = (customerID ?? string.Empty).Trim();
+
+            l_SQL = "SELECT ID,WHSID,ShipFromLocationName,CustomerID FROM AmazonWarehouseMap";
+
+            PublicFunctions.FieldToParam(l_TrimmedValue, ref l_LocationParam, Declarations.FieldTypes.String);
+
+            PublicFunctions.FieldToParam(l_TrimmedCustomer, ref l_CustomerParam, Declarations.FieldTypes.String);
+
+            l_SQL += " WHERE LTRIM(RTRIM(ShipFromLocationName)) = " + l_LocationParam
+                  + " AND CustomerID = " + l_CustomerParam;
+
+            return Connection.GetData(l_SQL, ref p_Data);
+        }
+
          public bool ProcessAPIMissingOrders(string CustomerID, ref DataTable p_dataTable)
         {
             string l_Query = string.Empty;

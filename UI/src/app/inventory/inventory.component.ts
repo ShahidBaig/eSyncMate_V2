@@ -193,13 +193,33 @@ export class InventoryComponent implements OnInit {
       ? this.inventoryToDisplay[currentIndex + 1]
       : null;
 
-    const fromDate = prevUpload ? this.formatDateISO(prevUpload.startDate || prevUpload.StartDate) : '2000-01-01';
     const toDate = this.formatDateISO(element.startDate || element.StartDate);
     const customerID = element.customerID || element.CustomerID;
 
-    // Store prev date for display
-    element._prevUploadDate = prevUpload ? (prevUpload.startDate || prevUpload.StartDate) : null;
+    if (prevUpload) {
+      const fromDate = this.formatDateISO(prevUpload.startDate || prevUpload.StartDate);
+      element._prevUploadDate = prevUpload.startDate || prevUpload.StartDate;
+      this.loadDownloadBatches(customerID, fromDate, toDate);
+      return;
+    }
 
+    // Last row on page — previous upload row not in memory, fetch its date from server
+    this.api.getPreviousUploadDate(customerID, toDate).subscribe({
+      next: (res: any) => {
+        const rows = res?.inventory || [];
+        const prevStart = rows.length > 0 ? (rows[0].startDate || rows[0].StartDate) : null;
+        const fromDate = prevStart ? this.formatDateISO(prevStart) : '2000-01-01';
+        element._prevUploadDate = prevStart;
+        this.loadDownloadBatches(customerID, fromDate, toDate);
+      },
+      error: () => {
+        element._prevUploadDate = null;
+        this.loadDownloadBatches(customerID, '2000-01-01', toDate);
+      }
+    });
+  }
+
+  private loadDownloadBatches(customerID: string, fromDate: string, toDate: string) {
     this.api.getDownloadBatches(customerID, fromDate, toDate).subscribe({
       next: (res: any) => {
         const rawBatches = res.inventory || [];

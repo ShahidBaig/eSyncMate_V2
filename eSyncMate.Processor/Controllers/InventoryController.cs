@@ -91,8 +91,11 @@ namespace eSyncMate.Processor.Controllers
 
                 if (!string.IsNullOrEmpty(ItemID))
                 {
-                    l_Criteria += " AND ";
-                    l_Criteria += $"ItemID LIKE '%{ItemID}%'";
+                    // Return distinct batches that contain the item — avoid VW_Inventory_ItemWise
+                    // duplication when a wildcard matches multiple items within the same batch.
+                    // Lowercase [ItemId] keeps the literal "ItemID" out of the criteria so the
+                    // DB layer's auto-switch to VW_Inventory_ItemWise is not triggered.
+                    l_Criteria += $" AND EXISTS (SELECT 1 FROM SCSInventoryFeedData d WITH (NOLOCK) WHERE d.BatchID = [VW_Inventory].BatchID AND d.[ItemId] LIKE '%{ItemID}%')";
                 }
 
                 if (!string.IsNullOrEmpty(Status))
@@ -306,6 +309,64 @@ namespace eSyncMate.Processor.Controllers
             {
                 l_Response.Code = (int)ResponseCodes.Exception;
                 this._logger.LogCritical($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - {ex}");
+            }
+            finally
+            {
+                l_Data.Dispose();
+            }
+
+            return l_Response;
+        }
+
+        /// <summary>
+        /// Returns the StartDate of the most recent upload batch (any upload route type)
+        /// that started BEFORE the given beforeDate for the given customer. Used by the
+        /// expandable row in the Inventory Feed Summary when the previous upload row is
+        /// not available on the current page (e.g. the last row of a page).
+        /// </summary>
+        [HttpGet]
+        [Route("getPreviousUploadDate")]
+        public GetInventoryResponseModel GetPreviousUploadDate(
+            [FromQuery] string customerID = "",
+            [FromQuery] string beforeDate = "")
+        {
+            GetInventoryResponseModel l_Response = new GetInventoryResponseModel();
+            DataTable l_Data = new DataTable();
+
+            try
+            {
+                var claimsIdentity = User.Identity as ClaimsIdentity;
+                if (claimsIdentity?.Claims == null)
+                {
+                    l_Response.Code = StatusCodes.Status401Unauthorized;
+                    l_Response.Message = "Not Authorized";
+                    return l_Response;
+                }
+
+                Inventory l_Inventory = new Inventory();
+                l_Inventory.UseConnection(CommonUtils.ConnectionString);
+
+                string l_Criteria = "Status <> 'DELETED'"
+                    + " AND OrignalRouteType IN ('WalmartUploadInventory','TargetPlusInventoryFeedWHSWise','AmazonInventoryUpload','LowesWHSWInventoryUpload','MacysInventoryUpload','MichealInventoryUpload','KnotInventoryUpload','KnotWHSWInventoryUpload','AmazonWHSWInventoryUpload')";
+
+                if (!string.IsNullOrEmpty(customerID))
+                    l_Criteria += $" AND CustomerID = '{customerID}'";
+
+                if (!string.IsNullOrEmpty(beforeDate))
+                    l_Criteria += $" AND ISNULL(StartDate, FinishDate) < '{beforeDate}'";
+
+                int totalCount = 0;
+                l_Inventory.GetViewListPaged(l_Criteria, string.Empty, ref l_Data, "StartDate DESC", 1, 1, out totalCount);
+
+                l_Response.Inventory = l_Data;
+                l_Response.TotalCount = totalCount;
+                l_Response.Code = (int)ResponseCodes.Success;
+                l_Response.Message = "Previous upload date fetched";
+            }
+            catch (Exception ex)
+            {
+                l_Response.Code = (int)ResponseCodes.Exception;
+                l_Response.Message = ex.Message;
             }
             finally
             {

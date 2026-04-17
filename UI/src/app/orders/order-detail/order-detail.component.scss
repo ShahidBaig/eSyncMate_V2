@@ -7,32 +7,33 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 20px;
+  padding: 16px 24px;
   border-bottom: 1px solid #e2e8f0;
 }
 
 .header-left {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
 .header-icon {
-  font-size: 24px;
-  width: 24px;
-  height: 24px;
-  color: #2563eb;
+  font-size: 26px;
+  width: 26px;
+  height: 26px;
+  color: #E8834A;
 }
 
 .header-title {
   margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: #1e293b;
+  font-size: 17px;
+  font-weight: 800;
+  color: #1a1a2e;
 }
 
 .header-subtitle {
   font-size: 12px;
+  font-weight: 600;
   color: #64748b;
 }
 
@@ -49,10 +50,10 @@
 
 // ===== STATUS BADGES =====
 .status-badge, .line-status-badge {
-  padding: 4px 12px;
+  padding: 4px 14px;
   border-radius: 9999px;
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.3px;
   white-space: nowrap;
 }
@@ -60,26 +61,26 @@
 // ===== INFO CARDS =====
 .info-cards {
   display: flex;
-  gap: 12px;
-  padding: 16px 0 8px;
+  gap: 10px;
+  padding: 14px 0 6px;
   flex-wrap: wrap;
 }
 
 .info-card {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   padding: 10px 16px;
-  min-width: 140px;
+  min-width: 130px;
   flex: 1;
 }
 
 .info-label {
-  font-size: 11px;
-  font-weight: 500;
+  font-size: 10px;
+  font-weight: 700;
   color: #64748b;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -87,28 +88,89 @@
 
 .info-value {
   font-size: 14px;
-  font-weight: 600;
-  color: #1e293b;
+  font-weight: 700;
+  color: #1a1a2e;
+  min-height: 38px;
+  display: flex;
+  align-items: center;
 }
 
+// Shared style for all edit-mode controls inside info cards
 .status-select {
-  margin-top: 4px;
+  margin-top: 2px;
+  width: 100%;
 
-  ::ng-deep .mat-mdc-form-field-subscript-wrapper {
-    display: none;
+  ::ng-deep {
+    .mat-mdc-form-field-subscript-wrapper { display: none; }
+
+    .mat-mdc-text-field-wrapper {
+      background: #fff !important;
+    }
+
+    .mdc-notched-outline__leading,
+    .mdc-notched-outline__notch,
+    .mdc-notched-outline__trailing {
+      border-color: #e2e8f0 !important;
+    }
+
+    .mdc-notched-outline {
+      border-radius: 8px;
+      .mdc-notched-outline__leading { border-radius: 8px 0 0 8px; }
+      .mdc-notched-outline__trailing { border-radius: 0 8px 8px 0; }
+    }
+
+    .mat-mdc-form-field-infix {
+      padding-top: 8px !important;
+      padding-bottom: 8px !important;
+      min-height: 38px !important;
+    }
+
+    .mdc-text-field--focused {
+      .mdc-notched-outline__leading,
+      .mdc-notched-outline__notch,
+      .mdc-notched-outline__trailing {
+        border-color: #E8834A !important;
+        border-width: 1.5px !important;
+      }
+    }
+
+    .mat-mdc-select-value-text {
+      font-family: 'Poppins', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      color: #1a1a2e;
+    }
+
+    input.mat-mdc-input-element {
+      font-family: 'Poppins', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      color: #1a1a2e;
+    }
+
+    .mdc-floating-label { display: none !important; }
+    .mdc-notched-outline__notch { border-top: 1px solid; }
+
+    .mat-datepicker-toggle {
+      .mat-mdc-icon-button {
+        width: 30px !important;
+        height: 30px !important;
+        padding: 0 !important;
+      }
+    }
   }
 }
 
 // ===== CONTENT =====
 .order-content {
-  padding: 0 20px !important;
-  max-height: 520px;
-  overflow-y: auto;
+  padding: 0 24px !important;
+  max-height: none;
+  overflow-y: visible;
 }
 
 // ===== TABS =====
 .order-tabs {
-  margin-top: 8px;
+  margin-top: 10px;
 
   ::ng-deep .mat-mdc-tab-labels {
     gap: 4px;
@@ -118,6 +180,7 @@
     min-width: auto;
     padding: 0 16px;
     font-size: 13px;
+    font-weight: 600;
   }
 }
 
@@ -130,14 +193,14 @@
 }
 
 .tab-body {
-  padding: 16px 0;
+  padding: 14px 0;
 }
 
 // ===== ADDRESS FORM =====
 .address-grid {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 
 .full-width {
@@ -147,18 +210,17 @@
 .address-row {
   display: flex;
   gap: 10px;
-  flex-wrap: wrap;
 
   mat-form-field {
     flex: 1;
-    min-width: 140px;
+    min-width: 120px;
   }
 }
 
 // ===== DETAIL TABLE =====
 .detail-table-wrapper {
-  max-height: 260px;
-  overflow-y: auto;
+  max-height: none;
+  overflow-y: visible;
   border: 1px solid #e2e8f0;
   border-radius: 10px;
 }
@@ -168,20 +230,21 @@
 
   th {
     background: #f8fafc;
-    color: #64748b;
-    font-size: 12px;
-    font-weight: 600;
+    color: #475569;
+    font-size: 11px;
+    font-weight: 800;
     text-transform: uppercase;
-    letter-spacing: 0.3px;
+    letter-spacing: 0.4px;
   }
 
   td {
     font-size: 13px;
-    color: #1e293b;
+    font-weight: 600;
+    color: #1a1a2e;
   }
 
   tr:hover td {
-    background: #f1f5f9;
+    background: #f8fafc;
   }
 }
 
@@ -190,7 +253,7 @@
   display: flex;
   justify-content: flex-end;
   gap: 8px;
-  padding: 12px 20px !important;
+  padding: 14px 24px !important;
   border-top: 1px solid #e2e8f0;
 }
 
@@ -199,7 +262,7 @@
   padding: 4px 12px;
   border-radius: 9999px;
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
   display: inline-block;
 }
 

@@ -45,6 +45,7 @@
         </div>
       </div>
 
+
       <!-- Tabs -->
       <mat-tab-group class="order-tabs" animationDuration="200ms">
 
@@ -56,46 +57,48 @@
           </ng-template>
           <div class="tab-body">
             <div class="address-grid">
-              <mat-form-field appearance="outline" class="full-width">
-                <mat-label>{{ 'shipToName' | translate }}</mat-label>
-                <input [readonly]="isReadonly()" type="text" formControlName="shipToName" matInput>
-                <mat-icon matPrefix>person</mat-icon>
-              </mat-form-field>
+              <!-- Row 1: Ship To Name + Company -->
+              <div class="address-row">
+                <mat-form-field appearance="outline">
+                  <mat-label>{{ 'shipToName' | translate }}</mat-label>
+                  <input [readonly]="isReadonly()" type="text" formControlName="shipToName" matInput>
+                  <mat-icon matPrefix>person</mat-icon>
+                </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>Ship To Company</mat-label>
+                  <input [readonly]="isReadonly()" type="text" formControlName="shipToCompanyName" matInput>
+                  <mat-icon matPrefix>business</mat-icon>
+                </mat-form-field>
+              </div>
 
-              <mat-form-field appearance="outline" class="full-width">
-                <mat-label>Ship To Company</mat-label>
-                <input [readonly]="isReadonly()" type="text" formControlName="shipToCompanyName" matInput>
-                <mat-icon matPrefix>business</mat-icon>
-              </mat-form-field>
+              <!-- Row 2: Address 1 + Address 2 -->
+              <div class="address-row">
+                <mat-form-field appearance="outline">
+                  <mat-label>{{ 'addressLine1' | translate }}</mat-label>
+                  <input [readonly]="isReadonly()" type="text" formControlName="shipToAddress1" matInput>
+                  <mat-icon matPrefix>location_on</mat-icon>
+                </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>{{ 'addressLine2' | translate }}</mat-label>
+                  <input [readonly]="isReadonly()" type="text" formControlName="shipToAddress2" matInput>
+                  <mat-icon matPrefix>location_on</mat-icon>
+                </mat-form-field>
+              </div>
 
-              <mat-form-field appearance="outline" class="full-width">
-                <mat-label>{{ 'addressLine1' | translate }}</mat-label>
-                <input [readonly]="isReadonly()" type="text" formControlName="shipToAddress1" matInput>
-                <mat-icon matPrefix>location_on</mat-icon>
-              </mat-form-field>
-
-              <mat-form-field appearance="outline" class="full-width">
-                <mat-label>{{ 'addressLine2' | translate }}</mat-label>
-                <input [readonly]="isReadonly()" type="text" formControlName="shipToAddress2" matInput>
-                <mat-icon matPrefix>location_on</mat-icon>
-              </mat-form-field>
-
+              <!-- Row 3: City + State + Zip + Country -->
               <div class="address-row">
                 <mat-form-field appearance="outline">
                   <mat-label>{{ 'city' | translate }}</mat-label>
                   <input [readonly]="isReadonly()" type="text" formControlName="shipToCity" matInput>
                 </mat-form-field>
-
                 <mat-form-field appearance="outline">
                   <mat-label>{{ 'state' | translate }}</mat-label>
                   <input [readonly]="isReadonly()" type="text" formControlName="shipToState" matInput>
                 </mat-form-field>
-
                 <mat-form-field appearance="outline">
                   <mat-label>{{ 'zipCode' | translate }}</mat-label>
                   <input [readonly]="isReadonly()" type="text" formControlName="shipToZip" matInput>
                 </mat-form-field>
-
                 <mat-form-field appearance="outline">
                   <mat-label>{{ 'country' | translate }}</mat-label>
                   <input [readonly]="isReadonly()" type="text" formControlName="shipToCountry" matInput>

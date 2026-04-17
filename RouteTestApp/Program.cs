@@ -36,15 +36,15 @@ using Microsoft.Graph.Users.Item.SendMail;
 using RouteTestApp;
 
 // ======== Test Connection ========
-string testConnectionString = "<<SET_CONNECTION_STRING>>";
+//string testConnectionString = "<<SET_CONNECTION_STRING>>";
 
-// ======== Route Execution Lock Tests ========
-RouteExecutionLockTests.RunAllTests(testConnectionString).GetAwaiter().GetResult();
+//// ======== Route Execution Lock Tests ========
+//RouteExecutionLockTests.RunAllTests(testConnectionString).GetAwaiter().GetResult();
 
-// ======== Flow Inventory Coordination Tests ========
-FlowInventoryCoordinationTests.RunAllTests(testConnectionString).GetAwaiter().GetResult();
+//// ======== Flow Inventory Coordination Tests ========
+//FlowInventoryCoordinationTests.RunAllTests(testConnectionString).GetAwaiter().GetResult();
 
-return;
+//return;
 
 static void Main()
 {
@@ -68,10 +68,16 @@ static void Main()
     IConfiguration config = new MyConfigurationImplementation();
     RouteEngine routeEngine = new RouteEngine(config);
     ////1, 4, 10,7 GECKO
-    int routeId = 98;
+    int routeId = 99;
     routeEngine.Execute(routeId);
 
 
+    //string transformationMap = "{\r\n  \"order\": {\r\n    \"header\": {\r\n      \"CustomerID\": \"AMA1005\",\r\n      \"CustomerPO\": \"#valueof($.AmazonOrderId)\",\r\n      \"AddressName\": \"#valueof($.OrderAddress.payload.ShippingAddress.Name)\",\r\n      \"CompanyName\": \"#valueof($.OrderAddress.payload.ShippingAddress.Name)\",\r\n      \"ShipToCode\": \"\",\r\n      \"Address1\": \"#valueof($.OrderAddress.payload.ShippingAddress.AddressLine1)\",\r\n      \"Address2\": \"#valueof($.OrderAddress.payload.ShippingAddress.AddressLine2)\",\r\n      \"City\": \"#valueof($.OrderAddress.payload.ShippingAddress.City)\",\r\n      \"State\": \"#valueof($.OrderAddress.payload.ShippingAddress.StateOrRegion)\",\r\n      \"Zip\": \"#valueof($.OrderAddress.payload.ShippingAddress.PostalCode)\",\r\n      \"Country\": \"#valueof($.OrderAddress.payload.ShippingAddress.CountryCode)\",\r\n      \"Phone\": \"\",\r\n      \"OrderTakenBy\": \"API\",\r\n      \"Instructions\": \"\",\r\n      \"ShipViaCode\": \"FEDX\",\r\n      \"OrderDate\": \"#customfunction(eSyncMate.Processor,eSyncMate.Maps.Transformations.formatDate,#valueof($.PurchaseDate),MM/dd/yyyy)\",\r\n      \"ShipDate\": \"#customfunction(eSyncMate.Processor,eSyncMate.Maps.Transformations.formatDate,#valueof($.LatestShipDate),MM/dd/yyyy)\",\r\n      \"CancelDate\": \"#customfunction(eSyncMate.Processor,eSyncMate.Maps.Transformations.formatDate,#valueof($.LatestShipDate),MM/dd/yyyy)\",\r\n      \"ExternalID\": \"#valueof($.AmazonOrderId)\"\r\n    },\r\n    \"detail\": {\r\n      \"#loop($.OrderDetail.payload.OrderItems)\": {\r\n        \"ItemID\": \"#currentvalueatpath($.ItemID)\",\r\n        \"OrderQty\": \"#currentvalueatpath($.QuantityOrdered)\",\r\n        \"UnitPrice\": \"#ifcondition(#currentvalueatpath($.QuantityOrdered),0,0,#round(#divide(#currentvalueatpath($.ItemPrice.Amount),#currentvalueatpath($.QuantityOrdered)),2))\",\r\n        \"Discount\": \"\",\r\n        \"WHSID\": \"#customfunction(eSyncMate.Processor,eSyncMate.Maps.Transformations.TransAmazonWarehouseID,#valueof($.DefaultShipFromLocationAddress.Name),AMA1005)\",\r\n        \"Remarks\": \"\",\r\n        \"ETA_Date\": \"\",\r\n        \"TaxAmount\": \"\",\r\n        \"APIOrderLineNo\": \"#currentvalueatpath($.LineNo)\"\r\n      }\r\n    }\r\n  }\r\n}";
+    //string Body = "{\r\n  \"BuyerInfo\": {\r\n    \"BuyerEmail\": \"jg4p8x8ctknvsg1@marketplace.amazon.com\"\r\n  },\r\n  \"AmazonOrderId\": \"112-0553045-5736252\",\r\n  \"EarliestDeliveryDate\": \"2026-04-19T07:00:00Z\",\r\n  \"EarliestShipDate\": \"2026-04-16T07:00:00Z\",\r\n  \"SalesChannel\": \"Amazon.com\",\r\n  \"AutomatedShippingSettings\": {\r\n    \"HasAutomatedShippingSettings\": true\r\n  },\r\n  \"OrderStatus\": \"Unshipped\",\r\n  \"NumberOfItemsShipped\": 0,\r\n  \"OrderType\": \"StandardOrder\",\r\n  \"IsPremiumOrder\": false,\r\n  \"IsPrime\": false,\r\n  \"FulfillmentChannel\": \"MFN\",\r\n  \"NumberOfItemsUnshipped\": 1,\r\n  \"HasRegulatedItems\": false,\r\n  \"IsReplacementOrder\": \"false\",\r\n  \"IsSoldByAB\": false,\r\n  \"LatestShipDate\": \"2026-04-17T06:59:59Z\",\r\n  \"ShipServiceLevel\": \"Std US D2D Dom\",\r\n  \"DefaultShipFromLocationAddress\": {\r\n    \"StateOrRegion\": \"NY\",\r\n    \"AddressLine1\": \"40 Harbor Park Drive North\",\r\n    \"PostalCode\": \"11050\",\r\n    \"City\": \"Port Washington\",\r\n    \"CountryCode\": \"US\",\r\n    \"Name\": \"L10 Port Washington\"\r\n  },\r\n  \"IsISPU\": false,\r\n  \"MarketplaceId\": \"ATVPDKIKX0DER\",\r\n  \"LatestDeliveryDate\": \"2026-04-20T06:59:59Z\",\r\n  \"PurchaseDate\": \"2026-04-15T14:55:04Z\",\r\n  \"ShippingAddress\": {\r\n    \"StateOrRegion\": \"NY\",\r\n    \"PostalCode\": \"10128-0726\",\r\n    \"City\": \"NEW YORK\",\r\n    \"CountryCode\": \"US\",\r\n    \"CompanyName\": null\r\n  },\r\n  \"IsAccessPointOrder\": false,\r\n  \"PaymentMethod\": \"Other\",\r\n  \"IsBusinessOrder\": false,\r\n  \"OrderTotal\": {\r\n    \"CurrencyCode\": \"USD\",\r\n    \"Amount\": \"65.52\"\r\n  },\r\n  \"PaymentMethodDetails\": [\r\n    \"Standard\"\r\n  ],\r\n  \"IsGlobalExpressEnabled\": false,\r\n  \"LastUpdateDate\": \"2026-04-15T15:24:31Z\",\r\n  \"ShipmentServiceLevelCategory\": \"Standard\",\r\n  \"ReplacedOrderId\": null,\r\n  \"OrderAddress\": {\r\n    \"payload\": {\r\n      \"AmazonOrderId\": \"112-0553045-5736252\",\r\n      \"ShippingAddress\": {\r\n        \"StateOrRegion\": \"NY\",\r\n        \"PostalCode\": \"10128-0726\",\r\n        \"City\": \"NEW YORK\",\r\n        \"CountryCode\": \"US\",\r\n        \"Name\": \"alison sola\",\r\n        \"AddressLine1\": \"40 E 94TH ST APT 13G\",\r\n        \"AddressLine2\": null,\r\n        \"AddressLine3\": null\r\n      }\r\n    }\r\n  },\r\n  \"OrderDetail\": {\r\n    \"payload\": {\r\n      \"OrderItems\": [\r\n        {\r\n          \"TaxCollection\": {\r\n            \"Model\": \"MarketplaceFacilitator\",\r\n            \"ResponsibleParty\": \"Amazon Services, Inc.\"\r\n          },\r\n          \"ProductInfo\": {\r\n            \"NumberOfItems\": \"2\"\r\n          },\r\n          \"BuyerInfo\": {\r\n            \r\n          },\r\n          \"ItemTax\": {\r\n            \"CurrencyCode\": \"USD\",\r\n            \"Amount\": \"5.34\"\r\n          },\r\n          \"QuantityShipped\": 0,\r\n          \"BuyerRequestedCancel\": {\r\n            \"IsBuyerRequestedCancel\": \"false\",\r\n            \"BuyerCancelReason\": \"\"\r\n          },\r\n          \"ItemPrice\": {\r\n            \"CurrencyCode\": \"USD\",\r\n            \"Amount\": \"60.18\"\r\n          },\r\n          \"ASIN\": \"B0FDLC6965\",\r\n          \"SellerSKU\": \"B0FDLC6965 TBL4635A-SET2\",\r\n          \"Title\": \"SAFAVIEH Lighting Collection Trea Brass & Dark Walnut 20-inch Table Lamp Set of 2\",\r\n          \"IsGift\": \"false\",\r\n          \"ConditionSubtypeId\": \"New\",\r\n          \"IsTransparency\": false,\r\n          \"QuantityOrdered\": 1,\r\n          \"PromotionDiscountTax\": {\r\n            \"CurrencyCode\": \"USD\",\r\n            \"Amount\": \"0.00\"\r\n          },\r\n          \"ConditionId\": \"New\",\r\n          \"PromotionDiscount\": {\r\n            \"CurrencyCode\": \"USD\",\r\n            \"Amount\": \"0.00\"\r\n          },\r\n          \"OrderItemId\": \"157887997198041\",\r\n          \"LineNo\": 1,\r\n          \"ItemID\": \"TBL4635A-SET2\"\r\n        }\r\n      ],\r\n      \"AmazonOrderId\": \"112-0553045-5736252\"\r\n    }\r\n  }\r\n}";
+
+    //string jsonTransformation = new JsonTransformer().Transform(transformationMap, Body);
+
+    ////return;
     //IConfiguration config = new MyConfigurationImplementation();
     //AlertEngine routeEngine = new AlertEngine(config);
     //////1, 4, 10,7 GECKO

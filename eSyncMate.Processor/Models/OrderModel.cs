@@ -95,8 +95,5 @@ namespace eSyncMate.Processor.Models
         public string? ShipToZip { get; set; }
         public string? ShipToCountry { get; set; }
         public string? ShipToName { get; set; }
-        //public string? ShipViaCode { get; set; }
-
-
     }
 }

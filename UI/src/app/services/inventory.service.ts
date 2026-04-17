@@ -58,6 +58,13 @@ export class InventoryService {
     return this.http.get<any>(`${this.apiUrl}api/v1/inventory/getDownloadBatches`, { params });
   }
 
+  getPreviousUploadDate(customerID: string, beforeDate: string): Observable<any> {
+    let params = new HttpParams()
+      .set('customerID', customerID)
+      .set('beforeDate', beforeDate);
+    return this.http.get<any>(`${this.apiUrl}api/v1/inventory/getPreviousUploadDate`, { params });
+  }
+
   getERPCustomers(): Observable<any> {
     return this.http.get(`${this.apiUrl}api/CustomerProductCatalog/getERPCustomers`);
   }

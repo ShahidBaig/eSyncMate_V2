@@ -368,8 +368,9 @@ export class OrdersComponent implements OnInit {
 
   editOrder(data: any) {
     const dialogRef = this.dialog.open(OrderDetailComponent, {
-      width: '85%',
-      maxWidth: '1100px',
+      width: '80%',
+      maxWidth: '950px',
+      maxHeight: '92vh',
       disableClose: true,
       data: {
         orderData: data
