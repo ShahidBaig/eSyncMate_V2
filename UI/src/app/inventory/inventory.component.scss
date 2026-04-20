@@ -51,13 +51,6 @@ table {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
-  &::before {
-    content: '';
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: currentColor;
-  }
 }
 
 .new-status {
@@ -417,22 +410,68 @@ table {
   cursor: pointer;
 }
 
-.expand-icon {
-  font-size: 20px !important;
-  width: 20px !important;
-  height: 20px !important;
+// SVG chevron — no font/ligature issues (no dots leak)
+svg.expand-icon {
+  width: 20px;
+  height: 20px;
   color: #cbd5e1;
+  opacity: 0.75;
+  cursor: pointer;
+  display: inline-block;
+  vertical-align: middle;
+  transform: rotate(0deg);
   transition:
     transform 0.36s cubic-bezier(0.25, 0.8, 0.25, 1),
     color 0.28s ease,
     opacity 0.28s ease;
-  opacity: 0.65;
-  transform: rotate(0deg);
 
   &.expanded {
     transform: rotate(180deg);
     color: #E8834A;
     opacity: 1;
+  }
+}
+
+// Ensure the expand cell itself has no stray markers
+::ng-deep td.mat-mdc-cell.expand-cell {
+  list-style: none !important;
+
+  &::before,
+  &::after {
+    content: none !important;
+    display: none !important;
+  }
+
+  // Hide any text that isn't inside the mat-icon (prevents "expand_more"
+  // text leaking if the Material Icons ligature fails to apply)
+  > :not(.expand-icon):not(mat-icon) {
+    display: none !important;
+  }
+
+  // Hide Material ripple overlay artifacts
+  .mat-ripple-element,
+  .mat-mdc-button-ripple,
+  .mat-mdc-focus-indicator,
+  .mat-mdc-button-persistent-ripple,
+  .mat-mdc-button-touch-target {
+    display: none !important;
+  }
+
+  // Hide any mat-badge dots attached to the icon
+  .mat-badge-content,
+  .mdc-badge,
+  [matbadge],
+  [matBadge] {
+    display: none !important;
+  }
+}
+
+// Hide any badge/overlay inside the expand icon itself
+::ng-deep .expand-icon {
+  .mat-badge-content,
+  .mdc-badge,
+  .mat-icon-badge {
+    display: none !important;
   }
 }
 
@@ -452,8 +491,8 @@ table {
 }
 
 ::ng-deep tr.mat-mdc-row.expanded-row td.mat-mdc-cell {
-  background: #fdf9f5 !important;
-  border-bottom: 1px solid #f1d7c3 !important;
+  background: #fff7ed !important;
+  border-bottom: 1px solid #fed7aa !important;
 }
 
 // Detail row — CRITICAL: Material MDC sets min-height: 52px on .mat-mdc-row.
@@ -465,6 +504,7 @@ table {
   height: auto !important;
   min-height: 0 !important;      // <-- the fix for weird spacing
   line-height: 0 !important;     // <-- prevents baseline residue
+  font-size: 0 !important;       // <-- kill baseline dash/dot marks that render when collapsed
   display: table-row !important;
 
   &:hover {
@@ -483,6 +523,31 @@ table {
     min-height: 0 !important;
     line-height: normal !important; // restore inside content
   }
+
+  // Kill any pseudo-element marks (dots/dashes) rendered by Angular Material
+  // defaults on the row or its cells when collapsed.
+  &::before,
+  &::after,
+  td::before,
+  td::after,
+  td.detail-cell::before,
+  td.detail-cell::after {
+    content: none !important;
+    display: none !important;
+  }
+}
+
+// Same cleanup on the main data row to be safe
+::ng-deep tr.mat-mdc-row.upload-row {
+  &::before,
+  &::after,
+  td::before,
+  td::after,
+  td.expand-cell::before,
+  td.expand-cell::after {
+    content: none !important;
+    display: none !important;
+  }
 }
 
 
@@ -494,6 +559,13 @@ table {
   overflow: hidden;
   will-change: height, opacity;
   background: #fdfbf8;
+}
+
+// Restore base font-size inside expanded content (parent tr has font-size: 0
+// to suppress baseline marks when collapsed)
+::ng-deep tr.mat-mdc-row.detail-row .download-section {
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 // Inner container — holds the padding, fully unconstrained by the animation
@@ -516,10 +588,10 @@ table {
 
 .snapshot-card-header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 14px;
-  padding-bottom: 10px;
-  border-bottom: none;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f1f5f9;
 }
 
 .snapshot-card-icon {
@@ -527,14 +599,13 @@ table {
   height: 40px;
   border-radius: 10px;
   background: #fff7ed;
-  border: 1px solid #fed7aa;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
 
   mat-icon {
-    color: #c2410c;
+    color: #E8834A;
     font-size: 22px;
     width: 22px;
     height: 22px;
@@ -600,20 +671,21 @@ table {
 
 .snapshot-stat {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 10px;
   min-width: 0;
-  padding: 12px 14px;
-  background: #fafaf9;
-  border: 1px solid #f1efe9;
-  border-radius: 8px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
 
   .stat-icon {
-    color: #94a3b8;
-    font-size: 20px;
-    width: 20px;
-    height: 20px;
+    color: #64748b;
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
     flex-shrink: 0;
+    margin-top: 2px;
   }
 
   .stat-text {

@@ -326,7 +326,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const fromDate = `${yesterday.getFullYear()}-${pad(yesterday.getMonth() + 1)}-${pad(yesterday.getDate())}`;
     const toDate = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
 
-    this.inventoryApi.getInventory('EMPTY', fromDate, toDate, 'EMPTY', 'EMPTY', 'EMPTY').subscribe({
+    this.inventoryApi.getInventory('', fromDate, toDate, '', '').subscribe({
       next: (res: any) => {
         const batches = res.inventory || [];
         this.totalBatches = batches.length;

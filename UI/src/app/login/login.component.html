@@ -9,11 +9,8 @@
     <div class="login-card" [class.mfa-card-wide]="!isLoginView">
       <!-- Logo (always visible) -->
       <div class="login-logo" [class.mfa-logo-centered]="!isLoginView">
-        <svg class="logo-svg" width="50" height="40" viewBox="0 0 50 40" xmlns="http://www.w3.org/2000/svg">
-          <polygon points="5,0 30,20 5,40" fill="#E8834A"/>
-          <polygon points="18,0 43,20 18,40" fill="#a0644a"/>
-        </svg>
-        <span class="logo-caption">eSyncMate</span>
+        <img src="/assets/images/esyncmate-icon.svg" alt="eSyncMate" class="logo-svg">
+        <span class="logo-caption"><span class="logo-caption-dark">eSync</span><span class="logo-caption-orange">Mate</span></span>
       </div>
 
       <!-- ========== VIEW 1: LOGIN FORM ========== -->
@@ -189,10 +186,6 @@
 
     <div class="feature-header">
       <div class="feature-header-top">
-        <svg class="feature-logo-svg" width="40" height="32" viewBox="0 0 50 40" xmlns="http://www.w3.org/2000/svg">
-          <polygon points="5,0 30,20 5,40" fill="#E8834A"/>
-          <polygon points="18,0 43,20 18,40" fill="#a0644a"/>
-        </svg>
         <h2>{{ 'feature.title' | translate }}</h2>
       </div>
       <p>{{ 'feature.subtitle' | translate }}</p>

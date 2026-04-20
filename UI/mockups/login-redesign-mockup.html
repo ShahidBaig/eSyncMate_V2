@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Login Redesign — 3 Concepts</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --primary: #E8834A;
+    --primary-dark: #c06834;
+    --primary-soft: #fff7ed;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Poppins', sans-serif;
+    margin: 0;
+    background: #0f172a;
+    color: #fff;
+  }
+
+  .concept-nav {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 100;
+    background: rgba(255,255,255,0.1);
+    backdrop-filter: blur(20px);
+    padding: 6px;
+    border-radius: 40px;
+    display: flex;
+    gap: 4px;
+    border: 1px solid rgba(255,255,255,0.15);
+  }
+  .concept-nav a {
+    padding: 8px 18px;
+    border-radius: 30px;
+    color: rgba(255,255,255,0.7);
+    text-decoration: none;
+    font-size: 12px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+  }
+  .concept-nav a:hover { background: rgba(255,255,255,0.1); color: white; }
+
+  .concept {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 80px 20px 40px;
+  }
+
+  .concept-label {
+    position: absolute;
+    top: 90px;
+    left: 30px;
+    background: var(--primary);
+    color: white;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  /* ========================================= */
+  /* CONCEPT 1: Split Screen Modern            */
+  /* ========================================= */
+  #concept-1 {
+    background: #f8f4ef;
+  }
+  .split-container {
+    display: flex;
+    width: 1000px;
+    max-width: 95vw;
+    height: 620px;
+    background: white;
+    border-radius: 24px;
+    overflow: hidden;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.15);
+  }
+  .split-left {
+    flex: 1;
+    padding: 50px 60px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .logo-row { display: flex; align-items: center; gap: 10px; margin-bottom: 50px; }
+  .logo-badge {
+    width: 40px; height: 40px;
+    background: linear-gradient(135deg, var(--primary) 0%, #d4722e 100%);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 12px rgba(232,131,74,0.35);
+  }
+  .logo-badge .material-icons { color: white; font-size: 22px; }
+  .logo-text {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1e293b;
+  }
+
+  h1.welcome {
+    font-size: 32px;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0 0 8px;
+    letter-spacing: -0.5px;
+  }
+  .welcome-sub {
+    color: #64748b;
+    font-size: 14px;
+    margin-bottom: 32px;
+    line-height: 1.5;
+  }
+
+  .field-group { margin-bottom: 18px; }
+  .field-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: #475569;
+    margin-bottom: 8px;
+  }
+  .field-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  .field-wrap .material-icons {
+    position: absolute;
+    left: 14px;
+    color: #94a3b8;
+    font-size: 18px;
+    pointer-events: none;
+  }
+  .field-input {
+    width: 100%;
+    padding: 12px 14px 12px 44px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 14px;
+    font-family: inherit;
+    background: #f8fafc;
+    transition: all 0.2s ease;
+    color: #0f172a;
+  }
+  .field-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    background: white;
+    box-shadow: 0 0 0 4px rgba(232,131,74,0.1);
+  }
+  .field-input::placeholder { color: #94a3b8; }
+
+  .password-toggle {
+    position: absolute;
+    right: 14px;
+    cursor: pointer;
+    color: #94a3b8;
+    background: none;
+    border: none;
+  }
+
+  .remember-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 18px 0 24px;
+    font-size: 12.5px;
+  }
+  .checkbox-row { display: flex; align-items: center; gap: 8px; color: #475569; cursor: pointer; }
+  .checkbox-row input { accent-color: var(--primary); }
+  .forgot-link { color: var(--primary); text-decoration: none; font-weight: 600; }
+
+  .btn-primary {
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-family: inherit;
+    box-shadow: 0 6px 16px rgba(232,131,74,0.3);
+    transition: all 0.2s ease;
+  }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 22px rgba(232,131,74,0.45); }
+  .btn-primary .material-icons { font-size: 18px; }
+
+  .divider-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 24px 0;
+    color: #94a3b8;
+    font-size: 11px;
+  }
+  .divider-row::before, .divider-row::after {
+    content: ''; flex: 1; height: 1px; background: #e2e8f0;
+  }
+
+  .social-row { display: flex; gap: 10px; }
+  .btn-social {
+    flex: 1;
+    padding: 10px;
+    background: white;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #475569;
+    font-family: inherit;
+  }
+
+  .signup-hint {
+    text-align: center;
+    color: #64748b;
+    font-size: 13px;
+    margin-top: 24px;
+  }
+  .signup-hint a { color: var(--primary); font-weight: 600; text-decoration: none; }
+
+  /* Right artistic panel */
+  .split-right {
+    flex: 1;
+    position: relative;
+    background: linear-gradient(135deg, #E8834A 0%, #c06834 50%, #8b3d1a 100%);
+    padding: 60px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    overflow: hidden;
+  }
+  .split-right::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(circle at 20% 20%, rgba(255,255,255,0.15) 0%, transparent 40%),
+      radial-gradient(circle at 80% 80%, rgba(255,255,255,0.1) 0%, transparent 40%);
+  }
+  .deco-grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+  .partner-strip {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    width: 80%;
+  }
+  .partner-badge {
+    padding: 20px 12px;
+    background: rgba(255,255,255,0.12);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 12px;
+    color: white;
+    font-size: 12px;
+    font-weight: 700;
+    text-align: center;
+    letter-spacing: 1px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+  .partner-badge .material-icons { font-size: 22px; }
+  .right-title {
+    color: white;
+    font-size: 28px;
+    font-weight: 700;
+    position: relative;
+    margin-bottom: 10px;
+    letter-spacing: -0.3px;
+  }
+  .right-subtitle {
+    color: rgba(255,255,255,0.85);
+    font-size: 14px;
+    position: relative;
+    line-height: 1.6;
+  }
+
+  /* ========================================= */
+  /* CONCEPT 2: Glass Morphism Dark            */
+  /* ========================================= */
+  #concept-2 {
+    background:
+      radial-gradient(circle at 20% 20%, #E8834A 0%, transparent 40%),
+      radial-gradient(circle at 80% 80%, #8b5cf6 0%, transparent 40%),
+      #0f172a;
+  }
+  #concept-2::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+    background-size: 50px 50px;
+    pointer-events: none;
+  }
+  .glass-card {
+    width: 440px;
+    max-width: 95vw;
+    background: rgba(255,255,255,0.08);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 20px;
+    padding: 42px 40px;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.4);
+    position: relative;
+    z-index: 1;
+  }
+  .glass-logo {
+    width: 54px; height: 54px;
+    background: linear-gradient(135deg, var(--primary), #c06834);
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 20px;
+    box-shadow: 0 10px 30px rgba(232,131,74,0.4);
+  }
+  .glass-logo .material-icons { color: white; font-size: 28px; }
+  .glass-title {
+    text-align: center;
+    font-size: 22px;
+    font-weight: 700;
+    color: white;
+    margin-bottom: 6px;
+  }
+  .glass-subtitle {
+    text-align: center;
+    color: rgba(255,255,255,0.6);
+    font-size: 13px;
+    margin-bottom: 30px;
+  }
+  .glass-field {
+    margin-bottom: 14px;
+    position: relative;
+  }
+  .glass-field .material-icons {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: rgba(255,255,255,0.5);
+    font-size: 18px;
+  }
+  .glass-input {
+    width: 100%;
+    padding: 13px 14px 13px 44px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 10px;
+    color: white;
+    font-size: 14px;
+    font-family: inherit;
+    transition: all 0.2s ease;
+  }
+  .glass-input::placeholder { color: rgba(255,255,255,0.4); }
+  .glass-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    background: rgba(255,255,255,0.12);
+    box-shadow: 0 0 0 4px rgba(232,131,74,0.15);
+  }
+
+  .glass-remember {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: rgba(255,255,255,0.7);
+    font-size: 12px;
+    margin: 16px 0 22px;
+  }
+  .glass-remember a { color: var(--primary); text-decoration: none; font-weight: 600; }
+
+  .glass-btn {
+    width: 100%;
+    padding: 13px;
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-family: inherit;
+    box-shadow: 0 8px 20px rgba(232,131,74,0.35);
+  }
+  .glass-btn:hover { transform: translateY(-1px); }
+
+  .glass-footer {
+    text-align: center;
+    color: rgba(255,255,255,0.5);
+    font-size: 12px;
+    margin-top: 22px;
+  }
+
+  /* ========================================= */
+  /* CONCEPT 3: Minimal Centered               */
+  /* ========================================= */
+  #concept-3 {
+    background: #fff;
+    position: relative;
+  }
+  #concept-3::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(circle at 15% 85%, rgba(232,131,74,0.08) 0%, transparent 30%),
+      radial-gradient(circle at 85% 15%, rgba(232,131,74,0.06) 0%, transparent 30%);
+  }
+  .minimal-card {
+    width: 400px;
+    max-width: 95vw;
+    padding: 40px;
+    position: relative;
+    z-index: 1;
+  }
+  .minimal-logo {
+    width: 48px; height: 48px;
+    background: linear-gradient(135deg, var(--primary), #c06834);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 24px;
+    box-shadow: 0 8px 24px rgba(232,131,74,0.3);
+  }
+  .minimal-logo .material-icons { color: white; font-size: 24px; }
+  .minimal-title {
+    text-align: center;
+    font-size: 26px;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 8px;
+  }
+  .minimal-sub {
+    text-align: center;
+    color: #64748b;
+    font-size: 14px;
+    margin-bottom: 32px;
+  }
+  .minimal-field {
+    position: relative;
+    margin-bottom: 16px;
+  }
+  .minimal-label {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: white;
+    padding: 0 6px;
+    color: #94a3b8;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    pointer-events: none;
+  }
+  .minimal-input {
+    width: 100%;
+    padding: 16px 14px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 12px;
+    font-size: 14px;
+    font-family: inherit;
+    background: white;
+    transition: all 0.2s ease;
+  }
+  .minimal-input:focus,
+  .minimal-input:not(:placeholder-shown) {
+    outline: none;
+    border-color: var(--primary);
+  }
+  .minimal-input:focus + .minimal-label,
+  .minimal-input:not(:placeholder-shown) + .minimal-label {
+    top: 0;
+    font-size: 11px;
+    color: var(--primary);
+    font-weight: 600;
+  }
+  .minimal-btn {
+    width: 100%;
+    padding: 14px;
+    background: #0f172a;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 10px;
+    font-family: inherit;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+  }
+  .minimal-btn:hover { background: var(--primary); }
+
+  .minimal-links {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: #64748b;
+    margin: 16px 0;
+  }
+  .minimal-links a { color: var(--primary); text-decoration: none; font-weight: 600; }
+
+  .minimal-footer {
+    text-align: center;
+    color: #94a3b8;
+    font-size: 11px;
+    margin-top: 30px;
+    border-top: 1px solid #f1f5f9;
+    padding-top: 16px;
+  }
+
+  /* OTP view demo */
+  .otp-section {
+    margin-top: 30px;
+    text-align: center;
+    display: none; /* toggle for demo */
+  }
+  .otp-boxes {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin: 16px 0;
+  }
+  .otp-box {
+    width: 48px;
+    height: 56px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    text-align: center;
+    font-size: 20px;
+    font-weight: 700;
+    font-family: inherit;
+  }
+  .otp-box:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 4px rgba(232,131,74,0.12); }
+
+</style>
+</head>
+<body>
+
+<nav class="concept-nav">
+  <a href="#concept-1">Split</a>
+  <a href="#concept-2">Glass</a>
+  <a href="#concept-3">Minimal</a>
+</nav>
+
+<!-- ===================== CONCEPT 1: SPLIT SCREEN ===================== -->
+<div class="concept" id="concept-1">
+  <span class="concept-label">Concept 1 · Split Screen</span>
+  <div class="split-container">
+    <div class="split-left">
+      <div class="logo-row">
+        <div class="logo-badge"><span class="material-icons">sync_alt</span></div>
+        <div class="logo-text">eSyncMate</div>
+      </div>
+      <h1 class="welcome">Welcome back</h1>
+      <p class="welcome-sub">Sign in to manage your EDI integrations and inventory feeds.</p>
+
+      <div class="field-group">
+        <label class="field-label">User ID</label>
+        <div class="field-wrap">
+          <span class="material-icons">person</span>
+          <input class="field-input" type="text" placeholder="Enter your user ID">
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label">Password</label>
+        <div class="field-wrap">
+          <span class="material-icons">lock</span>
+          <input class="field-input" type="password" placeholder="Enter your password" value="••••••••">
+          <button class="password-toggle"><span class="material-icons">visibility</span></button>
+        </div>
+      </div>
+
+      <div class="remember-row">
+        <label class="checkbox-row">
+          <input type="checkbox"> Remember me
+        </label>
+        <a class="forgot-link" href="#">Forgot password?</a>
+      </div>
+
+      <button class="btn-primary">
+        Sign In
+        <span class="material-icons">arrow_forward</span>
+      </button>
+
+      <p class="signup-hint">Need help? <a href="#">Contact administrator</a></p>
+    </div>
+
+    <div class="split-right">
+      <div class="deco-grid"></div>
+      <div class="partner-strip">
+        <div class="partner-badge"><span class="material-icons">store</span>Amazon</div>
+        <div class="partner-badge"><span class="material-icons">shopping_cart</span>Walmart</div>
+        <div class="partner-badge"><span class="material-icons">home</span>Lowe's</div>
+        <div class="partner-badge"><span class="material-icons">local_mall</span>Target</div>
+        <div class="partner-badge"><span class="material-icons">shopping_bag</span>Macy's</div>
+        <div class="partner-badge"><span class="material-icons">palette</span>Michaels</div>
+      </div>
+      <div class="right-title">All your EDI partners,<br>one platform.</div>
+      <div class="right-subtitle">Seamlessly manage order flows, inventory sync, and shipment notifications across every marketplace.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== CONCEPT 2: GLASS MORPHISM ===================== -->
+<div class="concept" id="concept-2">
+  <span class="concept-label">Concept 2 · Glass Morphism</span>
+  <div class="glass-card">
+    <div class="glass-logo"><span class="material-icons">sync_alt</span></div>
+    <div class="glass-title">eSyncMate</div>
+    <div class="glass-subtitle">EDI Integration Platform</div>
+
+    <div class="glass-field">
+      <span class="material-icons">person</span>
+      <input class="glass-input" type="text" placeholder="User ID">
+    </div>
+
+    <div class="glass-field">
+      <span class="material-icons">lock</span>
+      <input class="glass-input" type="password" placeholder="Password" value="••••••••">
+    </div>
+
+    <div class="glass-remember">
+      <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+        <input type="checkbox" style="accent-color: var(--primary);"> Keep me signed in
+      </label>
+      <a href="#">Forgot?</a>
+    </div>
+
+    <button class="glass-btn">
+      Sign In
+      <span class="material-icons">login</span>
+    </button>
+
+    <div class="glass-footer">Secured with 2-Factor Authentication</div>
+  </div>
+</div>
+
+<!-- ===================== CONCEPT 3: MINIMAL CENTERED ===================== -->
+<div class="concept" id="concept-3">
+  <span class="concept-label">Concept 3 · Minimal</span>
+  <div class="minimal-card">
+    <div class="minimal-logo"><span class="material-icons">sync_alt</span></div>
+    <div class="minimal-title">Welcome to eSyncMate</div>
+    <div class="minimal-sub">Sign in to continue</div>
+
+    <div class="minimal-field">
+      <input class="minimal-input" type="text" placeholder=" " value="admin">
+      <label class="minimal-label">User ID</label>
+    </div>
+
+    <div class="minimal-field">
+      <input class="minimal-input" type="password" placeholder=" " value="••••••••">
+      <label class="minimal-label">Password</label>
+    </div>
+
+    <div class="minimal-links">
+      <label style="cursor:pointer;"><input type="checkbox" style="accent-color: var(--primary);"> Remember me</label>
+      <a href="#">Forgot password?</a>
+    </div>
+
+    <button class="minimal-btn">
+      Sign In
+      <span class="material-icons" style="font-size:18px;">arrow_forward</span>
+    </button>
+
+    <div class="minimal-footer">© 2026 eSyncMate · eSoftage Solutions</div>
+  </div>
+</div>
+
+</body>
+</html>

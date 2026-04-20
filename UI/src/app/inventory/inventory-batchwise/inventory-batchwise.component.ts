@@ -134,9 +134,10 @@ export class InventoryBatchwiseComponent implements OnInit {
     this.isLoading = true;
     const itemID = this.batchWiseInventoryForm.get('itemID')?.value || '';
 
-    const obs = (this.isMerged && this.mergedBatchIDs.length > 0)
-      ? this.api.getMergedDownloadItems(this.mergedBatchIDs, itemID, this.pageNumber, this.pageSize)
-      : this.api.getbatchWise(this.batchID, itemID, this.pageNumber, this.pageSize);
+    const batchIDs = (this.isMerged && this.mergedBatchIDs.length > 0)
+      ? this.mergedBatchIDs
+      : [this.batchID];
+    const obs = this.api.getBatchItems(batchIDs, itemID, this.pageNumber, this.pageSize);
 
     obs.subscribe({
       next: (res: any) => {

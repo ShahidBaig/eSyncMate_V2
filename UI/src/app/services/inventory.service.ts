@@ -12,57 +12,36 @@ export class InventoryService {
   apiUrl = environment.apiUrl;
   constructor(private http: HttpClient, private jwt: JwtHelperService) { }
 
-  getInventory(itemID: string, fromDate: string, toDate: string, status: string, customerID: string, routeType: string, pageNumber: number = 1, pageSize: number = 10) {
-    const params = new HttpParams()
-      .set('pageNumber', pageNumber.toString())
-      .set('pageSize', pageSize.toString());
-    return this.http.get<any>(this.apiUrl + 'api/v1/inventory/getInventory/' + itemID + '/' + fromDate + '/' + toDate + '/' + status + '/' + customerID + '/' + routeType, { params });
+  getInventory(itemID: string, fromDate: string, toDate: string, status: string, customerID: string, pageNumber: number = 1, pageSize: number = 10) {
+    const body = {
+      itemID: itemID || '',
+      customerID: customerID || '',
+      startDate: fromDate || '',
+      finishDate: toDate || '',
+      status: status || '',
+      pageNumber,
+      pageSize
+    };
+    return this.http.post<any>(this.apiUrl + 'api/v1/inventory/getInventory', body);
   }
 
   getInventoryFiles(customerId: string, itemId: string, batchId: string = '') {
     return this.http.get<Inventory[]>(this.apiUrl + 'api/v1/inventory/getInventoryFiles/' + customerId + '/' + itemId + '/' + batchId);
   }
 
-  getbatchWise(batchID: string, itemID: string = '', pageNumber: number = 1, pageSize: number = 10) {
-    let params = new HttpParams()
-      .set('pageNumber', pageNumber.toString())
-      .set('pageSize', pageSize.toString());
-    if (itemID) {
-      params = params.set('itemID', itemID);
-    }
-    return this.http.get<any>(this.apiUrl + 'api/v1/inventory/getBatchData/' + batchID, { params });
+  getBatchItems(batchIDs: string[], itemID: string = '', pageNumber: number = 1, pageSize: number = 10): Observable<any> {
+    const body = {
+      batchIDs: batchIDs.join(','),
+      itemID: itemID || '',
+      pageNumber,
+      pageSize
+    };
+    return this.http.post<any>(`${this.apiUrl}api/v1/inventory/getBatchItems`, body);
   }
 
-  getBatchWiseItemID(itemID: string, batchID:string): Observable<any> {
-    const url = `${this.apiUrl}api/v1/inventory/getBatchWiseItemID?ItemID=${itemID}&BatchID=${batchID}`;
-    return this.http.get<any>(url);
-
-  }
-
-  getMergedDownloadItems(batchIDs: string[], itemID: string = '', pageNumber: number = 1, pageSize: number = 10): Observable<any> {
-    let params = new HttpParams()
-      .set('batchIDs', batchIDs.join(','))
-      .set('pageNumber', pageNumber.toString())
-      .set('pageSize', pageSize.toString());
-    if (itemID) {
-      params = params.set('itemID', itemID);
-    }
-    return this.http.get<any>(`${this.apiUrl}api/v1/inventory/getMergedDownloadItems`, { params });
-  }
-
-  getDownloadBatches(customerID: string, fromDate: string, toDate: string): Observable<any> {
-    let params = new HttpParams()
-      .set('customerID', customerID)
-      .set('fromDate', fromDate)
-      .set('toDate', toDate);
-    return this.http.get<any>(`${this.apiUrl}api/v1/inventory/getDownloadBatches`, { params });
-  }
-
-  getPreviousUploadDate(customerID: string, beforeDate: string): Observable<any> {
-    let params = new HttpParams()
-      .set('customerID', customerID)
-      .set('beforeDate', beforeDate);
-    return this.http.get<any>(`${this.apiUrl}api/v1/inventory/getPreviousUploadDate`, { params });
+  getConsolidatedDownload(uploadBatchID: string, itemID: string = ''): Observable<any> {
+    const body = { uploadBatchID, itemID };
+    return this.http.post<any>(`${this.apiUrl}api/v1/inventory/getConsolidatedDownload`, body);
   }
 
   getERPCustomers(): Observable<any> {

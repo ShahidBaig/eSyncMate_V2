@@ -1,5 +1,5 @@
-$primary:        #2563eb;
-$primary-light:  #eff6ff;
+$primary:        #E8834A;
+$primary-light:  #fdf0e8;
 $gray-50:        #f8fafc;
 $gray-100:       #f1f5f9;
 $gray-200:       #e2e8f0;
@@ -27,8 +27,8 @@ $white:          #ffffff;
   align-items: center;
   height: 56px;
   padding: 0 24px;
-  background: $white;
-  border-bottom: 1px solid $gray-200;
+  background: $primary;
+  border-bottom: 1px solid darken($primary, 8%);
   gap: 0;
 }
 
@@ -41,7 +41,7 @@ $white:          #ffffff;
   gap: 10px;
   flex-shrink: 0;
   padding-right: 20px;
-  border-right: 1px solid $gray-200;
+  border-right: 1px solid rgba(255, 255, 255, 0.25);
   height: 100%;
   transition: opacity 0.15s ease;
 
@@ -54,13 +54,12 @@ $white:          #ffffff;
   height: 30px;
   width: auto;
   flex-shrink: 0;
-  margin-left: -55px;
 }
 
 .header-logo-text {
   font-size: 17px;
   font-weight: 700;
-  color: $gray-800;
+  color: $white;
   letter-spacing: -0.4px;
   white-space: nowrap;
 }
@@ -71,10 +70,10 @@ $white:          #ffffff;
 .header-nav {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 6px;
   flex: 1;
   height: 100%;
-  margin-left: 12px;
+  margin-left: 16px;
 }
 
 .nav-module {
@@ -86,49 +85,63 @@ $white:          #ffffff;
 }
 
 .nav-module-btn {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 5px;
-  padding: 6px 12px;
+  gap: 7px;
+  padding: 8px 16px;
   border: none;
   background: transparent;
-  color: $gray-600;
+  color: $white;
   font-family: 'Poppins', sans-serif;
-  font-size: 13px;
-  font-weight: 500;
+  font-size: 14.5px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
   cursor: pointer;
-  border-radius: 6px;
+  border-radius: 8px;
   transition: all 0.15s ease;
   white-space: nowrap;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.12);
 
   &:hover {
-    background: $gray-50;
-    color: $gray-900;
+    background: transparent;
+    color: $white;
   }
 
   &.active {
-    color: $primary;
-    background: $primary-light;
+    color: $white;
+    background: transparent;
+
+    &::after {
+      content: '';
+      position: absolute;
+      left: 16px;
+      right: 16px;
+      bottom: 2px;
+      height: 2px;
+      background: $white;
+      border-radius: 2px;
+    }
   }
 
   .nav-module-icon {
-    font-size: 18px;
-    width: 18px;
-    height: 18px;
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
     color: inherit;
   }
 
   .nav-chevron {
-    font-size: 16px;
-    width: 16px;
-    height: 16px;
-    color: $gray-400;
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    color: rgba(255, 255, 255, 0.9);
     margin-left: -2px;
     transition: transform 0.2s ease;
   }
 
   &:hover .nav-chevron {
-    color: $gray-600;
+    color: $white;
   }
 }
 
@@ -222,7 +235,7 @@ $white:          #ffffff;
   height: 100%;
   margin-left: auto;
   padding-left: 12px;
-  border-left: 1px solid $gray-200;
+  border-left: 1px solid rgba(255, 255, 255, 0.25);
 
   // Uniform icon buttons — same size, same position
   button[mat-icon-button],
@@ -235,7 +248,7 @@ $white:          #ffffff;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    color: $gray-400;
+    color: rgba(255, 255, 255, 0.92);
     border-radius: 8px !important;
     transition: all 0.15s ease;
 
@@ -247,8 +260,8 @@ $white:          #ffffff;
     }
 
     &:hover {
-      color: $gray-700;
-      background-color: $gray-100;
+      color: $white;
+      background-color: rgba(255, 255, 255, 0.18);
     }
   }
 }
@@ -277,7 +290,7 @@ $white:          #ffffff;
   &:focus-within {
     background: $white;
     border-color: $primary;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    box-shadow: 0 0 0 3px rgba(232, 131, 74, 0.15);
   }
 
   .search-box-icon {
@@ -395,8 +408,8 @@ $white:          #ffffff;
   border: 1px solid transparent;
 
   &:hover {
-    background-color: $gray-50;
-    border-color: $gray-200;
+    background-color: rgba(255, 255, 255, 0.18);
+    border-color: rgba(255, 255, 255, 0.3);
   }
 }
 
@@ -404,8 +417,8 @@ $white:          #ffffff;
   width: 30px;
   height: 30px;
   border-radius: 50%;
-  background: $primary;
-  color: $white;
+  background: $white;
+  color: $primary;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -418,13 +431,13 @@ $white:          #ffffff;
 .user-name {
   font-size: 13px;
   font-weight: 500;
-  color: $gray-700;
+  color: $white;
   white-space: nowrap;
   line-height: 1;
 }
 
 .dropdown-arrow {
-  color: $gray-400;
+  color: rgba(255, 255, 255, 0.85);
   font-size: 18px !important;
   width: 18px !important;
   height: 18px !important;

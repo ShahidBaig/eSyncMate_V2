@@ -456,62 +456,117 @@ namespace eSyncMate.DB.Entities
         }
         #endregion
 
-        public bool GetBatchWiseData(string p_Criteria, ref DataTable p_Data)
+        public bool GetInventoryFeedSummary(
+            string p_ItemID, string p_CustomerID, string p_FromDate, string p_ToDate,
+            string p_Status, int p_PageNumber, int p_PageSize,
+            ref DataTable p_Data, out int p_TotalCount)
         {
-            string l_SQL = string.Empty;
+            p_TotalCount = 0;
+            string l_Param = string.Empty;
+            string l_Query = "EXEC [dbo].[Sp_GetInventoryFeedSummary] ";
 
-            l_SQL = $"SELECT * FROM VW_BatchWiseInventory WHERE {p_Criteria}";
+            PublicFunctions.FieldToParam(p_ItemID ?? string.Empty, ref l_Param, Declarations.FieldTypes.String);
+            l_Query += " @p_ItemID = " + l_Param;
 
-            return Connection.GetData(l_SQL, ref p_Data);
+            PublicFunctions.FieldToParam(p_CustomerID ?? string.Empty, ref l_Param, Declarations.FieldTypes.String);
+            l_Query += ", @p_CustomerID = " + l_Param;
+
+            PublicFunctions.FieldToParam(p_FromDate ?? string.Empty, ref l_Param, Declarations.FieldTypes.String);
+            l_Query += ", @p_StartDate = " + l_Param;
+
+            PublicFunctions.FieldToParam(p_ToDate ?? string.Empty, ref l_Param, Declarations.FieldTypes.String);
+            l_Query += ", @p_FinishDate = " + l_Param;
+
+            PublicFunctions.FieldToParam(p_Status ?? string.Empty, ref l_Param, Declarations.FieldTypes.String);
+            l_Query += ", @p_Status = " + l_Param;
+
+            PublicFunctions.FieldToParam(p_PageNumber, ref l_Param, Declarations.FieldTypes.Number);
+            l_Query += ", @p_PageNumber = " + l_Param;
+
+            PublicFunctions.FieldToParam(p_PageSize, ref l_Param, Declarations.FieldTypes.Number);
+            l_Query += ", @p_PageSize = " + l_Param;
+
+            DataSet l_DataSet = new DataSet();
+            bool l_Result = Connection.GetDataSP(l_Query, ref l_DataSet);
+
+            if (l_DataSet.Tables.Count > 0)
+            {
+                p_Data = l_DataSet.Tables[0].Copy();
+            }
+            if (l_DataSet.Tables.Count > 1 && l_DataSet.Tables[1].Rows.Count > 0)
+            {
+                p_TotalCount = Convert.ToInt32(l_DataSet.Tables[1].Rows[0]["TotalCount"]);
+            }
+
+            l_DataSet.Dispose();
+            return l_Result;
         }
 
-        public bool GetBatchWiseDataPaged(string p_Criteria, ref DataTable p_Data, int pageNumber, int pageSize, out int totalCount)
+        public bool GetConsolidatedDownloadBatches(
+            string p_UploadBatchID,
+            string p_ItemID,
+            ref DataTable p_MainRow, ref DataTable p_TypeBreakdown)
         {
-            totalCount = 0;
-            string l_CountQuery = $"SELECT COUNT(*) FROM VW_BatchWiseInventory WHERE {p_Criteria}";
-            var l_CountData = new DataTable();
-            Connection.GetData(l_CountQuery, ref l_CountData);
-            if (l_CountData.Rows.Count > 0) totalCount = Convert.ToInt32(l_CountData.Rows[0][0]);
-            l_CountData.Dispose();
+            string l_Param = string.Empty;
+            string l_Query = "EXEC [dbo].[Sp_GetConsolidatedDownloadBatches] ";
 
-            int offset = (pageNumber - 1) * pageSize;
-            string l_SQL = $"SELECT * FROM VW_BatchWiseInventory WHERE {p_Criteria} ORDER BY Id DESC OFFSET {offset} ROWS FETCH NEXT {pageSize} ROWS ONLY";
-            return Connection.GetData(l_SQL, ref p_Data);
+            PublicFunctions.FieldToParam(p_UploadBatchID ?? string.Empty, ref l_Param, Declarations.FieldTypes.String);
+            l_Query += " @p_UploadBatchID = " + l_Param;
+
+            PublicFunctions.FieldToParam(p_ItemID ?? string.Empty, ref l_Param, Declarations.FieldTypes.String);
+            l_Query += ", @p_ItemID = " + l_Param;
+
+            DataSet l_DataSet = new DataSet();
+            bool l_Result = Connection.GetDataSP(l_Query, ref l_DataSet);
+
+            if (l_DataSet.Tables.Count > 0)
+            {
+                p_MainRow = l_DataSet.Tables[0].Copy();
+            }
+            if (l_DataSet.Tables.Count > 1)
+            {
+                p_TypeBreakdown = l_DataSet.Tables[1].Copy();
+            }
+
+            l_DataSet.Dispose();
+            return l_Result;
         }
 
-        /// <summary>
-        /// Returns merged item-level data across multiple download batches.
-        /// Dedupes by ItemID — keeps only the latest row (last write wins) using ROW_NUMBER.
-        /// p_BatchIdsCsv must be a pre-quoted, comma-separated GUID list (caller sanitizes).
-        /// </summary>
-        public bool GetMergedDownloadItemsPaged(string p_BatchIdsCsv, string p_ItemIdFilter, ref DataTable p_Data, int pageNumber, int pageSize, out int totalCount)
+        public bool GetInventoryBatchItems(
+            string p_BatchIDsCsv, string p_ItemID,
+            int p_PageNumber, int p_PageSize,
+            ref DataTable p_Data, out int p_TotalCount)
         {
-            totalCount = 0;
-            string itemFilter = string.IsNullOrEmpty(p_ItemIdFilter)
-                ? string.Empty
-                : $" AND ItemId LIKE '%{p_ItemIdFilter.Replace("'", "''")}%'";
+            p_TotalCount = 0;
+            string l_Param = string.Empty;
+            string l_Query = "EXEC [dbo].[Sp_GetInventoryBatchItems] ";
 
-            string baseCte = $@"
-WITH MergedItems AS (
-    SELECT *,
-           ROW_NUMBER() OVER (PARTITION BY ItemId ORDER BY ISNULL(ModifiedDate, CreatedDate) DESC, Id DESC) AS rn
-    FROM VW_BatchWiseInventory WITH (NOLOCK)
-    WHERE BatchID IN ({p_BatchIdsCsv}){itemFilter}
-)";
+            PublicFunctions.FieldToParam(p_BatchIDsCsv ?? string.Empty, ref l_Param, Declarations.FieldTypes.String);
+            l_Query += " @p_BatchIDs = " + l_Param;
 
-            string l_CountQuery = baseCte + " SELECT COUNT(*) FROM MergedItems WHERE rn = 1";
-            var l_CountData = new DataTable();
-            Connection.GetData(l_CountQuery, ref l_CountData);
-            if (l_CountData.Rows.Count > 0) totalCount = Convert.ToInt32(l_CountData.Rows[0][0]);
-            l_CountData.Dispose();
+            PublicFunctions.FieldToParam(p_ItemID ?? string.Empty, ref l_Param, Declarations.FieldTypes.String);
+            l_Query += ", @p_ItemID = " + l_Param;
 
-            int offset = (pageNumber - 1) * pageSize;
-            string l_SQL = baseCte + $@"
-SELECT * FROM MergedItems
-WHERE rn = 1
-ORDER BY ItemId
-OFFSET {offset} ROWS FETCH NEXT {pageSize} ROWS ONLY";
-            return Connection.GetData(l_SQL, ref p_Data);
+            PublicFunctions.FieldToParam(p_PageNumber, ref l_Param, Declarations.FieldTypes.Number);
+            l_Query += ", @p_PageNumber = " + l_Param;
+
+            PublicFunctions.FieldToParam(p_PageSize, ref l_Param, Declarations.FieldTypes.Number);
+            l_Query += ", @p_PageSize = " + l_Param;
+
+            DataSet l_DataSet = new DataSet();
+            bool l_Result = Connection.GetDataSP(l_Query, ref l_DataSet);
+
+            if (l_DataSet.Tables.Count > 0)
+            {
+                p_Data = l_DataSet.Tables[0].Copy();
+            }
+            if (l_DataSet.Tables.Count > 1 && l_DataSet.Tables[1].Rows.Count > 0)
+            {
+                p_TotalCount = Convert.ToInt32(l_DataSet.Tables[1].Rows[0]["TotalCount"]);
+            }
+
+            l_DataSet.Dispose();
+            return l_Result;
         }
     }
 }
