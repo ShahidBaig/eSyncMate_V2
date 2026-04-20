@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Login Redesign — More Concepts (4-6)</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --primary: #E8834A;
+    --primary-dark: #c06834;
+    --primary-soft: #fff7ed;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Poppins', sans-serif;
+    margin: 0;
+    background: #0f172a;
+    color: #fff;
+  }
+
+  .concept-nav {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 100;
+    background: rgba(255,255,255,0.1);
+    backdrop-filter: blur(20px);
+    padding: 6px;
+    border-radius: 40px;
+    display: flex;
+    gap: 4px;
+    border: 1px solid rgba(255,255,255,0.15);
+  }
+  .concept-nav a {
+    padding: 8px 18px;
+    border-radius: 30px;
+    color: rgba(255,255,255,0.7);
+    text-decoration: none;
+    font-size: 12px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+  }
+  .concept-nav a:hover { background: rgba(255,255,255,0.1); color: white; }
+
+  .concept {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 80px 20px 40px;
+    position: relative;
+  }
+
+  .concept-label {
+    position: absolute;
+    top: 90px;
+    left: 30px;
+    background: var(--primary);
+    color: white;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    z-index: 10;
+  }
+
+  /* ========================================= */
+  /* CONCEPT 4: Animated Mesh Gradient          */
+  /* ========================================= */
+  #concept-4 {
+    overflow: hidden;
+    background: #0a0a1a;
+  }
+  .blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.5;
+    animation: float 10s ease-in-out infinite;
+  }
+  .blob-1 { width: 500px; height: 500px; background: #E8834A; top: -100px; left: -100px; }
+  .blob-2 { width: 400px; height: 400px; background: #8b5cf6; top: 40%; right: -80px; animation-delay: -3s; }
+  .blob-3 { width: 450px; height: 450px; background: #0ea5e9; bottom: -100px; left: 30%; animation-delay: -6s; }
+  @keyframes float {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33% { transform: translate(40px, -30px) scale(1.1); }
+    66% { transform: translate(-30px, 40px) scale(0.95); }
+  }
+
+  .mesh-card {
+    width: 460px;
+    max-width: 95vw;
+    background: rgba(15, 23, 42, 0.75);
+    backdrop-filter: blur(30px) saturate(180%);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 24px;
+    padding: 48px;
+    position: relative;
+    z-index: 1;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.4);
+  }
+  .mesh-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 40px;
+  }
+  .mesh-logo {
+    width: 40px; height: 40px;
+    background: linear-gradient(135deg, var(--primary), #c06834);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 6px 16px rgba(232,131,74,0.4);
+  }
+  .mesh-logo .material-icons { color: white; font-size: 22px; }
+  .mesh-brandname { font-size: 17px; font-weight: 700; color: white; }
+
+  .mesh-title {
+    font-size: 28px;
+    font-weight: 700;
+    color: white;
+    line-height: 1.2;
+    margin-bottom: 10px;
+    letter-spacing: -0.5px;
+  }
+  .mesh-title .accent { background: linear-gradient(135deg, #E8834A, #fbbf24); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .mesh-sub {
+    color: rgba(255,255,255,0.6);
+    font-size: 14px;
+    margin-bottom: 30px;
+  }
+
+  .mesh-field {
+    margin-bottom: 14px;
+    position: relative;
+  }
+  .mesh-field .material-icons {
+    position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+    color: rgba(255,255,255,0.4); font-size: 18px;
+  }
+  .mesh-input {
+    width: 100%;
+    padding: 14px 14px 14px 44px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    color: white;
+    font-size: 14px;
+    font-family: inherit;
+    transition: all 0.2s ease;
+  }
+  .mesh-input::placeholder { color: rgba(255,255,255,0.35); }
+  .mesh-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    background: rgba(255,255,255,0.1);
+    box-shadow: 0 0 0 4px rgba(232,131,74,0.15);
+  }
+
+  .mesh-links {
+    display: flex;
+    justify-content: space-between;
+    color: rgba(255,255,255,0.6);
+    font-size: 12px;
+    margin: 16px 0 24px;
+  }
+  .mesh-links a { color: var(--primary); text-decoration: none; font-weight: 600; }
+
+  .mesh-btn {
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(135deg, var(--primary), #d67038);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-family: inherit;
+    box-shadow: 0 10px 24px rgba(232,131,74,0.35);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .mesh-btn:hover { transform: translateY(-2px); box-shadow: 0 14px 32px rgba(232,131,74,0.5); }
+  .mesh-footer { text-align: center; color: rgba(255,255,255,0.4); font-size: 11px; margin-top: 20px; }
+
+
+  /* ========================================= */
+  /* CONCEPT 5: Dashboard Preview Side          */
+  /* ========================================= */
+  #concept-5 {
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  }
+  .preview-container {
+    display: flex;
+    width: 1100px;
+    max-width: 95vw;
+    height: 660px;
+    background: white;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 40px 100px rgba(0,0,0,0.5);
+  }
+  .preview-form {
+    width: 420px;
+    padding: 48px 42px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .preview-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 36px;
+  }
+  .preview-logo {
+    width: 38px; height: 38px;
+    background: linear-gradient(135deg, var(--primary), #c06834);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .preview-logo .material-icons { color: white; font-size: 20px; }
+  .preview-brandname { font-size: 16px; font-weight: 700; color: #0f172a; }
+
+  .preview-title { font-size: 26px; font-weight: 700; color: #0f172a; margin-bottom: 6px; letter-spacing: -0.3px; }
+  .preview-sub { color: #64748b; font-size: 13.5px; margin-bottom: 28px; }
+
+  .preview-field { margin-bottom: 14px; }
+  .preview-field label { display: block; font-size: 12px; font-weight: 600; color: #475569; margin-bottom: 6px; }
+  .preview-input-wrap { position: relative; }
+  .preview-input-wrap .material-icons {
+    position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+    color: #94a3b8; font-size: 17px;
+  }
+  .preview-input {
+    width: 100%;
+    padding: 11px 12px 11px 40px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 13px;
+    font-family: inherit;
+    transition: all 0.2s ease;
+  }
+  .preview-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 4px rgba(232,131,74,0.1);
+  }
+
+  .preview-remember {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    color: #64748b;
+    margin: 14px 0 22px;
+  }
+  .preview-remember a { color: var(--primary); font-weight: 600; text-decoration: none; }
+
+  .preview-btn {
+    width: 100%;
+    padding: 12px;
+    background: #0f172a;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+  }
+  .preview-btn:hover { background: var(--primary); }
+
+  .preview-footer {
+    margin-top: auto;
+    font-size: 11px;
+    color: #94a3b8;
+    padding-top: 24px;
+  }
+
+  /* Right: Dashboard Preview (live mockup) */
+  .preview-app {
+    flex: 1;
+    background: #fafaf9;
+    padding: 24px;
+    overflow: hidden;
+    position: relative;
+  }
+  .preview-app::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 100%;
+    background: linear-gradient(180deg, transparent 70%, #fafaf9);
+    pointer-events: none;
+  }
+  .pv-topbar {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 0;
+    border-bottom: 1px solid #e5e5e5;
+    margin-bottom: 16px;
+  }
+  .pv-dots { display: flex; gap: 6px; }
+  .pv-dot { width: 12px; height: 12px; border-radius: 50%; background: #e2e8f0; }
+  .pv-dot:nth-child(1) { background: #fca5a5; }
+  .pv-dot:nth-child(2) { background: #fcd34d; }
+  .pv-dot:nth-child(3) { background: #86efac; }
+  .pv-url {
+    flex: 1;
+    padding: 5px 12px;
+    background: white;
+    border-radius: 6px;
+    font-size: 11px;
+    color: #64748b;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .pv-kpis {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .pv-kpi {
+    background: white;
+    border: 1px solid #e5e5e5;
+    border-left: 3px solid var(--primary);
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
+  .pv-kpi-lbl { font-size: 9px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.4px; }
+  .pv-kpi-val { font-size: 18px; font-weight: 700; color: #0f172a; margin-top: 2px; }
+  .pv-kpi.good { border-left-color: #14532d; }
+  .pv-kpi.warn { border-left-color: #3b82f6; }
+  .pv-kpi.err { border-left-color: #dc2626; }
+
+  .pv-table {
+    background: white;
+    border: 1px solid #e5e5e5;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .pv-tr {
+    display: grid;
+    grid-template-columns: 1fr 80px 110px 80px;
+    padding: 9px 12px;
+    gap: 10px;
+    font-size: 11px;
+    border-bottom: 1px solid #f1f5f9;
+    align-items: center;
+  }
+  .pv-tr.header { background: #fafaf9; font-size: 9px; font-weight: 700; color: #94a3b8; text-transform: uppercase; }
+  .pv-chip {
+    display: inline-block; padding: 2px 8px; border-radius: 10px;
+    background: #f0fdf4; color: #14532d;
+    font-size: 9px; font-weight: 600;
+    border: 1px solid #bbf7d0;
+  }
+  .pv-chip.err { background: #fef2f2; color: #991b1b; border-color: #fecaca; }
+  .pv-avatar {
+    width: 20px; height: 20px; border-radius: 5px;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: white; font-weight: 700; font-size: 9px;
+    margin-right: 6px;
+  }
+
+
+  /* ========================================= */
+  /* CONCEPT 6: Feature Carousel                */
+  /* ========================================= */
+  #concept-6 {
+    background: #fafaf9;
+    padding: 0;
+  }
+  .carousel-container {
+    display: flex;
+    width: 100vw;
+    height: 100vh;
+  }
+  .carousel-features {
+    flex: 1;
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    color: white;
+    padding: 80px 70px;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .carousel-features::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(circle at 20% 30%, rgba(232,131,74,0.25) 0%, transparent 40%),
+      radial-gradient(circle at 80% 70%, rgba(139,92,246,0.15) 0%, transparent 40%);
+  }
+  .carousel-brand {
+    position: relative;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .carousel-logo {
+    width: 38px; height: 38px;
+    background: linear-gradient(135deg, var(--primary), #c06834);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .carousel-logo .material-icons { color: white; font-size: 20px; }
+  .carousel-brandname { font-size: 17px; font-weight: 700; }
+
+  .carousel-stage { position: relative; max-width: 480px; }
+  .carousel-pill {
+    display: inline-block;
+    padding: 6px 14px;
+    background: rgba(232,131,74,0.15);
+    border: 1px solid rgba(232,131,74,0.35);
+    color: #fbbf24;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    margin-bottom: 22px;
+  }
+  .carousel-big {
+    font-size: 42px;
+    font-weight: 700;
+    line-height: 1.1;
+    margin-bottom: 18px;
+    letter-spacing: -0.8px;
+  }
+  .carousel-big .accent { background: linear-gradient(135deg, #E8834A, #fbbf24); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .carousel-desc {
+    color: rgba(255,255,255,0.7);
+    font-size: 16px;
+    line-height: 1.6;
+    margin-bottom: 36px;
+  }
+
+  .carousel-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    max-width: 480px;
+  }
+  .carousel-stat {
+    padding: 14px 16px;
+    background: rgba(255,255,255,0.05);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+  }
+  .carousel-stat-val { font-size: 22px; font-weight: 700; color: white; }
+  .carousel-stat-val .plus { color: var(--primary); }
+  .carousel-stat-lbl { font-size: 10px; color: rgba(255,255,255,0.55); margin-top: 2px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
+
+  .carousel-dots {
+    position: relative;
+    display: flex;
+    gap: 6px;
+  }
+  .carousel-dot-indicator {
+    width: 24px; height: 3px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 2px;
+  }
+  .carousel-dot-indicator.active { background: var(--primary); width: 36px; }
+
+  .carousel-form {
+    width: 480px;
+    padding: 70px 60px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    background: white;
+  }
+  .cf-title { font-size: 26px; font-weight: 700; color: #0f172a; margin-bottom: 6px; letter-spacing: -0.3px; }
+  .cf-sub { color: #64748b; font-size: 13.5px; margin-bottom: 30px; }
+  .cf-field { margin-bottom: 14px; }
+  .cf-field label { display: block; font-size: 12px; font-weight: 600; color: #475569; margin-bottom: 6px; }
+  .cf-wrap { position: relative; }
+  .cf-wrap .material-icons {
+    position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+    color: #94a3b8; font-size: 17px;
+  }
+  .cf-input {
+    width: 100%;
+    padding: 12px 12px 12px 40px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 13px;
+    font-family: inherit;
+    background: #f8fafc;
+    transition: all 0.2s ease;
+  }
+  .cf-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    background: white;
+    box-shadow: 0 0 0 4px rgba(232,131,74,0.1);
+  }
+  .cf-links {
+    display: flex; justify-content: space-between; font-size: 12px; color: #64748b; margin: 16px 0 22px;
+  }
+  .cf-links a { color: var(--primary); font-weight: 600; text-decoration: none; }
+  .cf-btn {
+    width: 100%;
+    padding: 13px;
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    box-shadow: 0 8px 20px rgba(232,131,74,0.3);
+  }
+  .cf-footer {
+    text-align: center;
+    color: #94a3b8;
+    font-size: 11px;
+    margin-top: 24px;
+  }
+
+</style>
+</head>
+<body>
+
+<nav class="concept-nav">
+  <a href="#concept-4">Animated Mesh</a>
+  <a href="#concept-5">Dashboard Preview</a>
+  <a href="#concept-6">Feature Carousel</a>
+</nav>
+
+<!-- ===================== CONCEPT 4: Animated Mesh ===================== -->
+<div class="concept" id="concept-4">
+  <span class="concept-label">Concept 4 · Animated Mesh</span>
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+  <div class="blob blob-3"></div>
+
+  <div class="mesh-card">
+    <div class="mesh-brand">
+      <div class="mesh-logo"><span class="material-icons">sync_alt</span></div>
+      <div class="mesh-brandname">eSyncMate</div>
+    </div>
+
+    <h1 class="mesh-title">Sign in to your <span class="accent">EDI hub</span></h1>
+    <p class="mesh-sub">Manage inventory, orders, and shipments across all marketplaces.</p>
+
+    <div class="mesh-field">
+      <span class="material-icons">person</span>
+      <input class="mesh-input" type="text" placeholder="User ID">
+    </div>
+
+    <div class="mesh-field">
+      <span class="material-icons">lock</span>
+      <input class="mesh-input" type="password" placeholder="Password" value="••••••••">
+    </div>
+
+    <div class="mesh-links">
+      <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+        <input type="checkbox" style="accent-color: var(--primary);"> Remember me
+      </label>
+      <a href="#">Forgot password?</a>
+    </div>
+
+    <button class="mesh-btn">
+      Sign In Securely
+      <span class="material-icons">arrow_forward</span>
+    </button>
+
+    <div class="mesh-footer">🔒 Protected by 2-Factor Authentication</div>
+  </div>
+</div>
+
+
+<!-- ===================== CONCEPT 5: Dashboard Preview ===================== -->
+<div class="concept" id="concept-5">
+  <span class="concept-label">Concept 5 · Dashboard Preview</span>
+  <div class="preview-container">
+    <div class="preview-form">
+      <div class="preview-brand">
+        <div class="preview-logo"><span class="material-icons">sync_alt</span></div>
+        <div class="preview-brandname">eSyncMate</div>
+      </div>
+
+      <div class="preview-title">Welcome back 👋</div>
+      <div class="preview-sub">Sign in to access your EDI workspace.</div>
+
+      <div class="preview-field">
+        <label>User ID</label>
+        <div class="preview-input-wrap">
+          <span class="material-icons">person</span>
+          <input class="preview-input" type="text" placeholder="e.g. admin">
+        </div>
+      </div>
+
+      <div class="preview-field">
+        <label>Password</label>
+        <div class="preview-input-wrap">
+          <span class="material-icons">lock</span>
+          <input class="preview-input" type="password" value="••••••••">
+        </div>
+      </div>
+
+      <div class="preview-remember">
+        <label style="cursor:pointer;"><input type="checkbox" style="accent-color: var(--primary);"> Remember me</label>
+        <a href="#">Forgot?</a>
+      </div>
+
+      <button class="preview-btn">
+        Sign In
+        <span class="material-icons" style="font-size: 16px;">arrow_forward</span>
+      </button>
+
+      <div class="preview-footer">© 2026 eSyncMate · v2.4.1</div>
+    </div>
+
+    <div class="preview-app">
+      <div class="pv-topbar">
+        <div class="pv-dots">
+          <div class="pv-dot"></div>
+          <div class="pv-dot"></div>
+          <div class="pv-dot"></div>
+        </div>
+        <div class="pv-url">esyncmate.app/edi/inventory</div>
+      </div>
+
+      <div class="pv-kpis">
+        <div class="pv-kpi"><div class="pv-kpi-lbl">Total</div><div class="pv-kpi-val">184</div></div>
+        <div class="pv-kpi good"><div class="pv-kpi-lbl">Success</div><div class="pv-kpi-val">178</div></div>
+        <div class="pv-kpi warn"><div class="pv-kpi-lbl">Running</div><div class="pv-kpi-val">2</div></div>
+        <div class="pv-kpi err"><div class="pv-kpi-lbl">Errors</div><div class="pv-kpi-val">4</div></div>
+      </div>
+
+      <div class="pv-table">
+        <div class="pv-tr header">
+          <div>Customer</div>
+          <div>Status</div>
+          <div>Date</div>
+          <div>Action</div>
+        </div>
+        <div class="pv-tr">
+          <div><span class="pv-avatar" style="background:#8b5cf6;">KN</span>KNO8068</div>
+          <div><span class="pv-chip">Done</span></div>
+          <div>2h ago</div>
+          <div>Uploaded</div>
+        </div>
+        <div class="pv-tr">
+          <div><span class="pv-avatar" style="background:#ff9900;">AM</span>AMA1005</div>
+          <div><span class="pv-chip">Done</span></div>
+          <div>3h ago</div>
+          <div>Uploaded</div>
+        </div>
+        <div class="pv-tr">
+          <div><span class="pv-avatar" style="background:#0071ce;">WM</span>WAL4001MP</div>
+          <div><span class="pv-chip err">Error</span></div>
+          <div>5h ago</div>
+          <div>Retry</div>
+        </div>
+        <div class="pv-tr">
+          <div><span class="pv-avatar" style="background:#004990;">LO</span>LOW2221MP</div>
+          <div><span class="pv-chip">Done</span></div>
+          <div>8h ago</div>
+          <div>Uploaded</div>
+        </div>
+        <div class="pv-tr">
+          <div><span class="pv-avatar" style="background:#e21a2c;">MA</span>MAC0149M</div>
+          <div><span class="pv-chip">Done</span></div>
+          <div>12h ago</div>
+          <div>Uploaded</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ===================== CONCEPT 6: Feature Carousel ===================== -->
+<div class="concept" id="concept-6" style="padding:0;">
+  <span class="concept-label" style="top: 20px;">Concept 6 · Feature Carousel</span>
+  <div class="carousel-container">
+    <div class="carousel-features">
+      <div class="carousel-brand">
+        <div class="carousel-logo"><span class="material-icons">sync_alt</span></div>
+        <div class="carousel-brandname">eSyncMate</div>
+      </div>
+
+      <div class="carousel-stage">
+        <div class="carousel-pill">Enterprise EDI</div>
+        <h1 class="carousel-big">Sync inventory to <span class="accent">7+ marketplaces</span> in real time.</h1>
+        <p class="carousel-desc">From Walmart to Amazon to Lowe's — automate your orders, shipments, and invoicing with a single unified workflow.</p>
+
+        <div class="carousel-stats">
+          <div class="carousel-stat">
+            <div class="carousel-stat-val"><span class="plus">2.4M</span>+</div>
+            <div class="carousel-stat-lbl">Orders synced</div>
+          </div>
+          <div class="carousel-stat">
+            <div class="carousel-stat-val">99.7%</div>
+            <div class="carousel-stat-lbl">Uptime</div>
+          </div>
+          <div class="carousel-stat">
+            <div class="carousel-stat-val">24/7</div>
+            <div class="carousel-stat-lbl">Automation</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="carousel-dots">
+        <div class="carousel-dot-indicator active"></div>
+        <div class="carousel-dot-indicator"></div>
+        <div class="carousel-dot-indicator"></div>
+      </div>
+    </div>
+
+    <div class="carousel-form">
+      <div class="cf-title">Welcome back</div>
+      <div class="cf-sub">Sign in to continue to your workspace.</div>
+
+      <div class="cf-field">
+        <label>User ID</label>
+        <div class="cf-wrap">
+          <span class="material-icons">person</span>
+          <input class="cf-input" type="text" placeholder="admin">
+        </div>
+      </div>
+
+      <div class="cf-field">
+        <label>Password</label>
+        <div class="cf-wrap">
+          <span class="material-icons">lock</span>
+          <input class="cf-input" type="password" value="••••••••">
+        </div>
+      </div>
+
+      <div class="cf-links">
+        <label style="cursor:pointer;"><input type="checkbox" style="accent-color: var(--primary);"> Remember me</label>
+        <a href="#">Forgot password?</a>
+      </div>
+
+      <button class="cf-btn">
+        Sign In
+        <span class="material-icons" style="font-size:18px;">arrow_forward</span>
+      </button>
+
+      <div class="cf-footer">🔒 Secured with 2-Factor Authentication</div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

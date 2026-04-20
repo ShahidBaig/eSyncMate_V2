@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Inventory Feed Summary — v2 Mockup</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --primary: #E8834A;
+    --primary-dark: #c06834;
+    --primary-soft: #fff7ed;
+    --success: #14532d;
+    --success-bg: #f0fdf4;
+    --success-border: #bbf7d0;
+    --warning: #9a4d1c;
+    --warning-bg: #fff7ed;
+    --warning-border: #fed7aa;
+    --error: #991b1b;
+    --error-bg: #fef2f2;
+    --error-border: #fecaca;
+    --gray-50: #fafaf9;
+    --gray-100: #f4f4f5;
+    --gray-200: #e8e5e0;
+    --gray-300: #cbd5e1;
+    --gray-500: #64748b;
+    --gray-700: #334155;
+    --gray-900: #0f172a;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Poppins', sans-serif;
+    background: #fafaf9;
+    margin: 0;
+    padding: 24px;
+    color: var(--gray-900);
+  }
+
+  /* ===== Page Title ===== */
+  .page-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--primary);
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 20px;
+  }
+  .page-title .help-btn {
+    margin-left: auto;
+    background: transparent;
+    border: 1px solid var(--gray-200);
+    padding: 6px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    color: var(--gray-500);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: inherit;
+  }
+  .page-title .help-btn:hover { background: var(--gray-100); }
+
+  /* ===== KPI Cards — NEW ===== */
+  .kpi-strip {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-bottom: 18px;
+  }
+  .kpi-card {
+    background: #fff;
+    border: 1px solid var(--gray-200);
+    border-left: 4px solid transparent;
+    border-radius: 12px;
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    transition: transform 0.15s ease, box-shadow 0.2s ease;
+  }
+  .kpi-card:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.04); }
+  .kpi-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .kpi-icon .material-icons { font-size: 22px; }
+  .kpi-content { flex: 1; }
+  .kpi-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--gray-500);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .kpi-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--gray-900);
+    line-height: 1.1;
+    margin-top: 2px;
+  }
+  .kpi-trend {
+    font-size: 11px;
+    color: var(--gray-500);
+    margin-top: 2px;
+  }
+
+  .kpi-total { border-left-color: var(--primary); }
+  .kpi-total .kpi-icon { background: var(--primary-soft); color: var(--primary); }
+
+  .kpi-success { border-left-color: #14532d; }
+  .kpi-success .kpi-icon { background: var(--success-bg); color: var(--success); }
+
+  .kpi-processing { border-left-color: #3b82f6; }
+  .kpi-processing .kpi-icon { background: #eff6ff; color: #1e40af; }
+
+  .kpi-error { border-left-color: #dc2626; }
+  .kpi-error .kpi-icon { background: var(--error-bg); color: var(--error); }
+
+  /* ===== Filter Card ===== */
+  .card {
+    background: #fff;
+    border: 1px solid var(--gray-200);
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 16px;
+  }
+
+  .quick-dates {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+  .quick-date-btn {
+    padding: 6px 14px;
+    background: #fff;
+    border: 1px solid var(--gray-200);
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--gray-700);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    font-family: inherit;
+  }
+  .quick-date-btn:hover { background: var(--gray-100); }
+  .quick-date-btn.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: white;
+  }
+
+  .filter-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr auto;
+    gap: 12px;
+    align-items: end;
+  }
+  .form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .form-field label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--gray-500);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+  .form-field input,
+  .form-field select {
+    padding: 9px 12px;
+    border: 1px solid var(--gray-200);
+    border-radius: 8px;
+    font-size: 13px;
+    font-family: inherit;
+    background: #fff;
+  }
+  .form-field input:focus,
+  .form-field select:focus {
+    outline: none;
+    border-color: var(--primary);
+  }
+  .btn-search {
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 10px 22px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: inherit;
+    height: 40px;
+  }
+  .btn-search:hover { background: var(--primary-dark); }
+
+  /* ===== Status Chips Filter — NEW ===== */
+  .status-chips {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+  }
+  .status-chip {
+    padding: 6px 14px;
+    border: 1px solid var(--gray-200);
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #fff;
+    color: var(--gray-700);
+    font-family: inherit;
+    transition: all 0.15s ease;
+  }
+  .status-chip .material-icons { font-size: 14px; }
+  .status-chip:hover { background: var(--gray-50); }
+  .status-chip.active.all { background: var(--gray-900); color: white; border-color: var(--gray-900); }
+  .status-chip.active.completed { background: var(--success-bg); color: var(--success); border-color: var(--success-border); }
+  .status-chip.active.processing { background: #eff6ff; color: #1e40af; border-color: #bfdbfe; }
+  .status-chip.active.error { background: var(--error-bg); color: var(--error); border-color: var(--error-border); }
+  .status-chip .count {
+    background: rgba(0,0,0,0.08);
+    padding: 1px 7px;
+    border-radius: 10px;
+    font-size: 11px;
+  }
+  .status-chip.active .count { background: rgba(255,255,255,0.25); }
+
+  /* ===== Toolbar ===== */
+  .toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background: #fff;
+    border: 1px solid var(--gray-200);
+    border-bottom: none;
+    border-radius: 12px 12px 0 0;
+  }
+  .toolbar-title { font-weight: 600; font-size: 14px; }
+  .toolbar-actions {
+    margin-left: auto;
+    display: flex;
+    gap: 8px;
+  }
+  .btn-ghost {
+    background: transparent;
+    border: 1px solid var(--gray-200);
+    padding: 7px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--gray-700);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-family: inherit;
+  }
+  .btn-ghost:hover { background: var(--gray-100); }
+  .btn-ghost .material-icons { font-size: 15px; }
+
+  .auto-refresh {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--gray-500);
+  }
+  .auto-refresh .pulse {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #10b981;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.6; transform: scale(1.2); }
+  }
+
+  /* ===== Table ===== */
+  .table-container {
+    background: #fff;
+    border: 1px solid var(--gray-200);
+    border-radius: 0 0 12px 12px;
+    overflow: hidden;
+  }
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    background: var(--gray-50);
+    color: var(--gray-500);
+    font-size: 10.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    padding: 14px 16px;
+    text-align: left;
+    border-bottom: 1px solid var(--gray-200);
+    cursor: pointer;
+    user-select: none;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+  th:hover { background: var(--gray-100); }
+  th.sorted::after {
+    content: '↓';
+    margin-left: 4px;
+    color: var(--primary);
+  }
+  th.expand-col { width: 40px; cursor: default; }
+  th.expand-col:hover { background: var(--gray-50); }
+
+  td {
+    padding: 14px 16px;
+    font-size: 13px;
+    color: var(--gray-700);
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+  }
+  tr.upload-row:hover { background: #fefcfa; }
+  tr.upload-row.expanded { background: var(--primary-soft); }
+
+  .expand-cell { text-align: center; }
+  .expand-icon {
+    font-size: 20px;
+    color: var(--gray-300);
+    cursor: pointer;
+    transition: transform 0.3s ease, color 0.2s ease;
+  }
+  .expand-icon.expanded { transform: rotate(180deg); color: var(--primary); }
+
+  /* Customer chip with partner avatar */
+  .customer-cell { display: flex; align-items: center; gap: 10px; }
+  .customer-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 11px;
+    color: white;
+  }
+  .av-amazon { background: #ff9900; }
+  .av-walmart { background: #0071ce; }
+  .av-knot { background: #8b5cf6; }
+  .av-lowes { background: #004990; }
+  .av-macys { background: #e21a2c; }
+  .av-michaels { background: #ee3124; }
+  .customer-id { font-weight: 600; }
+
+  /* Route badge */
+  .route-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    background: var(--warning-bg);
+    color: var(--warning);
+    border: 1px solid var(--warning-border);
+  }
+
+  /* Status badges */
+  .status-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    border: 1px solid;
+  }
+  .status-completed { background: var(--success-bg); color: var(--success); border-color: var(--success-border); }
+  .status-processing {
+    background: #eff6ff;
+    color: #1e40af;
+    border-color: #bfdbfe;
+    position: relative;
+    padding-left: 22px;
+  }
+  .status-processing::before {
+    content: '';
+    position: absolute;
+    left: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 8px;
+    height: 8px;
+    border: 2px solid #1e40af;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: translateY(-50%) rotate(360deg); } }
+  .status-error { background: var(--error-bg); color: var(--error); border-color: var(--error-border); }
+
+  /* Relative time */
+  .time-cell { display: flex; flex-direction: column; gap: 2px; }
+  .time-relative { font-weight: 500; }
+  .time-absolute { font-size: 11px; color: var(--gray-500); }
+
+  /* Action button */
+  .action-btn {
+    background: var(--primary-soft);
+    color: var(--primary);
+    border: 1px solid var(--warning-border);
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: inherit;
+    transition: all 0.15s ease;
+  }
+  .action-btn:hover { background: var(--primary); color: white; border-color: var(--primary); }
+  .action-btn .material-icons { font-size: 15px; }
+
+  .action-retry {
+    background: #fee2e2;
+    color: var(--error);
+    border-color: var(--error-border);
+  }
+  .action-retry:hover { background: var(--error); color: white; border-color: var(--error); }
+
+  /* ===== ERROR ROW — inline error message ===== */
+  .error-row {
+    background: #fff5f5 !important;
+  }
+  .error-detail-row td {
+    background: #fff5f5;
+    padding: 10px 16px 12px 70px;
+    border-top: 0;
+    font-size: 12px;
+    color: var(--error);
+    border-bottom: 1px solid #fecaca;
+  }
+  .error-detail-row .error-message {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .error-detail-row .material-icons { font-size: 18px; }
+  .error-detail-row .error-actions { margin-left: auto; display: flex; gap: 6px; }
+
+  /* ===== Expanded Row (Downloads) ===== */
+  .detail-row td { background: #fdfbf8; padding: 16px 24px 20px 60px; border-bottom: 1px solid var(--gray-200); }
+  .snapshot-card {
+    background: #fff;
+    border: 1px solid var(--gray-200);
+    border-left: 4px solid var(--primary);
+    border-radius: 12px;
+    padding: 16px 20px;
+  }
+  .snapshot-header { display: flex; align-items: center; gap: 14px; padding-bottom: 12px; border-bottom: 1px solid #f1f5f9; }
+  .snapshot-icon {
+    width: 40px;
+    height: 40px;
+    background: var(--primary-soft);
+    color: var(--primary);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .snapshot-title { font-size: 14px; font-weight: 600; }
+  .snapshot-subtitle { font-size: 12px; color: var(--gray-500); margin-top: 2px; }
+  .snapshot-stats {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    gap: 18px;
+    padding-top: 14px;
+  }
+  .snapshot-stat { display: flex; gap: 10px; align-items: flex-start; }
+  .snapshot-stat .material-icons { font-size: 18px; color: var(--gray-500); margin-top: 2px; }
+  .stat-label { font-size: 10.5px; font-weight: 600; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.4px; }
+  .stat-value { font-size: 13px; font-weight: 600; color: var(--gray-900); margin-top: 2px; }
+  .stat-arrow { color: var(--gray-300); margin: 0 6px; }
+
+  .type-breakdown { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+  .type-chip {
+    background: var(--primary-soft);
+    color: var(--primary);
+    padding: 3px 10px 3px 8px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    border: 1px solid var(--warning-border);
+  }
+  .type-chip .count {
+    background: var(--primary);
+    color: white;
+    border-radius: 10px;
+    padding: 0 7px;
+    font-size: 10px;
+    font-weight: 700;
+  }
+
+  /* Download button inside snapshot */
+  .btn-downloaded {
+    margin-left: auto;
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 7px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .btn-downloaded:hover { background: var(--primary-dark); }
+  .btn-downloaded .material-icons { font-size: 15px; }
+
+  /* Pagination */
+  .pagination {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 12px 20px;
+    gap: 14px;
+    border-top: 1px solid var(--gray-200);
+    background: #fff;
+    font-size: 12px;
+    color: var(--gray-500);
+  }
+  .page-btn { background: transparent; border: 1px solid var(--gray-200); padding: 4px 8px; border-radius: 6px; cursor: pointer; font-family: inherit; color: var(--gray-700); }
+
+  /* Tooltip note */
+  .legend {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: var(--gray-900);
+    color: white;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 12px;
+    max-width: 280px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  }
+  .legend strong { color: #fed7aa; }
+</style>
+</head>
+<body>
+
+<div class="page-title">
+  <span class="material-icons">inventory_2</span>
+  <span>Inventory Feed Summary</span>
+  <button class="help-btn">
+    <span class="material-icons">help_outline</span>
+    Help
+  </button>
+</div>
+
+<!-- 🎯 NEW: KPI Cards top strip -->
+<div class="kpi-strip">
+  <div class="kpi-card kpi-total">
+    <div class="kpi-icon"><span class="material-icons">cloud_sync</span></div>
+    <div class="kpi-content">
+      <div class="kpi-label">Total Batches</div>
+      <div class="kpi-value">184</div>
+      <div class="kpi-trend">↑ 12% vs yesterday</div>
+    </div>
+  </div>
+  <div class="kpi-card kpi-success">
+    <div class="kpi-icon"><span class="material-icons">check_circle</span></div>
+    <div class="kpi-content">
+      <div class="kpi-label">Completed</div>
+      <div class="kpi-value">178</div>
+      <div class="kpi-trend">96.7% success rate</div>
+    </div>
+  </div>
+  <div class="kpi-card kpi-processing">
+    <div class="kpi-icon"><span class="material-icons">sync</span></div>
+    <div class="kpi-content">
+      <div class="kpi-label">Processing</div>
+      <div class="kpi-value">2</div>
+      <div class="kpi-trend">Live · updating</div>
+    </div>
+  </div>
+  <div class="kpi-card kpi-error">
+    <div class="kpi-icon"><span class="material-icons">error</span></div>
+    <div class="kpi-content">
+      <div class="kpi-label">Errors</div>
+      <div class="kpi-value">4</div>
+      <div class="kpi-trend">Needs attention</div>
+    </div>
+  </div>
+</div>
+
+<!-- 🎯 Filter Card with Quick Presets -->
+<div class="card">
+  <!-- NEW: Quick date presets -->
+  <div class="quick-dates">
+    <button class="quick-date-btn">Today</button>
+    <button class="quick-date-btn">Yesterday</button>
+    <button class="quick-date-btn active">Last 7 Days</button>
+    <button class="quick-date-btn">Last 30 Days</button>
+    <button class="quick-date-btn">Custom Range</button>
+  </div>
+
+  <div class="filter-row">
+    <div class="form-field">
+      <label>Customer</label>
+      <select>
+        <option>All Customers</option>
+        <option>KNO8068 — Knot</option>
+        <option>AMA1005 — Amazon</option>
+        <option>WAL4001MP — Walmart</option>
+      </select>
+    </div>
+    <div class="form-field">
+      <label>Item ID</label>
+      <input type="text" placeholder="Search by Item ID...">
+    </div>
+    <div class="form-field">
+      <label>Start Date</label>
+      <input type="date" value="2026-04-11">
+    </div>
+    <div class="form-field">
+      <label>Finish Date</label>
+      <input type="date" value="2026-04-18">
+    </div>
+    <button class="btn-search">
+      <span class="material-icons">search</span>
+      Search
+    </button>
+  </div>
+
+  <!-- 🎯 NEW: Status chips filter -->
+  <div class="status-chips">
+    <button class="status-chip active all">
+      All <span class="count">184</span>
+    </button>
+    <button class="status-chip completed">
+      <span class="material-icons">check_circle</span>
+      Completed <span class="count">178</span>
+    </button>
+    <button class="status-chip processing">
+      <span class="material-icons">sync</span>
+      Processing <span class="count">2</span>
+    </button>
+    <button class="status-chip error">
+      <span class="material-icons">error</span>
+      Errors <span class="count">4</span>
+    </button>
+  </div>
+</div>
+
+<!-- 🎯 Toolbar with auto-refresh indicator + export -->
+<div class="toolbar">
+  <div class="toolbar-title">Upload Batches</div>
+  <div class="auto-refresh">
+    <span class="pulse"></span>
+    Auto-refresh · Last updated 12s ago
+  </div>
+  <div class="toolbar-actions">
+    <button class="btn-ghost">
+      <span class="material-icons">bookmark_border</span>
+      Save View
+    </button>
+    <button class="btn-ghost">
+      <span class="material-icons">file_download</span>
+      Export
+    </button>
+  </div>
+</div>
+
+<!-- 🎯 Table with sortable headers + sticky header -->
+<div class="table-container">
+  <table>
+    <thead>
+      <tr>
+        <th class="expand-col"></th>
+        <th>Customer</th>
+        <th>Status</th>
+        <th class="sorted">Start Date</th>
+        <th>Finish Date</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- Normal row -->
+      <tr class="upload-row">
+        <td class="expand-cell"><span class="material-icons expand-icon">expand_more</span></td>
+        <td>
+          <div class="customer-cell">
+            <div class="customer-avatar av-knot">KN</div>
+            <div>
+              <div class="customer-id">KNO8068</div>
+              <div style="font-size:11px; color: var(--gray-500);">Knot Standard</div>
+            </div>
+          </div>
+        </td>
+        <td><span class="status-badge status-completed">COMPLETED</span></td>
+        <td>
+          <div class="time-cell">
+            <span class="time-relative">2 hours ago</span>
+            <span class="time-absolute">04/18/2026 12:00:06 AM</span>
+          </div>
+        </td>
+        <td>
+          <div class="time-cell">
+            <span class="time-relative">2 hours ago</span>
+            <span class="time-absolute">04/18/2026 12:01:07 AM</span>
+          </div>
+        </td>
+        <td>
+          <button class="action-btn">
+            <span class="material-icons">outbox</span>
+            Uploaded
+          </button>
+        </td>
+      </tr>
+
+      <!-- PROCESSING row with live spinner -->
+      <tr class="upload-row">
+        <td class="expand-cell"><span class="material-icons expand-icon">expand_more</span></td>
+        <td>
+          <div class="customer-cell">
+            <div class="customer-avatar av-amazon">AM</div>
+            <div>
+              <div class="customer-id">AMA1005</div>
+              <div style="font-size:11px; color: var(--gray-500);">Amazon SP-API</div>
+            </div>
+          </div>
+        </td>
+        <td><span class="status-badge status-processing">PROCESSING</span></td>
+        <td>
+          <div class="time-cell">
+            <span class="time-relative">Just now</span>
+            <span class="time-absolute">04/18/2026 02:14:22 AM</span>
+          </div>
+        </td>
+        <td>—</td>
+        <td>
+          <button class="action-btn" disabled style="opacity:0.5; cursor: not-allowed;">
+            <span class="material-icons">hourglass_empty</span>
+            In Progress
+          </button>
+        </td>
+      </tr>
+
+      <!-- ERROR row with inline error detail -->
+      <tr class="upload-row error-row">
+        <td class="expand-cell"><span class="material-icons expand-icon">expand_more</span></td>
+        <td>
+          <div class="customer-cell">
+            <div class="customer-avatar av-walmart">WM</div>
+            <div>
+              <div class="customer-id">WAL4001MP</div>
+              <div style="font-size:11px; color: var(--gray-500);">Walmart Marketplace</div>
+            </div>
+          </div>
+        </td>
+        <td><span class="status-badge status-error">ERROR</span></td>
+        <td>
+          <div class="time-cell">
+            <span class="time-relative">1 hour ago</span>
+            <span class="time-absolute">04/18/2026 01:15:00 AM</span>
+          </div>
+        </td>
+        <td>
+          <div class="time-cell">
+            <span class="time-relative">1 hour ago</span>
+            <span class="time-absolute">04/18/2026 01:15:32 AM</span>
+          </div>
+        </td>
+        <td>
+          <button class="action-btn action-retry">
+            <span class="material-icons">refresh</span>
+            Retry
+          </button>
+        </td>
+      </tr>
+
+      <!-- 🎯 NEW: Inline error detail row -->
+      <tr class="error-detail-row">
+        <td colspan="6">
+          <div class="error-message">
+            <span class="material-icons">error_outline</span>
+            <div>
+              <strong>Walmart API Authentication Failed:</strong>
+              Token expired at 01:15:30 AM. Config: Consumer Key/Secret.
+            </div>
+            <div class="error-actions">
+              <button class="btn-ghost" style="background: white;">
+                <span class="material-icons">content_copy</span>
+                Copy Error
+              </button>
+              <button class="btn-ghost" style="background: white;">
+                <span class="material-icons">open_in_new</span>
+                View Logs
+              </button>
+            </div>
+          </div>
+        </td>
+      </tr>
+
+      <!-- Expanded row example -->
+      <tr class="upload-row expanded">
+        <td class="expand-cell"><span class="material-icons expand-icon expanded">expand_more</span></td>
+        <td>
+          <div class="customer-cell">
+            <div class="customer-avatar av-knot">KN</div>
+            <div>
+              <div class="customer-id">KNO8068</div>
+              <div style="font-size:11px; color: var(--gray-500);">Knot Standard</div>
+            </div>
+          </div>
+        </td>
+        <td><span class="status-badge status-completed">COMPLETED</span></td>
+        <td>
+          <div class="time-cell">
+            <span class="time-relative">3 hours ago</span>
+            <span class="time-absolute">04/17/2026 11:40:05 PM</span>
+          </div>
+        </td>
+        <td>
+          <div class="time-cell">
+            <span class="time-relative">3 hours ago</span>
+            <span class="time-absolute">04/17/2026 11:41:05 PM</span>
+          </div>
+        </td>
+        <td>
+          <button class="action-btn">
+            <span class="material-icons">outbox</span>
+            Uploaded
+          </button>
+        </td>
+      </tr>
+
+      <!-- Expanded detail -->
+      <tr class="detail-row">
+        <td colspan="6">
+          <div class="snapshot-card">
+            <div class="snapshot-header">
+              <div class="snapshot-icon"><span class="material-icons">inventory</span></div>
+              <div>
+                <div class="snapshot-title">Consolidated Inventory Received from ERP</div>
+                <div class="snapshot-subtitle">ERP data that fed into this upload · archive-aware view</div>
+              </div>
+              <button class="btn-downloaded">
+                <span class="material-icons">inbox</span>
+                View Downloaded Data
+              </button>
+            </div>
+            <div class="snapshot-stats">
+              <div class="snapshot-stat">
+                <span class="material-icons">layers</span>
+                <div>
+                  <div class="stat-label">Feeds Breakdown</div>
+                  <div class="type-breakdown">
+                    <span class="type-chip">Full Inventory Feed <span class="count">1</span></span>
+                    <span class="type-chip">Differential Feed <span class="count">2</span></span>
+                  </div>
+                </div>
+              </div>
+              <div class="snapshot-stat">
+                <span class="material-icons">schedule</span>
+                <div>
+                  <div class="stat-label">Received Between</div>
+                  <div class="stat-value">
+                    11:00 PM <span class="stat-arrow">→</span> 11:35 PM
+                  </div>
+                </div>
+              </div>
+              <div class="snapshot-stat">
+                <span class="material-icons">check_circle</span>
+                <div>
+                  <div class="stat-label">Status</div>
+                  <div class="stat-value">
+                    <span class="status-badge status-completed">COMPLETED</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </td>
+      </tr>
+
+      <!-- More normal rows -->
+      <tr class="upload-row">
+        <td class="expand-cell"><span class="material-icons expand-icon">expand_more</span></td>
+        <td>
+          <div class="customer-cell">
+            <div class="customer-avatar av-lowes">LO</div>
+            <div>
+              <div class="customer-id">LOW2221MP</div>
+              <div style="font-size:11px; color: var(--gray-500);">Lowe's Mirakl</div>
+            </div>
+          </div>
+        </td>
+        <td><span class="status-badge status-completed">COMPLETED</span></td>
+        <td>
+          <div class="time-cell">
+            <span class="time-relative">Yesterday</span>
+            <span class="time-absolute">04/17/2026 11:20:04 PM</span>
+          </div>
+        </td>
+        <td>
+          <div class="time-cell">
+            <span class="time-relative">Yesterday</span>
+            <span class="time-absolute">04/17/2026 11:21:04 PM</span>
+          </div>
+        </td>
+        <td>
+          <button class="action-btn">
+            <span class="material-icons">outbox</span>
+            Uploaded
+          </button>
+        </td>
+      </tr>
+
+      <tr class="upload-row">
+        <td class="expand-cell"><span class="material-icons expand-icon">expand_more</span></td>
+        <td>
+          <div class="customer-cell">
+            <div class="customer-avatar av-macys">MA</div>
+            <div>
+              <div class="customer-id">MAC0149M</div>
+              <div style="font-size:11px; color: var(--gray-500);">Macy's Marketplace</div>
+            </div>
+          </div>
+        </td>
+        <td><span class="status-badge status-completed">COMPLETED</span></td>
+        <td>
+          <div class="time-cell">
+            <span class="time-relative">Yesterday</span>
+            <span class="time-absolute">04/17/2026 11:00:03 PM</span>
+          </div>
+        </td>
+        <td>
+          <div class="time-cell">
+            <span class="time-relative">Yesterday</span>
+            <span class="time-absolute">04/17/2026 11:01:03 PM</span>
+          </div>
+        </td>
+        <td>
+          <button class="action-btn">
+            <span class="material-icons">outbox</span>
+            Uploaded
+          </button>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="pagination">
+    <span>Items per page: <select style="padding: 2px 6px;"><option>10</option><option>25</option><option>50</option></select></span>
+    <span>1 – 10 of 184</span>
+    <button class="page-btn">⏮</button>
+    <button class="page-btn">◀</button>
+    <button class="page-btn">▶</button>
+    <button class="page-btn">⏭</button>
+  </div>
+</div>
+
+<div class="legend">
+  <strong>💡 Mockup Highlights:</strong><br>
+  · KPI strip (top)<br>
+  · Quick date presets<br>
+  · Status chips filter<br>
+  · Auto-refresh live indicator<br>
+  · Customer avatars + subtitle<br>
+  · Relative + absolute dates<br>
+  · Inline error details + Retry<br>
+  · Sortable sticky headers<br>
+  · Export / Save View
+</div>
+
+</body>
+</html>

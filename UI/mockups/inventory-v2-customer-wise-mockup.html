@@ -1,0 +1,1153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Inventory Feed Summary — Customer-Wise v2 Mockup</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --primary: #E8834A;
+    --primary-dark: #c06834;
+    --primary-soft: #fff7ed;
+    --success: #14532d;
+    --success-bg: #f0fdf4;
+    --success-border: #bbf7d0;
+    --warning: #9a4d1c;
+    --warning-bg: #fff7ed;
+    --warning-border: #fed7aa;
+    --error: #991b1b;
+    --error-bg: #fef2f2;
+    --error-border: #fecaca;
+    --gray-50: #fafaf9;
+    --gray-100: #f4f4f5;
+    --gray-200: #e8e5e0;
+    --gray-300: #cbd5e1;
+    --gray-500: #64748b;
+    --gray-700: #334155;
+    --gray-900: #0f172a;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Poppins', sans-serif;
+    background: #fafaf9;
+    margin: 0;
+    padding: 20px 24px;
+    color: var(--gray-900);
+  }
+
+  /* ===== Page Title ===== */
+  .page-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--primary);
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 18px;
+  }
+  .page-title .help-btn {
+    margin-left: auto;
+    background: transparent;
+    border: 1px solid var(--gray-200);
+    padding: 6px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    color: var(--gray-500);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: inherit;
+  }
+
+  /* ===== Overall Summary Strip (across ALL customers) ===== */
+  .summary-strip {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .summary-card {
+    background: #fff;
+    border: 1px solid var(--gray-200);
+    border-left: 4px solid transparent;
+    border-radius: 10px;
+    padding: 12px 16px;
+  }
+  .summary-label {
+    font-size: 10.5px;
+    font-weight: 600;
+    color: var(--gray-500);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+  .summary-value {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--gray-900);
+    line-height: 1.1;
+    margin-top: 3px;
+  }
+  .summary-customers { border-left-color: var(--primary); }
+  .summary-total { border-left-color: #6366f1; }
+  .summary-success { border-left-color: #14532d; }
+  .summary-processing { border-left-color: #3b82f6; }
+  .summary-error { border-left-color: #dc2626; }
+
+  /* ===== Filter Card ===== */
+  .filter-card {
+    background: #fff;
+    border: 1px solid var(--gray-200);
+    border-radius: 12px;
+    padding: 14px 18px;
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .filter-card .quick-dates {
+    display: flex;
+    gap: 6px;
+  }
+  .chip-btn {
+    padding: 6px 14px;
+    background: #fff;
+    border: 1px solid var(--gray-200);
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--gray-700);
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s ease;
+  }
+  .chip-btn:hover { background: var(--gray-100); }
+  .chip-btn.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: white;
+  }
+
+  .filter-divider {
+    width: 1px;
+    height: 24px;
+    background: var(--gray-200);
+  }
+
+  .search-input {
+    flex: 1;
+    max-width: 280px;
+    padding: 8px 12px 8px 36px;
+    border: 1px solid var(--gray-200);
+    border-radius: 8px;
+    font-size: 13px;
+    font-family: inherit;
+    background: #fff url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%2364748b" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>') no-repeat 10px center;
+  }
+
+  .auto-refresh {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--gray-500);
+  }
+  .auto-refresh .pulse {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #10b981;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.6; transform: scale(1.2); }
+  }
+
+  /* ===== CUSTOMER SECTION — Main Layout ===== */
+  .customer-section {
+    background: #fff;
+    border: 1px solid var(--gray-200);
+    border-radius: 14px;
+    margin-bottom: 16px;
+    overflow: hidden;
+    transition: box-shadow 0.2s ease;
+  }
+  .customer-section:hover { box-shadow: 0 4px 14px rgba(0,0,0,0.03); }
+
+  .customer-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 20px;
+    background: linear-gradient(135deg, #fff 0%, #fdfbf8 100%);
+    border-bottom: 1px solid var(--gray-200);
+    cursor: pointer;
+  }
+  .customer-avatar-lg {
+    width: 46px;
+    height: 46px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 15px;
+    color: white;
+    flex-shrink: 0;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  }
+  .av-amazon { background: linear-gradient(135deg, #ff9900, #ff6f00); }
+  .av-walmart { background: linear-gradient(135deg, #0071ce, #003f7d); }
+  .av-knot { background: linear-gradient(135deg, #8b5cf6, #6d28d9); }
+  .av-lowes { background: linear-gradient(135deg, #004990, #002d5a); }
+  .av-macys { background: linear-gradient(135deg, #e21a2c, #b00010); }
+  .av-michaels { background: linear-gradient(135deg, #ee3124, #a01810); }
+  .av-target { background: linear-gradient(135deg, #cc0000, #7a0000); }
+
+  .customer-info { flex: 1; min-width: 0; }
+  .customer-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--gray-900);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .customer-title .partner-name {
+    font-weight: 500;
+    color: var(--gray-500);
+    font-size: 13px;
+  }
+  .customer-subtitle {
+    font-size: 12px;
+    color: var(--gray-500);
+    margin-top: 2px;
+  }
+
+  /* Customer mini-KPIs */
+  .customer-kpis {
+    display: flex;
+    gap: 18px;
+    margin-right: 12px;
+  }
+  .mini-kpi {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    min-width: 56px;
+  }
+  .mini-kpi-value {
+    font-size: 17px;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .mini-kpi-label {
+    font-size: 10px;
+    color: var(--gray-500);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    margin-top: 3px;
+    font-weight: 600;
+  }
+  .mini-kpi.total .mini-kpi-value { color: var(--primary); }
+  .mini-kpi.success .mini-kpi-value { color: #14532d; }
+  .mini-kpi.processing .mini-kpi-value { color: #1e40af; }
+  .mini-kpi.error .mini-kpi-value { color: #991b1b; }
+
+  .customer-health {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    background: var(--success-bg);
+    border: 1px solid var(--success-border);
+    border-radius: 20px;
+    color: var(--success);
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .customer-health.warning {
+    background: var(--warning-bg);
+    border-color: var(--warning-border);
+    color: var(--warning);
+  }
+  .customer-health.error {
+    background: var(--error-bg);
+    border-color: var(--error-border);
+    color: var(--error);
+  }
+  .customer-health .material-icons { font-size: 14px; }
+
+  .customer-toggle {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--gray-500);
+    transition: transform 0.25s ease;
+  }
+  .customer-section.expanded .customer-toggle { transform: rotate(180deg); }
+
+  /* ===== Customer body (batches table) ===== */
+  .customer-body {
+    padding: 0;
+    background: var(--gray-50);
+  }
+
+  .customer-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 18px;
+    background: #fff;
+    border-bottom: 1px solid var(--gray-200);
+  }
+  .customer-toolbar .status-chips {
+    display: flex;
+    gap: 6px;
+  }
+  .mini-chip {
+    padding: 4px 10px;
+    border: 1px solid var(--gray-200);
+    border-radius: 16px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: #fff;
+    color: var(--gray-700);
+    font-family: inherit;
+  }
+  .mini-chip .material-icons { font-size: 12px; }
+  .mini-chip.active.all { background: var(--gray-900); color: white; border-color: var(--gray-900); }
+  .mini-chip.active.success { background: var(--success-bg); color: var(--success); border-color: var(--success-border); }
+  .mini-chip.active.error { background: var(--error-bg); color: var(--error); border-color: var(--error-border); }
+  .mini-chip .count {
+    background: rgba(0,0,0,0.08);
+    padding: 0 6px;
+    border-radius: 8px;
+    font-size: 10px;
+  }
+  .mini-chip.active .count { background: rgba(255,255,255,0.25); }
+
+  .customer-toolbar-actions {
+    margin-left: auto;
+    display: flex;
+    gap: 6px;
+  }
+  .btn-ghost {
+    background: transparent;
+    border: 1px solid var(--gray-200);
+    padding: 5px 10px;
+    border-radius: 7px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--gray-700);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-family: inherit;
+  }
+  .btn-ghost:hover { background: var(--gray-100); }
+  .btn-ghost .material-icons { font-size: 14px; }
+
+  /* ===== Table ===== */
+  .customer-table-wrap {
+    background: #fff;
+  }
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    background: var(--gray-50);
+    color: var(--gray-500);
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 11px 16px;
+    text-align: left;
+    border-bottom: 1px solid var(--gray-200);
+    cursor: pointer;
+    user-select: none;
+  }
+  th:hover { background: var(--gray-100); }
+  th.sorted::after {
+    content: ' ↓';
+    color: var(--primary);
+  }
+  th.expand-col { width: 36px; cursor: default; }
+  th.expand-col:hover { background: var(--gray-50); }
+
+  td {
+    padding: 11px 16px;
+    font-size: 12.5px;
+    color: var(--gray-700);
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+  }
+  tr.upload-row:hover { background: #fefcfa; }
+
+  .expand-cell { text-align: center; }
+  .expand-icon {
+    font-size: 18px;
+    color: var(--gray-300);
+    cursor: pointer;
+    transition: transform 0.3s ease, color 0.2s ease;
+  }
+  .expand-icon.expanded { transform: rotate(180deg); color: var(--primary); }
+
+  /* Status badges */
+  .status-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 10.5px;
+    font-weight: 600;
+    border: 1px solid;
+  }
+  .status-completed { background: var(--success-bg); color: var(--success); border-color: var(--success-border); }
+  .status-processing {
+    background: #eff6ff;
+    color: #1e40af;
+    border-color: #bfdbfe;
+    position: relative;
+    padding-left: 22px;
+  }
+  .status-processing::before {
+    content: '';
+    position: absolute;
+    left: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 8px;
+    height: 8px;
+    border: 2px solid #1e40af;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: translateY(-50%) rotate(360deg); } }
+  .status-error { background: var(--error-bg); color: var(--error); border-color: var(--error-border); }
+
+  /* Time cell */
+  .time-cell { display: flex; flex-direction: column; gap: 1px; }
+  .time-relative { font-weight: 500; font-size: 12.5px; }
+  .time-absolute { font-size: 10.5px; color: var(--gray-500); }
+
+  /* Action button */
+  .action-btn {
+    background: var(--primary-soft);
+    color: var(--primary);
+    border: 1px solid var(--warning-border);
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-family: inherit;
+  }
+  .action-btn:hover { background: var(--primary); color: white; border-color: var(--primary); }
+  .action-btn .material-icons { font-size: 14px; }
+  .action-retry {
+    background: #fee2e2;
+    color: var(--error);
+    border-color: var(--error-border);
+  }
+  .action-retry:hover { background: var(--error); color: white; border-color: var(--error); }
+
+  /* Error row + inline details */
+  .error-row { background: #fff5f5 !important; }
+  .error-detail-row td {
+    background: #fff5f5;
+    padding: 8px 16px 10px 60px;
+    border-top: 0;
+    font-size: 11.5px;
+    color: var(--error);
+    border-bottom: 1px solid #fecaca;
+  }
+  .error-detail-row .inline-err {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .error-detail-row .material-icons { font-size: 16px; }
+  .error-detail-row .err-actions { margin-left: auto; display: flex; gap: 6px; }
+
+  /* Expanded detail (Downloads consolidated) */
+  .detail-row td {
+    background: #fdfbf8;
+    padding: 14px 20px 16px 58px;
+    border-bottom: 1px solid var(--gray-200);
+  }
+  .snapshot-card {
+    background: #fff;
+    border: 1px solid var(--gray-200);
+    border-left: 4px solid var(--primary);
+    border-radius: 10px;
+    padding: 14px 18px;
+  }
+  .snapshot-header { display: flex; align-items: center; gap: 12px; padding-bottom: 10px; border-bottom: 1px solid #f1f5f9; }
+  .snapshot-icon {
+    width: 36px;
+    height: 36px;
+    background: var(--primary-soft);
+    color: var(--primary);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .snapshot-title { font-size: 13px; font-weight: 600; }
+  .snapshot-subtitle { font-size: 11px; color: var(--gray-500); margin-top: 2px; }
+  .btn-downloaded {
+    margin-left: auto;
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .snapshot-stats { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 16px; padding-top: 12px; }
+  .snapshot-stat { display: flex; gap: 8px; }
+  .snapshot-stat .material-icons { font-size: 16px; color: var(--gray-500); margin-top: 1px; }
+  .stat-label { font-size: 10px; font-weight: 600; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.3px; }
+  .stat-value { font-size: 12px; font-weight: 600; color: var(--gray-900); margin-top: 2px; }
+  .stat-arrow { color: var(--gray-300); margin: 0 5px; }
+  .type-breakdown { display: flex; gap: 5px; margin-top: 3px; flex-wrap: wrap; }
+  .type-chip {
+    background: var(--primary-soft);
+    color: var(--primary);
+    padding: 2px 8px 2px 6px;
+    border-radius: 14px;
+    font-size: 10.5px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    border: 1px solid var(--warning-border);
+  }
+  .type-chip .count {
+    background: var(--primary);
+    color: white;
+    border-radius: 8px;
+    padding: 0 6px;
+    font-size: 9.5px;
+    font-weight: 700;
+  }
+
+  /* Pagination */
+  .customer-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 8px 16px;
+    gap: 12px;
+    background: #fff;
+    font-size: 11px;
+    color: var(--gray-500);
+    border-top: 1px solid var(--gray-200);
+  }
+  .page-btn { background: transparent; border: 1px solid var(--gray-200); padding: 3px 7px; border-radius: 5px; cursor: pointer; font-family: inherit; font-size: 11px; color: var(--gray-700); }
+
+  /* Show more customers */
+  .show-more {
+    text-align: center;
+    padding: 10px;
+    color: var(--gray-500);
+    font-size: 13px;
+    background: #fff;
+    border: 1px dashed var(--gray-200);
+    border-radius: 12px;
+    cursor: pointer;
+    font-family: inherit;
+    width: 100%;
+    margin-top: 4px;
+  }
+  .show-more:hover { background: var(--gray-50); color: var(--primary); }
+
+  /* Legend */
+  .legend {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: var(--gray-900);
+    color: white;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 11.5px;
+    max-width: 240px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  }
+  .legend strong { color: #fed7aa; }
+</style>
+</head>
+<body>
+
+<div class="page-title">
+  <span class="material-icons">inventory_2</span>
+  <span>Inventory Feed Summary</span>
+  <button class="help-btn">
+    <span class="material-icons">help_outline</span>
+    Help
+  </button>
+</div>
+
+<!-- Overall Summary (all customers) -->
+<div class="summary-strip">
+  <div class="summary-card summary-customers">
+    <div class="summary-label">Active Customers</div>
+    <div class="summary-value">7</div>
+  </div>
+  <div class="summary-card summary-total">
+    <div class="summary-label">Total Batches</div>
+    <div class="summary-value">184</div>
+  </div>
+  <div class="summary-card summary-success">
+    <div class="summary-label">Completed</div>
+    <div class="summary-value">178</div>
+  </div>
+  <div class="summary-card summary-processing">
+    <div class="summary-label">Processing</div>
+    <div class="summary-value">2</div>
+  </div>
+  <div class="summary-card summary-error">
+    <div class="summary-label">Errors</div>
+    <div class="summary-value">4</div>
+  </div>
+</div>
+
+<!-- Slim filter bar -->
+<div class="filter-card">
+  <div class="quick-dates">
+    <button class="chip-btn">Today</button>
+    <button class="chip-btn">Yesterday</button>
+    <button class="chip-btn active">Last 7 Days</button>
+    <button class="chip-btn">Last 30 Days</button>
+    <button class="chip-btn">Custom</button>
+  </div>
+
+  <div class="filter-divider"></div>
+
+  <input type="text" class="search-input" placeholder="Search by Item ID...">
+
+  <div class="auto-refresh">
+    <span class="pulse"></span>
+    Auto-refresh · Last updated 12s ago
+  </div>
+</div>
+
+<!-- ==================== CUSTOMER 1 — Knot (has expanded batch) ==================== -->
+<div class="customer-section expanded">
+  <div class="customer-header">
+    <div class="customer-avatar-lg av-knot">KN</div>
+    <div class="customer-info">
+      <div class="customer-title">
+        KNO8068
+        <span class="partner-name">— Knot Standard</span>
+      </div>
+      <div class="customer-subtitle">47 upload batches · last upload 2 hours ago</div>
+    </div>
+
+    <div class="customer-kpis">
+      <div class="mini-kpi total">
+        <div class="mini-kpi-value">47</div>
+        <div class="mini-kpi-label">Total</div>
+      </div>
+      <div class="mini-kpi success">
+        <div class="mini-kpi-value">46</div>
+        <div class="mini-kpi-label">Success</div>
+      </div>
+      <div class="mini-kpi processing">
+        <div class="mini-kpi-value">1</div>
+        <div class="mini-kpi-label">Running</div>
+      </div>
+      <div class="mini-kpi error">
+        <div class="mini-kpi-value">0</div>
+        <div class="mini-kpi-label">Errors</div>
+      </div>
+    </div>
+
+    <div class="customer-health">
+      <span class="material-icons">check_circle</span>
+      Healthy
+    </div>
+
+    <div class="customer-toggle">
+      <span class="material-icons">expand_more</span>
+    </div>
+  </div>
+
+  <div class="customer-body">
+    <div class="customer-toolbar">
+      <div class="status-chips">
+        <button class="mini-chip active all">All <span class="count">47</span></button>
+        <button class="mini-chip success">
+          <span class="material-icons">check_circle</span>
+          Completed <span class="count">46</span>
+        </button>
+        <button class="mini-chip">
+          <span class="material-icons">sync</span>
+          Processing <span class="count">1</span>
+        </button>
+      </div>
+
+      <div class="customer-toolbar-actions">
+        <button class="btn-ghost">
+          <span class="material-icons">file_download</span>
+          Export
+        </button>
+      </div>
+    </div>
+
+    <div class="customer-table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th class="expand-col"></th>
+            <th>Status</th>
+            <th class="sorted">Start Date</th>
+            <th>Finish Date</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Normal completed row -->
+          <tr class="upload-row">
+            <td class="expand-cell"><span class="material-icons expand-icon">expand_more</span></td>
+            <td><span class="status-badge status-completed">COMPLETED</span></td>
+            <td>
+              <div class="time-cell">
+                <span class="time-relative">2 hours ago</span>
+                <span class="time-absolute">04/18/2026 12:00:06 AM</span>
+              </div>
+            </td>
+            <td>
+              <div class="time-cell">
+                <span class="time-relative">2 hours ago</span>
+                <span class="time-absolute">04/18/2026 12:01:07 AM</span>
+              </div>
+            </td>
+            <td>
+              <button class="action-btn">
+                <span class="material-icons">outbox</span>
+                Uploaded
+              </button>
+            </td>
+          </tr>
+
+          <!-- Expanded row with download detail -->
+          <tr class="upload-row" style="background: var(--primary-soft);">
+            <td class="expand-cell"><span class="material-icons expand-icon expanded">expand_more</span></td>
+            <td><span class="status-badge status-completed">COMPLETED</span></td>
+            <td>
+              <div class="time-cell">
+                <span class="time-relative">3 hours ago</span>
+                <span class="time-absolute">04/17/2026 11:40:05 PM</span>
+              </div>
+            </td>
+            <td>
+              <div class="time-cell">
+                <span class="time-relative">3 hours ago</span>
+                <span class="time-absolute">04/17/2026 11:41:05 PM</span>
+              </div>
+            </td>
+            <td>
+              <button class="action-btn">
+                <span class="material-icons">outbox</span>
+                Uploaded
+              </button>
+            </td>
+          </tr>
+
+          <!-- Expanded detail -->
+          <tr class="detail-row">
+            <td colspan="5">
+              <div class="snapshot-card">
+                <div class="snapshot-header">
+                  <div class="snapshot-icon"><span class="material-icons">inventory</span></div>
+                  <div>
+                    <div class="snapshot-title">Consolidated Inventory Received from ERP</div>
+                    <div class="snapshot-subtitle">ERP data that fed into this upload · archive-aware</div>
+                  </div>
+                  <button class="btn-downloaded">
+                    <span class="material-icons">inbox</span>
+                    View Downloaded Data
+                  </button>
+                </div>
+                <div class="snapshot-stats">
+                  <div class="snapshot-stat">
+                    <span class="material-icons">layers</span>
+                    <div>
+                      <div class="stat-label">Feeds Breakdown</div>
+                      <div class="type-breakdown">
+                        <span class="type-chip">Full Feed <span class="count">1</span></span>
+                        <span class="type-chip">Differential <span class="count">2</span></span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="snapshot-stat">
+                    <span class="material-icons">schedule</span>
+                    <div>
+                      <div class="stat-label">Received Between</div>
+                      <div class="stat-value">11:00 PM <span class="stat-arrow">→</span> 11:35 PM</div>
+                    </div>
+                  </div>
+                  <div class="snapshot-stat">
+                    <span class="material-icons">check_circle</span>
+                    <div>
+                      <div class="stat-label">Status</div>
+                      <div class="stat-value"><span class="status-badge status-completed">COMPLETED</span></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Another row -->
+          <tr class="upload-row">
+            <td class="expand-cell"><span class="material-icons expand-icon">expand_more</span></td>
+            <td><span class="status-badge status-completed">COMPLETED</span></td>
+            <td>
+              <div class="time-cell">
+                <span class="time-relative">3 hours ago</span>
+                <span class="time-absolute">04/17/2026 11:20:04 PM</span>
+              </div>
+            </td>
+            <td>
+              <div class="time-cell">
+                <span class="time-relative">3 hours ago</span>
+                <span class="time-absolute">04/17/2026 11:21:04 PM</span>
+              </div>
+            </td>
+            <td>
+              <button class="action-btn">
+                <span class="material-icons">outbox</span>
+                Uploaded
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="customer-pagination">
+      <span>Page 1 of 5</span>
+      <button class="page-btn">◀</button>
+      <button class="page-btn">▶</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== CUSTOMER 2 — Walmart (has ERROR) ==================== -->
+<div class="customer-section expanded">
+  <div class="customer-header">
+    <div class="customer-avatar-lg av-walmart">WM</div>
+    <div class="customer-info">
+      <div class="customer-title">
+        WAL4001MP
+        <span class="partner-name">— Walmart Marketplace</span>
+      </div>
+      <div class="customer-subtitle">28 upload batches · last error 1 hour ago</div>
+    </div>
+
+    <div class="customer-kpis">
+      <div class="mini-kpi total">
+        <div class="mini-kpi-value">28</div>
+        <div class="mini-kpi-label">Total</div>
+      </div>
+      <div class="mini-kpi success">
+        <div class="mini-kpi-value">24</div>
+        <div class="mini-kpi-label">Success</div>
+      </div>
+      <div class="mini-kpi processing">
+        <div class="mini-kpi-value">0</div>
+        <div class="mini-kpi-label">Running</div>
+      </div>
+      <div class="mini-kpi error">
+        <div class="mini-kpi-value">4</div>
+        <div class="mini-kpi-label">Errors</div>
+      </div>
+    </div>
+
+    <div class="customer-health error">
+      <span class="material-icons">error</span>
+      4 Errors
+    </div>
+
+    <div class="customer-toggle">
+      <span class="material-icons">expand_more</span>
+    </div>
+  </div>
+
+  <div class="customer-body">
+    <div class="customer-toolbar">
+      <div class="status-chips">
+        <button class="mini-chip all">All <span class="count">28</span></button>
+        <button class="mini-chip success">
+          <span class="material-icons">check_circle</span>
+          Completed <span class="count">24</span>
+        </button>
+        <button class="mini-chip active error">
+          <span class="material-icons">error</span>
+          Errors <span class="count">4</span>
+        </button>
+      </div>
+
+      <div class="customer-toolbar-actions">
+        <button class="btn-ghost">
+          <span class="material-icons">file_download</span>
+          Export
+        </button>
+      </div>
+    </div>
+
+    <div class="customer-table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th class="expand-col"></th>
+            <th>Status</th>
+            <th class="sorted">Start Date</th>
+            <th>Finish Date</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- ERROR row -->
+          <tr class="upload-row error-row">
+            <td class="expand-cell"><span class="material-icons expand-icon">expand_more</span></td>
+            <td><span class="status-badge status-error">ERROR</span></td>
+            <td>
+              <div class="time-cell">
+                <span class="time-relative">1 hour ago</span>
+                <span class="time-absolute">04/18/2026 01:15:00 AM</span>
+              </div>
+            </td>
+            <td>
+              <div class="time-cell">
+                <span class="time-relative">1 hour ago</span>
+                <span class="time-absolute">04/18/2026 01:15:32 AM</span>
+              </div>
+            </td>
+            <td>
+              <button class="action-btn action-retry">
+                <span class="material-icons">refresh</span>
+                Retry
+              </button>
+            </td>
+          </tr>
+
+          <!-- Inline error detail -->
+          <tr class="error-detail-row">
+            <td colspan="5">
+              <div class="inline-err">
+                <span class="material-icons">error_outline</span>
+                <div>
+                  <strong>Walmart API Authentication Failed:</strong>
+                  Token expired at 01:15:30 AM. Check Consumer Key / Secret in Connectors.
+                </div>
+                <div class="err-actions">
+                  <button class="btn-ghost" style="background: white;">
+                    <span class="material-icons">content_copy</span>
+                    Copy
+                  </button>
+                  <button class="btn-ghost" style="background: white;">
+                    <span class="material-icons">open_in_new</span>
+                    Logs
+                  </button>
+                </div>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Another error -->
+          <tr class="upload-row error-row">
+            <td class="expand-cell"><span class="material-icons expand-icon">expand_more</span></td>
+            <td><span class="status-badge status-error">ERROR</span></td>
+            <td>
+              <div class="time-cell">
+                <span class="time-relative">3 hours ago</span>
+                <span class="time-absolute">04/17/2026 11:20:00 PM</span>
+              </div>
+            </td>
+            <td>
+              <div class="time-cell">
+                <span class="time-relative">3 hours ago</span>
+                <span class="time-absolute">04/17/2026 11:20:42 PM</span>
+              </div>
+            </td>
+            <td>
+              <button class="action-btn action-retry">
+                <span class="material-icons">refresh</span>
+                Retry
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== CUSTOMER 3 — Amazon (processing, collapsed by default) ==================== -->
+<div class="customer-section">
+  <div class="customer-header">
+    <div class="customer-avatar-lg av-amazon">AM</div>
+    <div class="customer-info">
+      <div class="customer-title">
+        AMA1005
+        <span class="partner-name">— Amazon SP-API</span>
+      </div>
+      <div class="customer-subtitle">62 upload batches · 1 running now</div>
+    </div>
+
+    <div class="customer-kpis">
+      <div class="mini-kpi total">
+        <div class="mini-kpi-value">62</div>
+        <div class="mini-kpi-label">Total</div>
+      </div>
+      <div class="mini-kpi success">
+        <div class="mini-kpi-value">61</div>
+        <div class="mini-kpi-label">Success</div>
+      </div>
+      <div class="mini-kpi processing">
+        <div class="mini-kpi-value">1</div>
+        <div class="mini-kpi-label">Running</div>
+      </div>
+      <div class="mini-kpi error">
+        <div class="mini-kpi-value">0</div>
+        <div class="mini-kpi-label">Errors</div>
+      </div>
+    </div>
+
+    <div class="customer-health warning">
+      <span class="material-icons">sync</span>
+      Syncing Now
+    </div>
+
+    <div class="customer-toggle">
+      <span class="material-icons">expand_more</span>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== CUSTOMER 4 — Lowe's (collapsed) ==================== -->
+<div class="customer-section">
+  <div class="customer-header">
+    <div class="customer-avatar-lg av-lowes">LO</div>
+    <div class="customer-info">
+      <div class="customer-title">
+        LOW2221MP
+        <span class="partner-name">— Lowe's Mirakl</span>
+      </div>
+      <div class="customer-subtitle">18 upload batches · last upload yesterday</div>
+    </div>
+
+    <div class="customer-kpis">
+      <div class="mini-kpi total">
+        <div class="mini-kpi-value">18</div>
+        <div class="mini-kpi-label">Total</div>
+      </div>
+      <div class="mini-kpi success">
+        <div class="mini-kpi-value">18</div>
+        <div class="mini-kpi-label">Success</div>
+      </div>
+      <div class="mini-kpi processing">
+        <div class="mini-kpi-value">0</div>
+        <div class="mini-kpi-label">Running</div>
+      </div>
+      <div class="mini-kpi error">
+        <div class="mini-kpi-value">0</div>
+        <div class="mini-kpi-label">Errors</div>
+      </div>
+    </div>
+
+    <div class="customer-health">
+      <span class="material-icons">check_circle</span>
+      Healthy
+    </div>
+
+    <div class="customer-toggle">
+      <span class="material-icons">expand_more</span>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== CUSTOMER 5 — Macy's (collapsed) ==================== -->
+<div class="customer-section">
+  <div class="customer-header">
+    <div class="customer-avatar-lg av-macys">MA</div>
+    <div class="customer-info">
+      <div class="customer-title">
+        MAC0149M
+        <span class="partner-name">— Macy's Marketplace</span>
+      </div>
+      <div class="customer-subtitle">15 upload batches · last upload yesterday</div>
+    </div>
+
+    <div class="customer-kpis">
+      <div class="mini-kpi total">
+        <div class="mini-kpi-value">15</div>
+        <div class="mini-kpi-label">Total</div>
+      </div>
+      <div class="mini-kpi success">
+        <div class="mini-kpi-value">15</div>
+        <div class="mini-kpi-label">Success</div>
+      </div>
+      <div class="mini-kpi processing">
+        <div class="mini-kpi-value">0</div>
+        <div class="mini-kpi-label">Running</div>
+      </div>
+      <div class="mini-kpi error">
+        <div class="mini-kpi-value">0</div>
+        <div class="mini-kpi-label">Errors</div>
+      </div>
+    </div>
+
+    <div class="customer-health">
+      <span class="material-icons">check_circle</span>
+      Healthy
+    </div>
+
+    <div class="customer-toggle">
+      <span class="material-icons">expand_more</span>
+    </div>
+  </div>
+</div>
+
+<button class="show-more">
+  <span class="material-icons" style="vertical-align: middle; font-size: 18px;">expand_more</span>
+  Show 2 more customers (Michaels, Target Plus)
+</button>
+
+<div class="legend">
+  <strong>💡 Customer-Wise v2:</strong><br>
+  · Each partner = own section<br>
+  · Health badge per customer<br>
+  · Mini-KPIs per customer<br>
+  · Expand to see batches<br>
+  · Auto-expand if has errors<br>
+  · Inline error details<br>
+  · Per-customer status filter
+</div>
+
+</body>
+</html>

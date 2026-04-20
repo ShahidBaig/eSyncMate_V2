@@ -83,7 +83,7 @@ export class InventoryComponent implements OnInit {
   downloadBatches: any[] = [];
   downloadLoading = false;
 
-  columns: string[] = ['Expand', 'CustomerID', 'Status', 'StartDate', 'FinishDate', 'File'];
+  columns: string[] = ['CustomerID', 'Status', 'StartDate', 'FinishDate', 'File'];
 
   constructor(
     private translate: TranslateService,
@@ -177,53 +177,51 @@ export class InventoryComponent implements OnInit {
 
   toggleExpand(element: any) {
     if (this.expandedBatchID === element.batchID) {
-      // Collapse
       this.expandedBatchID = null;
       this.downloadBatches = [];
       return;
     }
 
-    // Expand — find previous upload's start date
     this.expandedBatchID = element.batchID;
     this.downloadBatches = [];
     this.downloadLoading = true;
 
-    const currentIndex = this.inventoryToDisplay.findIndex((r: any) => r.batchID === element.batchID);
-    const prevUpload: any = currentIndex < this.inventoryToDisplay.length - 1
-      ? this.inventoryToDisplay[currentIndex + 1]
-      : null;
+    const filterItemID = (this.InventoryForm.get('itemID') as FormControl).value || '';
 
-    const toDate = this.formatDateISO(element.startDate || element.StartDate);
-    const customerID = element.customerID || element.CustomerID;
-
-    if (prevUpload) {
-      const fromDate = this.formatDateISO(prevUpload.startDate || prevUpload.StartDate);
-      element._prevUploadDate = prevUpload.startDate || prevUpload.StartDate;
-      this.loadDownloadBatches(customerID, fromDate, toDate);
-      return;
-    }
-
-    // Last row on page — previous upload row not in memory, fetch its date from server
-    this.api.getPreviousUploadDate(customerID, toDate).subscribe({
+    this.api.getConsolidatedDownload(element.batchID, filterItemID).subscribe({
       next: (res: any) => {
-        const rows = res?.inventory || [];
-        const prevStart = rows.length > 0 ? (rows[0].startDate || rows[0].StartDate) : null;
-        const fromDate = prevStart ? this.formatDateISO(prevStart) : '2000-01-01';
-        element._prevUploadDate = prevStart;
-        this.loadDownloadBatches(customerID, fromDate, toDate);
-      },
-      error: () => {
-        element._prevUploadDate = null;
-        this.loadDownloadBatches(customerID, '2000-01-01', toDate);
-      }
-    });
-  }
+        const mainRows = res?.mainRow || [];
+        const breakdown = res?.typeBreakdown || [];
 
-  private loadDownloadBatches(customerID: string, fromDate: string, toDate: string) {
-    this.api.getDownloadBatches(customerID, fromDate, toDate).subscribe({
-      next: (res: any) => {
-        const rawBatches = res.inventory || [];
-        this.downloadBatches = this.buildMergedDownloadRow(rawBatches, customerID);
+        if (mainRows.length === 0) {
+          this.downloadBatches = [];
+          this.downloadLoading = false;
+          return;
+        }
+
+        const main = mainRows[0];
+        element._prevUploadDate = main.previousUploadDate || null;
+
+        const batchIDs = (main.batchIDs || '').split(',').filter((x: string) => !!x);
+
+        const typeBreakdown = breakdown.map((b: any) => ({
+          type: b.orignalRouteType,
+          displayName: b.displayName,
+          count: b.batchCount  // RouteType count, not itemCount
+        }));
+
+        this.downloadBatches = [{
+          batchID: batchIDs[batchIDs.length - 1],
+          mergedBatchIDs: batchIDs,
+          typeBreakdown: typeBreakdown,
+          isMerged: true,
+          mergedCount: main.mergedCount,
+          routeType: main.routeType,
+          status: main.status,
+          startDate: main.startDate,
+          finishDate: main.finishDate,
+          customerID: main.customerID
+        }];
         this.downloadLoading = false;
       },
       error: () => {
@@ -231,79 +229,6 @@ export class InventoryComponent implements OnInit {
         this.downloadLoading = false;
       }
     });
-  }
-
-  /**
-   * Collapse multiple download batches into ONE merged row.
-   * - earliest StartDate, latest FinishDate
-   * - status hardcoded to 'Completed' (no merging of statuses)
-   * - keeps all underlying batchIDs for item-level merge
-   */
-  private buildMergedDownloadRow(rawBatches: any[], customerID: string): any[] {
-    if (!rawBatches || rawBatches.length === 0) return [];
-
-    const sorted = [...rawBatches].sort((a, b) => {
-      const da = new Date(a.startDate || a.StartDate || 0).getTime();
-      const db = new Date(b.startDate || b.StartDate || 0).getTime();
-      return da - db;
-    });
-
-    const first = sorted[0];
-    const last = sorted[sorted.length - 1];
-    const batchIDs = sorted.map((b: any) => b.batchID || b.BatchID).filter((x: any) => !!x);
-
-    // Build a meaningful label describing the consolidated inventory snapshot
-    const typeSet = new Set<string>(sorted.map((b: any) => (b.routeType || b.RouteType || '').toString()));
-    const typeLabel = typeSet.size === 1
-      ? Array.from(typeSet)[0]
-      : `Latest Inventory Snapshot (consolidated from ${sorted.length} feeds)`;
-
-    // Per-type breakdown with friendly display names
-    // (e.g. SCSFullInventoryFeed → "Full Inventory Feed Received")
-    const typeCounts = new Map<string, number>();
-    for (const b of sorted) {
-      const t = (b.routeType || b.RouteType || 'Unknown').toString();
-      typeCounts.set(t, (typeCounts.get(t) || 0) + 1);
-    }
-    const typeBreakdown = Array.from(typeCounts.entries()).map(([type, count]) => ({
-      type,
-      displayName: this.getFeedDisplayName(type),
-      count
-    }));
-
-    return [{
-      batchID: batchIDs[batchIDs.length - 1], // representative ID for any single-batch fallback
-      mergedBatchIDs: batchIDs,
-      typeBreakdown: typeBreakdown,
-      isMerged: true,
-      mergedCount: sorted.length,
-      routeType: typeLabel,
-      status: 'Completed', // hardcoded — no status merging
-      startDate: first.startDate || first.StartDate,
-      finishDate: last.finishDate || last.FinishDate,
-      customerID: customerID
-    }];
-  }
-
-  /**
-   * Map internal route type names to friendly display names for the
-   * consolidated feed breakdown chips.
-   */
-  private getFeedDisplayName(routeType: string): string {
-    const t = (routeType || '').toLowerCase();
-    if (t.includes('full')) return 'Full Inventory Feed Received';
-    if (t.includes('differential')) return 'Differential Inventory Feed Received';
-    if (t.includes('portal')) return 'Portal Inventory Feed Received';
-    return routeType; // fallback — show raw name
-  }
-
-  private formatDateISO(date: any): string {
-    if (!date) return '';
-    const d = new Date(date);
-    // Format as local time (YYYY-MM-DDTHH:mm:ss) — do NOT convert to UTC
-    // The DB stores dates in local time, so we must send local time not UTC
-    const pad = (n: number) => n.toString().padStart(2, '0');
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
   }
 
   // ========== EXISTING METHODS ==========
@@ -386,29 +311,20 @@ export class InventoryComponent implements OnInit {
       return;
     }
 
-    if (itemID == '') { itemID = 'EMPTY' }
-    if (status == '' || status.toLocaleLowerCase() == 'select status') { status = 'EMPTY' }
-    if (customerID == '') { customerID = 'EMPTY' }
-
-    // Route type fixed to upload types only
-    let routeType = 'EMPTY';
+    if (status && status.toLocaleLowerCase() === 'select status') { status = ''; }
 
     if (startDate !== null) {
       stringFromDate = startDate.toLocaleString();
       if (stringFromDate.length > 10) { stringFromDate = this.getFormattedDate(startDate); }
-    } else {
-      stringFromDate = '1999-01-01';
     }
 
     if (finishDate !== null) {
       stringToDate = finishDate.toLocaleString();
       if (stringToDate.length > 10) { stringToDate = this.getFormattedDate(finishDate); }
-    } else {
-      stringToDate = '1999-01-01';
     }
 
     this.isLoading = true;
-    this.api.getInventory(itemID, stringFromDate, stringToDate, status, customerID, routeType, this.pageNumber, this.pageSize).subscribe({
+    this.api.getInventory(itemID, stringFromDate, stringToDate, status, customerID, this.pageNumber, this.pageSize).subscribe({
       next: (res: any) => {
         this.msg = res.message;
         this.code = res.code;

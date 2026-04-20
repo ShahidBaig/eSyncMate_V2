@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Login — Bold & Image Rich</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --primary: #E8834A;
+    --primary-dark: #c06834;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: 'Poppins', sans-serif;
+    background: #0f172a;
+    color: #fff;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  .page {
+    display: flex;
+    min-height: 100vh;
+  }
+
+  /* ====================================================
+     LEFT: Hero Marketing Panel (dark + image)
+     ==================================================== */
+  .hero-panel {
+    flex: 1.2;
+    background:
+      linear-gradient(135deg, rgba(15,23,42,0.92) 0%, rgba(30,41,59,0.88) 100%),
+      url('https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=1600&q=80') center/cover;
+    padding: 60px 72px;
+    color: white;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .hero-panel::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(circle at 15% 85%, rgba(232,131,74,0.35) 0%, transparent 45%),
+      radial-gradient(circle at 90% 20%, rgba(251,191,36,0.18) 0%, transparent 40%);
+    pointer-events: none;
+  }
+
+  /* Brand Top */
+  .brand-row {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .brand-logo {
+    width: 46px; height: 46px;
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 8px 24px rgba(232,131,74,0.4);
+  }
+  .brand-logo .material-icons { color: white; font-size: 24px; }
+  .brand-name { font-size: 20px; font-weight: 700; letter-spacing: -0.3px; }
+  .brand-name span { color: var(--primary); }
+
+  /* Stage (center hero content) */
+  .stage {
+    position: relative;
+    z-index: 2;
+    max-width: 560px;
+  }
+
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: rgba(251,191,36,0.12);
+    border: 1px solid rgba(251,191,36,0.35);
+    color: #fbbf24;
+    border-radius: 30px;
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 30px;
+  }
+  .eyebrow .material-icons { font-size: 14px; }
+
+  h1.hero-title {
+    font-size: 60px;
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -2px;
+    margin: 0 0 22px;
+  }
+  h1.hero-title .accent {
+    background: linear-gradient(135deg, #E8834A, #fbbf24 80%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    display: inline-block;
+  }
+
+  p.hero-desc {
+    font-size: 17px;
+    line-height: 1.55;
+    color: rgba(255,255,255,0.8);
+    margin: 0 0 40px;
+    font-weight: 400;
+    max-width: 500px;
+  }
+
+  /* Partner logos row */
+  .partners {
+    position: relative;
+    z-index: 2;
+  }
+  .partners-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.5);
+    margin-bottom: 16px;
+  }
+  .partner-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    max-width: 520px;
+  }
+  .partner-tile {
+    background: rgba(255,255,255,0.08);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 14px;
+    padding: 14px 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.25s ease;
+  }
+  .partner-tile:hover {
+    background: rgba(232,131,74,0.15);
+    border-color: rgba(232,131,74,0.4);
+    transform: translateY(-3px);
+  }
+  .partner-icon {
+    width: 36px; height: 36px;
+    border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800;
+    font-size: 13px;
+    color: white;
+    letter-spacing: -0.5px;
+  }
+  .partner-icon.amazon { background: linear-gradient(135deg, #ff9900, #ff6f00); }
+  .partner-icon.walmart { background: linear-gradient(135deg, #0071ce, #004c8c); }
+  .partner-icon.lowes { background: linear-gradient(135deg, #004990, #002d5a); }
+  .partner-icon.target { background: linear-gradient(135deg, #cc0000, #7a0000); }
+  .partner-icon.knot { background: linear-gradient(135deg, #8b5cf6, #6d28d9); }
+  .partner-icon.macys { background: linear-gradient(135deg, #e21a2c, #b00010); }
+  .partner-icon.michaels { background: linear-gradient(135deg, #ee3124, #a01810); }
+  .partner-icon.target-plus { background: linear-gradient(135deg, #f97316, #c2410c); }
+  .partner-name-sm {
+    font-size: 10.5px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.85);
+  }
+
+  /* Stats strip */
+  .stats-strip {
+    position: relative;
+    z-index: 2;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 26px;
+    padding-top: 28px;
+    margin-top: 28px;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    max-width: 520px;
+  }
+  .stat {
+    .stat-big {
+      font-size: 34px;
+      font-weight: 800;
+      line-height: 1;
+      letter-spacing: -1px;
+      background: linear-gradient(135deg, #E8834A, #fbbf24);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      margin-bottom: 4px;
+    }
+    .stat-lbl {
+      font-size: 11px;
+      color: rgba(255,255,255,0.55);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+  }
+
+  /* ====================================================
+     RIGHT: Clean White Form
+     ==================================================== */
+  .form-panel {
+    width: 480px;
+    flex-shrink: 0;
+    background: #ffffff;
+    padding: 60px 50px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .form-title {
+    font-size: 34px;
+    font-weight: 800;
+    color: #0f172a;
+    letter-spacing: -0.8px;
+    margin: 0 0 8px;
+  }
+  .form-sub {
+    color: #64748b;
+    font-size: 14px;
+    margin: 0 0 32px;
+  }
+
+  .field-group { margin-bottom: 16px; }
+  .field-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    color: #475569;
+    margin-bottom: 7px;
+    letter-spacing: 0.2px;
+    text-transform: uppercase;
+  }
+  .field-wrap { position: relative; }
+  .field-wrap .material-icons {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #94a3b8;
+    font-size: 19px;
+    pointer-events: none;
+  }
+  .field-input {
+    width: 100%;
+    padding: 14px 14px 14px 44px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 12px;
+    background: #f8fafc;
+    font-family: inherit;
+    font-size: 14px;
+    color: #0f172a;
+    transition: all 0.2s ease;
+  }
+  .field-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    background: white;
+    box-shadow: 0 0 0 4px rgba(232,131,74,0.12);
+  }
+
+  .form-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 20px 0 26px;
+    font-size: 13px;
+  }
+  .remember { display: flex; align-items: center; gap: 8px; color: #475569; cursor: pointer; font-weight: 500; }
+  .remember input { accent-color: var(--primary); }
+  .forgot { color: var(--primary); text-decoration: none; font-weight: 700; }
+
+  .submit-btn {
+    width: 100%;
+    padding: 16px;
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    font-family: inherit;
+    box-shadow: 0 14px 32px rgba(232,131,74,0.35);
+    transition: all 0.2s ease;
+    letter-spacing: 0.3px;
+  }
+  .submit-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 18px 40px rgba(232,131,74,0.5);
+  }
+  .submit-btn .material-icons { font-size: 20px; }
+
+  .trust-row {
+    display: flex;
+    justify-content: space-around;
+    gap: 16px;
+    margin-top: 28px;
+    padding: 16px 0;
+    border-top: 1px solid #f1f5f9;
+    border-bottom: 1px solid #f1f5f9;
+  }
+  .trust-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: #64748b;
+    font-weight: 600;
+  }
+  .trust-item .material-icons { color: var(--primary); font-size: 16px; }
+
+  .footer-note {
+    text-align: center;
+    font-size: 11px;
+    color: #94a3b8;
+    margin-top: 24px;
+    line-height: 1.6;
+  }
+  .footer-note a { color: var(--primary); text-decoration: none; font-weight: 600; }
+
+  /* Responsive */
+  @media (max-width: 1100px) {
+    h1.hero-title { font-size: 48px; }
+    .hero-panel { padding: 50px 44px; }
+  }
+  @media (max-width: 900px) {
+    .page { flex-direction: column; }
+    .hero-panel { min-height: 400px; padding: 40px 24px; }
+    .form-panel { width: 100%; padding: 40px 24px; }
+    h1.hero-title { font-size: 40px; }
+    .partner-grid { grid-template-columns: repeat(4, 1fr); }
+  }
+
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- ======== LEFT HERO PANEL ======== -->
+  <div class="hero-panel">
+    <div class="brand-row">
+      <div class="brand-logo"><span class="material-icons">sync_alt</span></div>
+      <div class="brand-name">e<span>Sync</span>Mate</div>
+    </div>
+
+    <div class="stage">
+      <div class="eyebrow">
+        <span class="material-icons">bolt</span>
+        Enterprise EDI Platform
+      </div>
+
+      <h1 class="hero-title">
+        Run your<br>
+        entire <span class="accent">marketplace</span><br>
+        stack from one place.
+      </h1>
+
+      <p class="hero-desc">
+        Sync inventory, orders, and shipments across 8+ retail partners.
+        Built for scale, trusted by Safavieh.
+      </p>
+
+      <div class="partners">
+        <div class="partners-label">Trusted integrations</div>
+        <div class="partner-grid">
+          <div class="partner-tile">
+            <div class="partner-icon amazon">a</div>
+            <div class="partner-name-sm">Amazon</div>
+          </div>
+          <div class="partner-tile">
+            <div class="partner-icon walmart">W</div>
+            <div class="partner-name-sm">Walmart</div>
+          </div>
+          <div class="partner-tile">
+            <div class="partner-icon lowes">L</div>
+            <div class="partner-name-sm">Lowe's</div>
+          </div>
+          <div class="partner-tile">
+            <div class="partner-icon target">T</div>
+            <div class="partner-name-sm">Target</div>
+          </div>
+          <div class="partner-tile">
+            <div class="partner-icon macys">M</div>
+            <div class="partner-name-sm">Macy's</div>
+          </div>
+          <div class="partner-tile">
+            <div class="partner-icon michaels">M</div>
+            <div class="partner-name-sm">Michaels</div>
+          </div>
+          <div class="partner-tile">
+            <div class="partner-icon knot">K</div>
+            <div class="partner-name-sm">Knot</div>
+          </div>
+          <div class="partner-tile">
+            <div class="partner-icon target-plus">T+</div>
+            <div class="partner-name-sm">Target Plus</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="stats-strip">
+      <div class="stat">
+        <div class="stat-big">2.4M+</div>
+        <div class="stat-lbl">Orders processed</div>
+      </div>
+      <div class="stat">
+        <div class="stat-big">99.7%</div>
+        <div class="stat-lbl">Platform uptime</div>
+      </div>
+      <div class="stat">
+        <div class="stat-big">8</div>
+        <div class="stat-lbl">Retail integrations</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======== RIGHT FORM PANEL ======== -->
+  <div class="form-panel">
+    <h1 class="form-title">Welcome back</h1>
+    <p class="form-sub">Sign in to continue to your workspace</p>
+
+    <div class="field-group">
+      <label class="field-label">User ID</label>
+      <div class="field-wrap">
+        <span class="material-icons">person</span>
+        <input class="field-input" type="text" placeholder="Enter your user ID" value="admin">
+      </div>
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">Password</label>
+      <div class="field-wrap">
+        <span class="material-icons">lock</span>
+        <input class="field-input" type="password" placeholder="Enter your password" value="••••••••">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <label class="remember"><input type="checkbox" checked> Keep me signed in</label>
+      <a class="forgot" href="#">Forgot password?</a>
+    </div>
+
+    <button class="submit-btn">
+      Sign In Securely
+      <span class="material-icons">arrow_forward</span>
+    </button>
+
+    <div class="trust-row">
+      <div class="trust-item"><span class="material-icons">verified_user</span>JWT</div>
+      <div class="trust-item"><span class="material-icons">lock</span>2FA</div>
+      <div class="trust-item"><span class="material-icons">shield</span>RBAC</div>
+    </div>
+
+    <div class="footer-note">
+      By signing in, you agree to our <a href="#">Terms of Use</a> and <a href="#">Privacy Policy</a><br>
+      &copy; 2026 eSyncMate · eSoftage Solutions
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

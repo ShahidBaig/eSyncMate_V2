@@ -141,18 +141,28 @@ $green:         #16a34a;
 .login-logo {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 14px;
   margin-bottom: 40px;
 
   .logo-svg {
     flex-shrink: 0;
+    width: auto;
+    height: 44px;
   }
 
   .logo-caption {
-    font-size: 22px;
+    font-size: 26px;
     font-weight: 800;
-    color: #1a1a2e;
     letter-spacing: -0.3px;
+
+    .logo-caption-dark {
+      color: #000000;
+    }
+
+    .logo-caption-orange {
+      color: #E8834A;
+    }
   }
 }
 
@@ -508,6 +518,12 @@ $green:         #16a34a;
 
   .feature-logo-svg {
     flex-shrink: 0;
+    height: 32px;
+    width: auto;
+    width: 52px;
+    height: 48px;
+    object-fit: cover;
+    object-position: right center;
   }
 }
 
