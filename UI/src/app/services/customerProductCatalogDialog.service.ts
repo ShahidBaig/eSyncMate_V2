@@ -129,8 +129,11 @@ export class CustomerProductCatalogService {
   }
 
   deleteItemData(CustomerID: string, ItemType: string, UserID: number): Observable<any> {
-    const url = `${this.apiUrl}api/CustomerProductCatalog/deleteItemsData?UserID=${UserID}&CustomerID=${CustomerID}&ItemType=${ItemType}`;
-    return this.http.get(url);
+    return this.http.post(`${this.apiUrl}api/CustomerProductCatalog/deleteItemsData`, {
+      userID: UserID,
+      customerID: CustomerID,
+      itemType: ItemType
+    });
   }
 
 

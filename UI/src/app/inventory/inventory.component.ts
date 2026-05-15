@@ -93,14 +93,13 @@ export class InventoryComponent implements OnInit {
     private dialog: MatDialog,
     public languageService: LanguageService
   ) {
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const today = new Date();
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12, 0, 0);
 
     this.InventoryForm = this.fb.group({
       itemID: fb.control(''),
-      startDate: new FormControl(formatDate(yesterday, "yyyy-MM-dd", "en")),
-      finishDate: new FormControl(formatDate(today, "yyyy-MM-dd", "en")),
+      startDate: new FormControl(today),
+      finishDate: new FormControl(today),
       status: fb.control(''),
       customerID: fb.control(''),
     });

@@ -207,8 +207,9 @@ namespace eSyncMate.Processor.Models
 
     public class CommonUtils
     {
-        public static string ConnectionString { get; set; } = "Server=110.93.227.0,1433;Database=eSyncmate_Dev;UID=sa;PWD=eSoft#123456;";
+        public static string ConnectionString { get; set; } = "Server=192.168.0.44,7100;Database=ESYNCMATE;UID=esyncmate;PWD=eSyncMate786$$$;";
         public static string MySqlConnectionString { get; set; } = "Server=162.241.63.30;Database=geckote1_edi;User=geckote1_esyncmate;Password=Gecko8079;";
+        public static string EncryptionKey { get; set; } = "eSyncMate@Dev#2026!!SecretKey";
         public static string SMTPHost { get; set; } = "smtp.office365.com";
         public static int SMTPPort { get; set; } = 587;
         public static string FromEmailAccount { get; set; } = "alerts@SAFAVIEH.COM";
@@ -217,6 +218,7 @@ namespace eSyncMate.Processor.Models
         public static string Company = "eSyncMate";
 
         public static Int32 UploadInventoryTotalThread = 10;
+        public static Int32 AmazonFeedMaxMessages = 20000;
         public static RestSharp.Method GetRequestMethod(string p_Method)
         {
             RestSharp.Method l_Method = RestSharp.Method.Get;

@@ -23,10 +23,6 @@ export class AppComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    if (!this.api.isLoggedIn()) {
-      this.api.deleteToken();
-    }
-    // Initialize the inactivity service
     this.inactivityService.setup();
   }
 

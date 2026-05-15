@@ -64,11 +64,12 @@ namespace eSyncMate.Processor.Controllers
 
                 if (searchModel.SearchOption == "Id")
                 {
-                    l_Criteria = $" Id = {searchModel.SearchValue}";
+                    if (int.TryParse(searchModel.SearchValue, out _))
+                        l_Criteria = $" Id = {searchModel.SearchValue}";
                 }
                 else if (searchModel.SearchOption == "Connector Name")
                 {
-                    l_Criteria = $" Name = '{searchModel.SearchValue}'";
+                    l_Criteria = $" Name LIKE '%{searchModel.SearchValue}%'";
                 }
                 else if (searchModel.SearchOption == "Connector Type")
                 {
@@ -90,7 +91,7 @@ namespace eSyncMate.Processor.Controllers
                     ConnectorsDataModel l_ConnectorRow = new ConnectorsDataModel();
 
                     DBEntity.PopulateObjectFromRow(l_ConnectorRow, l_Data, l_Row);
-
+                    l_ConnectorRow.Data = Helpers.EncryptionHelper.DecryptAndMaskConnectorData(l_ConnectorRow.Data, CommonUtils.EncryptionKey);
                     l_Response.Connectors.Add(l_ConnectorRow);
                 }
 
@@ -133,6 +134,7 @@ namespace eSyncMate.Processor.Controllers
                     return l_Response;
                 }
 
+                connectorModel.Data = Helpers.EncryptionHelper.EncryptConnectorData(connectorModel.Data, CommonUtils.EncryptionKey);
                 PublicFunctions.CopyTo(connectorModel, l_Connectors);
 
                 l_Connectors.CreatedBy = l_Connectors.CreatedBy;
@@ -178,6 +180,7 @@ namespace eSyncMate.Processor.Controllers
                 Connectors l_Connectors = new Connectors();
                 l_Connectors.UseConnection(CommonUtils.ConnectionString);
 
+                connectorsModel.Data = Helpers.EncryptionHelper.EncryptConnectorData(connectorsModel.Data, CommonUtils.EncryptionKey);
                 PublicFunctions.CopyTo(connectorsModel, l_Connectors);
 
                 l_Connectors.ModifiedBy = l_Connectors.CreatedBy;
@@ -207,6 +210,47 @@ namespace eSyncMate.Processor.Controllers
 
             }
 
+            return l_Response;
+        }
+
+        [HttpGet]
+        [Route("getConnectorForEdit/{id}")]
+        public async Task<GetConnectorsResponseModel> GetConnectorForEdit(int id)
+        {
+            GetConnectorsResponseModel l_Response = new GetConnectorsResponseModel();
+            try
+            {
+                Connectors l_Connector = new Connectors();
+                l_Connector.UseConnection(CommonUtils.ConnectionString);
+                l_Connector.Id = id;
+
+                if (l_Connector.GetObjectOnly().IsSuccess)
+                {
+                    var connectorRow = new ConnectorsDataModel
+                    {
+                        Id          = l_Connector.Id,
+                        TypeId      = l_Connector.TypeId,
+                        Name        = l_Connector.Name,
+                        CreatedDate = l_Connector.CreatedDate,
+                        CreatedBy   = l_Connector.CreatedBy,
+                        // Return FULLY DECRYPTED data for editing
+                        Data = Helpers.EncryptionHelper.DecryptConnectorData(l_Connector.Data, CommonUtils.EncryptionKey)
+                    };
+
+                    l_Response.Connectors = new List<ConnectorsDataModel> { connectorRow };
+                    l_Response.Code       = (int)ResponseCodes.Success;
+                }
+                else
+                {
+                    l_Response.Code    = (int)ResponseCodes.Error;
+                    l_Response.Message = "Connector not found.";
+                }
+            }
+            catch (Exception ex)
+            {
+                l_Response.Code = (int)ResponseCodes.Exception;
+                this._logger.LogCritical(ex.ToString());
+            }
             return l_Response;
         }
 

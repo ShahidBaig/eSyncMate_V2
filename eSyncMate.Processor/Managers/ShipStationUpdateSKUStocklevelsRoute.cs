@@ -51,8 +51,8 @@ namespace eSyncMate.Processor.Managers
             ShipmentDetailFromNDC shipmentData = new ShipmentDetailFromNDC();
             DataTable l_Data = new DataTable();
 
-            ConnectorDataModel? l_SourceConnector = JsonConvert.DeserializeObject<ConnectorDataModel>(route.SourceConnectorObject.Data);
-            ConnectorDataModel? l_DestinationConnector = JsonConvert.DeserializeObject<ConnectorDataModel>(route.DestinationConnectorObject.Data);
+            ConnectorDataModel? l_SourceConnector = ConnectorDataModel.Deserialize(route.SourceConnectorObject.Data);
+            ConnectorDataModel? l_DestinationConnector = ConnectorDataModel.Deserialize(route.DestinationConnectorObject.Data);
             string baseUrl = l_SourceConnector.BaseUrl.TrimEnd('/');
 
             // Store API key for per-request headers (shared HttpClient can't use DefaultRequestHeaders)

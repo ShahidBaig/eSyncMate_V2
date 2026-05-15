@@ -1,7 +1,19 @@
-﻿namespace eSyncMate.Processor.Models
+﻿using Newtonsoft.Json;
+using eSyncMate.Processor.Helpers;
+using Microsoft.Extensions.Configuration;
+
+namespace eSyncMate.Processor.Models
 {
     public class ConnectorDataModel
     {
+        // Use this everywhere instead of JsonConvert.DeserializeObject<ConnectorDataModel>
+        public static ConnectorDataModel Deserialize(string encryptedJson, IConfiguration config = null)
+        {
+            if (string.IsNullOrWhiteSpace(encryptedJson)) return new ConnectorDataModel();
+            var key = config?["EncryptionKey"] ?? CommonUtils.EncryptionKey;
+            var decrypted = EncryptionHelper.DecryptConnectorData(encryptedJson, key);
+            return JsonConvert.DeserializeObject<ConnectorDataModel>(decrypted) ?? new ConnectorDataModel();
+        }
         public string ConnectivityType { get; set; }
         public string ConnectionString { get; set; }
         public string CommandType { get; set; }

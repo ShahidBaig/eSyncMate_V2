@@ -1,4 +1,4 @@
-﻿using eSyncMate.DB;
+using eSyncMate.DB;
 using eSyncMate.DB.Entities;
 using eSyncMate.Processor.Connections;
 using eSyncMate.Processor.Models;
@@ -37,8 +37,8 @@ namespace eSyncMate.Processor.Managers
 
             try
             {
-                ConnectorDataModel? l_SourceConnector = JsonConvert.DeserializeObject<ConnectorDataModel>(route.SourceConnectorObject.Data);
-                ConnectorDataModel? l_DestinationConnector = JsonConvert.DeserializeObject<ConnectorDataModel>(route.DestinationConnectorObject.Data);
+                ConnectorDataModel? l_SourceConnector = ConnectorDataModel.Deserialize(route.SourceConnectorObject.Data);
+                ConnectorDataModel? l_DestinationConnector = ConnectorDataModel.Deserialize(route.DestinationConnectorObject.Data);
 
                 // ========== CONNECTOR VALIDATION ==========
                 if (l_SourceConnector == null)
@@ -57,9 +57,9 @@ namespace eSyncMate.Processor.Managers
                 // Self-lock and same-route overlap already handled by RouteEngine/RouteWorker (Level 1)
                 // Here we only CHECK if the other feed type is running for the same customer (Level 2)
                 //
-                // Full Feed running  → Differential Feed skips (IsLocked check on Full TypeId)
-                // Diff Feed running  → Full Feed skips (IsLocked check on Diff TypeId)
-                // Different customer → no blocking (per-customer lock in RouteEngine)
+                // Full Feed running  ? Differential Feed skips (IsLocked check on Full TypeId)
+                // Diff Feed running  ? Full Feed skips (IsLocked check on Diff TypeId)
+                // Different customer ? no blocking (per-customer lock in RouteEngine)
                 //
                 l_RouteLock.UseConnection(l_DestinationConnector.ConnectionString);
                 string customerID = l_DestinationConnector.CustomerID;

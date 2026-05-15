@@ -1,4 +1,4 @@
-﻿using eSyncMate.DB;
+using eSyncMate.DB;
 using eSyncMate.DB.Entities;
 using eSyncMate.Processor.Connections;
 using eSyncMate.Processor.Models;
@@ -47,8 +47,8 @@ namespace eSyncMate.Processor.Managers
 
             try
             {
-                ConnectorDataModel? l_SourceConnector = JsonConvert.DeserializeObject<ConnectorDataModel>(route.SourceConnectorObject.Data);
-                ConnectorDataModel? l_DestinationConnector = JsonConvert.DeserializeObject<ConnectorDataModel>(route.DestinationConnectorObject.Data);
+                ConnectorDataModel? l_SourceConnector = ConnectorDataModel.Deserialize(route.SourceConnectorObject.Data);
+                ConnectorDataModel? l_DestinationConnector = ConnectorDataModel.Deserialize(route.DestinationConnectorObject.Data);
 
                 route.SaveLog(LogTypeEnum.Info, $"Started executing route [{route.Id}]", string.Empty, userNo);
 
@@ -115,17 +115,7 @@ namespace eSyncMate.Processor.Managers
                     //{
 
                         int i = 0;
-                        int totalThread = CommonUtils.UploadInventoryTotalThread;
-                        int chunkSize = 0;
-
-                        if (l_data.Rows.Count >= 20000)
-                        {
-                            chunkSize = l_data.Rows.Count / totalThread;
-                        }
-                        else
-                        {
-                            chunkSize = l_data.Rows.Count;
-                        }
+                        int chunkSize = CommonUtils.AmazonFeedMaxMessages;
 
 
                         List<Task> tasks = new List<Task>();
@@ -361,7 +351,15 @@ namespace eSyncMate.Processor.Managers
                     }
                     
                     feed.BulkNewInsertData(this.sourceConnector.ConnectionString, "SCSInventoryFeedData", bulkInsertTable);
-                    this.feed.InsertInventoryBatchWiseFeedDetail(this.bacthID, "NEW", feedId, this.destinationConnector.CustomerID);
+
+                    if (!string.IsNullOrWhiteSpace(feedId))
+                    {
+                        this.feed.InsertInventoryBatchWiseFeedDetail(this.bacthID, "NEW", feedId, this.destinationConnector.CustomerID);
+                    }
+                    else
+                    {
+                        this.route.SaveLog(LogTypeEnum.Error, $"SubmitFeed failed — feedId empty, BatchID [{this.bacthID}] not tracked for status check.", string.Empty, userNo);
+                    }
                     //this.feed.UpdateSCSAmazonFeedData(this.bacthID, feedId,l_Guid);
                 }
             }
@@ -549,14 +547,14 @@ namespace eSyncMate.Processor.Managers
                 {
                     var sku = row["CustomerItemCode"]?.ToString() ?? "";
 
-                    // ✅ Build a single PATCH for /fulfillmentAvailability
+                    // ? Build a single PATCH for /fulfillmentAvailability
                     var patch = new AmazonInventoryFeedPatchWiseModel.Patch
                     {
                         op = "replace",
                         path = "/attributes/fulfillment_availability"
                     };
 
-                    // ✅ Add fulfillmentAvailability values (channel-wise)
+                    // ? Add fulfillmentAvailability values (channel-wise)
                     foreach (DataRow item in shipNodeData.Rows)
                     {
                         string shipNode = item["ShipNode"]?.ToString() ?? "DEFAULT";
@@ -576,7 +574,7 @@ namespace eSyncMate.Processor.Managers
                         });
                     }
 
-                    // ✅ Message
+                    // ? Message
                     var msg = new AmazonInventoryFeedPatchWiseModel.PatchMessage
                     {
                         messageId = messageId,
@@ -590,7 +588,7 @@ namespace eSyncMate.Processor.Managers
                     // Add to full feed
                     l_AmazonInventoryRequestModel.messages.Add(msg);
 
-                    // ✅ Per-item payload (only this message) for DB logging
+                    // ? Per-item payload (only this message) for DB logging
                     var perItemPayload = new AmazonInventoryFeedPatchWiseModel
                     {
                         header = l_AmazonInventoryRequestModel.header,

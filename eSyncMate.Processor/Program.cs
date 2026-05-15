@@ -52,11 +52,16 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
+// -------------------- MEMORY CACHE (for permission caching) --------------------
+builder.Services.AddMemoryCache();
+
 // -------------------- CORS --------------------
+var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
 builder.Services.AddCors(o => o.AddDefaultPolicy(p => p
-    .AllowAnyOrigin()
+    .WithOrigins(allowedOrigins)
     .AllowAnyHeader()
-    .AllowAnyMethod()));
+    .AllowAnyMethod()
+    .AllowCredentials()));
 
 // -------------------- JWT AUTH --------------------
 builder.Services.AddAuthentication(o =>
@@ -94,8 +99,10 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
 
 // -------------------- BIND APP SETTINGS TO STATICS --------------------
 CommonUtils.ConnectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+CommonUtils.EncryptionKey   = builder.Configuration["EncryptionKey"] ?? "";
 CommonUtils.Company = builder.Configuration["CompanyName"];
 CommonUtils.UploadInventoryTotalThread = Convert.ToInt32(builder.Configuration["UploadInventoryTotalThread"]);
+CommonUtils.AmazonFeedMaxMessages = Convert.ToInt32(builder.Configuration["AmazonFeedMaxMessages"] ?? "20000");
 CommonUtils.MySqlConnectionString = builder.Configuration["MySQLConnection"];
 
 
@@ -111,10 +118,38 @@ if (app.Environment.IsDevelopment() || app.Environment.IsProduction())
     app.UseSwaggerUI();
 }
 
+// -------------------- SECURITY HEADERS --------------------
+app.Use(async (context, next) =>
+{
+    context.Response.Headers["X-Content-Type-Options"]  = "nosniff";
+    context.Response.Headers["X-XSS-Protection"]        = "1; mode=block";
+    context.Response.Headers["Referrer-Policy"]         = "strict-origin-when-cross-origin";
+    context.Response.Headers["Permissions-Policy"]      = "camera=(), microphone=(), geolocation=()";
+
+    bool isDashboard = context.Request.Path.StartsWithSegments("/dashboard");
+    if (isDashboard)
+    {
+        context.Response.Headers["Content-Security-Policy"] =
+            "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; img-src 'self' data:; font-src 'self' data: https://cdnjs.cloudflare.com; connect-src 'self' ws: wss:;";
+    }
+    else
+    {
+        context.Response.Headers["X-Frame-Options"]         = "DENY";
+        context.Response.Headers["Content-Security-Policy"] = "default-src 'none'; frame-ancestors 'none'";
+    }
+
+    if (context.Request.IsHttps)
+    {
+        context.Response.Headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains";
+    }
+    await next();
+});
+
 // -------------------- MIDDLEWARE ORDER --------------------
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseMiddleware<eSyncMate.Processor.Middleware.PermissionMiddleware>();
 
 // -------------------- HANGFIRE DASHBOARD --------------------
 // (A) Secure with basic auth (recommended for server)

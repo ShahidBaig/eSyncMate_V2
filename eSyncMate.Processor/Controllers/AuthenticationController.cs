@@ -46,6 +46,7 @@ namespace eSyncMate.Processor.Controllers
             var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
             var claims = new[]
             {
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
                 new Claim("id", user.Id.ToString()),
                 new Claim("firstName", user.FirstName),
                 new Claim("lastName", user.LastName),
@@ -55,17 +56,16 @@ namespace eSyncMate.Processor.Controllers
                 new Claim("createdDate", user.CreatedDate.ToString()),
                 new Claim("userType", user.UserType.ToString()),
                 new Claim("company", user.Company.ToString()),
-				new Claim("customerName", user.CustomerName.ToString()),
+                new Claim("customerName", user.CustomerName.ToString()),
                 new Claim("isSetupAllowed", user.IsSetupAllowed.ToString()),
                 new Claim("userID", user.UserID.ToString()),
                 new Claim("roleName", user.RoleName ?? "")
-
             };
 
             var token = new JwtSecurityToken(_config["Jwt:Issuer"],
                 _config["Jwt:Issuer"],
                 claims: claims,
-                expires: DateTime.Now.AddMinutes(120),
+                expires: DateTime.Now.AddMinutes(15),
                 signingCredentials: credentials);
 
             return new JwtSecurityTokenHandler().WriteToken(token);
@@ -110,11 +110,11 @@ namespace eSyncMate.Processor.Controllers
             return user;
         }
 
-        [HttpGet("Login")]
-        public async Task<IActionResult> Login(string userID, string password)
+        [HttpPost("Login")]
+        public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
             IActionResult response = Unauthorized();
-            var user = await AuthenticateUser(userID, password);
+            var user = await AuthenticateUser(request.UserID, request.Password);
            
             if (user !=null)
             {
@@ -156,6 +156,13 @@ namespace eSyncMate.Processor.Controllers
                     var tokenString = GenerateJSONWebToken(user);
                     Declarations.g_UserNo = user.Id;
                     var userMenus = GetUserMenuTree(user.Id, user.Company);
+
+                    Response.Cookies.Append("jwt", tokenString, new CookieOptions
+                    {
+                        HttpOnly = true,
+                        SameSite = SameSiteMode.Lax,
+                        Path = "/"
+                    });
 
                     response = Ok(new { token = tokenString, message = "Success", menus = userMenus });
                 }
@@ -375,25 +382,25 @@ namespace eSyncMate.Processor.Controllers
 
 
 
-        [HttpGet("UpdatePassword")]
-        public async Task<IActionResult> UpdatePassword(string UserID, string oldPassword, string Password)
+        [HttpPost("UpdatePassword")]
+        public async Task<IActionResult> UpdatePassword([FromBody] UpdatePasswordRequest request)
         {
             IActionResult response = Unauthorized();
 
             Result l_Result = new Result();
 
-            Password = PublicFunctions.Encrypt(Password);
+            string Password = PublicFunctions.Encrypt(request.Password);
 
             var l_DataTable = new DataTable();
             Users l_users = new Users();
 
             l_users.UseConnection(CommonUtils.ConnectionString);
 
-            string criteria = $"UserID = '{UserID}' AND Password = '{l_users.Encrypt(oldPassword)}' AND Status = 'ACTIVE'";
+            string criteria = $"UserID = '{request.UserID}' AND Password = '{l_users.Encrypt(request.OldPassword)}' AND Status = 'ACTIVE'";
 
             if (l_users.GetViewList(criteria, "", ref l_DataTable))
             {
-                l_Result = l_users.UpdatePassword(UserID, Password);
+                l_Result = l_users.UpdatePassword(request.UserID, Password);
             }
 
             if (l_Result.IsSuccess)
@@ -405,6 +412,105 @@ namespace eSyncMate.Processor.Controllers
                 response = Ok(new { Message = "Either you dont have permission or Invalid Credentials!", Code = 400 });
             }
             return response;
+        }
+
+        [AllowAnonymous]
+        [HttpPost("RefreshToken")]
+        public IActionResult RefreshToken()
+        {
+            var cookieToken = Request.Cookies["jwt"];
+            if (string.IsNullOrEmpty(cookieToken))
+                return Unauthorized(new { message = "No session found" });
+
+            try
+            {
+                var tokenHandler = new JwtSecurityTokenHandler();
+                var key = Encoding.UTF8.GetBytes(_config["Jwt:Key"]);
+
+                tokenHandler.ValidateToken(cookieToken, new TokenValidationParameters
+                {
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = new SymmetricSecurityKey(key),
+                    ValidateIssuer = true,
+                    ValidIssuer = _config["Jwt:Issuer"],
+                    ValidateAudience = false,
+                    ValidateLifetime = true,
+                    ClockSkew = TimeSpan.Zero
+                }, out SecurityToken validatedToken);
+
+                var jwtToken = (JwtSecurityToken)validatedToken;
+
+                var user = new LoginModel
+                {
+                    Id = int.Parse(jwtToken.Claims.First(c => c.Type == "id").Value),
+                    FirstName = jwtToken.Claims.FirstOrDefault(c => c.Type == "firstName")?.Value ?? "",
+                    LastName = jwtToken.Claims.FirstOrDefault(c => c.Type == "lastName")?.Value ?? "",
+                    Mobile = jwtToken.Claims.FirstOrDefault(c => c.Type == "mobile")?.Value ?? "",
+                    Email = jwtToken.Claims.FirstOrDefault(c => c.Type == "email")?.Value ?? "",
+                    Status = jwtToken.Claims.FirstOrDefault(c => c.Type == "status")?.Value ?? "",
+                    CreatedDate = DateTime.TryParse(jwtToken.Claims.FirstOrDefault(c => c.Type == "createdDate")?.Value, out var cd) ? cd : DateTime.MinValue,
+                    UserType = jwtToken.Claims.FirstOrDefault(c => c.Type == "userType")?.Value ?? "",
+                    Company = jwtToken.Claims.FirstOrDefault(c => c.Type == "company")?.Value ?? "",
+                    CustomerName = jwtToken.Claims.FirstOrDefault(c => c.Type == "customerName")?.Value ?? "",
+                    IsSetupAllowed = bool.TryParse(jwtToken.Claims.FirstOrDefault(c => c.Type == "isSetupAllowed")?.Value, out var isa) && isa,
+                    UserID = jwtToken.Claims.FirstOrDefault(c => c.Type == "userID")?.Value ?? "",
+                    RoleName = jwtToken.Claims.FirstOrDefault(c => c.Type == "roleName")?.Value ?? ""
+                };
+
+                var newToken = GenerateJSONWebToken(user);
+                var userMenus = GetUserMenuTree(user.Id, user.Company);
+
+                Response.Cookies.Append("jwt", newToken, new CookieOptions
+                {
+                    HttpOnly = true,
+                    SameSite = SameSiteMode.Lax,
+                    Path = "/"
+                });
+
+                return Ok(new { token = newToken, message = "Success", menus = userMenus });
+            }
+            catch
+            {
+                return Unauthorized(new { message = "Session expired" });
+            }
+        }
+
+        [HttpPost("Logout")]
+        public IActionResult Logout()
+        {
+            try
+            {
+                // Manually parse token (without expiry validation so expired tokens also get blacklisted)
+                var authHeader = Request.Headers["Authorization"].FirstOrDefault();
+                var rawToken   = authHeader?.StartsWith("Bearer ") == true
+                                 ? authHeader.Substring(7)
+                                 : null;
+
+                if (!string.IsNullOrEmpty(rawToken))
+                {
+                    var tokenHandler = new JwtSecurityTokenHandler();
+                    var jwtToken     = tokenHandler.ReadJwtToken(rawToken);
+
+                    var jti       = jwtToken.Claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Jti)?.Value;
+                    var userIdStr = jwtToken.Claims.FirstOrDefault(c => c.Type == "id")?.Value;
+
+                    if (!string.IsNullOrEmpty(jti) && int.TryParse(userIdStr, out int userId))
+                    {
+                        using var conn = new System.Data.SqlClient.SqlConnection(CommonUtils.ConnectionString);
+                        conn.Open();
+                        using var cmd = new System.Data.SqlClient.SqlCommand(
+                            "INSERT INTO TokenBlacklist (TokenJti, UserId, ExpiresAt) VALUES (@jti, @uid, @exp)", conn);
+                        cmd.Parameters.AddWithValue("@jti", jti);
+                        cmd.Parameters.AddWithValue("@uid", userId);
+                        cmd.Parameters.AddWithValue("@exp", jwtToken.ValidTo);
+                        cmd.ExecuteNonQuery();
+                    }
+                }
+            }
+            catch { }
+
+            Response.Cookies.Delete("jwt");
+            return Ok(new { Message = "Logged out" });
         }
 
         // Exact BizMate VerifyOTP pattern with wider window for clock drift

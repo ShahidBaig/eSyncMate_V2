@@ -2,6 +2,19 @@
 
 namespace eSyncMate.Processor.Models
 {
+    public class LoginRequest
+    {
+        public string UserID { get; set; }
+        public string Password { get; set; }
+    }
+
+    public class UpdatePasswordRequest
+    {
+        public string UserID { get; set; }
+        public string OldPassword { get; set; }
+        public string Password { get; set; }
+    }
+
     public class LoginModel
     {
         public string Email { get; set; }

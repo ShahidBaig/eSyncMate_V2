@@ -6,4 +6,11 @@ namespace eSyncMate.Processor.Models
     {
         public DataTable ItemDataResponseDatatable { get; set; }
     }
+
+    public class DeleteItemsDataRequest
+    {
+        public int UserID { get; set; }
+        public string CustomerID { get; set; }
+        public string ItemType { get; set; }
+    }
 }

@@ -259,7 +259,9 @@ export class OrderDetailComponent {
   }
 
   getTooltipWithTranslation(status: any): string {
+    if (!status) return '';
     const tooltipData = this.getStatusTooltip(status.toLocaleUpperCase());
+    if (!tooltipData || !tooltipData.key) return '';
     return this.translate.instant(tooltipData.key, tooltipData.params);
   }
 

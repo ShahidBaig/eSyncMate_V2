@@ -1,4 +1,4 @@
-﻿using eSyncMate.DB;
+using eSyncMate.DB;
 using eSyncMate.DB.Entities;
 using eSyncMate.Processor.Connections;
 using eSyncMate.Processor.Models;
@@ -39,8 +39,8 @@ namespace eSyncMate.Processor.Managers
 
             try
             {
-                ConnectorDataModel? l_SourceConnector = JsonConvert.DeserializeObject<ConnectorDataModel>(route.SourceConnectorObject.Data);
-                ConnectorDataModel? l_DestinationConnector = JsonConvert.DeserializeObject<ConnectorDataModel>(route.DestinationConnectorObject.Data);
+                ConnectorDataModel? l_SourceConnector = ConnectorDataModel.Deserialize(route.SourceConnectorObject.Data);
+                ConnectorDataModel? l_DestinationConnector = ConnectorDataModel.Deserialize(route.DestinationConnectorObject.Data);
 
                 route.SaveLog(LogTypeEnum.Info, $"Started executing route [{route.Id}]", string.Empty, userNo);
 
@@ -149,8 +149,8 @@ namespace eSyncMate.Processor.Managers
             {
                 Customers customer = new Customers();
 
-                ConnectorDataModel? sourceConnector = JsonConvert.DeserializeObject<ConnectorDataModel>(route.SourceConnectorObject.Data);
-                ConnectorDataModel? destinationConnector = JsonConvert.DeserializeObject<ConnectorDataModel>(route.DestinationConnectorObject.Data);
+                ConnectorDataModel? sourceConnector = ConnectorDataModel.Deserialize(route.SourceConnectorObject.Data);
+                ConnectorDataModel? destinationConnector = ConnectorDataModel.Deserialize(route.DestinationConnectorObject.Data);
               
                 customer.UseConnection(destinationConnector.ConnectionString);
                 customer.GetObject("ERPCustomerID", sourceConnector.CustomerID);
@@ -174,8 +174,8 @@ namespace eSyncMate.Processor.Managers
             {
                 MaxTimeout = -1,
             };
-            ConnectorDataModel? sourceConnector = JsonConvert.DeserializeObject<ConnectorDataModel>(route.SourceConnectorObject.Data);
-            ConnectorDataModel? destinationConnector = JsonConvert.DeserializeObject<ConnectorDataModel>(route.DestinationConnectorObject.Data);
+            ConnectorDataModel? sourceConnector = ConnectorDataModel.Deserialize(route.SourceConnectorObject.Data);
+            ConnectorDataModel? destinationConnector = ConnectorDataModel.Deserialize(route.DestinationConnectorObject.Data);
 
             sourceConnector.Url = sourceConnector.BaseUrl + $"orders/{orderNumber}";
             response = RestConnector.Execute(sourceConnector, string.Empty).GetAwaiter().GetResult();
@@ -293,7 +293,7 @@ namespace eSyncMate.Processor.Managers
                 l_Data.UseConnection(string.Empty, l_Orders.Connection);
             }
 
-            sourceConnector.Url = sourceConnector.BaseUrl + "order_statuses/" + order.id;
+            sourceConnector.Url = sourceConnector.BaseUrl + "order_statuses/" + l_Orders.OrderNumber;
             sourceConnector.Method = "PUT";
 
             route.SaveData("JSON-SNT", 0, sourceConnector.Url, userNo);

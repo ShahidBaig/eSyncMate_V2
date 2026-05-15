@@ -1,4 +1,4 @@
-﻿using eSyncMate.DB.Entities;
+using eSyncMate.DB.Entities;
 using eSyncMate.Processor.Models;
 using EdiEngine.Runtime;
 using JUST;
@@ -172,7 +172,7 @@ namespace eSyncMate.Processor.Managers
 
                 if (l_Connector != null)
                 {
-                    l_Data = JsonConvert.DeserializeObject<ConnectorDataModel>(l_Connector.FirstOrDefault<CustomerConnectors>()?.ConnectorData);
+                    l_Data = ConnectorDataModel.Deserialize(l_Connector.FirstOrDefault<CustomerConnectors>()?.ConnectorData);
                 }
 
                 if (l_Data == null)
@@ -372,7 +372,7 @@ namespace eSyncMate.Processor.Managers
 
                 if (l_Connector != null)
                 {
-                    l_Data = JsonConvert.DeserializeObject<ConnectorDataModel>(l_Connector.FirstOrDefault<CustomerConnectors>()?.ConnectorData);
+                    l_Data = ConnectorDataModel.Deserialize(l_Connector.FirstOrDefault<CustomerConnectors>()?.ConnectorData);
                 }
 
                 if (l_Data == null)
@@ -467,7 +467,7 @@ namespace eSyncMate.Processor.Managers
 
                 if (l_Connector != null)
                 {
-                    l_Data = JsonConvert.DeserializeObject<ConnectorDataModel>(l_Connector.FirstOrDefault<CustomerConnectors>()?.ConnectorData);
+                    l_Data = ConnectorDataModel.Deserialize(l_Connector.FirstOrDefault<CustomerConnectors>()?.ConnectorData);
                 }
 
                 if (l_Data == null)
@@ -714,7 +714,7 @@ namespace eSyncMate.Processor.Managers
 
                 if (l_Connector != null)
                 {
-                    l_Data = JsonConvert.DeserializeObject<ConnectorDataModel>(l_Connector.FirstOrDefault<CustomerConnectors>()?.ConnectorData);
+                    l_Data = ConnectorDataModel.Deserialize(l_Connector.FirstOrDefault<CustomerConnectors>()?.ConnectorData);
                 }
 
                 if (l_Data == null)
@@ -1043,7 +1043,7 @@ namespace eSyncMate.Processor.Managers
 
                 if (l_Connector != null)
                 {
-                    l_Data = JsonConvert.DeserializeObject<ConnectorDataModel>(l_Connector.FirstOrDefault<CustomerConnectors>()?.ConnectorData);
+                    l_Data = ConnectorDataModel.Deserialize(l_Connector.FirstOrDefault<CustomerConnectors>()?.ConnectorData);
                 }
 
                 if (l_Data == null)
@@ -1343,7 +1343,7 @@ namespace eSyncMate.Processor.Managers
 
                 if (l_Connector != null)
                 {
-                    l_Data = JsonConvert.DeserializeObject<ConnectorDataModel>(l_Connector.FirstOrDefault<CustomerConnectors>()?.ConnectorData);
+                    l_Data = ConnectorDataModel.Deserialize(l_Connector.FirstOrDefault<CustomerConnectors>()?.ConnectorData);
                 }
 
                 if (l_Data == null)
@@ -1561,7 +1561,7 @@ namespace eSyncMate.Processor.Managers
 
                 if (l_Connector != null)
                 {
-                    l_Data = JsonConvert.DeserializeObject<ConnectorDataModel>(l_Connector.FirstOrDefault<CustomerConnectors>()?.ConnectorData);
+                    l_Data = ConnectorDataModel.Deserialize(l_Connector.FirstOrDefault<CustomerConnectors>()?.ConnectorData);
                 }
 
                 if (l_Data == null)
@@ -2415,7 +2415,7 @@ namespace eSyncMate.Processor.Managers
 
                 if (l_Connector != null)
                 {
-                    l_Data = JsonConvert.DeserializeObject<ConnectorDataModel>(l_Connector.FirstOrDefault<CustomerConnectors>()?.ConnectorData);
+                    l_Data = ConnectorDataModel.Deserialize(l_Connector.FirstOrDefault<CustomerConnectors>()?.ConnectorData);
                 }
 
                 if (l_Data == null)
@@ -2575,7 +2575,7 @@ namespace eSyncMate.Processor.Managers
 
                 if (l_Connector != null)
                 {
-                    l_Data = JsonConvert.DeserializeObject<ConnectorDataModel>(l_Connector.FirstOrDefault<CustomerConnectors>()?.ConnectorData);
+                    l_Data = ConnectorDataModel.Deserialize(l_Connector.FirstOrDefault<CustomerConnectors>()?.ConnectorData);
                 }
 
                 if (l_Data == null)

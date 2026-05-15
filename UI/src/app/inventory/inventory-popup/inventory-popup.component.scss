@@ -124,5 +124,28 @@
 
 /* ===== Data columns ===== */
 ::ng-deep .files-table .mat-column-CustomerId { min-width: 160px; }
+::ng-deep .files-table .mat-column-type { min-width: 140px; }
 ::ng-deep .files-table .mat-column-ItemId { min-width: 160px; }
 ::ng-deep .files-table .mat-column-createdDate { min-width: 140px; }
+
+/* ===== Type badges ===== */
+.type-chip {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.type-sent {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+
+.type-received {
+  background: #f0fdf4;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
