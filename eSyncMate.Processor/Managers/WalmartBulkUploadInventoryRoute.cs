@@ -82,7 +82,18 @@ namespace eSyncMate.Processor.Managers
                     l_InventoryBatchWise.CustomerID = l_SourceConnector.CustomerID;
                     l_SCSInventoryFeed.InsertInventoryBatchWise(l_InventoryBatchWise);
 
-                 
+                    // Log UPLOAD snapshot — captures inventory state sent to Walmart (Bulk)
+                    string l_LogTable = SCSInventoryFeed.GetLogTableName(l_SourceConnector.ConnectionString, l_SourceConnector.CustomerID);
+                    if (!string.IsNullOrEmpty(l_LogTable))
+                    {
+                        SCSInventoryFeed.BulkInsertToLogTable(
+                            l_SourceConnector.ConnectionString,
+                            l_LogTable,
+                            l_data,
+                            l_InventoryBatchWise.BatchID,
+                            "UPLOAD");
+                    }
+
                     int chunkSize = 5000;
 
                     if (l_data.Rows.Count <= chunkSize)
@@ -275,7 +286,7 @@ namespace eSyncMate.Processor.Managers
                 }
 
                 // Bulk insert sent data (single DB call instead of N calls)
-                this.feed.BulkNewInsertData(this.sourceConnector.ConnectionString, "SCSInventoryFeedData", bulkInsertTable);
+                this.feed.BulkNewInsertData(this.sourceConnector.ConnectionString, "SCSInventoryFeedData_" + this.sourceConnector.CustomerID, bulkInsertTable);
 
                 // Make single API call for this chunk using Feed API
                 string body = JsonConvert.SerializeObject(requestModel, Formatting.None, new JsonSerializerSettings
@@ -326,7 +337,7 @@ namespace eSyncMate.Processor.Managers
                     }
 
                     // Single bulk insert for responses
-                    this.feed.BulkNewInsertData(this.sourceConnector.ConnectionString, "SCSInventoryFeedData", bulkResponseTable);
+                    this.feed.BulkNewInsertData(this.sourceConnector.ConnectionString, "SCSInventoryFeedData_" + this.sourceConnector.CustomerID, bulkResponseTable);
 
                     // Bulk update item status (single DB call)
                     this.feed.BulkUpdateItemStatus(this.sourceConnector.ConnectionString, this.data);

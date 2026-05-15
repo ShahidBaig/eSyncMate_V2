@@ -1,0 +1,13 @@
+ALTER PROCEDURE [dbo].[Sp_GetInventoryLogTableColumns]
+    @p_TableName NVARCHAR(200)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT COLUMN_NAME
+    FROM   INFORMATION_SCHEMA.COLUMNS
+    WHERE  TABLE_SCHEMA = 'dbo'
+      AND  TABLE_NAME   = @p_TableName
+      AND  COLUMN_NAME NOT IN ('LogID', 'BatchID', 'LogType', 'LogDate')
+    ORDER BY ORDINAL_POSITION
+END

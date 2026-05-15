@@ -93,6 +93,18 @@ namespace eSyncMate.Processor.Managers
 
                     l_SCSInventoryFeed.InsertInventoryBatchWise(l_InventoryBatchWise);
 
+                    // Log UPLOAD snapshot — captures inventory state sent to Walmart
+                    string l_LogTable = SCSInventoryFeed.GetLogTableName(l_SourceConnector.ConnectionString, l_SourceConnector.CustomerID);
+                    if (!string.IsNullOrEmpty(l_LogTable))
+                    {
+                        SCSInventoryFeed.BulkInsertToLogTable(
+                            l_SourceConnector.ConnectionString,
+                            l_LogTable,
+                            l_data,
+                            l_InventoryBatchWise.BatchID,
+                            "UPLOAD");
+                    }
+
                     if (l_data.Rows.Count <= 100)
                     {
                         ProcessWalmartItemsThread itemsThread = new ProcessWalmartItemsThread(l_data, route, feed, l_DestinationConnector, l_SourceConnector, userNo, l_InventoryBatchWise.BatchID);
@@ -165,9 +177,10 @@ namespace eSyncMate.Processor.Managers
         private ConnectorDataModel sourceConnector;
         private int userNo;
         private string bacthID;
+        private string logTableName;
 
         // The constructor obtains the state information.
-        public ProcessWalmartItemsThread(DataTable data, Routes route, SCSInventoryFeed feed, ConnectorDataModel destinationConnector, 
+        public ProcessWalmartItemsThread(DataTable data, Routes route, SCSInventoryFeed feed, ConnectorDataModel destinationConnector,
                                 ConnectorDataModel sourceConnector, int userNo,string batchID)
         {
             this.data = data;
@@ -177,6 +190,7 @@ namespace eSyncMate.Processor.Managers
             this.sourceConnector = sourceConnector;
             this.userNo = userNo;
             this.bacthID = batchID;
+            this.logTableName = SCSInventoryFeed.GetLogTableName(sourceConnector.ConnectionString, sourceConnector.CustomerID);
         }
 
         public void ProcessItems()
@@ -256,6 +270,7 @@ namespace eSyncMate.Processor.Managers
                     if (response != null && response.nodes.Any(node => node.errors.Any()))
                     {
                         this.feed.UpdateItemStatusError(itemId, customerId);
+                        this.feed.UpdateLogItemStatus(this.logTableName, this.bacthID, itemId, "Error");
 
                         this.route.SaveLog(LogTypeEnum.Error, $"WalmartUploadInventory has node errors for item [{row["ProductId"]}].", sourceResponse.Content, this.userNo);
                     }

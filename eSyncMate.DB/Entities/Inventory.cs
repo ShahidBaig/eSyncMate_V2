@@ -532,6 +532,43 @@ namespace eSyncMate.DB.Entities
             return l_Result;
         }
 
+        // Queries Sp_GetInventoryBatchItemsLog (per-customer log tables).
+        // Returns true only when historical log data actually exists for the given batches.
+        // Caller falls back to GetInventoryBatchItems when this returns false.
+        public bool GetInventoryBatchItemsFromLog(
+            string p_BatchIDsCsv, string p_ItemID,
+            int p_PageNumber, int p_PageSize,
+            ref DataTable p_Data, out int p_TotalCount)
+        {
+            p_TotalCount = 0;
+            string l_Param = string.Empty;
+            string l_Query = "EXEC [dbo].[Sp_GetInventoryBatchItemsLog] ";
+
+            PublicFunctions.FieldToParam(p_BatchIDsCsv ?? string.Empty, ref l_Param, Declarations.FieldTypes.String);
+            l_Query += " @p_BatchIDs = " + l_Param;
+
+            PublicFunctions.FieldToParam(p_ItemID ?? string.Empty, ref l_Param, Declarations.FieldTypes.String);
+            l_Query += ", @p_ItemID = " + l_Param;
+
+            PublicFunctions.FieldToParam(p_PageNumber, ref l_Param, Declarations.FieldTypes.Number);
+            l_Query += ", @p_PageNumber = " + l_Param;
+
+            PublicFunctions.FieldToParam(p_PageSize, ref l_Param, Declarations.FieldTypes.Number);
+            l_Query += ", @p_PageSize = " + l_Param;
+
+            DataSet l_DataSet = new DataSet();
+            bool l_Result = Connection.GetDataSP(l_Query, ref l_DataSet);
+
+            if (l_DataSet.Tables.Count > 0 && l_DataSet.Tables[0].Rows.Count > 0)
+                p_Data = l_DataSet.Tables[0].Copy();
+
+            if (l_DataSet.Tables.Count > 1 && l_DataSet.Tables[1].Rows.Count > 0)
+                p_TotalCount = Convert.ToInt32(l_DataSet.Tables[1].Rows[0]["TotalCount"]);
+
+            l_DataSet.Dispose();
+            return l_Result && p_TotalCount > 0;
+        }
+
         public bool GetInventoryBatchItems(
             string p_BatchIDsCsv, string p_ItemID,
             int p_PageNumber, int p_PageSize,

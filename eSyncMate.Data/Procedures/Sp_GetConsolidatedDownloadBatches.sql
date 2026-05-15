@@ -7,7 +7,8 @@ BEGIN
 			@l_ItemID				NVARCHAR(100)	= ISNULL(@p_ItemID, ''),
 			@l_CustomerID			VARCHAR(500),
 			@l_CurrentUploadDate	DATETIME,
-			@l_PreviousUploadDate	DATETIME
+			@l_PreviousUploadDate	DATETIME,
+			@l_FeedDataSource		NVARCHAR(300)	= N'VW_AllSCSInventoryFeedData'
 
 	BEGIN TRY
 		-- Step 1: Current upload batch ki StartDate + CustomerID nikalo
@@ -16,6 +17,14 @@ BEGIN
 		FROM	InventoryBatchWise WITH (NOLOCK)
 		WHERE	BatchID = @l_UploadBatchID
 			AND Status <> 'DELETED'
+
+		-- CustomerID known → use direct customer table (faster than UNION ALL)
+		IF @l_CustomerID IS NOT NULL
+		BEGIN
+			DECLARE @l_CandidateTable NVARCHAR(200) = N'SCSInventoryFeedData_' + @l_CustomerID
+			IF OBJECT_ID('dbo.' + @l_CandidateTable, 'U') IS NOT NULL
+				SET @l_FeedDataSource = QUOTENAME(@l_CandidateTable)
+		END
 
 		-- Step 2: Same customer ka previous upload dhoondo (current se pehle)
 		SELECT TOP 1 @l_PreviousUploadDate = ISNULL(StartDate, FinishDate)
@@ -44,24 +53,29 @@ BEGIN
 			RouteType	VARCHAR(500)
 		)
 
+		-- Build INSERT with dynamic feed data source for EXISTS guard
+		DECLARE @l_DownloadSql NVARCHAR(MAX) = N'
 		INSERT INTO #Downloads (BatchID, ItemCount, StartDate, FinishDate, Status, RouteType)
 		SELECT	IBW.BatchID, IBW.ItemCount, IBW.StartDate, IBW.FinishDate, IBW.Status, IBW.RouteType
 		FROM	InventoryBatchWise IBW WITH (NOLOCK)
-		WHERE	IBW.CustomerID = @l_CustomerID
-			AND IBW.Status <> 'DELETED'
-			AND IBW.RouteType IN ('SCSFullInventoryFeed', 'SCSDifferentialInventoryFeed')
-			AND ISNULL(IBW.StartDate, IBW.FinishDate) < @l_CurrentUploadDate
-			-- If previous upload exists, lower-bound the range; else no lower bound
-			AND (@l_PreviousUploadDate IS NULL
-				 OR ISNULL(IBW.StartDate, IBW.FinishDate) > @l_PreviousUploadDate)
-			-- Archive guard: batch must have live rows in SCSInventoryFeedData
-			-- If ItemID filter provided, only include batches that actually contain that item
+		WHERE	IBW.CustomerID = @CustomerID
+			AND IBW.Status <> ''DELETED''
+			AND IBW.RouteType IN (''SCSFullInventoryFeed'', ''SCSDifferentialInventoryFeed'')
+			AND ISNULL(IBW.StartDate, IBW.FinishDate) < @CurrentUploadDate
+			AND (@PreviousUploadDate IS NULL
+				 OR ISNULL(IBW.StartDate, IBW.FinishDate) > @PreviousUploadDate)
 			AND EXISTS (
-				SELECT 1
-				FROM	SCSInventoryFeedData D WITH (NOLOCK)
-				WHERE	D.BatchID = IBW.BatchID
-					AND (@l_ItemID = '' OR D.ItemId LIKE '%' + @l_ItemID + '%')
-			)
+				SELECT 1 FROM ' + @l_FeedDataSource + N' D
+				WHERE D.BatchID = IBW.BatchID
+				  AND (@ItemID = '''' OR D.ItemId LIKE ''%'' + @ItemID + ''%'')
+			)'
+
+		EXEC sp_executesql @l_DownloadSql,
+			N'@CustomerID VARCHAR(500), @CurrentUploadDate DATETIME, @PreviousUploadDate DATETIME, @ItemID NVARCHAR(100)',
+			@CustomerID          = @l_CustomerID,
+			@CurrentUploadDate   = @l_CurrentUploadDate,
+			@PreviousUploadDate  = @l_PreviousUploadDate,
+			@ItemID              = @l_ItemID
 
 		-- Result Set 1: Consolidated single row (HAVING skips empty case automatically)
 		SELECT	@l_CustomerID						AS CustomerID,

@@ -80,6 +80,18 @@ namespace eSyncMate.Processor.Managers
 
                     l_SCSInventoryFeed.InsertInventoryBatchWise(l_InventoryBatchWise);
 
+                    // Log UPLOAD snapshot — captures inventory state sent to Knot
+                    string l_LogTable = SCSInventoryFeed.GetLogTableName(l_SourceConnector.ConnectionString, l_SourceConnector.CustomerID);
+                    if (!string.IsNullOrEmpty(l_LogTable))
+                    {
+                        SCSInventoryFeed.BulkInsertToLogTable(
+                            l_SourceConnector.ConnectionString,
+                            l_LogTable,
+                            l_data,
+                            l_InventoryBatchWise.BatchID,
+                            "UPLOAD");
+                    }
+
                     foreach (DataRow row in l_data.Rows)
                     {
                         string customerId = row["CustomerId"].ToString();

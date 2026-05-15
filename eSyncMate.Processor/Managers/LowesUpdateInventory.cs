@@ -82,6 +82,18 @@ namespace eSyncMate.Processor.Managers
 
                     l_SCSInventoryFeed.InsertInventoryBatchWise(l_InventoryBatchWise);
 
+                    // Log UPLOAD snapshot — captures inventory state sent to Lowe's
+                    string l_LogTable = SCSInventoryFeed.GetLogTableName(l_SourceConnector.ConnectionString, l_SourceConnector.CustomerID);
+                    if (!string.IsNullOrEmpty(l_LogTable))
+                    {
+                        SCSInventoryFeed.BulkInsertToLogTable(
+                            l_SourceConnector.ConnectionString,
+                            l_LogTable,
+                            l_data,
+                            l_InventoryBatchWise.BatchID,
+                            "UPLOAD");
+                    }
+
                     // Process in chunks of 15,000 with 1-minute delay between chunks
                     int chunkSize = 10000;
 
@@ -219,7 +231,7 @@ namespace eSyncMate.Processor.Managers
                 }
 
                 // Bulk insert sent data (single DB call instead of N calls)
-                this.feed.BulkNewInsertData(this.sourceConnector.ConnectionString, "SCSInventoryFeedData", bulkInsertTable);
+                this.feed.BulkNewInsertData(this.sourceConnector.ConnectionString, "SCSInventoryFeedData_" + this.sourceConnector.CustomerID, bulkInsertTable);
 
                 // Make single API call for this chunk
                 string body = JsonConvert.SerializeObject(requestModel);
@@ -245,7 +257,7 @@ namespace eSyncMate.Processor.Managers
                     }
 
                     // Single bulk insert for responses
-                    this.feed.BulkNewInsertData(this.sourceConnector.ConnectionString, "SCSInventoryFeedData", bulkResponseTable);
+                    this.feed.BulkNewInsertData(this.sourceConnector.ConnectionString, "SCSInventoryFeedData_" + this.sourceConnector.CustomerID, bulkResponseTable);
 
                     // Bulk update item status (single DB call)
                     this.feed.BulkUpdateItemStatus(this.sourceConnector.ConnectionString, this.data);

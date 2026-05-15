@@ -98,6 +98,17 @@ namespace eSyncMate.Processor.Managers
 
                     l_SCSInventoryFeed.InsertInventoryBatchWise(l_InventoryBatchWise);
 
+                    // Log UPLOAD snapshot — captures inventory state sent to Amazon
+                    string l_LogTable = SCSInventoryFeed.GetLogTableName(l_SourceConnector.ConnectionString, l_SourceConnector.CustomerID);
+                    if (!string.IsNullOrEmpty(l_LogTable))
+                    {
+                        SCSInventoryFeed.BulkInsertToLogTable(
+                            l_SourceConnector.ConnectionString,
+                            l_LogTable,
+                            l_data,
+                            l_InventoryBatchWise.BatchID,
+                            "UPLOAD");
+                    }
 
                     int i = 0;
                     int totalThread = CommonUtils.UploadInventoryTotalThread;
@@ -266,7 +277,7 @@ namespace eSyncMate.Processor.Managers
                 string feedDocumentId = createDocumentResponse["feedDocumentId"].ToString();
                 string feedUrl = createDocumentResponse["url"].ToString();
 
-                string jsonrequest = GenerateInventoryFeedXml(this.data, this.feed, this.sourceConnector.ConnectionString, this.bacthID);
+                string jsonrequest = GenerateInventoryFeedXml(this.data, this.feed, this.sourceConnector.ConnectionString, this.bacthID, this.sourceConnector.CustomerID);
 
                 if (!string.IsNullOrWhiteSpace(jsonrequest))
                 {
@@ -304,7 +315,7 @@ namespace eSyncMate.Processor.Managers
                         feed.UpdateItemStatus(row["ItemId"].ToString(), row["CustomerId"].ToString());
                     }
                     
-                    feed.BulkNewInsertData(this.sourceConnector.ConnectionString, "SCSInventoryFeedData", bulkInsertTable);
+                    feed.BulkNewInsertData(this.sourceConnector.ConnectionString, "SCSInventoryFeedData_" + this.sourceConnector.CustomerID, bulkInsertTable);
                     this.feed.InsertInventoryBatchWiseFeedDetail(this.bacthID, "NEW", feedId, this.destinationConnector.CustomerID);
                 }
             }
@@ -371,7 +382,7 @@ namespace eSyncMate.Processor.Managers
         //    }
         //}
 
-        private static string GenerateInventoryFeedXml(DataTable inventoryData, SCSInventoryFeed feed,string ConnectionString , string batchID)
+        private static string GenerateInventoryFeedXml(DataTable inventoryData, SCSInventoryFeed feed, string ConnectionString, string batchID, string customerID)
         {
             StringBuilder xml = new StringBuilder();
             feed.UseConnection(ConnectionString);
@@ -439,7 +450,7 @@ namespace eSyncMate.Processor.Managers
                         Formatting.None
                     );
 
-                feed.BulkNewInsertData(ConnectionString, "SCSInventoryFeedData", bulkInsertTable);
+                feed.BulkNewInsertData(ConnectionString, "SCSInventoryFeedData_" + customerID, bulkInsertTable);
 
                 return fullFeedJson;
             }
