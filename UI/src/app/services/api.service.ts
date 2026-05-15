@@ -5,53 +5,65 @@ import { map } from 'rxjs/operators';
 import { Order, RouteLog, User, UserType, UserMenuResponse, UserMenuModule, Role, RoleMenu, MenuDef, ModuleDef } from '../models/models';
 import { Observable } from 'rxjs';
 import { environment } from 'src/environments/environment';
+import { TokenStoreService } from './token-store.service';
 
 @Injectable({
   providedIn: 'root',
 })
 export class ApiService {
   apiUrl = environment.apiUrl;
-  constructor(private http: HttpClient, private jwt: JwtHelperService) { }
+  constructor(private http: HttpClient, private jwt: JwtHelperService, private tokenStore: TokenStoreService) { }
 
   createAccount(user: any) {
     return this.http.post(this.apiUrl + 'RegisterUser', user)
   }
 
   login(loginInfo: any) {
-    let params = new HttpParams()
-      .append('userID', loginInfo.userID)
-      .append('password', loginInfo.password);
-    return this.http.get(this.apiUrl + 'Login', {
-      params: params,
-    });
+    return this.http.post(this.apiUrl + 'Login', {
+      userID: loginInfo.userID,
+      password: loginInfo.password
+    }, { withCredentials: true });
+  }
+
+  refreshToken() {
+    return this.http.post(this.apiUrl + 'RefreshToken', {}, { withCredentials: true });
   }
 
   updatePassword(userID: any, oldPassword: string, newPassword: string) {
-    let params = new HttpParams()
-      .append('UserID', userID)
-      .append('oldPassword', oldPassword)
-      .append('Password', newPassword);
-    return this.http.get(this.apiUrl + 'UpdatePassword', {
-      params: params,
+    return this.http.post(this.apiUrl + 'UpdatePassword', {
+      userID: userID,
+      oldPassword: oldPassword,
+      password: newPassword
     });
   }
 
   saveToken(token: string) {
-    localStorage.setItem('access_token', token);
+    this.tokenStore.set(token);
 
-    let tokenData = this.jwt.decodeToken();
-    if (tokenData.exp) {
+    const tokenData = this.jwt.decodeToken(token);
+    if (tokenData?.exp) {
       const expiryDate = new Date(tokenData.exp * 1000);
-      localStorage.setItem('tokenExpiry', expiryDate.toISOString());
+      sessionStorage.setItem('tokenExpiry', expiryDate.toISOString());
     }
+    // Remove old client-side expiry check — server 401 handles it now
+    sessionStorage.removeItem('tokenExpiry');
   }
 
   isLoggedIn(): boolean {
-    return !!localStorage.getItem('access_token');
+    return this.tokenStore.has();
+  }
+
+  getToken(): string {
+    return this.tokenStore.get();
   }
 
   deleteToken() {
-    localStorage.removeItem('access_token');
+    // Call logout API first (token still in memory so header gets attached)
+    this.http.post(this.apiUrl + 'Logout', {}).subscribe({ error: () => {} });
+    // Then clear local state
+    this.tokenStore.clear();
+    sessionStorage.removeItem('tokenExpiry');
+    sessionStorage.removeItem('sessionExpiryMessage');
     localStorage.removeItem('user_menus');
   }
 
@@ -155,7 +167,7 @@ export class ApiService {
 
   getTokenUserInfo(): User | null {
     if (!this.isLoggedIn()) return null;
-    let token = this.jwt.decodeToken();
+    let token = this.jwt.decodeToken(this.tokenStore.get());
 
     let user: User = {
       id: token.id,
@@ -190,27 +202,19 @@ export class ApiService {
   }
 
   blockUser(id: number) {
-    return this.http.get(this.apiUrl + 'ChangeBlockStatus/1/' + id, {
-      responseType: 'text',
-    });
+    return this.http.post(this.apiUrl + 'ChangeBlockStatus', { id, status: 1 }, { responseType: 'text' });
   }
 
   unblockUser(id: number) {
-    return this.http.get(this.apiUrl + 'ChangeBlockStatus/0/' + id, {
-      responseType: 'text',
-    });
+    return this.http.post(this.apiUrl + 'ChangeBlockStatus', { id, status: 0 }, { responseType: 'text' });
   }
 
   enableUser(id: number) {
-    return this.http.get(this.apiUrl + 'ChangeEnableStatus/1/' + id, {
-      responseType: 'text',
-    });
+    return this.http.post(this.apiUrl + 'ChangeEnableStatus', { id, status: 1 }, { responseType: 'text' });
   }
 
   disableUser(id: number) {
-    return this.http.get(this.apiUrl + 'ChangeEnableStatus/0/' + id, {
-      responseType: 'text',
-    });
+    return this.http.post(this.apiUrl + 'ChangeEnableStatus', { id, status: 0 }, { responseType: 'text' });
   }
 
   getOrders(orderId: number, fromDate: string, toDate: string, orderNumber: string, status: string, ExternalId: string, CustomerId: string, pageNumber: number = 1, pageSize: number = 10) {

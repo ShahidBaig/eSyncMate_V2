@@ -1,4 +1,4 @@
-﻿using eSyncMate.DB;
+using eSyncMate.DB;
 using eSyncMate.DB.Entities;
 using eSyncMate.Processor.Connections;
 using eSyncMate.Processor.Models;
@@ -42,8 +42,8 @@ namespace eSyncMate.Processor.Managers
 
             try
             {
-                ConnectorDataModel? l_SourceConnector = JsonConvert.DeserializeObject<ConnectorDataModel>(route.SourceConnectorObject.Data);
-                ConnectorDataModel? l_DestinationConnector = JsonConvert.DeserializeObject<ConnectorDataModel>(route.DestinationConnectorObject.Data);
+                ConnectorDataModel? l_SourceConnector = ConnectorDataModel.Deserialize(route.SourceConnectorObject.Data);
+                ConnectorDataModel? l_DestinationConnector = ConnectorDataModel.Deserialize(route.DestinationConnectorObject.Data);
 
                 route.SaveLog(LogTypeEnum.Info, $"Started executing route [{route.Id}]", string.Empty, userNo);
 
@@ -105,7 +105,7 @@ namespace eSyncMate.Processor.Managers
                         while (i < tables.Count)
                         {
                             // Deep copy connector per thread to avoid race condition on Url property
-                            ConnectorDataModel threadConnector = JsonConvert.DeserializeObject<ConnectorDataModel>(JsonConvert.SerializeObject(l_DestinationConnector));
+                            ConnectorDataModel threadConnector = ConnectorDataModel.Deserialize(JsonConvert.SerializeObject(l_DestinationConnector));
                             ProcessBulkItemPricesThread itemsThread = new ProcessBulkItemPricesThread(tables[i], route, threadConnector, l_SourceConnector, userNo);
 
                             Thread t = new Thread(new ThreadStart(itemsThread.ProcessItems));

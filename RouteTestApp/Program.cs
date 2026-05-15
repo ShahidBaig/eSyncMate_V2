@@ -48,6 +48,12 @@ using RouteTestApp;
 
 static void Main()
 {
+    //// //======== Connector Decryptor Tool ========
+    //ConnectorDecryptorTool();
+    //Console.WriteLine("Completed");
+    //Console.ReadLine();
+    //return;
+
     // ======== Amazon Missing Orders Report ========
     // FindMissingAmazonOrders().GetAwaiter().GetResult();
     // return;
@@ -2820,3 +2826,181 @@ static List<DataRow> GetDatabaseOrders(string connectionString, string erpCustom
     return result;
 }
 
+// ============================================================
+// ======== CONNECTOR DECRYPTOR TOOL ==========================
+// ============================================================
+static void ConnectorDecryptorTool()
+{
+    const string connStr  = "Server=192.168.0.44,7100;Database=ESYNCMATE;UID=esyncmate;PWD=eSyncMate786$$$;";
+    const string encPfx   = "ENC:";
+    string[] sensitives   = { "Password","ConnectionString","ConsumerSecret","Token","TokenSecret","Username" };
+
+    // ↓ Encryption key — appsettings.json wali key yahan daalo
+    var key = "eSyncMate@Dev#2026!!SecretKey";
+
+    while (true)
+    {
+        Console.Clear();
+        Console.ForegroundColor = ConsoleColor.Cyan;
+        Console.WriteLine("╔══════════════════════════════════════════════╗");
+        Console.WriteLine("║     eSyncMate — Connector Decryptor Tool     ║");
+        Console.WriteLine("╠══════════════════════════════════════════════╣");
+        Console.WriteLine("║  1. List all connectors                      ║");
+        Console.WriteLine("║  2. View connector by ID (decrypted)         ║");
+        Console.WriteLine("║  3. Migrate existing data (encrypt all)      ║");
+        Console.WriteLine("║  4. Exit                                     ║");
+        Console.WriteLine("╚══════════════════════════════════════════════╝");
+        Console.ResetColor();
+        Console.Write("\nChoice (1-4): ");
+        var choice = Console.ReadLine()?.Trim();
+
+        if (choice == "4") break;
+        else if (choice == "1")
+        {
+            var dt = CdQuery(connStr, "SELECT Id, Name, TypeId FROM Connectors ORDER BY Id");
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine($"\n{"ID",-6} {"Name",-45} TypeId");
+            Console.WriteLine(new string('─', 60));
+            Console.ResetColor();
+            foreach (System.Data.DataRow r in dt.Rows)
+                Console.WriteLine($"{r["Id"],-6} {r["Name"],-45} {r["TypeId"]}");
+            Console.WriteLine($"\nTotal: {dt.Rows.Count}");
+        }
+        else if (choice == "2")
+        {
+            Console.Write("Connector ID: ");
+            if (!int.TryParse(Console.ReadLine(), out int cid)) { Console.WriteLine("Invalid."); }
+            else
+            {
+                var dt = CdQuery(connStr, $"SELECT Id, Name, Data FROM Connectors WHERE Id = {cid}");
+                if (dt.Rows.Count == 0) { Console.WriteLine("Not found."); }
+                else
+                {
+                    var data = dt.Rows[0]["Data"]?.ToString() ?? "";
+                    Console.Clear();
+                    Console.ForegroundColor = ConsoleColor.Cyan;
+                    Console.WriteLine($"\n ID: {cid}  |  Name: {dt.Rows[0]["Name"]}");
+                    Console.WriteLine(new string('━', 60));
+                    Console.ResetColor();
+                    try
+                    {
+                        var obj = Newtonsoft.Json.Linq.JObject.Parse(CdDecryptData(data, key, encPfx, sensitives));
+                        foreach (var p in obj.Properties())
+                        {
+                            if (p.Value.Type == Newtonsoft.Json.Linq.JTokenType.Array)
+                            {
+                                Console.ForegroundColor = ConsoleColor.DarkGray;
+                                Console.WriteLine($"  {p.Name,-22} [array - {p.Value.Count()} items]");
+                            }
+                            else
+                            {
+                                Console.ForegroundColor = sensitives.Contains(p.Name) ? ConsoleColor.Green : ConsoleColor.White;
+                                Console.WriteLine($"  {p.Name,-22} {p.Value}");
+                            }
+                        }
+                        Console.ForegroundColor = ConsoleColor.Green;
+                        Console.WriteLine("\n  [Green = decrypted sensitive fields]");
+                    }
+                    catch (Exception ex) { Console.ForegroundColor = ConsoleColor.Red; Console.WriteLine($"Error: {ex.Message}"); }
+                    Console.ResetColor();
+                }
+            }
+        }
+        else if (choice == "3")
+        {
+
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine("\n WARNING: Encrypts ALL connector sensitive fields in DB.");
+            Console.WriteLine("  Backup table (Connectors_Backup) will be created first.");
+            Console.Write("\nType 'YES' to confirm: ");
+            Console.ResetColor();
+            if (Console.ReadLine()?.Trim() != "YES") { Console.WriteLine("Cancelled."); }
+            else
+            {
+                CdExec(connStr, "IF OBJECT_ID('Connectors_Backup','U') IS NOT NULL DROP TABLE Connectors_Backup; SELECT * INTO Connectors_Backup FROM Connectors;");
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine("Backup created: Connectors_Backup");
+                Console.ResetColor();
+                var dt = CdQuery(connStr, "SELECT Id, Data FROM Connectors");
+                int ok = 0, skip = 0, fail = 0;
+                foreach (System.Data.DataRow row in dt.Rows)
+                {
+                    var id   = (int)row["Id"];
+                    var data = row["Data"]?.ToString() ?? "";
+                    if (string.IsNullOrWhiteSpace(data)) { skip++; continue; }
+                    try
+                    {
+                        var enc = CdEncryptData(data, key, encPfx, sensitives);
+                        CdExec(connStr, $"UPDATE Connectors SET Data = @d WHERE Id = @i", ("@d", enc), ("@i", id));
+                        ok++;
+                        Console.Write($"\r  Encrypted {ok}/{dt.Rows.Count}...");
+                    }
+                    catch (Exception ex) { fail++; Console.ForegroundColor = ConsoleColor.Red; Console.WriteLine($"\n  Failed ID {id}: {ex.Message}"); Console.ResetColor(); }
+                }
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine($"\n\nDone: {ok} encrypted, {skip} skipped, {fail} failed");
+                Console.ResetColor();
+            }
+        }
+
+        Console.WriteLine("\nPress any key to continue...");
+        Console.ReadKey();
+    }
+}
+
+static string CdEncrypt(string plain, string key, string pfx)
+{
+    if (string.IsNullOrEmpty(plain) || plain.StartsWith(pfx)) return plain;
+    using var aes = System.Security.Cryptography.Aes.Create();
+    aes.Key = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(key));
+    aes.GenerateIV();
+    var pb  = System.Text.Encoding.UTF8.GetBytes(plain);
+    var cb  = aes.CreateEncryptor().TransformFinalBlock(pb, 0, pb.Length);
+    var buf = new byte[aes.IV.Length + cb.Length];
+    Buffer.BlockCopy(aes.IV, 0, buf, 0, aes.IV.Length);
+    Buffer.BlockCopy(cb,     0, buf, aes.IV.Length, cb.Length);
+    return pfx + Convert.ToBase64String(buf);
+}
+
+static string CdDecrypt(string cipher, string key, string pfx)
+{
+    if (string.IsNullOrEmpty(cipher) || !cipher.StartsWith(pfx)) return cipher;
+    var all = Convert.FromBase64String(cipher[pfx.Length..]);
+    using var aes = System.Security.Cryptography.Aes.Create();
+    aes.Key = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(key));
+    aes.IV  = all[..aes.IV.Length];
+    var enc = all[aes.IV.Length..];
+    return System.Text.Encoding.UTF8.GetString(aes.CreateDecryptor().TransformFinalBlock(enc, 0, enc.Length));
+}
+
+// Encrypt entire JSON blob
+static string CdEncryptData(string json, string key, string pfx, string[] fields)
+{
+    if (string.IsNullOrWhiteSpace(json)) return json;
+    return CdEncrypt(json, key, pfx);
+}
+
+// Decrypt entire JSON blob
+static string CdDecryptData(string json, string key, string pfx, string[] fields)
+{
+    if (string.IsNullOrWhiteSpace(json)) return json;
+    return CdDecrypt(json, key, pfx);
+}
+
+static System.Data.DataTable CdQuery(string connStr, string sql)
+{
+    using var conn = new System.Data.SqlClient.SqlConnection(connStr);
+    conn.Open();
+    var dt = new System.Data.DataTable();
+    new System.Data.SqlClient.SqlDataAdapter(new System.Data.SqlClient.SqlCommand(sql, conn)).Fill(dt);
+    return dt;
+}
+
+static void CdExec(string connStr, string sql, params (string name, object val)[] p)
+{
+    using var conn = new System.Data.SqlClient.SqlConnection(connStr);
+    conn.Open();
+    using var cmd = new System.Data.SqlClient.SqlCommand(sql, conn);
+    foreach (var (n, v) in p) cmd.Parameters.AddWithValue(n, v);
+    cmd.ExecuteNonQuery();
+}

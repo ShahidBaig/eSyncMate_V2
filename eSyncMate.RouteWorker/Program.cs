@@ -44,6 +44,7 @@ namespace eSyncMate.RouteWorker
                     .Build();
 
                 CommonUtils.ConnectionString = configuration.GetConnectionString("DefaultConnection");
+                CommonUtils.EncryptionKey   = configuration["EncryptionKey"] ?? "";
 
                 Routes route = new Routes();
                 route.UseConnection(CommonUtils.ConnectionString);

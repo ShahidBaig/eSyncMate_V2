@@ -1,4 +1,4 @@
-﻿using eSyncMate.DB;
+using eSyncMate.DB;
 using eSyncMate.DB.Entities;
 using eSyncMate.Processor.Connections;
 using eSyncMate.Processor.Models;
@@ -38,8 +38,8 @@ namespace eSyncMate.Processor.Managers
 
             try
             {
-                ConnectorDataModel? l_SourceConnector = JsonConvert.DeserializeObject<ConnectorDataModel>(route.SourceConnectorObject.Data);
-                ConnectorDataModel? l_DestinationConnector = JsonConvert.DeserializeObject<ConnectorDataModel>(route.DestinationConnectorObject.Data);
+                ConnectorDataModel? l_SourceConnector = ConnectorDataModel.Deserialize(route.SourceConnectorObject.Data);
+                ConnectorDataModel? l_DestinationConnector = ConnectorDataModel.Deserialize(route.DestinationConnectorObject.Data);
 
                 route.SaveLog(LogTypeEnum.Info, $"Started executing route [{route.Id}]", string.Empty, userNo);
 
@@ -238,6 +238,7 @@ namespace eSyncMate.Processor.Managers
 
                 if (!sourceResponse.IsSuccessful)
                 {
+                    this.feed.UpdateItemStatus(itemId, customerId);
                     this.route.SaveLog(LogTypeEnum.Error, $"API call failed for WalmartUploadInventory item [{row["ProductId"]}]. HTTP {(int)sourceResponse.StatusCode} {sourceResponse.StatusCode}.", sourceResponse.Content ?? sourceResponse.ErrorMessage, this.userNo);
                 }
                 else
@@ -254,6 +255,8 @@ namespace eSyncMate.Processor.Managers
 
                     if (response != null && response.nodes.Any(node => node.errors.Any()))
                     {
+                        this.feed.UpdateItemStatusError(itemId, customerId);
+
                         this.route.SaveLog(LogTypeEnum.Error, $"WalmartUploadInventory has node errors for item [{row["ProductId"]}].", sourceResponse.Content, this.userNo);
                     }
                     else if (response != null)

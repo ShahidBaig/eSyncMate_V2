@@ -64,30 +64,30 @@ namespace API.Controllers
             return Ok(result);
         }
 
-        [HttpGet("ChangeBlockStatus/{status}/{id}")]
-        public IActionResult ChangeBlockStatus(int status, int id)
+        [HttpPost("ChangeBlockStatus")]
+        public IActionResult ChangeBlockStatus([FromBody] UserStatusRequest request)
         {
-            if (status == 1)
+            if (request.Status == 1)
             {
-                library.BlockUser(id);
+                library.BlockUser(request.Id);
             }
             else
             {
-                library.UnblockUser(id);
+                library.UnblockUser(request.Id);
             }
             return Ok("success");
         }
 
-        [HttpGet("ChangeEnableStatus/{status}/{id}")]
-        public IActionResult ChangeEnableStatus(int status, int id)
+        [HttpPost("ChangeEnableStatus")]
+        public IActionResult ChangeEnableStatus([FromBody] UserStatusRequest request)
         {
-            if (status == 1)
+            if (request.Status == 1)
             {
-                library.ActivateUser(id);
+                library.ActivateUser(request.Id);
             }
             else
             {
-                library.DeactivateUser(id);
+                library.DeactivateUser(request.Id);
             }
             return Ok("success");
         }

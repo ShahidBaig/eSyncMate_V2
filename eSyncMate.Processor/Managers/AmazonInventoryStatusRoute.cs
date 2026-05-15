@@ -1,4 +1,4 @@
-﻿using eSyncMate.DB;
+using eSyncMate.DB;
 using eSyncMate.DB.Entities;
 using eSyncMate.Processor.Connections;
 using eSyncMate.Processor.Models;
@@ -45,8 +45,8 @@ namespace eSyncMate.Processor.Managers
 
             try
             {
-                ConnectorDataModel? l_SourceConnector = JsonConvert.DeserializeObject<ConnectorDataModel>(route.SourceConnectorObject.Data);
-                ConnectorDataModel? l_DestinationConnector = JsonConvert.DeserializeObject<ConnectorDataModel>(route.DestinationConnectorObject.Data);
+                ConnectorDataModel? l_SourceConnector = ConnectorDataModel.Deserialize(route.SourceConnectorObject.Data);
+                ConnectorDataModel? l_DestinationConnector = ConnectorDataModel.Deserialize(route.DestinationConnectorObject.Data);
 
                 route.SaveLog(LogTypeEnum.Info, $"Started executing route [{route.Id}]", string.Empty, userNo);
 
@@ -90,10 +90,29 @@ namespace eSyncMate.Processor.Managers
 
                     foreach (DataRow item in l_data.Rows)
                     {
-                        l_DestinationConnector.Url = l_DestinationConnector.BaseUrl + $"/feeds/2021-06-30/feeds/{Convert.ToString(item["FeedDocumentID"])}";
+                        string feedDocumentId = Convert.ToString(item["FeedDocumentID"]);
+
+                        if (string.IsNullOrWhiteSpace(feedDocumentId))
+                        {
+                            route.SaveLog(LogTypeEnum.Error, $"Skipping status check — FeedDocumentID is empty for BatchID [{item["BatchID"]}].", string.Empty, userNo);
+                            continue;
+                        }
+
+                        // Rate limit: GET /feeds/{feedId} = 2 req/sec
+                        Thread.Sleep(TimeSpan.FromSeconds(2));
+
+                        l_DestinationConnector.Url = l_DestinationConnector.BaseUrl + $"/feeds/2021-06-30/feeds/{feedDocumentId}";
                         route.SaveData("JSON-SNT", 0, l_DestinationConnector.Url, userNo);
 
                         sourceResponse = RestConnector.Execute(l_DestinationConnector, Body).GetAwaiter().GetResult();
+
+                        // Handle 429 TooManyRequests — wait 60s and retry once
+                        if ((int)sourceResponse.StatusCode == 429)
+                        {
+                            route.SaveLog(LogTypeEnum.Debug, $"Rate limited on getFeed [{feedDocumentId}] — waiting 60s before retry.", string.Empty, userNo);
+                            Thread.Sleep(TimeSpan.FromSeconds(60));
+                            sourceResponse = RestConnector.Execute(l_DestinationConnector, Body).GetAwaiter().GetResult();
+                        }
 
                         if (sourceResponse.StatusCode == System.Net.HttpStatusCode.OK)
                         {
@@ -101,19 +120,42 @@ namespace eSyncMate.Processor.Managers
                             AmazonInventoryStatusResponseModel l_AmazonInventoryStatusResponseModel = new AmazonInventoryStatusResponseModel();
                             l_AmazonInventoryStatusResponseModel = JsonConvert.DeserializeObject<AmazonInventoryStatusResponseModel>(sourceResponse.Content);
 
-                            if (!string.IsNullOrEmpty(l_AmazonInventoryStatusResponseModel.resultFeedDocumentId))
+                            string processingStatus = l_AmazonInventoryStatusResponseModel.processingStatus ?? string.Empty;
+
+                            route.SaveLog(LogTypeEnum.Debug, $"Feed [{feedDocumentId}] status: {processingStatus}.", string.Empty, userNo);
+
+                            if (processingStatus == "IN_QUEUE" || processingStatus == "IN_PROGRESS")
                             {
-                                Thread.Sleep(TimeSpan.FromSeconds(30)); 
+                                // Still processing — skip, next scheduled run will check again
+                                route.SaveLog(LogTypeEnum.Debug, $"Feed [{feedDocumentId}] still {processingStatus} — skipping, will check next run.", string.Empty, userNo);
+                            }
+                            else if (processingStatus == "FATAL" || processingStatus == "CANCELLED")
+                            {
+                                // Permanently failed — mark as Error in DB, no document to fetch
+                                route.SaveLog(LogTypeEnum.Error, $"Feed [{feedDocumentId}] {processingStatus} — marking batch as Error.", string.Empty, userNo);
+                                l_CustomerProductCatalog.UseConnection(l_SourceConnector.ConnectionString);
+                                l_CustomerProductCatalog.UpdateInventoryBacthwiseStatus(Convert.ToString(item["BatchID"]), feedDocumentId, "Error", l_SourceConnector.CustomerID, sourceResponse.Content);
+                            }
+                            else if (processingStatus == "DONE" && !string.IsNullOrEmpty(l_AmazonInventoryStatusResponseModel.resultFeedDocumentId))
+                            {
+                                // DONE — fetch result document (rate limit: 1 per 45 sec)
+                                Thread.Sleep(TimeSpan.FromSeconds(45));
 
                                 l_DestinationConnector.Url = l_DestinationConnector.BaseUrl + $"/feeds/2021-06-30/documents/{l_AmazonInventoryStatusResponseModel.resultFeedDocumentId}";
-
                                 route.SaveData("JSON-SNT", 0, l_DestinationConnector.Url, userNo);
-                                
+
                                 sourceResponse = RestConnector.Execute(l_DestinationConnector, Body).GetAwaiter().GetResult();
+
+                                // Handle 429 on getFeedDocument — wait 60s and retry once
+                                if ((int)sourceResponse.StatusCode == 429)
+                                {
+                                    route.SaveLog(LogTypeEnum.Debug, $"Rate limited on getFeedDocument [{feedDocumentId}] — waiting 60s before retry.", string.Empty, userNo);
+                                    Thread.Sleep(TimeSpan.FromSeconds(60));
+                                    sourceResponse = RestConnector.Execute(l_DestinationConnector, Body).GetAwaiter().GetResult();
+                                }
 
                                 AmazonInventoryFeedDocumentResponseModel l_AmazonInventoryFeedDocumentResponseModel = new AmazonInventoryFeedDocumentResponseModel();
                                 AmazonInventoryFeedReportDownloadResponseModel l_AmazonInventoryFeedReportDownloadResponseModel = new AmazonInventoryFeedReportDownloadResponseModel();
-                               
 
                                 if (sourceResponse.StatusCode == System.Net.HttpStatusCode.OK)
                                 {
@@ -128,26 +170,25 @@ namespace eSyncMate.Processor.Managers
                                         l_AmazonInventoryFeedReportDownloadResponseModel = JsonConvert.DeserializeObject<AmazonInventoryFeedReportDownloadResponseModel>(l_Content);
                                         l_CustomerProductCatalog.UseConnection(l_SourceConnector.ConnectionString);
 
-
                                         if (l_AmazonInventoryFeedReportDownloadResponseModel.issues.Count > 0)
                                         {
                                             foreach (var issue in l_AmazonInventoryFeedReportDownloadResponseModel.issues)
                                             {
-                                                l_CustomerProductCatalog.UpdateStatusSCSInventoryFeed(l_SourceConnector.CustomerID, item["BatchID"].ToString(), item["FeedDocumentID"].ToString(), Convert.ToInt64(issue.messageId));
+                                                l_CustomerProductCatalog.UpdateStatusSCSInventoryFeed(l_SourceConnector.CustomerID, item["BatchID"].ToString(), feedDocumentId, Convert.ToInt64(issue.messageId));
                                             }
                                         }
                                     }
-                                    
-                                    route.SaveLog(LogTypeEnum.Debug, $"Amazon Inventory Status updated for FeedDocumentID [{item["FeedDocumentID"]}].", string.Empty, userNo);
+
+                                    route.SaveLog(LogTypeEnum.Debug, $"Amazon Inventory Status updated for FeedDocumentID [{feedDocumentId}].", string.Empty, userNo);
 
                                     l_CustomerProductCatalog.UseConnection(l_SourceConnector.ConnectionString);
-                                    l_CustomerProductCatalog.UpdateInventoryBacthwiseStatus(Convert.ToString(item["BatchID"]), Convert.ToString(item["FeedDocumentID"]), "Completed", l_SourceConnector.CustomerID, l_Content);
+                                    l_CustomerProductCatalog.UpdateInventoryBacthwiseStatus(Convert.ToString(item["BatchID"]), feedDocumentId, "Completed", l_SourceConnector.CustomerID, l_Content);
                                 }
                             }
                         }
                         else
                         {
-                            route.SaveLog(LogTypeEnum.Error, $"Unable to get Amazon Inventory Status for FeedDocumentID [{Convert.ToString(item["FeedDocumentID"])}]. HTTP {(int)sourceResponse.StatusCode} {sourceResponse.StatusCode}.", sourceResponse.Content ?? sourceResponse.ErrorMessage, userNo);
+                            route.SaveLog(LogTypeEnum.Error, $"Unable to get Amazon Inventory Status for FeedDocumentID [{feedDocumentId}]. HTTP {(int)sourceResponse.StatusCode} {sourceResponse.StatusCode}.", sourceResponse.Content ?? sourceResponse.ErrorMessage, userNo);
                         }
 
                         route.SaveData("JSON-RVD", 0, sourceResponse.Content, userNo);

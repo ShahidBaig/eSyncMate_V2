@@ -1,4 +1,4 @@
-﻿using eSyncMate.DB;
+using eSyncMate.DB;
 using eSyncMate.DB.Entities;
 using eSyncMate.Processor.Connections;
 using eSyncMate.Processor.Models;
@@ -40,8 +40,8 @@ namespace eSyncMate.Processor.Managers
 
             try
             {
-                ConnectorDataModel? l_SourceConnector = JsonConvert.DeserializeObject<ConnectorDataModel>(route.SourceConnectorObject.Data);
-                ConnectorDataModel? l_DestinationConnector = JsonConvert.DeserializeObject<ConnectorDataModel>(route.DestinationConnectorObject.Data);
+                ConnectorDataModel? l_SourceConnector = ConnectorDataModel.Deserialize(route.SourceConnectorObject.Data);
+                ConnectorDataModel? l_DestinationConnector = ConnectorDataModel.Deserialize(route.DestinationConnectorObject.Data);
 
                 route.SaveLog(LogTypeEnum.Info, $"Started executing route [{route.Id}]", string.Empty, userNo);
 
@@ -151,7 +151,7 @@ namespace eSyncMate.Processor.Managers
 
                         var tables = l_data.AsEnumerable()
                             .ToChunks(chunkSize)
-                            .Where(rows => rows.Any()) // ✅ Avoid CopyToDataTable on empty chunks
+                            .Where(rows => rows.Any()) // ? Avoid CopyToDataTable on empty chunks
                             .Select(rows => rows.CopyToDataTable())
                             .ToList();
 

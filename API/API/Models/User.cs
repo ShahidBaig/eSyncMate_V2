@@ -1,5 +1,11 @@
 ﻿namespace API.Models
 {
+    public class UserStatusRequest
+    {
+        public int Id { get; set; }
+        public int Status { get; set; }
+    }
+
     public class User : ModelBase
     {
         public string FirstName { get; set; } = string.Empty;

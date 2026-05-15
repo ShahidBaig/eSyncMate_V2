@@ -27,8 +27,9 @@ $white:          #ffffff;
   align-items: center;
   height: 56px;
   padding: 0 24px;
-  background: $primary;
-  border-bottom: 1px solid darken($primary, 8%);
+  background: #0a1628d1;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   gap: 0;
 }
 
@@ -101,10 +102,10 @@ $white:          #ffffff;
   border-radius: 8px;
   transition: all 0.15s ease;
   white-space: nowrap;
-  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.12);
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
 
   &:hover {
-    background: transparent;
+    background: rgba(255, 255, 255, 0.18);
     color: $white;
   }
 
@@ -418,7 +419,7 @@ $white:          #ffffff;
   height: 30px;
   border-radius: 50%;
   background: $white;
-  color: $primary;
+  color: #0a1628;
   display: flex;
   align-items: center;
   justify-content: center;

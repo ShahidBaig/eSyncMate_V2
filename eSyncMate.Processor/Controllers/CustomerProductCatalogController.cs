@@ -1237,10 +1237,13 @@ namespace eSyncMate.Processor.Controllers
         }
 
 
-        [HttpGet]
+        [HttpPost]
         [Route("deleteItemsData")]
-        public async Task<PrepareItemDataResponseModel> DeleteItemsData(int UserID, string CustomerID, string ItemType)
+        public async Task<PrepareItemDataResponseModel> DeleteItemsData([FromBody] DeleteItemsDataRequest request)
         {
+            int UserID = request.UserID;
+            string CustomerID = request.CustomerID;
+            string ItemType = request.ItemType;
             MethodBase l_Me = MethodBase.GetCurrentMethod();
             PrepareItemDataResponseModel l_Response = new PrepareItemDataResponseModel();
             DataTable l_Data = new DataTable();

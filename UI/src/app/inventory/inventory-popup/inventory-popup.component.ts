@@ -1,6 +1,6 @@
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { Component, OnInit, Inject } from '@angular/core';
-import { DatePipe, NgIf, NgFor} from '@angular/common';
+import { DatePipe, NgIf, NgFor, NgClass } from '@angular/common';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatInputModule } from '@angular/material/input';
@@ -43,6 +43,7 @@ import { LanguageService } from '../../services/language.service';
     MatProgressSpinnerModule,
     MatSelectModule,
     NgFor,
+    NgClass,
     MatGridListModule,
     FormsModule,
     TranslateModule
@@ -58,9 +59,17 @@ export class InventorypopupComponent {
     'data',
     'DownloadFile',
     'CustomerId',
+    'type',
     'ItemId',
     'createdDate',
   ];
+
+  getTypeLabel(type: string): string {
+    if (!type) return '';
+    if (type.endsWith('-SNT')) return 'Request Sent';
+    if (type.endsWith('-RVD')) return 'Response Received';
+    return type;
+  }
 
   constructor(@Inject(MAT_DIALOG_DATA) public data: any, public dialogRef: MatDialogRef<InventorypopupComponent>,
     private dialog: MatDialog, private toast: NgToastService, public languageService: LanguageService) {

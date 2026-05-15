@@ -1,4 +1,4 @@
-﻿using eSyncMate.DB;
+using eSyncMate.DB;
 using eSyncMate.DB.Entities;
 using eSyncMate.Processor.Connections;
 using eSyncMate.Processor.Models;
@@ -37,8 +37,8 @@ namespace eSyncMate.Processor.Managers
 
             try
             {
-                ConnectorDataModel? l_SourceConnector = JsonConvert.DeserializeObject<ConnectorDataModel>(route.SourceConnectorObject.Data);
-                ConnectorDataModel? l_DestinationConnector = JsonConvert.DeserializeObject<ConnectorDataModel>(route.DestinationConnectorObject.Data);
+                ConnectorDataModel? l_SourceConnector = ConnectorDataModel.Deserialize(route.SourceConnectorObject.Data);
+                ConnectorDataModel? l_DestinationConnector = ConnectorDataModel.Deserialize(route.DestinationConnectorObject.Data);
 
                 route.SaveLog(LogTypeEnum.Info, $"Started executing route [{route.Id}]", string.Empty, userNo);
 
@@ -170,8 +170,8 @@ namespace eSyncMate.Processor.Managers
                 CustomerProductCatalog l_CustomerProductCatalog = new CustomerProductCatalog();
                 l_CustomerProductCatalog.UseConnection(this.sourceConnector.ConnectionString);
 
-                // APPROVED → call price API + mark APPROVED_PR + try delete
-                // APPROVED_PR → price already uploaded, only try delete
+                // APPROVED ? call price API + mark APPROVED_PR + try delete
+                // APPROVED_PR ? price already uploaded, only try delete
                 if (syncStatus == "APPROVED")
                 {
                     var data = new
@@ -203,11 +203,11 @@ namespace eSyncMate.Processor.Managers
                     }
                 }
 
-                // Both APPROVED (after price upload above) and APPROVED_PR → try delete if inventory synced
+                // Both APPROVED (after price upload above) and APPROVED_PR ? try delete if inventory synced
                 bool deleted = l_CustomerProductCatalog.DeleteIfInventorySynced(Convert.ToString(row["ItemID"]), this.sourceConnector.CustomerID);
                 if (!deleted)
                 {
-                    route.SaveLog(LogTypeEnum.Debug, $"Item [{row["ItemID"]}] kept as APPROVED_PR — inventory not yet uploaded via TargetPlusInventoryFeedWHSWise.", string.Empty, userNo);
+                    route.SaveLog(LogTypeEnum.Debug, $"Item [{row["ItemID"]}] kept as APPROVED_PR � inventory not yet uploaded via TargetPlusInventoryFeedWHSWise.", string.Empty, userNo);
                 }
             }
             catch (Exception ex)

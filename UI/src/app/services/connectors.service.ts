@@ -29,6 +29,10 @@ export class ConnectorsService {
     return this.http.get(`${this.apiUrl}api/Connectors/getConnectors`, { params });
   }
 
+  getConnectorForEdit(id: number): Observable<any> {
+    return this.http.get(`${this.apiUrl}api/Connectors/getConnectorForEdit/${id}`);
+  }
+
   getConnectorTypesData(): Observable<any> {
     return this.http.get(`${this.apiUrl}api/Connectors/getConnectorTypes`);
   }

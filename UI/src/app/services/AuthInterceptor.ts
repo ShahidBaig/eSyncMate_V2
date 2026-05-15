@@ -1,39 +1,98 @@
 import { Injectable } from '@angular/core';
-import { HttpEvent, HttpHandler, HttpInterceptor, HttpRequest } from '@angular/common/http';
-import { Observable, EMPTY  } from 'rxjs';
+import { HttpEvent, HttpHandler, HttpInterceptor, HttpRequest, HttpErrorResponse } from '@angular/common/http';
+import { Observable, EMPTY, throwError, BehaviorSubject } from 'rxjs';
+import { catchError, filter, switchMap, take } from 'rxjs/operators';
 import { Router } from '@angular/router';
+import { TokenStoreService } from './token-store.service';
+import { ApiService } from './api.service';
 
 @Injectable()
 export class AuthInterceptor implements HttpInterceptor {
-  constructor(private router: Router){}
+
+  private isRefreshing = false;
+  private refreshDone$ = new BehaviorSubject<boolean>(false);
+
+  constructor(
+    private router: Router,
+    private tokenStore: TokenStoreService,
+    private api: ApiService
+  ) {}
 
   intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
-    // Skip auth for login and MFA endpoints (user has no JWT yet)
-    if (req.url.includes('Login') || req.url.includes('VerifyMFA')) {
+    // Skip auth for public endpoints
+    if (this.isPublic(req.url)) {
       return next.handle(req);
     }
 
-    const token = localStorage.getItem('access_token');
+    const token = this.tokenStore.get();
 
-    if (!token) {
-      return next.handle(req);
-    }
+    const authReq = token
+      ? req.clone({ headers: req.headers.set('Authorization', `Bearer ${token}`), withCredentials: true })
+      : req.clone({ withCredentials: true });
 
-    const expiryTime = localStorage.getItem('tokenExpiry');
-    if (expiryTime && new Date(expiryTime) <= new Date())
-    {
-      this.router.navigate(['login']);
-      localStorage.setItem('tokenExpiry', '');
-      localStorage.setItem('access_token','');
-      localStorage.setItem('sessionExpiryMessage', 'Session expired, please log in.')
-      return EMPTY;
-    }
-
-    const req1 = req.clone({
-      headers: req.headers.set('Authorization', `Bearer ${token}`),
-    });
-
-    return next.handle(req1);
+    return next.handle(authReq).pipe(
+      catchError((err: HttpErrorResponse) => {
+        if (err.status === 401) {
+          return this.handle401(req, next);
+        }
+        return throwError(() => err);
+      })
+    );
   }
 
+  private handle401(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
+    if (this.isRefreshing) {
+      // Wait for ongoing refresh to finish, then retry
+      return this.refreshDone$.pipe(
+        filter(done => done),
+        take(1),
+        switchMap(() => {
+          const newToken = this.tokenStore.get();
+          if (!newToken) return EMPTY;
+          return next.handle(this.addToken(req, newToken));
+        })
+      );
+    }
+
+    this.isRefreshing = true;
+    this.refreshDone$.next(false);
+
+    return this.api.refreshToken().pipe(
+      switchMap((res: any) => {
+        this.isRefreshing = false;
+        if (res?.token && res.token !== 'Invalid') {
+          this.api.saveToken(res.token);
+          if (res.menus) this.api.saveUserMenus(res.menus);
+          this.refreshDone$.next(true);
+          return next.handle(this.addToken(req, res.token));
+        }
+        this.logout();
+        return EMPTY;
+      }),
+      catchError(() => {
+        this.isRefreshing = false;
+        this.logout();
+        return EMPTY;
+      })
+    );
+  }
+
+  private addToken(req: HttpRequest<any>, token: string): HttpRequest<any> {
+    return req.clone({
+      headers: req.headers.set('Authorization', `Bearer ${token}`),
+      withCredentials: true
+    });
+  }
+
+  private logout(): void {
+    this.tokenStore.clear();
+    sessionStorage.setItem('sessionExpiryMessage', 'Session expired, please log in.');
+    this.router.navigate(['login']);
+  }
+
+  private isPublic(url: string): boolean {
+    return url.includes('Login') ||
+           url.includes('VerifyMFA') ||
+           url.includes('RefreshToken');
+  }
 }

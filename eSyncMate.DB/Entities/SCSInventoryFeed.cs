@@ -433,6 +433,14 @@ namespace eSyncMate.DB.Entities
 
             return this.Connection.Execute(DeleteQuery);
         }
+        public bool UpdateItemStatusError(string p_ItemID, string p_CustomerId)
+        {
+            string DeleteQuery = $"UPDATE {SCSInventoryFeed.TableName} SET Status = 'ERROR', ModifiedDate = GETDATE() ";
+
+            DeleteQuery += $"WHERE ItemID = '{p_ItemID}' AND CustomerID = '{p_CustomerId}'";
+
+            return this.Connection.Execute(DeleteQuery);
+        }
 
         /// <summary>
         /// Bulk update item status for multiple items in a single database call

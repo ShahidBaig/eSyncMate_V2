@@ -59,7 +59,7 @@ export class LoginComponent {
     public languageService: LanguageService,
     private toast: NgToastService
   ) {
-       this.message = localStorage.getItem('sessionExpiryMessage');
+       this.message = sessionStorage.getItem('sessionExpiryMessage');
 
        if (this.message && !sessionStorage.getItem('hasReloaded')) {
         sessionStorage.setItem('hasReloaded', 'true');
@@ -71,7 +71,7 @@ export class LoginComponent {
         if (this.message) {
           this.toast.info({ detail: "INFO", summary: this.message, duration: 5000, position: 'topRight' });
           this.message = '';
-          localStorage.setItem('sessionExpiryMessage', '');
+          sessionStorage.setItem('sessionExpiryMessage', '');
         }
     });
 

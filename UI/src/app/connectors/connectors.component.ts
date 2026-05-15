@@ -134,15 +134,29 @@ export class ConnectorsComponent implements OnInit {
   }
 
   openEditDialog(connectorData: any) {
-    const dialogRef = this.dialog.open(EditConnectorDialogComponent, {
-      width: '800px',
-      data: connectorData,
-      disableClose: true
-    });
-
-    dialogRef.afterClosed().subscribe(result => {
-      if (result === 'updated') {
-        this.getConnectors(false);
+    // Fetch fully decrypted data from server before opening edit dialog
+    this.ConnectorsApi.getConnectorForEdit(connectorData.id).subscribe({
+      next: (res: any) => {
+        const decryptedConnector = res?.connectors?.[0] ?? connectorData;
+        const dialogRef = this.dialog.open(EditConnectorDialogComponent, {
+          width: '800px',
+          data: decryptedConnector,
+          disableClose: true
+        });
+        dialogRef.afterClosed().subscribe(result => {
+          if (result === 'updated') this.getConnectors(false);
+        });
+      },
+      error: () => {
+        // Fallback to existing data if fetch fails
+        const dialogRef = this.dialog.open(EditConnectorDialogComponent, {
+          width: '800px',
+          data: connectorData,
+          disableClose: true
+        });
+        dialogRef.afterClosed().subscribe(result => {
+          if (result === 'updated') this.getConnectors(false);
+        });
       }
     });
   }

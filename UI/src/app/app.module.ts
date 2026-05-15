@@ -1,5 +1,8 @@
-import { NgModule } from '@angular/core';
+import { NgModule, APP_INITIALIZER } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
+import { authInitializerFactory } from './auth.initializer';
+import { ApiService } from './services/api.service';
+import { environment } from 'src/environments/environment';
 
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
@@ -97,10 +100,8 @@ import { PrivacyPolicyComponent } from './privacy-policy/privacy-policy.componen
     MatTableModule,
     JwtModule.forRoot({
       config: {
-        tokenGetter: () => {
-          return localStorage.getItem('access_token');
-        },
-        allowedDomains: ['165.227.248.24:8080'],
+        tokenGetter: () => null,
+        allowedDomains: [environment.apiDomain],
       },
     }),
     PageHeaderComponent,
@@ -177,7 +178,10 @@ import { PrivacyPolicyComponent } from './privacy-policy/privacy-policy.componen
     }),
     ProductDataComponent
   ],
-  providers: [{ provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true },],
+  providers: [
+    { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true },
+    { provide: APP_INITIALIZER, useFactory: authInitializerFactory, deps: [ApiService], multi: true }
+  ],
   bootstrap: [AppComponent]
 })
 export class AppModule { }

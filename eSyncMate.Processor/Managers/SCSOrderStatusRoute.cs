@@ -1,4 +1,4 @@
-﻿//using eSyncMate.DB;
+//using eSyncMate.DB;
 //using eSyncMate.DB.Entities;
 //using eSyncMate.Processor.Connections;
 //using eSyncMate.Processor.Models;
@@ -23,8 +23,8 @@
 
 //            try
 //            {
-//                ConnectorDataModel? l_SourceConnector = JsonConvert.DeserializeObject<ConnectorDataModel>(route.SourceConnectorObject.Data);
-//                ConnectorDataModel? l_DestinationConnector = JsonConvert.DeserializeObject<ConnectorDataModel>(route.DestinationConnectorObject.Data);
+//                ConnectorDataModel? l_SourceConnector = ConnectorDataModel.Deserialize(route.SourceConnectorObject.Data);
+//                ConnectorDataModel? l_DestinationConnector = ConnectorDataModel.Deserialize(route.DestinationConnectorObject.Data);
 //                string destinationData = string.Empty;
 //                string sourceData = string.Empty;
 //                string transformedData = string.Empty;
@@ -111,8 +111,8 @@
 //            DB.Entities.SCSInventoryFeed l_SCSInventoryFeed = new DB.Entities.SCSInventoryFeed();
 
 
-//            ConnectorDataModel? l_SourceConnector = JsonConvert.DeserializeObject<ConnectorDataModel>(route.SourceConnectorObject.Data);
-//            ConnectorDataModel? l_DestinationConnector = JsonConvert.DeserializeObject<ConnectorDataModel>(route.DestinationConnectorObject.Data);
+//            ConnectorDataModel? l_SourceConnector = ConnectorDataModel.Deserialize(route.SourceConnectorObject.Data);
+//            ConnectorDataModel? l_DestinationConnector = ConnectorDataModel.Deserialize(route.DestinationConnectorObject.Data);
 //            l_SCSInventoryFeed.UseConnection(l_DestinationConnector.ConnectionString);
 
 //            DBConnector connection = new DBConnector(l_SourceConnector.ConnectionString);
@@ -158,8 +158,8 @@ namespace eSyncMate.Processor.Managers
 
             try
             {
-                ConnectorDataModel? l_SourceConnector = JsonConvert.DeserializeObject<ConnectorDataModel>(route.SourceConnectorObject.Data);
-                ConnectorDataModel? l_DestinationConnector = JsonConvert.DeserializeObject<ConnectorDataModel>(route.DestinationConnectorObject.Data);
+                ConnectorDataModel? l_SourceConnector = ConnectorDataModel.Deserialize(route.SourceConnectorObject.Data);
+                ConnectorDataModel? l_DestinationConnector = ConnectorDataModel.Deserialize(route.DestinationConnectorObject.Data);
                 string transformedData = string.Empty;
                 Customers l_Customer = new Customers();
                 DataTable l_dataTable = new DataTable();

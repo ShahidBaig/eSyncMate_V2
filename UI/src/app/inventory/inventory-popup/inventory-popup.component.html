@@ -60,9 +60,11 @@
 
         <!-- Type -->
         <ng-container matColumnDef="type">
-          <th mat-header-cell *matHeaderCellDef>{{ 'type' | translate }}</th>
+          <th mat-header-cell *matHeaderCellDef>Type</th>
           <td mat-cell *matCellDef="let element">
-            <span class="type-chip">{{ element.type }}</span>
+            <span class="type-chip" [ngClass]="element.type?.endsWith('-SNT') ? 'type-sent' : 'type-received'">
+              {{ getTypeLabel(element.type) }}
+            </span>
           </td>
         </ng-container>
 
