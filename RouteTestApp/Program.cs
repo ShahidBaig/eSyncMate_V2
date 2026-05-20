@@ -38,6 +38,18 @@ using RouteTestApp;
 // ======== Test Connection ========
 //string testConnectionString = "<<SET_CONNECTION_STRING>>";
 
+//// ======== Walmart Inventory PUT Test ========
+//WalmartInventoryTests.Run();
+//return;
+
+//// ======== BulkInsertToLogTable Paged Insert Tests (Amazon 300K scenario) ========
+//BulkInsertToLogTableTests.RunAllTests(testConnectionString, keepData: true);
+//return;
+
+//// ======== BulkInsertFeedData Paged Insert Tests (Amazon 300K scenario) ========
+//BulkInsertFeedDataTests.RunAllTests(testConnectionString, keepData: true);
+//return;
+
 //// ======== Route Execution Lock Tests ========
 //RouteExecutionLockTests.RunAllTests(testConnectionString).GetAwaiter().GetResult();
 
@@ -74,7 +86,7 @@ static void Main()
     IConfiguration config = new MyConfigurationImplementation();
     RouteEngine routeEngine = new RouteEngine(config);
     ////1, 4, 10,7 GECKO
-    int routeId = 99;
+    int routeId = 109;
     routeEngine.Execute(routeId);
 
 

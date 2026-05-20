@@ -82,32 +82,23 @@ namespace eSyncMate.Processor.Managers
 
                     l_SCSInventoryFeed.InsertInventoryBatchWise(l_InventoryBatchWise);
 
-                    // Log UPLOAD snapshot — captures inventory state sent to Lowe's
-                    string l_LogTable = SCSInventoryFeed.GetLogTableName(l_SourceConnector.ConnectionString, l_SourceConnector.CustomerID);
-                    if (!string.IsNullOrEmpty(l_LogTable))
-                    {
-                        SCSInventoryFeed.BulkInsertToLogTable(
-                            l_SourceConnector.ConnectionString,
-                            l_LogTable,
-                            l_data,
-                            l_InventoryBatchWise.BatchID,
-                            "UPLOAD");
-                    }
-
-                    // Process in chunks of 15,000 with 1-minute delay between chunks
+                    // Process in chunks of 10,000 with 1-minute delay between chunks
                     int chunkSize = 10000;
+
+                    string   l_LogTable = SCSInventoryFeed.GetLogTableName(l_SourceConnector.ConnectionString, l_SourceConnector.CustomerID);
+                    string[] l_LogCols  = !string.IsNullOrEmpty(l_LogTable)
+                                           ? SCSInventoryFeed.GetLogTableColumns(l_SourceConnector.ConnectionString, l_LogTable)
+                                           : null;
 
                     if (l_data.Rows.Count <= chunkSize)
                     {
-                        // Small dataset - process directly
                         ProcessLowesItemsChunkThread itemsThread = new ProcessLowesItemsChunkThread(
-                            l_data, route, feed, l_DestinationConnector, l_SourceConnector, userNo, l_InventoryBatchWise.BatchID
+                            l_data, route, feed, l_DestinationConnector, l_SourceConnector, userNo, l_InventoryBatchWise.BatchID, l_LogTable, l_LogCols
                         );
                         itemsThread.ProcessItems().GetAwaiter().GetResult();
                     }
                     else
                     {
-                        // Large dataset - split into chunks of 15,000
                         var tables = l_data.AsEnumerable().ToChunks(chunkSize)
                             .Select(rows => rows.CopyToDataTable()).ToList();
 
@@ -120,7 +111,7 @@ namespace eSyncMate.Processor.Managers
                             route.SaveLog(LogTypeEnum.Debug, $"Processing chunk {chunkIndex}/{tables.Count} with {table.Rows.Count} items", string.Empty, userNo);
 
                             var itemsThread = new ProcessLowesItemsChunkThread(
-                                table, route, feed, l_DestinationConnector, l_SourceConnector, userNo, l_InventoryBatchWise.BatchID
+                                table, route, feed, l_DestinationConnector, l_SourceConnector, userNo, l_InventoryBatchWise.BatchID, l_LogTable, l_LogCols
                             );
 
                             itemsThread.ProcessItems().GetAwaiter().GetResult();
@@ -166,24 +157,29 @@ namespace eSyncMate.Processor.Managers
     /// </summary>
     public class ProcessLowesItemsChunkThread
     {
-        private DataTable data;
-        private Routes route;
+        private DataTable  data;
+        private Routes     route;
         private SCSInventoryFeed feed;
         private ConnectorDataModel destinationConnector;
         private ConnectorDataModel sourceConnector;
-        private int userNo;
-        private string batchID;
+        private int        userNo;
+        private string     batchID;
+        private string     logTable;
+        private string[]   logCols;
 
         public ProcessLowesItemsChunkThread(DataTable data, Routes route, SCSInventoryFeed feed,
-            ConnectorDataModel destinationConnector, ConnectorDataModel sourceConnector, int userNo, string batchID)
+            ConnectorDataModel destinationConnector, ConnectorDataModel sourceConnector, int userNo, string batchID,
+            string logTable = null, string[] logCols = null)
         {
-            this.data = data;
-            this.route = JsonConvert.DeserializeObject<Routes>(JsonConvert.SerializeObject(route));
-            this.feed = JsonConvert.DeserializeObject<SCSInventoryFeed>(JsonConvert.SerializeObject(feed));
+            this.data                 = data;
+            this.route                = JsonConvert.DeserializeObject<Routes>(JsonConvert.SerializeObject(route));
+            this.feed                 = JsonConvert.DeserializeObject<SCSInventoryFeed>(JsonConvert.SerializeObject(feed));
             this.destinationConnector = destinationConnector;
-            this.sourceConnector = sourceConnector;
-            this.userNo = userNo;
-            this.batchID = batchID;
+            this.sourceConnector      = sourceConnector;
+            this.userNo               = userNo;
+            this.batchID              = batchID;
+            this.logTable             = logTable;
+            this.logCols              = logCols;
         }
 
         public async Task ProcessItems()
@@ -263,6 +259,18 @@ namespace eSyncMate.Processor.Managers
                     this.feed.BulkUpdateItemStatus(this.sourceConnector.ConnectionString, this.data);
 
                     this.route.SaveLog(LogTypeEnum.Debug, $"LowesUpdateInventory updated for {this.data.Rows.Count} items.", string.Empty, this.userNo);
+
+                    // Log UPLOAD snapshot after chunk is fully sent to Lowe's
+                    if (!string.IsNullOrEmpty(this.logTable))
+                    {
+                        SCSInventoryFeed.BulkInsertToLogTable(
+                            this.sourceConnector.ConnectionString,
+                            this.logTable,
+                            this.data,
+                            this.batchID,
+                            "UPLOAD",
+                            this.logCols);
+                    }
                 }
                 else
                 {

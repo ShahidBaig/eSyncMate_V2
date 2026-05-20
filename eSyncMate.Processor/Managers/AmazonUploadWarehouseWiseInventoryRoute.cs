@@ -104,48 +104,29 @@ namespace eSyncMate.Processor.Managers
 
                     l_SCSInventoryFeed.InsertInventoryBatchWise(l_InventoryBatchWise);
 
-                    // Log UPLOAD snapshot — captures inventory state sent to Amazon (WHS-wise)
-                    string l_LogTable = SCSInventoryFeed.GetLogTableName(l_SourceConnector.ConnectionString, l_SourceConnector.CustomerID);
-                    if (!string.IsNullOrEmpty(l_LogTable))
+                    int i = 0;
+                    int chunkSize = CommonUtils.AmazonFeedMaxMessages;
+
+                    List<Task> tasks = new List<Task>();
+
+                    string   l_LogTable = SCSInventoryFeed.GetLogTableName(l_SourceConnector.ConnectionString, l_SourceConnector.CustomerID);
+                    string[] l_LogCols  = !string.IsNullOrEmpty(l_LogTable)
+                                           ? SCSInventoryFeed.GetLogTableColumns(l_SourceConnector.ConnectionString, l_LogTable)
+                                           : null;
+
+                    var tables = l_data.AsEnumerable().ToChunks(chunkSize)
+                        .Select(rows => rows.CopyToDataTable()).ToList();
+
+                    foreach (var table in tables)
                     {
-                        SCSInventoryFeed.BulkInsertToLogTable(
-                            l_SourceConnector.ConnectionString,
-                            l_LogTable,
-                            l_data,
-                            l_InventoryBatchWise.BatchID,
-                            "UPLOAD");
+                        var itemsThread = new AmazonProcessItemsWarehousewiseThread(
+                           table, route, feed, l_DestinationConnector, l_SourceConnector, userNo, l_InventoryBatchWise.BatchID, ShipNodedataTable, l_LogTable, l_LogCols
+                       );
+
+                        itemsThread.ProcessItems().GetAwaiter().GetResult();
+
+                        Thread.Sleep(TimeSpan.FromMinutes(1));
                     }
-
-                    //if (l_data.Rows.Count <= 100)
-                    //{
-                    //    AmazonProcessItemsWarehousewiseThread itemsThread = new AmazonProcessItemsWarehousewiseThread(l_data, route, feed, l_DestinationConnector, l_SourceConnector, userNo, l_InventoryBatchWise.BatchID, ShipNodedataTable);
-
-                    //    // Run ProcessItems async
-                    //    Task.Run(() => itemsThread.ProcessItems());
-                    //}
-                    //else
-                    //{
-
-                        int i = 0;
-                        int chunkSize = CommonUtils.AmazonFeedMaxMessages;
-
-
-                        List<Task> tasks = new List<Task>();
-
-                        var tables = l_data.AsEnumerable().ToChunks(chunkSize)
-                            .Select(rows => rows.CopyToDataTable()).ToList();
-
-
-                        foreach (var table in tables)
-                        {
-                            var itemsThread = new AmazonProcessItemsWarehousewiseThread(
-                               table, route, feed, l_DestinationConnector, l_SourceConnector, userNo, l_InventoryBatchWise.BatchID, ShipNodedataTable
-                           );
-
-                            itemsThread.ProcessItems().GetAwaiter().GetResult();
-
-                            Thread.Sleep(TimeSpan.FromMinutes(1));
-                        }
                     
 
 
@@ -249,28 +230,32 @@ namespace eSyncMate.Processor.Managers
         private static HttpClient HttpClient => SharedHttpClientFactory.Amazon;
 
         // State information used in the task.
-        private DataTable data;
-        private Routes route;
+        private DataTable  data;
+        private Routes     route;
         private SCSInventoryFeed feed;
         private ConnectorDataModel destinationConnector;
         private ConnectorDataModel sourceConnector;
-        private int userNo;
-        private string bacthID;
-        private DataTable ShipNodeData;
-
+        private int        userNo;
+        private string     bacthID;
+        private DataTable  ShipNodeData;
+        private string     logTable;
+        private string[]   logCols;
 
         // The constructor obtains the state information.
         public AmazonProcessItemsWarehousewiseThread(DataTable data, Routes route, SCSInventoryFeed feed, ConnectorDataModel destinationConnector,
-                                ConnectorDataModel sourceConnector, int userNo, string batchID, DataTable shipNodeData)
+                                ConnectorDataModel sourceConnector, int userNo, string batchID, DataTable shipNodeData,
+                                string logTable = null, string[] logCols = null)
         {
-            this.data = data;
-            this.route = JsonConvert.DeserializeObject<Routes>(JsonConvert.SerializeObject(route));
-            this.feed = JsonConvert.DeserializeObject<SCSInventoryFeed>(JsonConvert.SerializeObject(feed));
+            this.data                 = data;
+            this.route                = JsonConvert.DeserializeObject<Routes>(JsonConvert.SerializeObject(route));
+            this.feed                 = JsonConvert.DeserializeObject<SCSInventoryFeed>(JsonConvert.SerializeObject(feed));
             this.destinationConnector = destinationConnector;
-            this.sourceConnector = sourceConnector;
-            this.userNo = userNo;
-            this.bacthID = batchID;
-            ShipNodeData = shipNodeData;
+            this.sourceConnector      = sourceConnector;
+            this.userNo               = userNo;
+            this.bacthID              = batchID;
+            this.ShipNodeData         = shipNodeData;
+            this.logTable             = logTable;
+            this.logCols              = logCols;
         }
 
         public async Task ProcessItems()
@@ -372,16 +357,37 @@ namespace eSyncMate.Processor.Managers
                     {
                         this.route.SaveLog(LogTypeEnum.Error, $"SubmitFeed failed — feedId empty, BatchID [{this.bacthID}] not tracked for status check.", string.Empty, userNo);
                     }
-                    //this.feed.UpdateSCSAmazonFeedData(this.bacthID, feedId,l_Guid);
+
+                    // Log UPLOAD snapshot after chunk is fully sent to Amazon
+                    if (!string.IsNullOrEmpty(this.logTable))
+                    {
+                        SCSInventoryFeed.BulkInsertToLogTable(
+                            this.sourceConnector.ConnectionString,
+                            this.logTable,
+                            this.data,
+                            this.bacthID,
+                            "UPLOAD",
+                            this.logCols,
+                            "Synced");
+                    }
                 }
             }
             catch (Exception ex)
             {
                 this.route.SaveLog(LogTypeEnum.Error, ex.Message, string.Empty, userNo);
+                
+                if (!string.IsNullOrEmpty(this.logTable))
+                {
+                    SCSInventoryFeed.BulkInsertToLogTable(
+                        this.sourceConnector.ConnectionString,
+                        this.logTable,
+                        this.data,
+                        this.bacthID,
+                        "UPLOAD",
+                        this.logCols,
+                        "Error");
+                }
             }
-
-            
-
         }
 
         //public void ProcessItem(DataRow row)

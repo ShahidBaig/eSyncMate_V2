@@ -428,7 +428,7 @@ namespace eSyncMate.DB.Entities
         }
 
         // ── Returns inventory data columns for a log table via SP ─────────
-        private static string[] GetLogTableColumns(string connectionString, string logTableName)
+        public static string[] GetLogTableColumns(string connectionString, string logTableName)
         {
             try
             {
@@ -464,25 +464,30 @@ namespace eSyncMate.DB.Entities
             string    logTableName,
             DataTable dataTable,
             string    batchID,
-            string    logType)
+            string    logType,
+            string[]  inventoryCols = null,
+            string    statusValue   = null)
         {
             if (dataTable == null || dataTable.Rows.Count == 0) return;
             if (string.IsNullOrEmpty(logTableName))             return;
             if (string.IsNullOrEmpty(batchID))                  return;
 
+            const int pageSize = 5000;
+
             try
             {
-                string[] inventoryCols = GetLogTableColumns(connectionString, logTableName);
+                if (inventoryCols == null)
+                    inventoryCols = GetLogTableColumns(connectionString, logTableName);
                 int      colCount      = inventoryCols.Length;
 
+                // ── Status value — caller can override, otherwise derived from logType ──
+                if (string.IsNullOrEmpty(statusValue))
+                    statusValue = logType.Equals("DOWNLOAD", StringComparison.OrdinalIgnoreCase)
+                                  ? "Updated" : "Synced";
+
                 // ── Pre-resolve column mapping ONCE (not per row) ─────────────────
-                // resolvedCols[i] = actual source column name to read from srcRow
-                //                   null = column handled specially (Status)
-                // statusIdx       = index of Status column, or -1 if absent
                 string[] resolvedCols = new string[colCount];
                 int      statusIdx    = -1;
-                string   statusValue  = logType.Equals("DOWNLOAD", StringComparison.OrdinalIgnoreCase)
-                                        ? "Updated" : "Synced";
 
                 for (int i = 0; i < colCount; i++)
                 {
@@ -508,58 +513,74 @@ namespace eSyncMate.DB.Entities
                     }
                 }
 
-                // ── Build log DataTable schema ────────────────────────────────────
-                DataTable logData = new DataTable();
-                logData.Columns.Add("BatchID", typeof(string));
-                logData.Columns.Add("LogType", typeof(string));
-
+                // ── Pre-resolve column types ONCE (reused per page) ──────────────
+                Type[] colTypes = new Type[colCount];
                 for (int i = 0; i < colCount; i++)
                 {
-                    Type colType = (i == statusIdx || resolvedCols[i] == null)
+                    colTypes[i] = (i == statusIdx || resolvedCols[i] == null)
                         ? typeof(string)
                         : dataTable.Columns[resolvedCols[i]].DataType;
-                    logData.Columns.Add(inventoryCols[i], colType);
                 }
 
-                // ── Fill rows — inner loop is index comparisons only ──────────────
-                logData.BeginLoadData();
-                foreach (DataRow srcRow in dataTable.Rows)
-                {
-                    DataRow logRow = logData.NewRow();
-                    logRow["BatchID"] = batchID;
-                    logRow["LogType"] = logType;
+                int totalRows  = dataTable.Rows.Count;
+                int totalPages = (int)Math.Ceiling((double)totalRows / pageSize);
 
-                    for (int i = 0; i < colCount; i++)
-                    {
-                        if (i == statusIdx)
-                        {
-                            logRow[i + 2] = statusValue;
-                        }
-                        else
-                        {
-                            string src = resolvedCols[i];
-                            logRow[i + 2] = src != null ? srcRow[src] ?? DBNull.Value : DBNull.Value;
-                        }
-                    }
-
-                    logData.Rows.Add(logRow);
-                }
-                logData.EndLoadData();
-
-                // ── SqlBulkCopy ───────────────────────────────────────────────────
+                // ── Single connection, paged inserts ──────────────────────────────
                 using (SqlConnection conn = new SqlConnection(connectionString))
                 {
                     conn.Open();
-                    using (SqlBulkCopy bulk = new SqlBulkCopy(conn))
+
+                    for (int page = 0; page < totalPages; page++)
                     {
-                        bulk.DestinationTableName = logTableName;
-                        bulk.BulkCopyTimeout      = 600;
-                        bulk.BatchSize            = 5000;
+                        int startIdx = page * pageSize;
+                        int endIdx   = Math.Min(startIdx + pageSize, totalRows);
 
-                        foreach (DataColumn col in logData.Columns)
-                            bulk.ColumnMappings.Add(col.ColumnName, col.ColumnName);
+                        // Build page DataTable schema
+                        DataTable logData = new DataTable();
+                        logData.Columns.Add("BatchID", typeof(string));
+                        logData.Columns.Add("LogType", typeof(string));
+                        for (int i = 0; i < colCount; i++)
+                            logData.Columns.Add(inventoryCols[i], colTypes[i]);
 
-                        bulk.WriteToServer(logData);
+                        // Fill page rows
+                        logData.BeginLoadData();
+                        for (int r = startIdx; r < endIdx; r++)
+                        {
+                            DataRow srcRow = dataTable.Rows[r];
+                            DataRow logRow = logData.NewRow();
+                            logRow["BatchID"] = batchID;
+                            logRow["LogType"] = logType;
+
+                            for (int i = 0; i < colCount; i++)
+                            {
+                                if (i == statusIdx)
+                                {
+                                    logRow[i + 2] = statusValue;
+                                }
+                                else
+                                {
+                                    string src = resolvedCols[i];
+                                    logRow[i + 2] = src != null ? srcRow[src] ?? DBNull.Value : DBNull.Value;
+                                }
+                            }
+
+                            logData.Rows.Add(logRow);
+                        }
+                        logData.EndLoadData();
+
+                        using (SqlBulkCopy bulk = new SqlBulkCopy(conn))
+                        {
+                            bulk.DestinationTableName = logTableName;
+                            bulk.BulkCopyTimeout      = 600;
+                            bulk.BatchSize            = pageSize;
+
+                            foreach (DataColumn col in logData.Columns)
+                                bulk.ColumnMappings.Add(col.ColumnName, col.ColumnName);
+
+                            bulk.WriteToServer(logData);
+                        }
+
+                        logData.Dispose();
                     }
                 }
             }
@@ -611,15 +632,17 @@ namespace eSyncMate.DB.Entities
             if (string.IsNullOrEmpty(batchID))                      return;
             if (perItemJson == null || perItemJson.Count == 0)       return;
 
+            const int pageSize = 5000;
+
             try
             {
                 string feedTable = "SCSInventoryFeedData_" + customerID;
 
-                // Validate customer table exists
                 using (SqlConnection conn = new SqlConnection(connectionString))
                 {
                     conn.Open();
 
+                    // Validate customer table exists (once, before paged loop)
                     using (SqlCommand checkCmd = new SqlCommand(
                         "SELECT COUNT(1) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA='dbo' AND TABLE_NAME=@t", conn))
                     {
@@ -628,46 +651,55 @@ namespace eSyncMate.DB.Entities
                         if (exists == 0) return;
                     }
 
-                    // Build feed DataTable
-                    DataTable feedData = new DataTable();
-                    feedData.Columns.Add("CustomerId",  typeof(string));
-                    feedData.Columns.Add("ItemId",      typeof(string));
-                    feedData.Columns.Add("Type",        typeof(string));
-                    feedData.Columns.Add("Data",        typeof(string));
-                    feedData.Columns.Add("BatchID",     typeof(string));
-                    feedData.Columns.Add("CreatedDate", typeof(DateTime));
-                    feedData.Columns.Add("CreatedBy",   typeof(int));
+                    int totalRows  = Math.Min(sourceTable.Rows.Count, perItemJson.Count);
+                    int totalPages = (int)Math.Ceiling((double)totalRows / pageSize);
 
-                    int rowCount = Math.Min(sourceTable.Rows.Count, perItemJson.Count);
-
-                    feedData.BeginLoadData();
-                    for (int i = 0; i < rowCount; i++)
+                    // ── Single connection, paged inserts ──────────────────────────
+                    for (int page = 0; page < totalPages; page++)
                     {
-                        DataRow src = sourceTable.Rows[i];
-                        DataRow row = feedData.NewRow();
+                        int startIdx = page * pageSize;
+                        int endIdx   = Math.Min(startIdx + pageSize, totalRows);
 
-                        row["CustomerId"]  = src["CustomerID"]?.ToString() ?? customerID;
-                        row["ItemId"]      = src["ItemId"]?.ToString() ?? string.Empty;
-                        row["Type"]        = type;
-                        row["Data"]        = perItemJson[i] ?? string.Empty;
-                        row["BatchID"]     = batchID;
-                        row["CreatedDate"] = DateTime.Now;
-                        row["CreatedBy"]   = 1;
+                        DataTable feedData = new DataTable();
+                        feedData.Columns.Add("CustomerId",  typeof(string));
+                        feedData.Columns.Add("ItemId",      typeof(string));
+                        feedData.Columns.Add("Type",        typeof(string));
+                        feedData.Columns.Add("Data",        typeof(string));
+                        feedData.Columns.Add("BatchID",     typeof(string));
+                        feedData.Columns.Add("CreatedDate", typeof(DateTime));
+                        feedData.Columns.Add("CreatedBy",   typeof(int));
 
-                        feedData.Rows.Add(row);
-                    }
-                    feedData.EndLoadData();
+                        feedData.BeginLoadData();
+                        for (int i = startIdx; i < endIdx; i++)
+                        {
+                            DataRow src = sourceTable.Rows[i];
+                            DataRow row = feedData.NewRow();
 
-                    using (SqlBulkCopy bulk = new SqlBulkCopy(conn))
-                    {
-                        bulk.DestinationTableName = feedTable;
-                        bulk.BulkCopyTimeout      = 600;
-                        bulk.BatchSize            = 5000;
+                            row["CustomerId"]  = src["CustomerID"]?.ToString() ?? customerID;
+                            row["ItemId"]      = src["ItemId"]?.ToString() ?? string.Empty;
+                            row["Type"]        = type;
+                            row["Data"]        = perItemJson[i] ?? string.Empty;
+                            row["BatchID"]     = batchID;
+                            row["CreatedDate"] = DateTime.Now;
+                            row["CreatedBy"]   = 1;
 
-                        foreach (DataColumn col in feedData.Columns)
-                            bulk.ColumnMappings.Add(col.ColumnName, col.ColumnName);
+                            feedData.Rows.Add(row);
+                        }
+                        feedData.EndLoadData();
 
-                        bulk.WriteToServer(feedData);
+                        using (SqlBulkCopy bulk = new SqlBulkCopy(conn))
+                        {
+                            bulk.DestinationTableName = feedTable;
+                            bulk.BulkCopyTimeout      = 600;
+                            bulk.BatchSize            = pageSize;
+
+                            foreach (DataColumn col in feedData.Columns)
+                                bulk.ColumnMappings.Add(col.ColumnName, col.ColumnName);
+
+                            bulk.WriteToServer(feedData);
+                        }
+
+                        feedData.Dispose();
                     }
                 }
             }

@@ -114,6 +114,11 @@ namespace eSyncMate.Processor.Managers
 
                 l_SCSInventoryFeed.InsertInventoryBatchWise(l_InventoryBatchWise);
 
+                string   l_LogTable = SCSInventoryFeed.GetLogTableName(l_DestinationConnector.ConnectionString, l_DestinationConnector.CustomerID);
+                string[] l_LogCols  = !string.IsNullOrEmpty(l_LogTable)
+                                       ? SCSInventoryFeed.GetLogTableColumns(l_DestinationConnector.ConnectionString, l_LogTable)
+                                       : null;
+
                 l_SCSInventoryFeed.GetViewList("CustomerID = " + PublicFunctions.FieldToParam(l_DestinationConnector.CustomerID, Declarations.FieldTypes.String), "*", ref l_TempData, "CurrentPage DESC");
                 
                 route.SaveLog(LogTypeEnum.Debug, $"SCSInventory GetObject Processed Successfully", string.Empty, userNo);
@@ -208,7 +213,6 @@ namespace eSyncMate.Processor.Managers
                                 SCSInventoryFeed.BulkInsert(l_DestinationConnector.ConnectionString, "Temp_", l_dataTable);
 
                                 // Log snapshot into per-customer log table
-                                string l_LogTable = SCSInventoryFeed.GetLogTableName(l_DestinationConnector.ConnectionString, l_DestinationConnector.CustomerID);
                                 if (!string.IsNullOrEmpty(l_LogTable))
                                 {
                                     SCSInventoryFeed.BulkInsertToLogTable(
@@ -216,7 +220,9 @@ namespace eSyncMate.Processor.Managers
                                         l_LogTable,
                                         l_dataTable,
                                         l_InventoryBatchWise.BatchID,
-                                        "DOWNLOAD");
+                                        "DOWNLOAD",
+                                        l_LogCols,
+                                        "Updated");
                                 }
 
                                 // Insert per-item ERP JSON into customer-wise SCSInventoryFeedData table
