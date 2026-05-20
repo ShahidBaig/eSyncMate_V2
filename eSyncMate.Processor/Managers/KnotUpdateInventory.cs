@@ -80,6 +80,11 @@ namespace eSyncMate.Processor.Managers
 
                     l_SCSInventoryFeed.InsertInventoryBatchWise(l_InventoryBatchWise);
 
+                    string   l_LogTable = SCSInventoryFeed.GetLogTableName(l_SourceConnector.ConnectionString, l_SourceConnector.CustomerID);
+                    string[] l_LogCols  = !string.IsNullOrEmpty(l_LogTable)
+                                           ? SCSInventoryFeed.GetLogTableColumns(l_SourceConnector.ConnectionString, l_LogTable)
+                                           : null;
+
                     foreach (DataRow row in l_data.Rows)
                     {
                         string customerId = row["CustomerId"].ToString();
@@ -126,6 +131,18 @@ namespace eSyncMate.Processor.Managers
                         route.SaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
 
                         route.SaveLog(LogTypeEnum.Debug, $"Destination connector processing completed.", string.Empty, userNo);
+
+                        // Log UPLOAD snapshot after successful send to Knot
+                        if (!string.IsNullOrEmpty(l_LogTable))
+                        {
+                            SCSInventoryFeed.BulkInsertToLogTable(
+                                l_SourceConnector.ConnectionString,
+                                l_LogTable,
+                                l_data,
+                                l_InventoryBatchWise.BatchID,
+                                "UPLOAD",
+                                l_LogCols);
+                        }
                     }
                     else
                     {

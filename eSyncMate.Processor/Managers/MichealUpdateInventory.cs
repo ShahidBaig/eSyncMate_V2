@@ -82,9 +82,14 @@ namespace eSyncMate.Processor.Managers
 
                     l_SCSInventoryFeed.InsertInventoryBatchWise(l_InventoryBatchWise);
 
+                    string   l_LogTable = SCSInventoryFeed.GetLogTableName(l_SourceConnector.ConnectionString, l_SourceConnector.CustomerID);
+                    string[] l_LogCols  = !string.IsNullOrEmpty(l_LogTable)
+                                           ? SCSInventoryFeed.GetLogTableColumns(l_SourceConnector.ConnectionString, l_LogTable)
+                                           : null;
+
                     if (l_data.Rows.Count <= 50)
                     {
-                        ProcessMichleItemPricesThread itemsThread = new ProcessMichleItemPricesThread(l_data, route, feed, l_DestinationConnector, l_SourceConnector, userNo, l_InventoryBatchWise.BatchID);
+                        ProcessMichleItemPricesThread itemsThread = new ProcessMichleItemPricesThread(l_data, route, feed, l_DestinationConnector, l_SourceConnector, userNo, l_InventoryBatchWise.BatchID, l_LogTable, l_LogCols);
 
                         itemsThread.ProcessItems();
                     }
@@ -100,7 +105,7 @@ namespace eSyncMate.Processor.Managers
 
                         while (i < tables.Count)
                         {
-                            ProcessMichleItemPricesThread itemsThread = new ProcessMichleItemPricesThread(tables[i], route, feed, l_DestinationConnector, l_SourceConnector, userNo, l_InventoryBatchWise.BatchID);
+                            ProcessMichleItemPricesThread itemsThread = new ProcessMichleItemPricesThread(tables[i], route, feed, l_DestinationConnector, l_SourceConnector, userNo, l_InventoryBatchWise.BatchID, l_LogTable, l_LogCols);
 
                             Thread t = new Thread(new ThreadStart(itemsThread.ProcessItems));
                             threads.Add(t);
@@ -209,25 +214,30 @@ namespace eSyncMate.Processor.Managers
     public class ProcessMichleItemPricesThread
     {
         // State information used in the task.
-        private DataTable data;
-        private Routes route;
+        private DataTable  data;
+        private Routes     route;
         private SCSInventoryFeed feed;
         private ConnectorDataModel destinationConnector;
         private ConnectorDataModel sourceConnector;
-        private int userNo;
-        private string bacthID;
+        private int        userNo;
+        private string     bacthID;
+        private string     logTable;
+        private string[]   logCols;
 
         // The constructor obtains the state information.
         public ProcessMichleItemPricesThread(DataTable data, Routes route, SCSInventoryFeed feed, ConnectorDataModel destinationConnector,
-                                ConnectorDataModel sourceConnector, int userNo, string batchID)
+                                ConnectorDataModel sourceConnector, int userNo, string batchID,
+                                string logTable = null, string[] logCols = null)
         {
-            this.data = data;
-            this.route = JsonConvert.DeserializeObject<Routes>(JsonConvert.SerializeObject(route));
-            this.feed = JsonConvert.DeserializeObject<SCSInventoryFeed>(JsonConvert.SerializeObject(feed));
+            this.data                 = data;
+            this.route                = JsonConvert.DeserializeObject<Routes>(JsonConvert.SerializeObject(route));
+            this.feed                 = JsonConvert.DeserializeObject<SCSInventoryFeed>(JsonConvert.SerializeObject(feed));
             this.destinationConnector = destinationConnector;
-            this.sourceConnector = sourceConnector;
-            this.userNo = userNo;
-            this.bacthID = batchID;
+            this.sourceConnector      = sourceConnector;
+            this.userNo               = userNo;
+            this.bacthID              = batchID;
+            this.logTable             = logTable;
+            this.logCols              = logCols;
         }
 
         public void ProcessItems()
@@ -235,8 +245,20 @@ namespace eSyncMate.Processor.Managers
             foreach (DataRow row in this.data.Rows)
             {
                 this.ProcessItem(row);
-
                 Thread.Sleep(400);
+            }
+
+            // Log UPLOAD snapshot after all items in this chunk are processed
+            if (!string.IsNullOrEmpty(this.logTable))
+            {
+                SCSInventoryFeed.BulkInsertToLogTable(
+                    this.sourceConnector.ConnectionString,
+                    this.logTable,
+                    this.data,
+                    this.bacthID,
+                    "UPLOAD",
+                    this.logCols,
+                    "Synced");
             }
         }
 
@@ -281,6 +303,7 @@ namespace eSyncMate.Processor.Managers
 
                 this.route.SaveData("JSON-RVD", 0, sourceResponse.Content, this.userNo);
                 this.feed.SaveData("JSON-RVD", customerId, itemId, sourceResponse.Content, this.userNo, this.bacthID);
+
             }
             catch (Exception ex)
             {

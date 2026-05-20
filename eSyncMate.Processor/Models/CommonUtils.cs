@@ -190,7 +190,9 @@ namespace eSyncMate.Processor.Models
         GenerateEDI856ForRepaintRoute = 504,
         GenerateEDI810ForRepaintRoute = 505,
         // System/Maintenance Routes
-        StaleLockCleanup = 72
+        StaleLockCleanup = 72,
+        WalmartWHSWInventoryUpload = 73
+
     }
 
     public enum AlertTypesEnum

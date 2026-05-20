@@ -402,6 +402,313 @@ namespace eSyncMate.DB.Entities
             return l_Result;
         }
 
+        // ── CustomerID → log table name via SP (pattern-based, DB-validated) ──
+        public static string GetLogTableName(string connectionString, string customerID)
+        {
+            if (string.IsNullOrEmpty(customerID)) return null;
+
+            try
+            {
+                using (SqlConnection conn = new SqlConnection(connectionString))
+                {
+                    conn.Open();
+                    using (SqlCommand cmd = new SqlCommand(
+                        "EXEC [dbo].[Sp_GetInventoryLogTableName] @p_CustomerID", conn))
+                    {
+                        cmd.Parameters.AddWithValue("@p_CustomerID", customerID);
+                        var result = cmd.ExecuteScalar();
+                        return (result == null || result == DBNull.Value) ? null : result.ToString();
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+
+        // ── Returns inventory data columns for a log table via SP ─────────
+        public static string[] GetLogTableColumns(string connectionString, string logTableName)
+        {
+            try
+            {
+                var columns = new List<string>();
+                using (SqlConnection conn = new SqlConnection(connectionString))
+                {
+                    conn.Open();
+                    using (SqlCommand cmd = new SqlCommand(
+                        "EXEC [dbo].[Sp_GetInventoryLogTableColumns] @p_TableName", conn))
+                    {
+                        cmd.Parameters.AddWithValue("@p_TableName", logTableName);
+                        using (SqlDataReader reader = cmd.ExecuteReader())
+                        {
+                            while (reader.Read())
+                                columns.Add(reader.GetString(0));
+                        }
+                    }
+                }
+                return columns.ToArray();
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+
+        // ── Bulk insert a historical snapshot into a per-customer log table ──
+        // batchID  : InventoryBatchWise.BatchID
+        // logType  : "DOWNLOAD"  (ERP → eSyncMate)  or  "UPLOAD" (eSyncMate → Partner)
+        // dataTable: the source DataTable (columns are matched by name; missing cols stay NULL)
+        public static void BulkInsertToLogTable(
+            string    connectionString,
+            string    logTableName,
+            DataTable dataTable,
+            string    batchID,
+            string    logType,
+            string[]  inventoryCols = null,
+            string    statusValue   = null)
+        {
+            if (dataTable == null || dataTable.Rows.Count == 0) return;
+            if (string.IsNullOrEmpty(logTableName))             return;
+            if (string.IsNullOrEmpty(batchID))                  return;
+
+            const int pageSize = 5000;
+
+            try
+            {
+                if (inventoryCols == null)
+                    inventoryCols = GetLogTableColumns(connectionString, logTableName);
+                int      colCount      = inventoryCols.Length;
+
+                // ── Status value — caller can override, otherwise derived from logType ──
+                if (string.IsNullOrEmpty(statusValue))
+                    statusValue = logType.Equals("DOWNLOAD", StringComparison.OrdinalIgnoreCase)
+                                  ? "Updated" : "Synced";
+
+                // ── Pre-resolve column mapping ONCE (not per row) ─────────────────
+                string[] resolvedCols = new string[colCount];
+                int      statusIdx    = -1;
+
+                for (int i = 0; i < colCount; i++)
+                {
+                    string col = inventoryCols[i];
+
+                    if (col.Equals("Status", StringComparison.OrdinalIgnoreCase))
+                    {
+                        statusIdx       = i;
+                        resolvedCols[i] = null; // handled via statusValue
+                    }
+                    else if (dataTable.Columns.Contains(col))
+                    {
+                        resolvedCols[i] = col;
+                    }
+                    else
+                    {
+                        // Case-insensitive fallback — paid once per column, never per row
+                        DataColumn found = dataTable.Columns
+                            .Cast<DataColumn>()
+                            .FirstOrDefault(c => string.Equals(c.ColumnName, col,
+                                StringComparison.OrdinalIgnoreCase));
+                        resolvedCols[i] = found?.ColumnName;
+                    }
+                }
+
+                // ── Pre-resolve column types ONCE (reused per page) ──────────────
+                Type[] colTypes = new Type[colCount];
+                for (int i = 0; i < colCount; i++)
+                {
+                    colTypes[i] = (i == statusIdx || resolvedCols[i] == null)
+                        ? typeof(string)
+                        : dataTable.Columns[resolvedCols[i]].DataType;
+                }
+
+                int totalRows  = dataTable.Rows.Count;
+                int totalPages = (int)Math.Ceiling((double)totalRows / pageSize);
+
+                // ── Single connection, paged inserts ──────────────────────────────
+                using (SqlConnection conn = new SqlConnection(connectionString))
+                {
+                    conn.Open();
+
+                    for (int page = 0; page < totalPages; page++)
+                    {
+                        int startIdx = page * pageSize;
+                        int endIdx   = Math.Min(startIdx + pageSize, totalRows);
+
+                        // Build page DataTable schema
+                        DataTable logData = new DataTable();
+                        logData.Columns.Add("BatchID", typeof(string));
+                        logData.Columns.Add("LogType", typeof(string));
+                        for (int i = 0; i < colCount; i++)
+                            logData.Columns.Add(inventoryCols[i], colTypes[i]);
+
+                        // Fill page rows
+                        logData.BeginLoadData();
+                        for (int r = startIdx; r < endIdx; r++)
+                        {
+                            DataRow srcRow = dataTable.Rows[r];
+                            DataRow logRow = logData.NewRow();
+                            logRow["BatchID"] = batchID;
+                            logRow["LogType"] = logType;
+
+                            for (int i = 0; i < colCount; i++)
+                            {
+                                if (i == statusIdx)
+                                {
+                                    logRow[i + 2] = statusValue;
+                                }
+                                else
+                                {
+                                    string src = resolvedCols[i];
+                                    logRow[i + 2] = src != null ? srcRow[src] ?? DBNull.Value : DBNull.Value;
+                                }
+                            }
+
+                            logData.Rows.Add(logRow);
+                        }
+                        logData.EndLoadData();
+
+                        using (SqlBulkCopy bulk = new SqlBulkCopy(conn))
+                        {
+                            bulk.DestinationTableName = logTableName;
+                            bulk.BulkCopyTimeout      = 600;
+                            bulk.BatchSize            = pageSize;
+
+                            foreach (DataColumn col in logData.Columns)
+                                bulk.ColumnMappings.Add(col.ColumnName, col.ColumnName);
+
+                            bulk.WriteToServer(logData);
+                        }
+
+                        logData.Dispose();
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+
+        // ── Update a single item's Status in the log table (e.g. Walmart node errors → 'Error') ──
+        public bool UpdateLogItemStatus(string logTableName, string batchID, string itemId, string status)
+        {
+            if (string.IsNullOrEmpty(logTableName)) return false;
+
+            try
+            {
+                string query = $"UPDATE [{logTableName}] SET [Status] = @Status WHERE BatchID = @BatchID AND ItemId = @ItemId";
+
+                SqlParameter[] parameters = new SqlParameter[]
+                {
+                    new SqlParameter("@Status",  SqlDbType.VarChar)   { Value = status  },
+                    new SqlParameter("@BatchID", SqlDbType.NVarChar)  { Value = batchID },
+                    new SqlParameter("@ItemId",  SqlDbType.VarChar)   { Value = itemId  }
+                };
+
+                return this.Connection.Execute(query, p_SQLParams: parameters);
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+
+        // ── Bulk insert per-item ERP/upload data into customer-wise SCSInventoryFeedData table ──
+        // customerID  : used to resolve table SCSInventoryFeedData_[customerID]
+        // sourceTable : must have ItemId and CustomerId columns
+        // type        : 'ERP-RVD' (download) or any other type
+        // perItemJson : actual JSON received/sent per item — same index order as sourceTable rows
+        public static void BulkInsertFeedData(
+            string        connectionString,
+            string        customerID,
+            DataTable     sourceTable,
+            string        batchID,
+            string        type,
+            IList<string> perItemJson)
+        {
+            if (sourceTable == null || sourceTable.Rows.Count == 0) return;
+            if (string.IsNullOrEmpty(customerID))                   return;
+            if (string.IsNullOrEmpty(batchID))                      return;
+            if (perItemJson == null || perItemJson.Count == 0)       return;
+
+            const int pageSize = 5000;
+
+            try
+            {
+                string feedTable = "SCSInventoryFeedData_" + customerID;
+
+                using (SqlConnection conn = new SqlConnection(connectionString))
+                {
+                    conn.Open();
+
+                    // Validate customer table exists (once, before paged loop)
+                    using (SqlCommand checkCmd = new SqlCommand(
+                        "SELECT COUNT(1) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA='dbo' AND TABLE_NAME=@t", conn))
+                    {
+                        checkCmd.Parameters.AddWithValue("@t", feedTable);
+                        int exists = (int)checkCmd.ExecuteScalar();
+                        if (exists == 0) return;
+                    }
+
+                    int totalRows  = Math.Min(sourceTable.Rows.Count, perItemJson.Count);
+                    int totalPages = (int)Math.Ceiling((double)totalRows / pageSize);
+
+                    // ── Single connection, paged inserts ──────────────────────────
+                    for (int page = 0; page < totalPages; page++)
+                    {
+                        int startIdx = page * pageSize;
+                        int endIdx   = Math.Min(startIdx + pageSize, totalRows);
+
+                        DataTable feedData = new DataTable();
+                        feedData.Columns.Add("CustomerId",  typeof(string));
+                        feedData.Columns.Add("ItemId",      typeof(string));
+                        feedData.Columns.Add("Type",        typeof(string));
+                        feedData.Columns.Add("Data",        typeof(string));
+                        feedData.Columns.Add("BatchID",     typeof(string));
+                        feedData.Columns.Add("CreatedDate", typeof(DateTime));
+                        feedData.Columns.Add("CreatedBy",   typeof(int));
+
+                        feedData.BeginLoadData();
+                        for (int i = startIdx; i < endIdx; i++)
+                        {
+                            DataRow src = sourceTable.Rows[i];
+                            DataRow row = feedData.NewRow();
+
+                            row["CustomerId"]  = src["CustomerID"]?.ToString() ?? customerID;
+                            row["ItemId"]      = src["ItemId"]?.ToString() ?? string.Empty;
+                            row["Type"]        = type;
+                            row["Data"]        = perItemJson[i] ?? string.Empty;
+                            row["BatchID"]     = batchID;
+                            row["CreatedDate"] = DateTime.Now;
+                            row["CreatedBy"]   = 1;
+
+                            feedData.Rows.Add(row);
+                        }
+                        feedData.EndLoadData();
+
+                        using (SqlBulkCopy bulk = new SqlBulkCopy(conn))
+                        {
+                            bulk.DestinationTableName = feedTable;
+                            bulk.BulkCopyTimeout      = 600;
+                            bulk.BatchSize            = pageSize;
+
+                            foreach (DataColumn col in feedData.Columns)
+                                bulk.ColumnMappings.Add(col.ColumnName, col.ColumnName);
+
+                            bulk.WriteToServer(feedData);
+                        }
+
+                        feedData.Dispose();
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+
         public static void BulkInsert(string connectionString, string destinationTableName, DataTable dataTable)
         {
             using (SqlConnection connection = new SqlConnection(connectionString))
@@ -806,25 +1113,30 @@ namespace eSyncMate.DB.Entities
 
             return this.Connection.Execute(updateQuery);
         }
-        public Result SaveData(string type, string CustomerId, string ItemId, string Data, int userNo,string batchID)
+        public Result SaveData(string type, string CustomerId, string ItemId, string Data, int userNo, string batchID)
         {
             Result l_Result = Result.GetFailureResult();
 
             try
             {
-                SCSInventoryFeedData entityData = new SCSInventoryFeedData();
+                string feedTable = "SCSInventoryFeedData_" + CustomerId;
 
-                entityData.UseConnection(string.Empty, this.Connection);
+                string query = $@"INSERT INTO [{feedTable}]
+                    (CustomerId, ItemId, [Type], [Data], BatchID, CreatedDate, CreatedBy)
+                    VALUES (@CustomerId, @ItemId, @Type, @Data, @BatchID, GETDATE(), @CreatedBy)";
 
-                entityData.CreatedBy = userNo;
-                entityData.CreatedDate = DateTime.Now;
-                entityData.Data = Data;
-                entityData.CustomerId = CustomerId;
-                entityData.ItemId = ItemId;
-                entityData.Type = type;
-                entityData.BatchID = batchID;
+                SqlParameter[] parameters = new SqlParameter[]
+                {
+                    new SqlParameter("@CustomerId", SqlDbType.VarChar)   { Value = CustomerId ?? string.Empty },
+                    new SqlParameter("@ItemId",     SqlDbType.VarChar)   { Value = ItemId     ?? string.Empty },
+                    new SqlParameter("@Type",       SqlDbType.VarChar)   { Value = type       ?? string.Empty },
+                    new SqlParameter("@Data",       SqlDbType.NVarChar)  { Value = Data       ?? string.Empty },
+                    new SqlParameter("@BatchID",    SqlDbType.NVarChar)  { Value = batchID    ?? string.Empty },
+                    new SqlParameter("@CreatedBy",  SqlDbType.Int)       { Value = userNo }
+                };
 
-                l_Result = entityData.SaveNew();
+                bool success = this.Connection.Execute(query, p_SQLParams: parameters);
+                if (success) l_Result = Result.GetSuccessResult();
             }
             catch (Exception)
             {

@@ -24,7 +24,8 @@ namespace eSyncMate.DB.Entities
         /// Returns the lock token (GUID) on success, or null if a lock already exists.
         /// Uses atomic INSERT ... WHERE NOT EXISTS with UPDLOCK to prevent race conditions.
         /// </summary>
-        public string AcquireLock(string customerID, int routeTypeId, int routeId)
+        public string AcquireLock(string customerID, int routeTypeId, int routeId,
+                                   int timeoutMinutes = 60)
         {
             // Safety check: ensure table exists on client DB
             if (!EnsureTableExists()) return null;
@@ -32,15 +33,15 @@ namespace eSyncMate.DB.Entities
             string lockToken = Guid.NewGuid().ToString();
             string machineName = Environment.MachineName;
 
-            string query = @"
-                INSERT INTO [RouteExecutionLock] ([CustomerID], [RouteTypeId], [RouteId], [LockToken], [AcquiredAt], [MachineName], [IsActive])
-                SELECT @CustomerID, @RouteTypeId, @RouteId, @LockToken, GETDATE(), @MachineName, 1
+            string query = $@"
+                INSERT INTO [RouteExecutionLock] ([CustomerID], [RouteTypeId], [RouteId], [LockToken], [AcquiredAt], [MachineName], [IsActive], [TimeoutMinutes])
+                SELECT @CustomerID, @RouteTypeId, @RouteId, @LockToken, GETDATE(), @MachineName, 1, {timeoutMinutes}
                 WHERE NOT EXISTS (
                     SELECT 1 FROM [RouteExecutionLock] WITH (UPDLOCK, HOLDLOCK)
                     WHERE [CustomerID] = @CustomerID
                       AND [RouteTypeId] = @RouteTypeId
                       AND [IsActive] = 1
-                      AND DATEDIFF(MINUTE, [AcquiredAt], GETDATE()) <= 60
+                      AND DATEDIFF(MINUTE, [AcquiredAt], GETDATE()) <= TimeoutMinutes
                 )";
 
             SqlParameter[] parameters = new SqlParameter[]
@@ -95,7 +96,7 @@ namespace eSyncMate.DB.Entities
                 WHERE [CustomerID] = '{safeCustomerID}'
                   AND [RouteTypeId] = {routeTypeId}
                   AND [IsActive] = 1
-                  AND DATEDIFF(MINUTE, [AcquiredAt], GETDATE()) <= 60";
+                  AND DATEDIFF(MINUTE, [AcquiredAt], GETDATE()) <= TimeoutMinutes";
 
             object result = _connection.ExecuteScalar(query);
             int count = Convert.ToInt32(result ?? 0);
@@ -107,7 +108,7 @@ namespace eSyncMate.DB.Entities
         /// Called by Hangfire cleanup job to handle crashed/orphaned processes.
         /// Returns the number of stale locks cleaned.
         /// </summary>
-        public int CleanStaleLocks(int timeoutMinutes = 60)
+        public int CleanStaleLocks(int timeoutMinutes = 60) // timeoutMinutes ignored — each lock uses its own TimeoutMinutes column
         {
             if (!EnsureTableExists()) return 0;
 
@@ -115,7 +116,7 @@ namespace eSyncMate.DB.Entities
                 UPDATE [RouteExecutionLock]
                 SET [IsActive] = 0
                 WHERE [IsActive] = 1
-                  AND DATEDIFF(MINUTE, [AcquiredAt], GETDATE()) > {timeoutMinutes};
+                  AND DATEDIFF(MINUTE, [AcquiredAt], GETDATE()) > TimeoutMinutes;
                 SELECT @@ROWCOUNT;";
 
             object result = _connection.ExecuteScalar(query);
@@ -141,7 +142,8 @@ namespace eSyncMate.DB.Entities
                             [LockToken] VARCHAR(50) NOT NULL,
                             [AcquiredAt] DATETIME NOT NULL DEFAULT GETDATE(),
                             [MachineName] VARCHAR(100) NULL,
-                            [IsActive] BIT NOT NULL DEFAULT 1
+                            [IsActive] BIT NOT NULL DEFAULT 1,
+                            [TimeoutMinutes] INT NOT NULL DEFAULT 60
                         );
                         CREATE INDEX IX_RouteExecutionLock_Active ON [RouteExecutionLock] ([CustomerID], [RouteTypeId], [IsActive]) WHERE [IsActive] = 1;
                     END

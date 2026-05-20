@@ -104,36 +104,29 @@ namespace eSyncMate.Processor.Managers
 
                     l_SCSInventoryFeed.InsertInventoryBatchWise(l_InventoryBatchWise);
 
-                    //if (l_data.Rows.Count <= 100)
-                    //{
-                    //    AmazonProcessItemsWarehousewiseThread itemsThread = new AmazonProcessItemsWarehousewiseThread(l_data, route, feed, l_DestinationConnector, l_SourceConnector, userNo, l_InventoryBatchWise.BatchID, ShipNodedataTable);
+                    int i = 0;
+                    int chunkSize = CommonUtils.AmazonFeedMaxMessages;
 
-                    //    // Run ProcessItems async
-                    //    Task.Run(() => itemsThread.ProcessItems());
-                    //}
-                    //else
-                    //{
+                    List<Task> tasks = new List<Task>();
 
-                        int i = 0;
-                        int chunkSize = CommonUtils.AmazonFeedMaxMessages;
+                    string   l_LogTable = SCSInventoryFeed.GetLogTableName(l_SourceConnector.ConnectionString, l_SourceConnector.CustomerID);
+                    string[] l_LogCols  = !string.IsNullOrEmpty(l_LogTable)
+                                           ? SCSInventoryFeed.GetLogTableColumns(l_SourceConnector.ConnectionString, l_LogTable)
+                                           : null;
 
+                    var tables = l_data.AsEnumerable().ToChunks(chunkSize)
+                        .Select(rows => rows.CopyToDataTable()).ToList();
 
-                        List<Task> tasks = new List<Task>();
+                    foreach (var table in tables)
+                    {
+                        var itemsThread = new AmazonProcessItemsWarehousewiseThread(
+                           table, route, feed, l_DestinationConnector, l_SourceConnector, userNo, l_InventoryBatchWise.BatchID, ShipNodedataTable, l_LogTable, l_LogCols
+                       );
 
-                        var tables = l_data.AsEnumerable().ToChunks(chunkSize)
-                            .Select(rows => rows.CopyToDataTable()).ToList();
+                        itemsThread.ProcessItems().GetAwaiter().GetResult();
 
-
-                        foreach (var table in tables)
-                        {
-                            var itemsThread = new AmazonProcessItemsWarehousewiseThread(
-                               table, route, feed, l_DestinationConnector, l_SourceConnector, userNo, l_InventoryBatchWise.BatchID, ShipNodedataTable
-                           );
-
-                            itemsThread.ProcessItems().GetAwaiter().GetResult();
-
-                            Thread.Sleep(TimeSpan.FromMinutes(1));
-                        }
+                        Thread.Sleep(TimeSpan.FromMinutes(1));
+                    }
                     
 
 
@@ -237,28 +230,32 @@ namespace eSyncMate.Processor.Managers
         private static HttpClient HttpClient => SharedHttpClientFactory.Amazon;
 
         // State information used in the task.
-        private DataTable data;
-        private Routes route;
+        private DataTable  data;
+        private Routes     route;
         private SCSInventoryFeed feed;
         private ConnectorDataModel destinationConnector;
         private ConnectorDataModel sourceConnector;
-        private int userNo;
-        private string bacthID;
-        private DataTable ShipNodeData;
-
+        private int        userNo;
+        private string     bacthID;
+        private DataTable  ShipNodeData;
+        private string     logTable;
+        private string[]   logCols;
 
         // The constructor obtains the state information.
         public AmazonProcessItemsWarehousewiseThread(DataTable data, Routes route, SCSInventoryFeed feed, ConnectorDataModel destinationConnector,
-                                ConnectorDataModel sourceConnector, int userNo, string batchID, DataTable shipNodeData)
+                                ConnectorDataModel sourceConnector, int userNo, string batchID, DataTable shipNodeData,
+                                string logTable = null, string[] logCols = null)
         {
-            this.data = data;
-            this.route = JsonConvert.DeserializeObject<Routes>(JsonConvert.SerializeObject(route));
-            this.feed = JsonConvert.DeserializeObject<SCSInventoryFeed>(JsonConvert.SerializeObject(feed));
+            this.data                 = data;
+            this.route                = JsonConvert.DeserializeObject<Routes>(JsonConvert.SerializeObject(route));
+            this.feed                 = JsonConvert.DeserializeObject<SCSInventoryFeed>(JsonConvert.SerializeObject(feed));
             this.destinationConnector = destinationConnector;
-            this.sourceConnector = sourceConnector;
-            this.userNo = userNo;
-            this.bacthID = batchID;
-            ShipNodeData = shipNodeData;
+            this.sourceConnector      = sourceConnector;
+            this.userNo               = userNo;
+            this.bacthID              = batchID;
+            this.ShipNodeData         = shipNodeData;
+            this.logTable             = logTable;
+            this.logCols              = logCols;
         }
 
         public async Task ProcessItems()
@@ -293,7 +290,7 @@ namespace eSyncMate.Processor.Managers
                     feedUrl = createDocumentResponse["url"].ToString();
                     jsonrequest = string.Empty;
 
-                    jsonrequest = GenerateInventoryFeedXml(this.data, this.feed, this.sourceConnector.ConnectionString, this.bacthID, this.ShipNodeData, l_Guid);
+                    jsonrequest = GenerateInventoryFeedXml(this.data, this.feed, this.sourceConnector.ConnectionString, this.bacthID, this.ShipNodeData, l_Guid, this.sourceConnector.CustomerID);
                     //jsonrequest = GenerateInventoryFeedXmlPathWise(this.data, this.feed, this.sourceConnector.ConnectionString, this.bacthID, this.ShipNodeData, l_Guid);
 
                 }
@@ -350,7 +347,7 @@ namespace eSyncMate.Processor.Managers
                         feed.UpdateItemStatus(row["ItemId"].ToString(), row["CustomerId"].ToString());
                     }
                     
-                    feed.BulkNewInsertData(this.sourceConnector.ConnectionString, "SCSInventoryFeedData", bulkInsertTable);
+                    feed.BulkNewInsertData(this.sourceConnector.ConnectionString, "SCSInventoryFeedData_" + this.sourceConnector.CustomerID, bulkInsertTable);
 
                     if (!string.IsNullOrWhiteSpace(feedId))
                     {
@@ -360,16 +357,37 @@ namespace eSyncMate.Processor.Managers
                     {
                         this.route.SaveLog(LogTypeEnum.Error, $"SubmitFeed failed — feedId empty, BatchID [{this.bacthID}] not tracked for status check.", string.Empty, userNo);
                     }
-                    //this.feed.UpdateSCSAmazonFeedData(this.bacthID, feedId,l_Guid);
+
+                    // Log UPLOAD snapshot after chunk is fully sent to Amazon
+                    if (!string.IsNullOrEmpty(this.logTable))
+                    {
+                        SCSInventoryFeed.BulkInsertToLogTable(
+                            this.sourceConnector.ConnectionString,
+                            this.logTable,
+                            this.data,
+                            this.bacthID,
+                            "UPLOAD",
+                            this.logCols,
+                            "Synced");
+                    }
                 }
             }
             catch (Exception ex)
             {
                 this.route.SaveLog(LogTypeEnum.Error, ex.Message, string.Empty, userNo);
+                
+                if (!string.IsNullOrEmpty(this.logTable))
+                {
+                    SCSInventoryFeed.BulkInsertToLogTable(
+                        this.sourceConnector.ConnectionString,
+                        this.logTable,
+                        this.data,
+                        this.bacthID,
+                        "UPLOAD",
+                        this.logCols,
+                        "Error");
+                }
             }
-
-            
-
         }
 
         //public void ProcessItem(DataRow row)
@@ -425,7 +443,7 @@ namespace eSyncMate.Processor.Managers
         //    }
         //}
 
-        private static string GenerateInventoryFeedXml(DataTable inventoryData, SCSInventoryFeed feed,string ConnectionString , string batchID,DataTable shipNodeData,string p_Guid)
+        private static string GenerateInventoryFeedXml(DataTable inventoryData, SCSInventoryFeed feed, string ConnectionString, string batchID, DataTable shipNodeData, string p_Guid, string customerID)
         {
             StringBuilder xml = new StringBuilder();
             feed.UseConnection(ConnectionString);
@@ -511,7 +529,7 @@ namespace eSyncMate.Processor.Managers
                         Formatting.None
                     );
 
-                feed.BulkNewInsertData(ConnectionString, "SCSInventoryFeedData", bulkInsertTable);
+                feed.BulkNewInsertData(ConnectionString, "SCSInventoryFeedData_" + customerID, bulkInsertTable);
                 //feed.BulkAmazonFeedData(ConnectionString, "SCSAmazonFeedData", bulkSCSAmazonFeedData);
 
                 return fullFeedJson;
@@ -526,7 +544,7 @@ namespace eSyncMate.Processor.Managers
             
         }
 
-        private static string GenerateInventoryFeedXmlPathWise(DataTable inventoryData, SCSInventoryFeed feed, string ConnectionString, string batchID, DataTable shipNodeData, string p_Guid)
+        private static string GenerateInventoryFeedXmlPathWise(DataTable inventoryData, SCSInventoryFeed feed, string ConnectionString, string batchID, DataTable shipNodeData, string p_Guid, string customerID)
         {
             StringBuilder xml = new StringBuilder();
             feed.UseConnection(ConnectionString);
@@ -629,7 +647,7 @@ namespace eSyncMate.Processor.Managers
                         Formatting.None
                     );
 
-                feed.BulkNewInsertData(ConnectionString, "SCSInventoryFeedData", bulkInsertTable);
+                feed.BulkNewInsertData(ConnectionString, "SCSInventoryFeedData_" + customerID, bulkInsertTable);
                 feed.BulkAmazonFeedData(ConnectionString, "SCSAmazonFeedData", bulkSCSAmazonFeedData);
 
                 return fullFeedJson;

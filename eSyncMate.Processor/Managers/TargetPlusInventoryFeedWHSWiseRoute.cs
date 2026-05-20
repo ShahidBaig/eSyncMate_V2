@@ -96,46 +96,16 @@ namespace eSyncMate.Processor.Managers
 
                     l_SCSInventoryFeed.InsertInventoryBatchWise(l_InventoryBatchWise);
 
-                    //if (l_data.Rows.Count <= 100)
-                    //{
-                    //    ProcessItemsWHSWiseThread itemsThread = new ProcessItemsWHSWiseThread(l_data, route, feed, l_DestinationConnector, l_SourceConnector, userNo, l_InventoryBatchWise.BatchID);
-
-                    //    itemsThread.ProcessItems();
-                    //}
-                    //else
-                    //{
-                    //    int i = 0;
-                    //    int totalThread = 300;
-                    //    int chunkSize = l_data.Rows.Count / totalThread;
-                    //    List<Thread> threads = new List<Thread>();
-
-                    //    var tables = l_data.AsEnumerable().ToChunks(chunkSize)
-                    //      .Select(rows => rows.CopyToDataTable()).ToList<DataTable>();
-
-                    //    while (i < tables.Count)
-                    //    {
-                    //        ProcessItemsWHSWiseThread itemsThread = new ProcessItemsWHSWiseThread(tables[i], route, feed, l_DestinationConnector, l_SourceConnector, userNo, l_InventoryBatchWise.BatchID);
-
-                    //        Thread t = new Thread(new ThreadStart(itemsThread.ProcessItems));
-                    //        threads.Add(t);
-
-                    //        i++;
-                    //    }
-
-                    //    foreach (Thread t in threads)
-                    //    {
-                    //        t.Start();
-                    //    }
-                    //    foreach (Thread t in threads)
-                    //    {
-                    //        t.Join();
-                    //    }
-                    //}
+                    // Resolved once — passed to each thread to avoid 50x DB calls
+                    string   l_LogTable = SCSInventoryFeed.GetLogTableName(l_SourceConnector.ConnectionString, l_SourceConnector.CustomerID);
+                    string[] l_LogCols  = !string.IsNullOrEmpty(l_LogTable)
+                                           ? SCSInventoryFeed.GetLogTableColumns(l_SourceConnector.ConnectionString, l_LogTable)
+                                           : null;
 
                     if (l_data.Rows.Count <= 100)
                     {
                         ProcessItemsWHSWiseThread itemsThread = new ProcessItemsWHSWiseThread(
-                            l_data, route, feed, l_DestinationConnector, l_SourceConnector, userNo, l_InventoryBatchWise.BatchID);
+                            l_data, route, feed, l_DestinationConnector, l_SourceConnector, userNo, l_InventoryBatchWise.BatchID, l_LogTable, l_LogCols);
 
                         itemsThread.ProcessItems();
                     }
@@ -146,19 +116,18 @@ namespace eSyncMate.Processor.Managers
                         int chunkSize = l_data.Rows.Count / totalThread;
                         List<Thread> threads = new List<Thread>();
 
-                        // Ensure chunkSize is at least 1 to avoid division issues
                         chunkSize = chunkSize == 0 ? 1 : chunkSize;
 
                         var tables = l_data.AsEnumerable()
                             .ToChunks(chunkSize)
-                            .Where(rows => rows.Any()) // ? Avoid CopyToDataTable on empty chunks
+                            .Where(rows => rows.Any())
                             .Select(rows => rows.CopyToDataTable())
                             .ToList();
 
                         while (i < tables.Count)
                         {
                             ProcessItemsWHSWiseThread itemsThread = new ProcessItemsWHSWiseThread(
-                                tables[i], route, feed, l_DestinationConnector, l_SourceConnector, userNo, l_InventoryBatchWise.BatchID);
+                                tables[i], route, feed, l_DestinationConnector, l_SourceConnector, userNo, l_InventoryBatchWise.BatchID, l_LogTable, l_LogCols);
 
                             Thread t = new Thread(new ThreadStart(itemsThread.ProcessItems));
                             threads.Add(t);
@@ -205,26 +174,29 @@ namespace eSyncMate.Processor.Managers
 
     public class ProcessItemsWHSWiseThread
     {
-        // State information used in the task.
-        private DataTable data;
-        private Routes route;
+        private DataTable  data;
+        private Routes     route;
         private SCSInventoryFeed feed;
         private ConnectorDataModel destinationConnector;
         private ConnectorDataModel sourceConnector;
-        private int userNo;
-        private string bacthID;
+        private int        userNo;
+        private string     bacthID;
+        private string     logTable;
+        private string[]   logCols;
 
-        // The constructor obtains the state information.
         public ProcessItemsWHSWiseThread(DataTable data, Routes route, SCSInventoryFeed feed, ConnectorDataModel destinationConnector,
-                                ConnectorDataModel sourceConnector, int userNo, string batchID)
+                                ConnectorDataModel sourceConnector, int userNo, string batchID,
+                                string logTable = null, string[] logCols = null)
         {
-            this.data = data;
-            this.route = JsonConvert.DeserializeObject<Routes>(JsonConvert.SerializeObject(route));
-            this.feed = JsonConvert.DeserializeObject<SCSInventoryFeed>(JsonConvert.SerializeObject(feed));
+            this.data                 = data;
+            this.route                = JsonConvert.DeserializeObject<Routes>(JsonConvert.SerializeObject(route));
+            this.feed                 = JsonConvert.DeserializeObject<SCSInventoryFeed>(JsonConvert.SerializeObject(feed));
             this.destinationConnector = destinationConnector;
-            this.sourceConnector = sourceConnector;
-            this.userNo = userNo;
-            this.bacthID = batchID;
+            this.sourceConnector      = sourceConnector;
+            this.userNo               = userNo;
+            this.bacthID              = batchID;
+            this.logTable             = logTable;
+            this.logCols              = logCols;
         }
 
         public void ProcessItems()
@@ -239,17 +211,27 @@ namespace eSyncMate.Processor.Managers
                 {
                     this.ProcessItem(row, ShipNodedataTable);
                 }
+
+                // Bulk log after chunk is fully processed — each thread logs its own chunk
+                if (!string.IsNullOrEmpty(this.logTable))
+                {
+                    SCSInventoryFeed.BulkInsertToLogTable(
+                        this.sourceConnector.ConnectionString,
+                        this.logTable,
+                        this.data,
+                        this.bacthID,
+                        "UPLOAD",
+                        this.logCols, "Synced");
+                }
             }
             catch (Exception)
             {
-
                 throw;
             }
             finally
             {
                 ShipNodedataTable.Dispose();
             }
-
         }
 
         public void ProcessItem(DataRow row, DataTable ShipNodedataTable)

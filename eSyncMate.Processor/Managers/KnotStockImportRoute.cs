@@ -151,7 +151,7 @@ namespace eSyncMate.Processor.Managers
                 this.feed.UseConnection(this.sourceConnector.ConnectionString);
                 string csv = BuildStockImportCsv(this.data, this.feed, this.sourceConnector.ConnectionString, this.batchID, this.ShipNodeData, l_Guid, out DataTable sentTable);
                 if (string.IsNullOrWhiteSpace(csv)) return;
-                this.feed.BulkNewInsertData(this.sourceConnector.ConnectionString, "SCSInventoryFeedData", sentTable);
+                this.feed.BulkNewInsertData(this.sourceConnector.ConnectionString, "SCSInventoryFeedData_" + this.sourceConnector.CustomerID, sentTable);
                 {
                     var uploadResp = await PostStockImportCsv(this.destinationConnector, csv);
                     string uploadBody = await uploadResp.Content.ReadAsStringAsync();
@@ -187,7 +187,7 @@ namespace eSyncMate.Processor.Managers
                         feed.UpdateItemStatus(row["ItemId"].ToString(), row["CustomerId"].ToString());
                     }
 
-                    feed.BulkNewInsertData(this.sourceConnector.ConnectionString, "SCSInventoryFeedData", bulkInsertTable);
+                    feed.BulkNewInsertData(this.sourceConnector.ConnectionString, "SCSInventoryFeedData_" + this.sourceConnector.CustomerID, bulkInsertTable);
                     this.feed.InsertInventoryBatchWiseFeedDetail(this.batchID, "NEW", importId, this.destinationConnector.CustomerID);
                 }
             }

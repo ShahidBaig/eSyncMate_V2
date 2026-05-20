@@ -8,16 +8,17 @@ ALTER PROCEDURE [dbo].[Sp_GetInventoryFeedSummary]
 	@p_PageSize		INT				= 10
 AS
 BEGIN
-	DECLARE	@l_ItemID		NVARCHAR(100)	= ISNULL(@p_ItemID, ''),
-			@l_CustomerID	NVARCHAR(MAX)	= ISNULL(@p_CustomerID, ''),
-			@l_StartDate	NVARCHAR(50)	= ISNULL(@p_StartDate, ''),
-			@l_FinishDate	NVARCHAR(50)	= ISNULL(@p_FinishDate, ''),
-			@l_Status		NVARCHAR(50)	= ISNULL(@p_Status, ''),
-			@l_PageNumber	INT				= @p_PageNumber,
-			@l_PageSize		INT				= @p_PageSize,
-			@l_Offset		INT,
-			@l_Where		NVARCHAR(MAX)	= N'',
-			@l_Sql			NVARCHAR(MAX)
+	DECLARE	@l_ItemID		    NVARCHAR(100)	= ISNULL(@p_ItemID, ''),
+			@l_CustomerID	    NVARCHAR(MAX)	= ISNULL(@p_CustomerID, ''),
+			@l_StartDate	    NVARCHAR(50)		= ISNULL(@p_StartDate, ''),
+			@l_FinishDate	    NVARCHAR(50)		= ISNULL(@p_FinishDate, ''),
+			@l_Status		    NVARCHAR(50)		= ISNULL(@p_Status, ''),
+			@l_PageNumber	    INT				= @p_PageNumber,
+			@l_PageSize		    INT				= @p_PageSize,
+			@l_Offset		    INT,
+			@l_Where		    NVARCHAR(MAX)	= N'',
+			@l_Sql			    NVARCHAR(MAX),
+			@l_FeedDataSource   NVARCHAR(300)	= N'VW_AllSCSInventoryFeedData'
 
 	BEGIN TRY
 		IF @l_PageNumber IS NULL OR @l_PageNumber < 1 SET @l_PageNumber = 1
@@ -35,6 +36,17 @@ BEGIN
 			SELECT LTRIM(RTRIM(REPLACE(value, '''', '')))
 			FROM STRING_SPLIT(@l_CustomerID, ',')
 			WHERE LTRIM(RTRIM(value)) <> ''
+		END
+
+		-- Single customer → use their specific table directly (faster than UNION ALL)
+		IF (SELECT COUNT(*) FROM #CustomerList) = 1
+		BEGIN
+			DECLARE @l_SingleCustomer NVARCHAR(100)
+			SELECT TOP 1 @l_SingleCustomer = CustomerID FROM #CustomerList
+
+			DECLARE @l_CandidateTable NVARCHAR(200) = N'SCSInventoryFeedData_' + @l_SingleCustomer
+			IF OBJECT_ID('dbo.' + @l_CandidateTable, 'U') IS NOT NULL
+				SET @l_FeedDataSource = QUOTENAME(@l_CandidateTable)
 		END
 
 		-- Always-on filters (applied to every call)
@@ -60,15 +72,15 @@ BEGIN
 		IF @l_FinishDate <> ''
 			SET @l_Where = @l_Where + N' AND CONVERT(DATE, ISNULL(V.StartDate, V.FinishDate)) <= CONVERT(DATE, @p_FinishDate)'
 
-		-- Archive guard (always on) + optional ItemID match merged into same EXISTS
+		-- Archive guard: single customer → direct table, multiple/no filter → UNION ALL view
 		IF @l_ItemID <> ''
 			SET @l_Where = @l_Where + N' AND EXISTS (
-				SELECT 1 FROM SCSInventoryFeedData D WITH (NOLOCK)
+				SELECT 1 FROM ' + @l_FeedDataSource + N' D
 				WHERE D.BatchID = V.BatchID AND D.ItemId LIKE ''%'' + @p_ItemID + ''%''
 			)'
 		ELSE
 			SET @l_Where = @l_Where + N' AND EXISTS (
-				SELECT 1 FROM SCSInventoryFeedData D WITH (NOLOCK)
+				SELECT 1 FROM ' + @l_FeedDataSource + N' D
 				WHERE D.BatchID = V.BatchID
 			)'
 

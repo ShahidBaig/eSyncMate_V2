@@ -71,8 +71,14 @@ namespace eSyncMate.Processor.Managers
                     l_InventoryBatchWise.RouteType = RouteTypesEnum.LowesWHSWInventoryUpload.ToString();
                     l_InventoryBatchWise.CustomerID = l_SourceConnector.CustomerID;
                     l_SCSInventoryFeed.InsertInventoryBatchWise(l_InventoryBatchWise);
+
                     int chunkSize = 0;
                     int totalThread = CommonUtils.UploadInventoryTotalThread;
+
+                    string   l_LogTable = SCSInventoryFeed.GetLogTableName(l_SourceConnector.ConnectionString, l_SourceConnector.CustomerID);
+                    string[] l_LogCols  = !string.IsNullOrEmpty(l_LogTable)
+                                           ? SCSInventoryFeed.GetLogTableColumns(l_SourceConnector.ConnectionString, l_LogTable)
+                                           : null;
 
                     if (l_data.Rows.Count >= 20000)
                     {
@@ -88,7 +94,7 @@ namespace eSyncMate.Processor.Managers
 
                     foreach (var table in tables)
                     {
-                        var itemsThread = new ProcessLowesStockImportChunkThread(table, route, feed, l_DestinationConnector, l_SourceConnector, userNo, l_InventoryBatchWise.BatchID, ShipNodedataTable);
+                        var itemsThread = new ProcessLowesStockImportChunkThread(table, route, feed, l_DestinationConnector, l_SourceConnector, userNo, l_InventoryBatchWise.BatchID, ShipNodedataTable, l_LogTable, l_LogCols);
                         itemsThread.ProcessItems().GetAwaiter().GetResult();
                         Thread.Sleep(TimeSpan.FromMinutes(1));
                     }
@@ -126,16 +132,22 @@ namespace eSyncMate.Processor.Managers
         private string batchID;
         private DataTable ShipNodeData;
 
-        public ProcessLowesStockImportChunkThread(DataTable data, Routes route, SCSInventoryFeed feed, ConnectorDataModel destinationConnector,ConnectorDataModel sourceConnector, int userNo, string batchID, DataTable shipNodeData)
+        private string   logTable;
+        private string[] logCols;
+
+        public ProcessLowesStockImportChunkThread(DataTable data, Routes route, SCSInventoryFeed feed, ConnectorDataModel destinationConnector, ConnectorDataModel sourceConnector, int userNo, string batchID, DataTable shipNodeData,
+            string logTable = null, string[] logCols = null)
         {
-            this.data = data;
-            this.route = JsonConvert.DeserializeObject<Routes>(JsonConvert.SerializeObject(route));
-            this.feed = JsonConvert.DeserializeObject<SCSInventoryFeed>(JsonConvert.SerializeObject(feed));
+            this.data                 = data;
+            this.route                = JsonConvert.DeserializeObject<Routes>(JsonConvert.SerializeObject(route));
+            this.feed                 = JsonConvert.DeserializeObject<SCSInventoryFeed>(JsonConvert.SerializeObject(feed));
             this.destinationConnector = destinationConnector;
-            this.sourceConnector = sourceConnector;
-            this.userNo = userNo;
-            this.batchID = batchID;
-            ShipNodeData = shipNodeData;
+            this.sourceConnector      = sourceConnector;
+            this.userNo               = userNo;
+            this.batchID              = batchID;
+            this.ShipNodeData         = shipNodeData;
+            this.logTable             = logTable;
+            this.logCols              = logCols;
         }
 
         public async Task ProcessItems()
@@ -147,7 +159,7 @@ namespace eSyncMate.Processor.Managers
                 this.feed.UseConnection(this.sourceConnector.ConnectionString);
                 string csv = BuildStockImportCsv(this.data, this.feed, this.sourceConnector.ConnectionString, this.batchID, this.ShipNodeData, l_Guid, out DataTable sentTable);
                 if (string.IsNullOrWhiteSpace(csv)) return;
-                this.feed.BulkNewInsertData(this.sourceConnector.ConnectionString, "SCSInventoryFeedData", sentTable);
+                this.feed.BulkNewInsertData(this.sourceConnector.ConnectionString, "SCSInventoryFeedData_" + this.sourceConnector.CustomerID, sentTable);
                 {
                     var uploadResp = await PostStockImportCsv(this.destinationConnector, csv);
                     string uploadBody = await uploadResp.Content.ReadAsStringAsync();
@@ -183,13 +195,38 @@ namespace eSyncMate.Processor.Managers
                         feed.UpdateItemStatus(row["ItemId"].ToString(), row["CustomerId"].ToString());
                     }
 
-                    feed.BulkNewInsertData(this.sourceConnector.ConnectionString, "SCSInventoryFeedData", bulkInsertTable);
+                    feed.BulkNewInsertData(this.sourceConnector.ConnectionString, "SCSInventoryFeedData_" + this.sourceConnector.CustomerID, bulkInsertTable);
                     this.feed.InsertInventoryBatchWiseFeedDetail(this.batchID, "NEW", importId, this.destinationConnector.CustomerID);
+
+                    // Log UPLOAD snapshot after chunk is fully sent to Lowe's WHSW
+                    if (!string.IsNullOrEmpty(this.logTable))
+                    {
+                        SCSInventoryFeed.BulkInsertToLogTable(
+                            this.sourceConnector.ConnectionString,
+                            this.logTable,
+                            this.data,
+                            this.batchID,
+                            "UPLOAD",
+                            this.logCols,
+                            "Synced");
+                    }
                 }
             }
             catch (Exception ex)
             {
                 this.route.SaveLog(LogTypeEnum.Error, ex.Message, string.Empty, userNo);
+                
+                if (!string.IsNullOrEmpty(this.logTable))
+                {
+                    SCSInventoryFeed.BulkInsertToLogTable(
+                        this.sourceConnector.ConnectionString,
+                        this.logTable,
+                        this.data,
+                        this.batchID,
+                        "UPLOAD",
+                        this.logCols,
+                        "Error");
+                }
             }
         }
 

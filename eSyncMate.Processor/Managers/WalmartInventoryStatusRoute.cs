@@ -233,7 +233,7 @@ namespace eSyncMate.Processor.Managers
                 string errorDataJson = JsonConvert.SerializeObject(errorData).Replace("'", "''");
 
                 // Insert error record with Type = 'FEED-ERROR'
-                string insertQuery = $@"INSERT INTO SCSInventoryFeedData (CustomerId, ItemId, Type, Data, BatchID, CreatedDate, CreatedBy)
+                string insertQuery = $@"INSERT INTO [SCSInventoryFeedData_{safeCustomerId}] (CustomerId, ItemId, Type, Data, BatchID, CreatedDate, CreatedBy)
                                        VALUES ('{safeCustomerId}', '{safeSku}', 'FEED-ERROR', '{errorDataJson}', '{safeBatchId}', GETDATE(), 1)";
 
                 connection.Execute(insertQuery);
@@ -268,7 +268,7 @@ namespace eSyncMate.Processor.Managers
 
                 // Build bulk insert for successful items
                 StringBuilder insertQuery = new StringBuilder();
-                insertQuery.Append("INSERT INTO SCSInventoryFeedData (CustomerId, ItemId, Type, Data, BatchID, CreatedDate, CreatedBy) VALUES ");
+                insertQuery.Append($"INSERT INTO [SCSInventoryFeedData_{safeCustomerId}] (CustomerId, ItemId, Type, Data, BatchID, CreatedDate, CreatedBy) VALUES ");
 
                 var values = skus.Select(sku =>
                 {

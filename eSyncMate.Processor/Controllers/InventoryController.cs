@@ -213,13 +213,26 @@ namespace eSyncMate.Processor.Controllers
 
                 int pageNumber = request.PageNumber < 1 ? 1 : request.PageNumber;
                 int pageSize   = request.PageSize   < 1 ? 10 : request.PageSize;
+                string batchIDsCsv = string.Join(",", validIds);
 
                 int totalCount = 0;
-                l_Inventory.GetInventoryBatchItems(
-                    string.Join(",", validIds),
+
+                // Try historical log table first — shows exact snapshot at batch time
+                bool hasLogData = l_Inventory.GetInventoryBatchItemsFromLog(
+                    batchIDsCsv,
                     request.ItemID ?? string.Empty,
                     pageNumber, pageSize,
                     ref l_Data, out totalCount);
+
+                if (!hasLogData)
+                {
+                    // Fallback: current-state from VW_BatchWiseInventory (old batches)
+                    l_Inventory.GetInventoryBatchItems(
+                        batchIDsCsv,
+                        request.ItemID ?? string.Empty,
+                        pageNumber, pageSize,
+                        ref l_Data, out totalCount);
+                }
 
                 l_Response.BatchWiseInventory = l_Data;
                 l_Response.TotalCount = totalCount;

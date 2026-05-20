@@ -62,7 +62,8 @@ namespace eSyncMate.Processor.Managers
 
                 // DB-based lock: prevents re-dispatch if Processor restarts while RouteWorker is running
                 routeLock.UseConnection(CommonUtils.ConnectionString);
-                dbLockToken = routeLock.AcquireLock(route.CustomerName, route.TypeId, routeId);
+                int lockTimeoutExternal = route.TypeId == (int)RouteTypesEnum.WalmartUploadInventory ? 300 : 60;
+                dbLockToken = routeLock.AcquireLock(route.CustomerName, route.TypeId, routeId, lockTimeoutExternal);
                 if (dbLockToken == null)
                 {
                     route.SaveLog(Declarations.LogTypeEnum.RouteInfo, $"Route [{routeId}] is already running (DB lock held), skipping.", "", 1);
@@ -292,7 +293,8 @@ namespace eSyncMate.Processor.Managers
 
                 // DB-based lock: cross-process self-lock for all routes
                 routeLock.UseConnection(CommonUtils.ConnectionString);
-                dbLockToken = routeLock.AcquireLock(route.CustomerName, route.TypeId, routeId);
+                int lockTimeout = route.TypeId == (int)RouteTypesEnum.WalmartUploadInventory ? 300 : 60;
+                dbLockToken = routeLock.AcquireLock(route.CustomerName, route.TypeId, routeId, lockTimeout);
                 if (dbLockToken == null)
                 {
                     route.SaveLog(Declarations.LogTypeEnum.RouteInfo, $"Route [{routeId}] is already running (DB lock held), skipping.", "", 1);
@@ -751,6 +753,7 @@ namespace eSyncMate.Processor.Managers
                 {
                     StaleLockCleanupRoute.Execute(_config, route);
                 }
+                
             }
             catch (Exception ex)
             {

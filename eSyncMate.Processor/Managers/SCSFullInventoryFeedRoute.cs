@@ -114,6 +114,11 @@ namespace eSyncMate.Processor.Managers
 
                 l_SCSInventoryFeed.InsertInventoryBatchWise(l_InventoryBatchWise);
 
+                string   l_LogTable = SCSInventoryFeed.GetLogTableName(l_DestinationConnector.ConnectionString, l_DestinationConnector.CustomerID);
+                string[] l_LogCols  = !string.IsNullOrEmpty(l_LogTable)
+                                       ? SCSInventoryFeed.GetLogTableColumns(l_DestinationConnector.ConnectionString, l_LogTable)
+                                       : null;
+
                 l_SCSInventoryFeed.GetViewList("CustomerID = " + PublicFunctions.FieldToParam(l_DestinationConnector.CustomerID, Declarations.FieldTypes.String), "*", ref l_TempData, "CurrentPage DESC");
                 
                 route.SaveLog(LogTypeEnum.Debug, $"SCSInventory GetObject Processed Successfully", string.Empty, userNo);
@@ -164,6 +169,8 @@ namespace eSyncMate.Processor.Managers
 
                             if (l_SCSInventory.InventoryFeed != null)
                             {
+                                var l_perItemJson = new List<string>();
+
                                 foreach (var inventory in l_SCSInventory.InventoryFeed)
                                 {
                                     DataRow row = l_dataTable.NewRow();
@@ -197,12 +204,35 @@ namespace eSyncMate.Processor.Managers
                                     row["TotalPages"] = l_SCSInventory.TotalPages;
 
                                     l_dataTable.Rows.Add(row);
+                                    l_perItemJson.Add(JsonConvert.SerializeObject(inventory));
                                 }
 
                                 route.SaveLog(LogTypeEnum.Debug, $"SCSInventory Bulk Insert Processing start...", string.Empty, userNo);
 
                                 l_SCSInventoryFeed.CustomerID = l_DestinationConnector.CustomerID;
                                 SCSInventoryFeed.BulkInsert(l_DestinationConnector.ConnectionString, "Temp_", l_dataTable);
+
+                                // Log snapshot into per-customer log table
+                                if (!string.IsNullOrEmpty(l_LogTable))
+                                {
+                                    SCSInventoryFeed.BulkInsertToLogTable(
+                                        l_DestinationConnector.ConnectionString,
+                                        l_LogTable,
+                                        l_dataTable,
+                                        l_InventoryBatchWise.BatchID,
+                                        "DOWNLOAD",
+                                        l_LogCols,
+                                        "Updated");
+                                }
+
+                                // Insert per-item ERP JSON into customer-wise SCSInventoryFeedData table
+                                SCSInventoryFeed.BulkInsertFeedData(
+                                    l_DestinationConnector.ConnectionString,
+                                    l_DestinationConnector.CustomerID,
+                                    l_dataTable,
+                                    l_InventoryBatchWise.BatchID,
+                                    "ERP-RVD",
+                                    l_perItemJson);
 
                                 l_InventoryBatchWise.PageCount = i;
                                 l_SCSInventoryFeed.UpdateInventoryBatchWisePageCount(l_InventoryBatchWise);

@@ -22,6 +22,7 @@ namespace eSyncMate.Processor.Managers
         {
             int userNo = 1;
             DataTable l_data = new DataTable();
+            DataTable l_shipNodeDataTable = new DataTable();
             InventoryBatchWise l_InventoryBatchWise = new InventoryBatchWise();
             l_InventoryBatchWise.BatchID = Guid.NewGuid().ToString();
             DB.Entities.SCSInventoryFeed l_SCSInventoryFeed = new DB.Entities.SCSInventoryFeed();
@@ -67,7 +68,7 @@ namespace eSyncMate.Processor.Managers
                 // Set connection before the if block so it's available for UpdateInventoryBatchWise in catch block
                 l_SCSInventoryFeed.UseConnection(l_SourceConnector.ConnectionString);
 
-                // Step 2: Process bulk feed
+
                 if (l_DestinationConnector.ConnectivityType == ConnectorTypesEnum.Rest.ToString() && l_data.Rows.Count > 0)
                 {
                     route.SaveLog(LogTypeEnum.Debug, $"Destination connector processing start...", string.Empty, userNo);
@@ -75,54 +76,43 @@ namespace eSyncMate.Processor.Managers
                     SCSInventoryFeed feed = new SCSInventoryFeed();
                     feed.UseConnection(l_SourceConnector.ConnectionString);
 
-                    // Insert batch tracking record
-                    l_InventoryBatchWise.StartDate = DateTime.Now;
-                    l_InventoryBatchWise.Status = "Processing";
-                    l_InventoryBatchWise.RouteType = RouteTypesEnum.WalmartUploadInventory.ToString();
+                    // Load ship nodes ONCE — same as Amazon pattern (not per-chunk)
+                    feed.APIShipNode("WalmartAPI", ref l_shipNodeDataTable);
+                    route.SaveLog(LogTypeEnum.Debug, $"Ship nodes loaded: {l_shipNodeDataTable.Rows.Count}", string.Empty, userNo);
+
+                    l_InventoryBatchWise.StartDate  = DateTime.Now;
+                    l_InventoryBatchWise.Status     = "Processing";
+                    l_InventoryBatchWise.RouteType  = RouteTypesEnum.WalmartUploadInventory.ToString();
                     l_InventoryBatchWise.CustomerID = l_SourceConnector.CustomerID;
                     l_SCSInventoryFeed.InsertInventoryBatchWise(l_InventoryBatchWise);
 
-                 
-                    int chunkSize = 5000;
+                    // 1 MB file size limit — each item ~920 bytes (14 ship nodes) → safe: 1000
+                    int chunkSize = 10000;
+                    int i = 0;
 
-                    if (l_data.Rows.Count <= chunkSize)
+                    List<Task> tasks = new List<Task>();
+
+                    string l_LogTable = SCSInventoryFeed.GetLogTableName(l_SourceConnector.ConnectionString, l_SourceConnector.CustomerID);
+                    string[] l_LogCols = !string.IsNullOrEmpty(l_LogTable)
+                                           ? SCSInventoryFeed.GetLogTableColumns(l_SourceConnector.ConnectionString, l_LogTable)
+                                           : null;
+
+                    var tables = l_data.AsEnumerable().ToChunks(chunkSize)
+                        .Select(rows => rows.CopyToDataTable()).ToList();
+
+                    foreach (var table in tables)
                     {
-                        // Small dataset - process directly
-                        ProcessWalmartBulkItemsChunkThread itemsThread = new ProcessWalmartBulkItemsChunkThread(
-                            l_data, route, feed, l_DestinationConnector, l_SourceConnector, userNo, l_InventoryBatchWise.BatchID
-                        );
+                        var itemsThread = new ProcessWalmartBulkItemsChunkThread(
+                           table, route, feed, l_DestinationConnector, l_SourceConnector, userNo, l_InventoryBatchWise.BatchID, l_LogTable, l_LogCols, l_shipNodeDataTable
+                       );
+
                         itemsThread.ProcessItems().GetAwaiter().GetResult();
-                    }
-                    else
-                    {
-                        // Large dataset - split into chunks of 10,000
-                        var tables = l_data.AsEnumerable().ToChunks(chunkSize)
-                            .Select(rows => rows.CopyToDataTable()).ToList();
 
-                        route.SaveLog(LogTypeEnum.Info, $"Processing {l_data.Rows.Count} items in {tables.Count} chunks of {chunkSize}", string.Empty, userNo);
-
-                        int chunkIndex = 0;
-                        foreach (var table in tables)
-                        {
-                            chunkIndex++;
-                            route.SaveLog(LogTypeEnum.Debug, $"Processing chunk {chunkIndex}/{tables.Count} with {table.Rows.Count} items", string.Empty, userNo);
-
-                            var itemsThread = new ProcessWalmartBulkItemsChunkThread(
-                                table, route, feed, l_DestinationConnector, l_SourceConnector, userNo, l_InventoryBatchWise.BatchID
-                            );
-
-                            itemsThread.ProcessItems().GetAwaiter().GetResult();
-
-                            // 1-minute delay between chunks (except for last chunk)
-                            if (chunkIndex < tables.Count)
-                            {
-                                Thread.Sleep(TimeSpan.FromMinutes(1));
-                            }
-                        }
+                        Thread.Sleep(TimeSpan.FromSeconds(60));
                     }
 
-                    l_InventoryBatchWise.Status = "Completed";
-                    l_InventoryBatchWise.FinishDate = DateTime.Now;
+                    l_InventoryBatchWise.Status     = "Completed";
+                    l_InventoryBatchWise.FinishDate  = DateTime.Now;
                     l_SCSInventoryFeed.UpdateInventoryBatchWise(l_InventoryBatchWise);
 
                     route.SaveLog(LogTypeEnum.Debug, $"Destination connector processing completed.", string.Empty, userNo);
@@ -133,13 +123,14 @@ namespace eSyncMate.Processor.Managers
             catch (Exception ex)
             {
                 l_InventoryBatchWise.FinishDate = DateTime.Now;
-                l_InventoryBatchWise.Status = "Error";
+                l_InventoryBatchWise.Status     = "Error";
                 l_SCSInventoryFeed.UpdateInventoryBatchWise(l_InventoryBatchWise);
                 route.SaveLog(LogTypeEnum.Exception, $"Error executing Walmart Bulk Inventory route [{route.Id}]", ex.ToString(), userNo);
             }
             finally
             {
                 l_data.Dispose();
+                l_shipNodeDataTable.Dispose();
             }
         }
     }
@@ -150,132 +141,111 @@ namespace eSyncMate.Processor.Managers
     /// </summary>
     public class ProcessWalmartBulkItemsChunkThread
     {
-        private DataTable data;
-        private Routes route;
+        private DataTable  data;
+        private Routes     route;
         private SCSInventoryFeed feed;
         private ConnectorDataModel destinationConnector;
         private ConnectorDataModel sourceConnector;
-        private int userNo;
-        private string batchID;
+        private int        userNo;
+        private string     batchID;
+        private string     logTable;
+        private string[]   logCols;
+        private DataTable  shipNodeDataTable;  // passed from Execute() — loaded once
 
         public ProcessWalmartBulkItemsChunkThread(DataTable data, Routes route, SCSInventoryFeed feed,
-            ConnectorDataModel destinationConnector, ConnectorDataModel sourceConnector, int userNo, string batchID)
+            ConnectorDataModel destinationConnector, ConnectorDataModel sourceConnector, int userNo, string batchID,
+            string logTable = null, string[] logCols = null, DataTable shipNodeData = null)
         {
-            this.data = data;
-            this.route = JsonConvert.DeserializeObject<Routes>(JsonConvert.SerializeObject(route));
-            this.feed = JsonConvert.DeserializeObject<SCSInventoryFeed>(JsonConvert.SerializeObject(feed));
+            this.data                 = data;
+            this.route                = JsonConvert.DeserializeObject<Routes>(JsonConvert.SerializeObject(route));
+            this.feed                 = JsonConvert.DeserializeObject<SCSInventoryFeed>(JsonConvert.SerializeObject(feed));
             this.destinationConnector = destinationConnector;
-            this.sourceConnector = sourceConnector;
-            this.userNo = userNo;
-            this.batchID = batchID;
+            this.sourceConnector      = sourceConnector;
+            this.userNo               = userNo;
+            this.batchID              = batchID;
+            this.logTable             = logTable;
+            this.logCols              = logCols;
+            this.shipNodeDataTable    = shipNodeData ?? new DataTable();
         }
 
         public async Task ProcessItems()
         {
             RestResponse sourceResponse = new RestResponse();
             DataTable bulkInsertTable = CreateBulkInsertDataTable();
-            DataTable shipNodeDataTable = new DataTable();
 
             try
             {
                 this.route.UseConnection(this.sourceConnector.ConnectionString);
                 this.feed.UseConnection(this.sourceConnector.ConnectionString);
 
-                // Get Ship Nodes
-                this.feed.APIShipNode("WalmartAPI", ref shipNodeDataTable);
+                // Ship nodes already loaded in Execute() — no per-chunk DB call
 
                 // Build Walmart bulk inventory request model
+                // Correct format: inventoryHeader + inventory[] with shipNodes[] nested per SKU
                 WalmartBulkInventoryFeed requestModel = new WalmartBulkInventoryFeed
                 {
-                    InventoryHeader = new WalmartInventoryHeader { version = "1.4" },
-                    Inventory = new List<WalmartInventoryItem>()
+                    inventoryHeader = new WalmartInventoryHeader { version = "1.5" },
+                    inventory       = new List<WalmartInventoryItem>()
                 };
 
-                // Build request model and bulk insert table in single loop
+                // Build request model — one entry per SKU, all ship nodes nested inside shipNodes[]
                 foreach (DataRow row in this.data.Rows)
                 {
                     string customerId = row["CustomerId"].ToString();
-                    string itemId = row["ItemId"].ToString();
+                    string itemId     = row["ItemId"].ToString();
 
-                    // If ship nodes exist, create entry for each ship node
+                    var shipNodesList = new List<WalmartShipNodeQty>();
+
                     if (shipNodeDataTable.Rows.Count > 0)
                     {
                         foreach (DataRow shipNodeRow in shipNodeDataTable.Rows)
                         {
                             string shipNode = shipNodeRow["ShipNode"]?.ToString() ?? "";
-                            string whsId = shipNodeRow["WHSID"]?.ToString() ?? "";
-                            int quantity = 0;
+                            string whsId    = shipNodeRow["WHSID"]?.ToString()    ?? "";
+                            int    quantity = 0;
 
-                            // Get quantity for this warehouse
                             if (this.data.Columns.Contains($"ATS_{whsId}") && row[$"ATS_{whsId}"] != DBNull.Value)
-                            {
                                 quantity = Convert.ToInt32(row[$"ATS_{whsId}"]);
-                            }
 
-                            var inventoryItem = new WalmartInventoryItem
+                            shipNodesList.Add(new WalmartShipNodeQty
                             {
-                                sku = itemId,
                                 shipNode = shipNode,
-                                quantity = new WalmartInventoryQuantity
-                                {
-                                    unit = "EACH",
-                                    amount = quantity
-                                }
-                            };
-
-                            requestModel.Inventory.Add(inventoryItem);
+                                quantity = new WalmartInventoryQuantity { unit = "EACH", amount = quantity }
+                            });
                         }
                     }
-                    else
+                  
+
+                    var inventoryItem = new WalmartInventoryItem
                     {
-                        // Single node - use Total_ATS
-                        int totalQuantity = 0;
-                        if (this.data.Columns.Contains("Total_ATS") && row["Total_ATS"] != DBNull.Value)
-                        {
-                            totalQuantity = Convert.ToInt32(row["Total_ATS"]);
-                        }
+                        sku       = itemId,
+                        shipNodes = shipNodesList
+                    };
 
-                        var inventoryItem = new WalmartInventoryItem
-                        {
-                            sku = itemId,
-                            quantity = new WalmartInventoryQuantity
-                            {
-                                unit = "EACH",
-                                amount = totalQuantity
-                            },
-                            fulfillmentLagTime = 1
-                        };
+                    requestModel.inventory.Add(inventoryItem);
 
-                        requestModel.Inventory.Add(inventoryItem);
-                    }
-
-                    // Build per-item JSON for logging - only items added for this row
-                    int itemsAddedThisRow = shipNodeDataTable.Rows.Count > 0 ? shipNodeDataTable.Rows.Count : 1;
+                    // Per-item JSON for logging
                     var perItemModel = new WalmartBulkInventoryFeed
                     {
-                        InventoryHeader = new WalmartInventoryHeader { version = "1.4" },
-                        Inventory = requestModel.Inventory
-                            .Skip(requestModel.Inventory.Count - itemsAddedThisRow)
-                            .ToList()
+                        inventoryHeader = new WalmartInventoryHeader { version = "1.5" },
+                        inventory       = new List<WalmartInventoryItem> { inventoryItem }
                     };
-                    string perItemJson = JsonConvert.SerializeObject(perItemModel, Formatting.None, new JsonSerializerSettings
-                    {
-                        NullValueHandling = NullValueHandling.Ignore
-                    });
+                    string perItemJson = JsonConvert.SerializeObject(perItemModel, Formatting.None,
+                        new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
 
                     DataRow bulkRow = bulkInsertTable.NewRow();
                     bulkRow["CustomerId"] = customerId;
-                    bulkRow["ItemId"] = itemId;
-                    bulkRow["Type"] = "JSON-SNT";
-                    bulkRow["Data"] = perItemJson;
-                    bulkRow["CreatedDate"] = DateTime.Now;
-                    bulkRow["CreatedBy"] = this.userNo;
-                    bulkRow["BatchID"] = this.batchID;
+                    bulkRow["ItemId"]     = itemId;
+                    bulkRow["Type"]       = "JSON-SNT";
+                    bulkRow["Data"]       = perItemJson;
+                    bulkRow["CreatedDate"]= DateTime.Now;
+                    bulkRow["CreatedBy"]  = this.userNo;
+                    bulkRow["BatchID"]    = this.batchID;
                     bulkInsertTable.Rows.Add(bulkRow);
                 }
 
                 // Bulk insert sent data (single DB call instead of N calls)
-                this.feed.BulkNewInsertData(this.sourceConnector.ConnectionString, "SCSInventoryFeedData", bulkInsertTable);
+                this.feed.BulkNewInsertData(this.sourceConnector.ConnectionString, "SCSInventoryFeedData_" + this.sourceConnector.CustomerID, bulkInsertTable);
 
                 // Make single API call for this chunk using Feed API
                 string body = JsonConvert.SerializeObject(requestModel, Formatting.None, new JsonSerializerSettings
@@ -326,7 +296,7 @@ namespace eSyncMate.Processor.Managers
                     }
 
                     // Single bulk insert for responses
-                    this.feed.BulkNewInsertData(this.sourceConnector.ConnectionString, "SCSInventoryFeedData", bulkResponseTable);
+                    this.feed.BulkNewInsertData(this.sourceConnector.ConnectionString, "SCSInventoryFeedData_" + this.sourceConnector.CustomerID, bulkResponseTable);
 
                     // Bulk update item status (single DB call)
                     this.feed.BulkUpdateItemStatus(this.sourceConnector.ConnectionString, this.data);
@@ -335,6 +305,18 @@ namespace eSyncMate.Processor.Managers
                     this.feed.InsertInventoryBatchWiseFeedDetail(this.batchID, "NEW", feedId, this.sourceConnector.CustomerID);
 
                     this.route.SaveLog(LogTypeEnum.Debug, $"WalmartBulkUploadInventory updated for {this.data.Rows.Count} items.", string.Empty, this.userNo);
+
+                    // Log UPLOAD snapshot after chunk is fully sent to Walmart
+                    if (!string.IsNullOrEmpty(this.logTable))
+                    {
+                        SCSInventoryFeed.BulkInsertToLogTable(
+                            this.sourceConnector.ConnectionString,
+                            this.logTable,
+                            this.data,
+                            this.batchID,
+                            "UPLOAD",
+                            this.logCols);
+                    }
                 }
                 else
                 {
@@ -349,7 +331,7 @@ namespace eSyncMate.Processor.Managers
             finally
             {
                 bulkInsertTable.Dispose();
-                shipNodeDataTable.Dispose();
+                // shipNodeDataTable disposed in Execute() — shared across chunks
             }
         }
 
@@ -422,12 +404,13 @@ namespace eSyncMate.Processor.Managers
     #region Walmart Bulk Feed Models
 
     /// <summary>
-    /// Walmart Bulk Inventory Feed - JSON Structure
+    /// Walmart MP_INVENTORY Feed — Correct JSON Structure
+    /// inventoryHeader (camelCase) + inventory[] with shipNodes[] nested per SKU
     /// </summary>
     public class WalmartBulkInventoryFeed
     {
-        public WalmartInventoryHeader InventoryHeader { get; set; }
-        public List<WalmartInventoryItem> Inventory { get; set; }
+        public WalmartInventoryHeader inventoryHeader { get; set; }
+        public List<WalmartInventoryItem> inventory { get; set; }
     }
 
     public class WalmartInventoryHeader
@@ -435,12 +418,17 @@ namespace eSyncMate.Processor.Managers
         public string version { get; set; }
     }
 
+    // One entry per SKU — all ship nodes nested inside shipNodes[]
     public class WalmartInventoryItem
     {
         public string sku { get; set; }
+        public List<WalmartShipNodeQty> shipNodes { get; set; }
+    }
+
+    public class WalmartShipNodeQty
+    {
         public string shipNode { get; set; }
         public WalmartInventoryQuantity quantity { get; set; }
-        public int? fulfillmentLagTime { get; set; }
     }
 
     public class WalmartInventoryQuantity
