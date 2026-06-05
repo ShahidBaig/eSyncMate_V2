@@ -84,6 +84,26 @@ namespace eSyncMate.RouteWorker
 
             route.SaveLog(Declarations.LogTypeEnum.Info, $"[RouteWorker] Started executing route [{route.Id}] - {route.Name}", string.Empty, userNo);
 
+            //long execLogId = RouteExecutionLogger.LogStart(
+            //    CommonUtils.ConnectionString,
+            //    route.Id, route.Name, route.TypeId, "RouteWorker");
+
+            //// ── HA TESTING MODE ────────────────────────────────────────────────
+            //// When RouteEngine:DryRunMode=true, skip actual route dispatch (no partner APIs hit).
+            //// Used to verify Hangfire distribution + Nginx LB without hitting production endpoints.
+            //bool dryRun = config.GetValue<bool>("RouteEngine:DryRunMode");
+            //if (dryRun)
+            //{
+            //    route.SaveLog(Declarations.LogTypeEnum.Info,
+            //        $"[RouteWorker] DryRunMode=true — skipping dispatch for route [{route.Id}].",
+            //        string.Empty, userNo);
+
+            //    System.Threading.Thread.Sleep(200); // brief simulated work
+
+            //    RouteExecutionLogger.LogEnd(CommonUtils.ConnectionString, execLogId, "Completed");
+            //    return;
+            //}
+
             try
             {
                 if (route.TypeId == Convert.ToInt32(RouteTypesEnum.InventoryFeed))
@@ -451,10 +471,15 @@ namespace eSyncMate.RouteWorker
                 }
 
                 route.SaveLog(Declarations.LogTypeEnum.Info, $"[RouteWorker] Completed executing route [{route.Id}] - {route.Name}", string.Empty, userNo);
+
+                //RouteExecutionLogger.LogEnd(CommonUtils.ConnectionString, execLogId, "Completed");
             }
             catch (Exception ex)
             {
                 route.SaveLog(Declarations.LogTypeEnum.Exception, $"[RouteWorker] Error executing route [{route.Id}]", ex.ToString(), userNo);
+
+                //RouteExecutionLogger.LogEnd(CommonUtils.ConnectionString, execLogId, "Error", ex.Message);
+
                 throw;
             }
         }

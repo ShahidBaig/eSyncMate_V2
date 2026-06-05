@@ -199,18 +199,9 @@ namespace eSyncMate.Processor.Managers
                 this.feed.UseConnection(this.sourceConnector.ConnectionString);
                 this.feed.APIShipNode("WalmartAPI", ref ShipNodedataTable);
 
-                // Throttle: target ~3 req/sec globally across all threads to respect Walmart Inventory API rate limit.
-                int perThreadDelayMs = (CommonUtils.UploadInventoryTotalThread * 1000) / 3;
-
-                int rowIndex = 0;
                 foreach (DataRow row in this.data.Rows)
                 {
                     this.ProcessItem(row, ShipNodedataTable);
-
-                    if (++rowIndex < this.data.Rows.Count)
-                    {
-                        Thread.Sleep(perThreadDelayMs);
-                    }
                 }
 
                 // Log UPLOAD snapshot after all items in this chunk are processed

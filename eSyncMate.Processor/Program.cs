@@ -2,9 +2,10 @@
 using Hangfire;
 using Hangfire.SqlServer;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.HttpOverrides;
+// using Microsoft.AspNetCore.HttpOverrides;   // HA / Nginx reverse proxy — uncomment for Nginx deployment
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+// using System.Net;                            // HA / Nginx reverse proxy — uncomment for Nginx deployment
 using System.Text;
 using Hangfire.Dashboard;
 
@@ -89,13 +90,24 @@ builder.Services.AddAuthentication(o =>
     };
 });
 
+// -------------------- FORWARDED HEADERS (for Nginx reverse proxy) --------------------
+// HA / Nginx mode — uncomment the block below + above `using` directives when deploying behind Nginx.
+// Trust X-Forwarded-For / X-Forwarded-Proto only from configured Nginx IPs (NginxProxies in appsettings).
+// var nginxIPs = builder.Configuration.GetSection("NginxProxies").Get<string[]>() ?? Array.Empty<string>();
+// builder.Services.Configure<ForwardedHeadersOptions>(options =>
+// {
+//     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+//     options.KnownProxies.Clear();
+//     foreach (var ip in nginxIPs)
+//     {
+//         if (IPAddress.TryParse(ip, out var parsed))
+//             options.KnownProxies.Add(parsed);
+//     }
+// });
+
 var app = builder.Build();
 
-// -------------------- FORWARDED HEADERS --------------------
-app.UseForwardedHeaders(new ForwardedHeadersOptions
-{
-    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
-});
+// app.UseForwardedHeaders();   // HA / Nginx mode — uncomment when deploying behind Nginx
 
 // -------------------- BIND APP SETTINGS TO STATICS --------------------
 CommonUtils.ConnectionString = builder.Configuration.GetConnectionString("DefaultConnection");
