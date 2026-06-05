@@ -56,7 +56,7 @@ import { InventorypopupComponent } from '../inventory-popup/inventory-popup.comp
 export class InventoryBatchwiseComponent implements OnInit {
 
   mydate = environment.date;
-  displayedColumns: string[] = ['File', 'ItemID', 'SyncDate', 'Status', 'CustomerItemCode', 'ETADate', 'ETAQty', 'TotalATS', 'ATSL10', 'ATSL21', 'ATSL28', 'ATSL29', 'ATSL30', 'ATSL34', 'ATSL35', 'ATSL36', 'ATSL37', 'ATSL40', 'ATSL41', 'ATSL55', 'ATSL56', 'ATSL57', 'ATSL60', 'ATSL65', 'ATSL70', 'ATSL91'];
+  displayedColumns: string[] = ['File', 'ItemID', 'SyncDate', 'Status', 'CustomerItemCode', 'ETADate', 'ETAQty', 'TotalATS', 'ATSL10', 'ATSL21', 'ATSL28', 'ATSL29', 'ATSL35', 'ATSL36', 'ATSL37', 'ATSL40', 'ATSL41', 'ATSL55', 'ATSL56', 'ATSL57', 'ATSL60', 'ATSL65', 'ATSL70', 'ATSL91'];
   dataSource: any[] = [];
   batchID: string = '';
   batchStatus: string = '';

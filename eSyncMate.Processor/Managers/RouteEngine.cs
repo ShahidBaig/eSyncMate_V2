@@ -2,6 +2,7 @@
 using eSyncMate.DB.Entities;
 using eSyncMate.Processor.Models;
 using Hangfire;
+using System.Data;
 using System.Diagnostics;
 
 namespace eSyncMate.Processor.Managers
@@ -34,6 +35,27 @@ namespace eSyncMate.Processor.Managers
             _config = config;
         }
 
+        // Reads ApplicationSettings.TagValue for 'RouteLockTimeoutMinutes' on every call.
+        // Falls back to 60 if the row is missing, value invalid, or DB is unreachable.
+        private static int GetRouteLockTimeoutMinutes()
+        {
+            try
+            {
+                DataTable dt = PublicFunctions.GetDataFromApplicationSettings(
+                    "RouteLockTimeoutMinutes", CommonUtils.ConnectionString);
+
+                if (dt != null && dt.Rows.Count > 0
+                    && int.TryParse(Convert.ToString(dt.Rows[0]["TagValue"]), out int mins)
+                    && mins > 0)
+                {
+                    return mins;
+                }
+            }
+            catch { /* fall through to default */ }
+
+            return 60;
+        }
+
         /// <summary>
         /// Execute route using external console app process
         /// This provides process isolation and better resource management
@@ -62,13 +84,29 @@ namespace eSyncMate.Processor.Managers
 
                 // DB-based lock: prevents re-dispatch if Processor restarts while RouteWorker is running
                 routeLock.UseConnection(CommonUtils.ConnectionString);
-                int lockTimeoutExternal = route.TypeId == (int)RouteTypesEnum.WalmartUploadInventory ? 300 : 60;
-                dbLockToken = routeLock.AcquireLock(route.CustomerName, route.TypeId, routeId, lockTimeoutExternal);
+                dbLockToken = routeLock.AcquireLock(route.CustomerName, route.TypeId, routeId, GetRouteLockTimeoutMinutes());
                 if (dbLockToken == null)
                 {
                     route.SaveLog(Declarations.LogTypeEnum.RouteInfo, $"Route [{routeId}] is already running (DB lock held), skipping.", "", 1);
                     return;
                 }
+
+                // ── HA TESTING MODE ────────────────────────────────────────────────
+                // When RouteEngine:DryRunMode=true, skip spawning RouteWorker.exe and
+                // just log start/end directly in the Processor. Avoids the cost of
+                // launching a child .NET process every 5 minutes during HA testing.
+                //if (_config?.GetValue<bool>("RouteEngine:DryRunMode") == true)
+                //{
+                //    long dryLogId = DB.Entities.RouteExecutionLogger.LogStart(
+                //        CommonUtils.ConnectionString,
+                //        route.Id, route.Name, route.TypeId, "RouteEngine.ExternalDryRun");
+                //    route.SaveLog(Declarations.LogTypeEnum.Info,
+                //        $"[RouteEngine] DryRunMode=true — skipping external process for route [{routeId}].", "", 1);
+                //    Thread.Sleep(200);
+                //    DB.Entities.RouteExecutionLogger.LogEnd(
+                //        CommonUtils.ConnectionString, dryLogId, "Completed");
+                //    return;
+                //}
 
                 // ========== FLOW-BASED INVENTORY COORDINATION (External) ==========
                 if (InventoryRouteHelper.IsInventoryRoute(route.TypeId))
@@ -274,6 +312,7 @@ namespace eSyncMate.Processor.Managers
 
             Routes route = new Routes();
             string dbLockToken = null;
+            long execLogId = 0;
             var routeLock = new DB.Entities.RouteExecutionLock();
 
             try
@@ -293,13 +332,28 @@ namespace eSyncMate.Processor.Managers
 
                 // DB-based lock: cross-process self-lock for all routes
                 routeLock.UseConnection(CommonUtils.ConnectionString);
-                int lockTimeout = route.TypeId == (int)RouteTypesEnum.WalmartUploadInventory ? 300 : 60;
-                dbLockToken = routeLock.AcquireLock(route.CustomerName, route.TypeId, routeId, lockTimeout);
+                dbLockToken = routeLock.AcquireLock(route.CustomerName, route.TypeId, routeId, GetRouteLockTimeoutMinutes());
                 if (dbLockToken == null)
                 {
                     route.SaveLog(Declarations.LogTypeEnum.RouteInfo, $"Route [{routeId}] is already running (DB lock held), skipping.", "", 1);
                     return;
                 }
+
+                //execLogId = DB.Entities.RouteExecutionLogger.LogStart(
+                //    CommonUtils.ConnectionString,
+                //    route.Id, route.Name, route.TypeId, "InProcess");
+
+                //// ── HA TESTING MODE ────────────────────────────────────────────────
+                //// When RouteEngine:DryRunMode=true, skip actual dispatch (no partner APIs hit).
+                //if (_config?.GetValue<bool>("RouteEngine:DryRunMode") == true)
+                //{
+                //    route.SaveLog(Declarations.LogTypeEnum.Info,
+                //        $"[RouteEngine] DryRunMode=true — skipping dispatch for route [{routeId}].", "", 1);
+                //    Thread.Sleep(200);
+                //    DB.Entities.RouteExecutionLogger.LogEnd(
+                //        CommonUtils.ConnectionString, execLogId, "Completed");
+                //    return;
+                //}
 
                 // ========== FLOW-BASED INVENTORY COORDINATION ==========
                 // For inventory routes only:
@@ -753,11 +807,16 @@ namespace eSyncMate.Processor.Managers
                 {
                     StaleLockCleanupRoute.Execute(_config, route);
                 }
-                
+
+                //DB.Entities.RouteExecutionLogger.LogEnd(
+                //    CommonUtils.ConnectionString, execLogId, "Completed");
             }
             catch (Exception ex)
             {
                 route.SaveLog(Declarations.LogTypeEnum.Exception, ex.Message, ex.ToString(), 1);
+
+                //DB.Entities.RouteExecutionLogger.LogEnd(
+                //    CommonUtils.ConnectionString, execLogId, "Error", ex.Message);
             }
             finally
             {
