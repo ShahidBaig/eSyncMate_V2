@@ -209,7 +209,7 @@ namespace eSyncMate.Processor.Models
 
     public class CommonUtils
     {
-        public static string ConnectionString { get; set; } = "Server=203.99.180.246,14533;Database=eSyncmate_Dev;UID=sa;PWD=eSoft#123456;";
+        public static string ConnectionString { get; set; } = "Server=192.168.0.44,7100;Database=ESYNCMATE;UID=esyncmate;PWD=eSyncMate786$$$;";
         public static string MySqlConnectionString { get; set; } = "Server=162.241.63.30;Database=geckote1_edi;User=geckote1_esyncmate;Password=Gecko8079;";
         public static string EncryptionKey { get; set; } = "eSyncMate@Dev#2026!!SecretKey";
         public static string SMTPHost { get; set; } = "smtp.office365.com";

@@ -1124,13 +1124,7 @@ namespace eSyncMate.DB.Entities
 
         public bool UpdateInventoryBacthwiseStatus(string p_batchID, string p_FeedDocumentID, string p_Status, string CustomerID = "",string Data = "")
         {
-            string updateQuery = $"UPDATE InventoryBatchWiseFeedDetail " +
-                     $"SET Status = '{p_Status}' , Data = '{Data}'   ";
-
-
-            updateQuery += $"WHERE batchID = '{p_batchID}' AND CustomerID = '{CustomerID}' AND FeedDocumentID = '{p_FeedDocumentID}'";
-
-            return this.Connection.Execute(updateQuery);
+            return UpdateInventoryBatchWiseStatus(p_batchID, p_FeedDocumentID, p_Status, CustomerID, Data);
         }
 
         public bool UpdateInventoryBatchWiseStatus(string p_batchID, string p_FeedDocumentID, string p_Status, string CustomerID = "", string Data = "")

@@ -146,6 +146,10 @@ namespace eSyncMate.Processor.Managers
             {
                 routeName = "Amazon - Place Orders in ERP";
             }
+            else if (customerName == "AMA1000")
+            {
+                routeName = "Amazon Pacific Rugs - Place Orders in ERP";
+            }
             else if (customerName == "LOW2221MP")
             {
                 routeName = "Lowes - Place Orders in ERP";
