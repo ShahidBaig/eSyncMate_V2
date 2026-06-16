@@ -34,6 +34,8 @@ using Microsoft.Graph;
 using Microsoft.Graph.Models;
 using Microsoft.Graph.Users.Item.SendMail;
 using RouteTestApp;
+using Newtonsoft.Json.Linq;
+using System.Net.Http.Headers;
 
 // ======== Test Connection ========
 //string testConnectionString = "<<SET_CONNECTION_STRING>>";
@@ -89,6 +91,34 @@ static void Main()
     int routeId = 109;
     routeEngine.Execute(routeId);
 
+    //string data = ReadFeedIssuesAsync("<<SET_FEED_DOCUMENT_URL>>").GetAwaiter().GetResult();
+
+
+    //string token = GetToken("<<SET_AMAZON_APPLICATION_ID>>", "<<SET_AMAZON_CLIENT_ID>>", "<<SET_AMAZON_CLIENT_SECRET>>", "<<SET_AMAZON_REFRESH_TOKEN>>").GetAwaiter().GetResult();
+
+    //JObject createDocumentResponse = CreateDocument(token, "https://sellingpartnerapi-na.amazon.com").GetAwaiter().GetResult();
+
+    //string documentCreateResponse = createDocumentResponse.ToString(Newtonsoft.Json.Formatting.Indented);
+
+
+    //string feedDocumentId = createDocumentResponse["feedDocumentId"].ToString();
+    //string feedUrl = createDocumentResponse["url"].ToString();
+
+    //string jsonrequest = "{\r\n  \"header\": { \"sellerId\": \"A2HPD9TN5YUQMH\", \"version\": \"2.0\", \"issueLocale\": \"en_US\" },\r\n  \"messages\": [\r\n    {\r\n      \"messageId\": 1,\r\n      \"sku\": \"B00BEU0NAW CY6937-26-2\",\r\n      \"operationType\": \"PARTIAL_UPDATE\",\r\n      \"productType\": \"PRODUCT\",\r\n      \"attributes\": {\r\n        \"fulfillment_availability\": [\r\n          { \"fulfillment_channel_code\": \"DEFAULT\", \"quantity\": 18, \"lead_time_to_ship_max_days\": 1 }\r\n        ]\r\n      }\r\n    }\r\n  ]\r\n}";
+
+    //if (!string.IsNullOrWhiteSpace(jsonrequest))
+    //{
+    //    var createUploadDocument = UploadDocument(feedUrl, jsonrequest).GetAwaiter().GetResult();
+
+    //    //Thread.Sleep(1000);
+
+    //    JObject l_responseSubmitFeed = SubmitFeed(feedDocumentId, token, "https://sellingpartnerapi-na.amazon.com").GetAwaiter().GetResult();
+    //    string submitFeedResponse = l_responseSubmitFeed.ToString(Newtonsoft.Json.Formatting.Indented);
+
+    //    string feedId = l_responseSubmitFeed["feedId"].ToString();
+
+    //}
+
 
     //string transformationMap = "{\r\n  \"order\": {\r\n    \"header\": {\r\n      \"CustomerID\": \"AMA1005\",\r\n      \"CustomerPO\": \"#valueof($.AmazonOrderId)\",\r\n      \"AddressName\": \"#valueof($.OrderAddress.payload.ShippingAddress.Name)\",\r\n      \"CompanyName\": \"#valueof($.OrderAddress.payload.ShippingAddress.Name)\",\r\n      \"ShipToCode\": \"\",\r\n      \"Address1\": \"#valueof($.OrderAddress.payload.ShippingAddress.AddressLine1)\",\r\n      \"Address2\": \"#valueof($.OrderAddress.payload.ShippingAddress.AddressLine2)\",\r\n      \"City\": \"#valueof($.OrderAddress.payload.ShippingAddress.City)\",\r\n      \"State\": \"#valueof($.OrderAddress.payload.ShippingAddress.StateOrRegion)\",\r\n      \"Zip\": \"#valueof($.OrderAddress.payload.ShippingAddress.PostalCode)\",\r\n      \"Country\": \"#valueof($.OrderAddress.payload.ShippingAddress.CountryCode)\",\r\n      \"Phone\": \"\",\r\n      \"OrderTakenBy\": \"API\",\r\n      \"Instructions\": \"\",\r\n      \"ShipViaCode\": \"FEDX\",\r\n      \"OrderDate\": \"#customfunction(eSyncMate.Processor,eSyncMate.Maps.Transformations.formatDate,#valueof($.PurchaseDate),MM/dd/yyyy)\",\r\n      \"ShipDate\": \"#customfunction(eSyncMate.Processor,eSyncMate.Maps.Transformations.formatDate,#valueof($.LatestShipDate),MM/dd/yyyy)\",\r\n      \"CancelDate\": \"#customfunction(eSyncMate.Processor,eSyncMate.Maps.Transformations.formatDate,#valueof($.LatestShipDate),MM/dd/yyyy)\",\r\n      \"ExternalID\": \"#valueof($.AmazonOrderId)\"\r\n    },\r\n    \"detail\": {\r\n      \"#loop($.OrderDetail.payload.OrderItems)\": {\r\n        \"ItemID\": \"#currentvalueatpath($.ItemID)\",\r\n        \"OrderQty\": \"#currentvalueatpath($.QuantityOrdered)\",\r\n        \"UnitPrice\": \"#ifcondition(#currentvalueatpath($.QuantityOrdered),0,0,#round(#divide(#currentvalueatpath($.ItemPrice.Amount),#currentvalueatpath($.QuantityOrdered)),2))\",\r\n        \"Discount\": \"\",\r\n        \"WHSID\": \"#customfunction(eSyncMate.Processor,eSyncMate.Maps.Transformations.TransAmazonWarehouseID,#valueof($.DefaultShipFromLocationAddress.Name),AMA1005)\",\r\n        \"Remarks\": \"\",\r\n        \"ETA_Date\": \"\",\r\n        \"TaxAmount\": \"\",\r\n        \"APIOrderLineNo\": \"#currentvalueatpath($.LineNo)\"\r\n      }\r\n    }\r\n  }\r\n}";
     //string Body = "{\r\n  \"BuyerInfo\": {\r\n    \"BuyerEmail\": \"jg4p8x8ctknvsg1@marketplace.amazon.com\"\r\n  },\r\n  \"AmazonOrderId\": \"112-0553045-5736252\",\r\n  \"EarliestDeliveryDate\": \"2026-04-19T07:00:00Z\",\r\n  \"EarliestShipDate\": \"2026-04-16T07:00:00Z\",\r\n  \"SalesChannel\": \"Amazon.com\",\r\n  \"AutomatedShippingSettings\": {\r\n    \"HasAutomatedShippingSettings\": true\r\n  },\r\n  \"OrderStatus\": \"Unshipped\",\r\n  \"NumberOfItemsShipped\": 0,\r\n  \"OrderType\": \"StandardOrder\",\r\n  \"IsPremiumOrder\": false,\r\n  \"IsPrime\": false,\r\n  \"FulfillmentChannel\": \"MFN\",\r\n  \"NumberOfItemsUnshipped\": 1,\r\n  \"HasRegulatedItems\": false,\r\n  \"IsReplacementOrder\": \"false\",\r\n  \"IsSoldByAB\": false,\r\n  \"LatestShipDate\": \"2026-04-17T06:59:59Z\",\r\n  \"ShipServiceLevel\": \"Std US D2D Dom\",\r\n  \"DefaultShipFromLocationAddress\": {\r\n    \"StateOrRegion\": \"NY\",\r\n    \"AddressLine1\": \"40 Harbor Park Drive North\",\r\n    \"PostalCode\": \"11050\",\r\n    \"City\": \"Port Washington\",\r\n    \"CountryCode\": \"US\",\r\n    \"Name\": \"L10 Port Washington\"\r\n  },\r\n  \"IsISPU\": false,\r\n  \"MarketplaceId\": \"ATVPDKIKX0DER\",\r\n  \"LatestDeliveryDate\": \"2026-04-20T06:59:59Z\",\r\n  \"PurchaseDate\": \"2026-04-15T14:55:04Z\",\r\n  \"ShippingAddress\": {\r\n    \"StateOrRegion\": \"NY\",\r\n    \"PostalCode\": \"10128-0726\",\r\n    \"City\": \"NEW YORK\",\r\n    \"CountryCode\": \"US\",\r\n    \"CompanyName\": null\r\n  },\r\n  \"IsAccessPointOrder\": false,\r\n  \"PaymentMethod\": \"Other\",\r\n  \"IsBusinessOrder\": false,\r\n  \"OrderTotal\": {\r\n    \"CurrencyCode\": \"USD\",\r\n    \"Amount\": \"65.52\"\r\n  },\r\n  \"PaymentMethodDetails\": [\r\n    \"Standard\"\r\n  ],\r\n  \"IsGlobalExpressEnabled\": false,\r\n  \"LastUpdateDate\": \"2026-04-15T15:24:31Z\",\r\n  \"ShipmentServiceLevelCategory\": \"Standard\",\r\n  \"ReplacedOrderId\": null,\r\n  \"OrderAddress\": {\r\n    \"payload\": {\r\n      \"AmazonOrderId\": \"112-0553045-5736252\",\r\n      \"ShippingAddress\": {\r\n        \"StateOrRegion\": \"NY\",\r\n        \"PostalCode\": \"10128-0726\",\r\n        \"City\": \"NEW YORK\",\r\n        \"CountryCode\": \"US\",\r\n        \"Name\": \"alison sola\",\r\n        \"AddressLine1\": \"40 E 94TH ST APT 13G\",\r\n        \"AddressLine2\": null,\r\n        \"AddressLine3\": null\r\n      }\r\n    }\r\n  },\r\n  \"OrderDetail\": {\r\n    \"payload\": {\r\n      \"OrderItems\": [\r\n        {\r\n          \"TaxCollection\": {\r\n            \"Model\": \"MarketplaceFacilitator\",\r\n            \"ResponsibleParty\": \"Amazon Services, Inc.\"\r\n          },\r\n          \"ProductInfo\": {\r\n            \"NumberOfItems\": \"2\"\r\n          },\r\n          \"BuyerInfo\": {\r\n            \r\n          },\r\n          \"ItemTax\": {\r\n            \"CurrencyCode\": \"USD\",\r\n            \"Amount\": \"5.34\"\r\n          },\r\n          \"QuantityShipped\": 0,\r\n          \"BuyerRequestedCancel\": {\r\n            \"IsBuyerRequestedCancel\": \"false\",\r\n            \"BuyerCancelReason\": \"\"\r\n          },\r\n          \"ItemPrice\": {\r\n            \"CurrencyCode\": \"USD\",\r\n            \"Amount\": \"60.18\"\r\n          },\r\n          \"ASIN\": \"B0FDLC6965\",\r\n          \"SellerSKU\": \"B0FDLC6965 TBL4635A-SET2\",\r\n          \"Title\": \"SAFAVIEH Lighting Collection Trea Brass & Dark Walnut 20-inch Table Lamp Set of 2\",\r\n          \"IsGift\": \"false\",\r\n          \"ConditionSubtypeId\": \"New\",\r\n          \"IsTransparency\": false,\r\n          \"QuantityOrdered\": 1,\r\n          \"PromotionDiscountTax\": {\r\n            \"CurrencyCode\": \"USD\",\r\n            \"Amount\": \"0.00\"\r\n          },\r\n          \"ConditionId\": \"New\",\r\n          \"PromotionDiscount\": {\r\n            \"CurrencyCode\": \"USD\",\r\n            \"Amount\": \"0.00\"\r\n          },\r\n          \"OrderItemId\": \"157887997198041\",\r\n          \"LineNo\": 1,\r\n          \"ItemID\": \"TBL4635A-SET2\"\r\n        }\r\n      ],\r\n      \"AmazonOrderId\": \"112-0553045-5736252\"\r\n    }\r\n  }\r\n}";
@@ -102,7 +132,7 @@ static void Main()
     //int routeId = 3;
     //routeEngine.Execute(routeId);
 
-    //ReadFeedIssuesAsync("https://tortuga-prod-na.s3-external-1.amazonaws.com/5fa875c4-f059-4835-a42d-3282f303ce76.amzn1.tortuga.4.na.TLTKCV24Q6QPJ?response-content-encoding=identity&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20260114T104620Z&X-Amz-SignedHeaders=host&X-Amz-Expires=300&X-Amz-Credential=AKIA5U6MO6RAFWDBC36B%2F20260114%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Signature=3a773f516b8baaedcd9a080e120cbd4d94f001212fb2b933f416b6c626be8345").GetAwaiter().GetResult();
+    //ReadFeedIssuesAsync("<<SET_FEED_DOCUMENT_URL>>").GetAwaiter().GetResult();
 
     //MissingOrdersProcessed().GetAwaiter().GetResult();
 
@@ -270,6 +300,121 @@ static void Main()
 
 }
 
+
+
+
+async static Task<string> GetToken(string l_applicationID, string l_client_id, string l_client_secret, string l_refresh_token)
+{
+    using var request = new HttpRequestMessage(HttpMethod.Post, $"https://api.amazon.com/auth/o2/token?application_id={l_applicationID}&client_id={l_client_id}&client_secret={l_client_secret}&refresh_token={l_refresh_token}&grant_type=refresh_token");
+
+    try
+    {
+        request.Headers.Add("contentType", "application/x-www-form-urlencoded");
+        var content = new StringContent(string.Empty);
+        content.Headers.ContentType = new MediaTypeHeaderValue("application/x-www-form-urlencoded");
+        request.Content = content;
+        using var http = new HttpClient();
+        var response = await http.SendAsync(request);
+        response.EnsureSuccessStatusCode();
+
+        string responseContent = await response.Content.ReadAsStringAsync();
+        JObject jsonResponse = JObject.Parse(responseContent);
+
+        return jsonResponse["access_token"].ToString();
+
+    }
+    catch (Exception)
+    {
+
+        throw;
+    }
+}
+
+async static Task<JObject> CreateDocument(string token, string baseUrl)
+{
+    using var req = new HttpRequestMessage(HttpMethod.Post, $"{baseUrl}/feeds/2021-06-30/documents");
+    req.Headers.Add("x-amz-access-token", token);
+
+    var body = new JObject { ["contentType"] = "application/json; charset=UTF-8" };
+    req.Content = new StringContent(body.ToString(), Encoding.UTF8, "application/json");
+
+    using var http = new HttpClient();
+    var res = await http.SendAsync(req);
+    res.EnsureSuccessStatusCode();
+    return JObject.Parse(await res.Content.ReadAsStringAsync());
+
+}
+
+async static Task<HttpStatusCode> UploadDocument(string url, string json)
+{
+    using var content = new StringContent(json, Encoding.UTF8);
+    content.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse("application/json; charset=UTF-8");
+
+    using var req = new HttpRequestMessage(HttpMethod.Put, url) { Content = content };
+    using var http = new HttpClient();
+    using var res = await http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead);
+    return (HttpStatusCode)res.StatusCode;
+}
+
+async static Task<JObject> SubmitFeed(string feedDocumentId, string token, string l_baseurl)
+{
+    // Set the destination URL for the Submit Feed API endpoint
+    using var request = new HttpRequestMessage(HttpMethod.Post, $"{l_baseurl}/feeds/2021-06-30/feeds");
+
+    try
+    {
+        request.Headers.Add("contentType", "application/json");
+        request.Headers.Add("x-amz-access-token", token);
+
+        var requestBody = new
+        {
+            feedType = "JSON_LISTINGS_FEED",
+            inputFeedDocumentId = feedDocumentId,
+            marketplaceIds = new[] { "ATVPDKIKX0DER" },
+            feedOptions = new { }
+        };
+
+        string requestBodyString = JsonConvert.SerializeObject(requestBody);
+        var content = new StringContent(requestBodyString, Encoding.UTF8, "application/json");
+
+        request.Content = content;
+
+        using var http = new HttpClient();
+        var response = await http.SendAsync(request);
+
+        response.EnsureSuccessStatusCode();
+
+        string responseContent = await response.Content.ReadAsStringAsync();
+
+        JObject jsonResponse = JObject.Parse(responseContent);
+
+        //return jsonResponse["feedId"].ToString();
+
+        return jsonResponse;
+    }
+    catch (Exception)
+    {
+
+        throw;
+    }
+}
+
+async static Task<string> ReadFeedIssuesAsync(string url)
+{
+    try
+    {
+        var text = await DownloadAndGunzipAsync(url);
+
+
+        return text;
+
+    }
+    catch (Exception)
+    {
+
+        throw;
+    }
+}
 static void MacysOrderProcess(IConfiguration config, Routes route)
 {
     int userNo = 1;
@@ -1789,38 +1934,38 @@ Console.WriteLine("Hello, World!");
     return await reader.ReadToEndAsync(); // JSON text (usually)
 }
 
- static async Task ReadFeedIssuesAsync(string url)
-{
-    //var text = await DownloadAndGunzipAsync(url);
+// static async Task ReadFeedIssuesAsync(string url)
+//{
+//    //var text = await DownloadAndGunzipAsync(url);
 
-    var exeFolder = AppContext.BaseDirectory;
-    var fileName = $"FBM_Items_Report_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
-    var outputPath = Path.Combine(exeFolder, fileName);
+//    var exeFolder = AppContext.BaseDirectory;
+//    var fileName = $"FBM_Items_Report_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+//    var outputPath = Path.Combine(exeFolder, fileName);
 
-    await SaveAmazonReportToExcelAsync(url, outputPath);
-    Console.WriteLine("Saved at: " + outputPath);
+//    await SaveAmazonReportToExcelAsync(url, outputPath);
+//    Console.WriteLine("Saved at: " + outputPath);
 
-    //using var doc = JsonDocument.Parse(text);
-    //var root = doc.RootElement;
+//    //using var doc = JsonDocument.Parse(text);
+//    //var root = doc.RootElement;
 
-    //// Try common keys
-    //if (!root.TryGetProperty("issues", out var issuesEl) &&
-    //    !root.TryGetProperty("errors", out issuesEl))
-    //{
-    //    Console.WriteLine("No 'issues'/'errors' found. First 500 chars:");
-    //    Console.WriteLine(text.Substring(0, Math.Min(500, text.Length)));
-    //    return;
-    //}
+//    //// Try common keys
+//    //if (!root.TryGetProperty("issues", out var issuesEl) &&
+//    //    !root.TryGetProperty("errors", out issuesEl))
+//    //{
+//    //    Console.WriteLine("No 'issues'/'errors' found. First 500 chars:");
+//    //    Console.WriteLine(text.Substring(0, Math.Min(500, text.Length)));
+//    //    return;
+//    //}
 
-    //foreach (var issue in issuesEl.EnumerateArray())
-    //{
-    //    string sku = issue.TryGetProperty("sku", out var skuEl) ? skuEl.GetString() : "";
-    //    string sev = issue.TryGetProperty("severity", out var sevEl) ? sevEl.GetString() : "";
-    //    string msg = issue.TryGetProperty("message", out var msgEl) ? msgEl.GetString() : "";
+//    //foreach (var issue in issuesEl.EnumerateArray())
+//    //{
+//    //    string sku = issue.TryGetProperty("sku", out var skuEl) ? skuEl.GetString() : "";
+//    //    string sev = issue.TryGetProperty("severity", out var sevEl) ? sevEl.GetString() : "";
+//    //    string msg = issue.TryGetProperty("message", out var msgEl) ? msgEl.GetString() : "";
 
-    //    Console.WriteLine($"[{sev}] sku={sku} msg={msg}");
-    //}
-}
+//    //    Console.WriteLine($"[{sev}] sku={sku} msg={msg}");
+//    //}
+//}
 
 
 static async Task SaveAmazonReportToExcelAsync(string reportUrl, string outputPath)

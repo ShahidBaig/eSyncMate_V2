@@ -455,7 +455,16 @@ namespace eSyncMate.Processor.Managers
 
                 AmazonInventoryRequestModel l_AmazonInventoryRequestModel = new AmazonInventoryRequestModel();
 
-                l_AmazonInventoryRequestModel.header.sellerId = "A3NX96R6O9JSG4";
+                if (customerID.ToUpper() == "AMA1005")
+                {
+                    l_AmazonInventoryRequestModel.header.sellerId = "A3NX96R6O9JSG4";
+                }
+
+                if (customerID.ToUpper() == "AMA1000")
+                {
+                    l_AmazonInventoryRequestModel.header.sellerId = "A2MYQVBOMVK2ZL";
+                }
+
                 l_AmazonInventoryRequestModel.header.version = "2.0";
                 l_AmazonInventoryRequestModel.header.issueLocale = "en_US";
                 int messageId = 1;
