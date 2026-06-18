@@ -189,7 +189,12 @@ namespace eSyncMate.Processor.Managers
 
                 string Body = JsonConvert.SerializeObject(data);
                 this.destinationConnector.Url = this.destinationConnector.BaseUrl + row["id"];
-                route.RouteSaveData("JSON-SNT", 0, $"URL: {this.destinationConnector.Url}\n{Body}", userNo);
+                //route.RouteSaveData("JSON-SNT", 0, $"URL: {this.destinationConnector.Url}\n{Body}", userNo);
+
+                ProductPriceFeedLog l_PriceLog = new ProductPriceFeedLog();
+                l_PriceLog.UseConnection(this.sourceConnector.ConnectionString);
+                l_PriceLog.SaveData(route.Id, this.sourceConnector.CustomerID, Convert.ToString(row["ItemID"]), Convert.ToString(row["id"]), "REQ-SNT", Body, userNo);
+
                 RestResponse sourceResponse = RestConnector.Execute(this.destinationConnector, Body).GetAwaiter().GetResult();
 
                 if (sourceResponse.StatusCode == System.Net.HttpStatusCode.OK)
@@ -209,7 +214,9 @@ namespace eSyncMate.Processor.Managers
                     route.SaveLog(LogTypeEnum.Error, $"Unable to update Bulk ItemPrices for item [{row["id"]}]. HTTP {(int)sourceResponse.StatusCode} {sourceResponse.StatusCode}.", sourceResponse.Content ?? sourceResponse.ErrorMessage, userNo);
                 }
 
-                route.RouteSaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
+                //route.RouteSaveData("JSON-RVD", 0, $"ItemID: {row["ItemID"]} | id: {row["id"]}\n{sourceResponse.Content}", userNo);
+
+                l_PriceLog.SaveData(route.Id, this.sourceConnector.CustomerID, Convert.ToString(row["ItemID"]), Convert.ToString(row["id"]), "RSP-RVD", sourceResponse.Content, userNo);
             }
             catch (Exception ex)
             {

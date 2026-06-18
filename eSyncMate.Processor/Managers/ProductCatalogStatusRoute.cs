@@ -24,6 +24,9 @@ namespace eSyncMate.Processor.Managers
 {
     public class ProductCatalogStatus
     {
+        // Delay in ms between each API call to avoid Target rate limiting (429)
+        private const int DelayBetweenCallsMs = 500;
+
         public static void Execute(IConfiguration config, Routes route)
         {
             int userNo = 1;
@@ -82,6 +85,8 @@ namespace eSyncMate.Processor.Managers
 
                     foreach (DataRow row in l_data.Rows)
                     {
+                        try
+                        {
                         CustomerProductCatalog l_Product = new CustomerProductCatalog();
                         List<SCS_ProductCatalogStatusResponseModel> productList = new List<SCS_ProductCatalogStatusResponseModel>();
 
@@ -92,7 +97,7 @@ namespace eSyncMate.Processor.Managers
                         l_DestinationConnector.Method = "GET";
 
                         sourceResponse = RestConnector.Execute(l_DestinationConnector, Body).GetAwaiter().GetResult();
-                        if (sourceResponse.StatusCode == System.Net.HttpStatusCode.OK)
+                        if (sourceResponse.IsSuccessStatusCode)
                         {
                             route.SaveLog(LogTypeEnum.Debug, $"ProductCatalogStatus processed for [{row["ItemID"]}].", string.Empty, userNo);
                             
@@ -101,11 +106,11 @@ namespace eSyncMate.Processor.Managers
 
                             productList = JsonConvert.DeserializeObject<List<SCS_ProductCatalogStatusResponseModel>>(sourceResponse.Content);
 
-                            if (productList.Any())
+                            if (productList != null && productList.Any())
                             {
                                 SCS_ProductCatalogStatusResponseModel productStatus = productList[0];
 
-                                if (productStatus.product_statuses[0].listing_status == "APPROVED")
+                                if (productStatus.product_statuses != null && productStatus.product_statuses.Any() && productStatus.product_statuses[0].listing_status == "APPROVED")
                                 {
                                     l_DestinationConnector.Url = $"https://api.target.com/sellers/v1/sellers/{l_DestinationConnector.Realm.ToString()}/product_logistics/{row["Id"].ToString()}";
                                     l_DestinationConnector.Method = "PUT";
@@ -152,17 +157,29 @@ namespace eSyncMate.Processor.Managers
                                     
                                     Body = JsonConvert.SerializeObject(requestBody);
 
+                                    l_Product.DeleteWithType(l_Product.ProductId, "REQ-JSON");
                                     l_Product.SaveData("REQ-JSON", Body, userNo);
 
                                     sourceResponse = RestConnector.Execute(l_DestinationConnector, Body).GetAwaiter().GetResult();
 
-                                    if (sourceResponse.StatusCode == System.Net.HttpStatusCode.OK)
+                                    if (sourceResponse.IsSuccessStatusCode)
                                     {
+                                        l_Product.DeleteWithType(l_Product.ProductId, "RSP-JSON");
                                         l_Product.SaveData("RSP-JSON", sourceResponse.Content, userNo);
+                                    }
+                                    else
+                                    {
+                                        l_Product.DeleteWithType(l_Product.ProductId, "RSP-ERR");
+                                        l_Product.SaveData("RSP-ERR", sourceResponse.Content, userNo);
+
+                                        route.SaveLog(LogTypeEnum.Error, $"Error ({(sourceResponse.ResponseStatus == ResponseStatus.TimedOut ? "Timeout" : (int)sourceResponse.StatusCode + " " + sourceResponse.StatusCode)}) updating product logistics for [{row["ItemID"]}].", sourceResponse.Content, userNo);
                                     }
                                 }
 
-                                l_CustomerProductCatalog.UpdateStatus(Convert.ToString(row["ItemID"]), Convert.ToString(row["VariationType"]), productStatus.product_statuses[0].listing_status, productStatus.id, l_SourceConnector.CustomerID,0);
+                                if (productStatus.product_statuses != null && productStatus.product_statuses.Any())
+                                {
+                                    l_CustomerProductCatalog.UpdateStatus(Convert.ToString(row["ItemID"]), Convert.ToString(row["VariationType"]), productStatus.product_statuses[0].listing_status, productStatus.id, l_SourceConnector.CustomerID, 0);
+                                }
                             }
                         }
                         else
@@ -170,10 +187,27 @@ namespace eSyncMate.Processor.Managers
                             l_Product.DeleteWithType(l_Product.ProductId, "RSP-ERR");
                             l_Product.SaveData("RSP-ERR", sourceResponse.Content, userNo);
                             
-                            route.SaveLog(LogTypeEnum.Error, $"Unable to process ProductCatalogStatus for [{row["ItemID"]}].", sourceResponse.Content, userNo);
+                            if (CommonUtils.IsTransientResponse(sourceResponse))
+                            {
+                                route.SaveLog(LogTypeEnum.Error, $"Transient error ({(sourceResponse.ResponseStatus == ResponseStatus.TimedOut ? "Timeout" : (int)sourceResponse.StatusCode + " " + sourceResponse.StatusCode)}) getting ProductCatalogStatus for [{row["ItemID"]}]. Item will be retried.", sourceResponse.Content, userNo);
+                            }
+                            else
+                            {
+                                l_CustomerProductCatalog.UpdateStatus(Convert.ToString(row["ItemID"]), Convert.ToString(row["VariationType"]), "ERROR", "", l_SourceConnector.CustomerID, 0);
+
+                                route.SaveLog(LogTypeEnum.Error, $"Error ({(int)sourceResponse.StatusCode} {sourceResponse.StatusCode}) getting ProductCatalogStatus for [{row["ItemID"]}]. Marked as ERROR.", sourceResponse.Content, userNo);
+                            }
                         }
 
                         route.SaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
+                        }
+                        catch (Exception itemEx)
+                        {
+                            route.SaveLog(LogTypeEnum.Exception, $"Error processing ProductCatalogStatus item [{row["ItemID"]}].", itemEx.ToString(), userNo);
+                        }
+
+                        // Delay between API calls to avoid Target rate limiting
+                        System.Threading.Thread.Sleep(DelayBetweenCallsMs);
                     }
 
                     route.SaveLog(LogTypeEnum.Debug, "Destination connector processed.", string.Empty, userNo);

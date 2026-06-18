@@ -249,6 +249,35 @@ namespace eSyncMate.Processor.Models
             return l_Format;
         }
 
+        /// <summary>
+        /// Decides whether a failed REST response is transient (retry next run) or a definite
+        /// HTTP/API error (mark ERROR).
+        /// Retryable  : timeout / network not completed, HTTP 429 or 5xx, and BadRequest with no body.
+        /// Hard error : BadRequest with a body, 401, 403, 404 and other definite client errors.
+        /// </summary>
+        public static bool IsTransientResponse(RestSharp.RestResponse response)
+        {
+            if (response == null)
+                return true;
+
+            // timeout / aborted / connection failure (request never completed) -> transient
+            if (response.ResponseStatus != RestSharp.ResponseStatus.Completed)
+                return true;
+
+            int statusCode = (int)response.StatusCode;
+
+            // rate limited or server-side error -> transient
+            if (statusCode == 429 || statusCode >= 500)
+                return true;
+
+            // BadRequest with no body -> ambiguous -> transient
+            if (response.StatusCode == System.Net.HttpStatusCode.BadRequest && string.IsNullOrWhiteSpace(response.Content))
+                return true;
+
+            // BadRequest with a body, 401, 403, 404, etc. -> definite error
+            return false;
+        }
+
         public static DataTable ConvertCSVToDataTable(string fileData, string[] columnNames)
         {
             DataTable dataTable = new DataTable();

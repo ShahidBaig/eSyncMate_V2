@@ -81,10 +81,17 @@ namespace eSyncMate.Processor.Managers
                         l_DestinationConnector.Method = "PUT";
                         l_DestinationConnector.Url = l_DestinationConnector.BaseUrl + l_Row["ProductID"];
 
-                        route.RouteSaveData("JSON-SNT", 0, Body, userNo);
+                        //route.RouteSaveData("JSON-SNT", 0, Body, userNo);
+
+                        ProductPriceFeedLog l_PriceLog = new ProductPriceFeedLog();
+                        l_PriceLog.UseConnection(l_SourceConnector.ConnectionString);
+                        l_PriceLog.SaveData(route.Id, l_SourceConnector.CustomerID, Convert.ToString(l_Row["ItemId"]), Convert.ToString(l_Row["ProductID"]), "REQ-SNT", Body, userNo);
+
                         sourceResponse = RestConnector.Execute(l_DestinationConnector, Body).GetAwaiter().GetResult();
 
-                        route.RouteSaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
+                        //route.RouteSaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
+
+                        l_PriceLog.SaveData(route.Id, l_SourceConnector.CustomerID, Convert.ToString(l_Row["ItemId"]), Convert.ToString(l_Row["ProductID"]), "RSP-RVD", sourceResponse.Content, userNo);
 
                         if (sourceResponse.StatusCode == System.Net.HttpStatusCode.OK)
                         {
