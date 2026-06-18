@@ -182,12 +182,19 @@ namespace eSyncMate.Processor.Managers
                     };
 
                     string Body = JsonConvert.SerializeObject(data);
-                    route.RouteSaveData("JSON-SNT", 0, Body, userNo);
+                    //route.RouteSaveData("JSON-SNT", 0, Body, userNo);
 
                     this.destinationConnector.Url = this.destinationConnector.BaseUrl + row["id"];
+
+                    ProductPriceFeedLog l_PriceLog = new ProductPriceFeedLog();
+                    l_PriceLog.UseConnection(this.sourceConnector.ConnectionString);
+                    l_PriceLog.SaveData(route.Id, this.sourceConnector.CustomerID, Convert.ToString(row["ItemID"]), Convert.ToString(row["id"]), "REQ-SNT", Body, userNo);
+
                     RestResponse sourceResponse = RestConnector.Execute(this.destinationConnector, Body).GetAwaiter().GetResult();
 
-                    route.RouteSaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
+                    //route.RouteSaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
+
+                    l_PriceLog.SaveData(route.Id, this.sourceConnector.CustomerID, Convert.ToString(row["ItemID"]), Convert.ToString(row["id"]), "RSP-RVD", sourceResponse.Content, userNo);
 
                     if (sourceResponse.StatusCode == System.Net.HttpStatusCode.OK)
                     {
@@ -207,7 +214,7 @@ namespace eSyncMate.Processor.Managers
                 bool deleted = l_CustomerProductCatalog.DeleteIfInventorySynced(Convert.ToString(row["ItemID"]), this.sourceConnector.CustomerID);
                 if (!deleted)
                 {
-                    route.SaveLog(LogTypeEnum.Debug, $"Item [{row["ItemID"]}] kept as APPROVED_PR — inventory not yet uploaded via TargetPlusInventoryFeedWHSWise.", string.Empty, userNo);
+                    route.SaveLog(LogTypeEnum.Debug, $"Item [{row["ItemID"]}] kept as APPROVED_PR ï¿½ inventory not yet uploaded via TargetPlusInventoryFeedWHSWise.", string.Empty, userNo);
                 }
             }
             catch (Exception ex)

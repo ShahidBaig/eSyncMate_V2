@@ -48,14 +48,14 @@ namespace eSyncMate.Processor.Managers
 
                 if (l_SourceConnector == null)
                 {
-                    
+
                     route.SaveLog(LogTypeEnum.Error, "Source Connector is not setup properly", string.Empty, userNo);
                     return;
                 }
 
                 if (l_DestinationConnector == null)
                 {
-                    
+
                     route.SaveLog(LogTypeEnum.Error, "Destination Connector is not setup properly", string.Empty, userNo);
                     return;
                 }
@@ -103,82 +103,84 @@ namespace eSyncMate.Processor.Managers
 
                             foreach (var itemsSA in filteredSAItems)
                             {
-                                l_DestinationConnector.Url = destUrl;
-                                l_DestinationConnector.Method = "POST";
-                                l_ProductCatalogErrorModel = new ProductCatalogErrorModel();
-
-                                if (itemsSA.Field<string>("SyncStatus").Equals("UPDATED"))
+                                try
                                 {
-                                    l_DestinationConnector.Method = "PUT";
+                                    l_DestinationConnector.Url = destUrl;
+                                    l_DestinationConnector.Method = "POST";
+                                    l_ProductCatalogErrorModel = new ProductCatalogErrorModel();
 
-                                    if (string.IsNullOrEmpty(itemsSA.Field<string>("id")))
-                                        continue;
-
-                                    l_DestinationConnector.Url = l_DestinationConnector.Url + "/" + itemsSA.Field<string>("id");
-                                }
-
-                                l_SCS_SAPrductModel = new SCS_SAPrductModel();
-
-                                l_SCS_SAPrductModel = JsonConvert.DeserializeObject<SCS_SAPrductModel>(itemsSA["JsonData"].ToString());
-                                l_SCS_SAPrductModel.external_id = itemsSA["ItemID"].ToString();
-
-                                if (itemsSA["VariationType"].ToString().ToUpper() == "STANDALONE")
-                                {
-                                    l_SCS_SAPrductModel.relationship_type = "SA";
-                                }
-                                else
-                                {
-                                    l_SCS_SAPrductModel.relationship_type = itemsSA["VariationType"].ToString();
-                                }
-
-                                l_SCS_SAPrductModel.seller_id = l_DestinationConnector.Realm;
-
-                                Body = JsonConvert.SerializeObject(l_SCS_SAPrductModel);
-
-                                route.SaveData("JSON-SNT", 0, Body, userNo);
-                                l_CustomerProductCatalog.ProductId = Convert.ToInt32(itemsSA["ProductId"]);
-
-                                l_CustomerProductCatalog.SaveData("REQ-SNT", Body, userNo);
-
-                                sourceResponse = RestConnector.Execute(l_DestinationConnector, Body).GetAwaiter().GetResult();
-
-                                string l_Status = "PENDING";
-
-                                if (sourceResponse.StatusCode == System.Net.HttpStatusCode.BadRequest)
-                                {
-                                    //l_Status = "ERROR";
-
-                                    if (!string.IsNullOrEmpty(sourceResponse.Content))
+                                    if (itemsSA.Field<string>("SyncStatus").Equals("UPDATED"))
                                     {
-                                        l_ProductCatalogErrorModel = JsonConvert.DeserializeObject<ProductCatalogErrorModel>(sourceResponse.Content);
-                                       
-                                        if (!l_ProductCatalogErrorModel.errors.Any() == true && Convert.ToInt32(itemsSA["RetryCount"] == DBNull.Value ? 0 : itemsSA["RetryCount"]) >= 3)
-                                        {
-                                            l_Status = "ERROR";
-                                        }
+                                        l_DestinationConnector.Method = "PUT";
 
-                                        if (l_ProductCatalogErrorModel.errors.Any() == true)
-                                        {
-                                            l_Status = "ERROR";
-                                        }
+                                        if (string.IsNullOrEmpty(itemsSA.Field<string>("id")))
+                                            continue;
+
+                                        l_DestinationConnector.Url = l_DestinationConnector.Url + "/" + itemsSA.Field<string>("id");
                                     }
 
+                                    l_SCS_SAPrductModel = new SCS_SAPrductModel();
 
-                                    route.SaveLog(LogTypeEnum.Error, $"BadRequest received from SA Item Sync for item {l_SCS_SAPrductModel.external_id}.", sourceResponse.Content, userNo);
+                                    l_SCS_SAPrductModel = JsonConvert.DeserializeObject<SCS_SAPrductModel>(itemsSA["JsonData"].ToString());
+                                    l_SCS_SAPrductModel.external_id = itemsSA["ItemID"].ToString();
 
-                                    l_CustomerProductCatalog.DeleteWithType(l_CustomerProductCatalog.ProductId, "REQ-ERR");
-                                    l_CustomerProductCatalog.SaveData("REQ-ERR", sourceResponse.Content, userNo);
+                                    if (itemsSA["VariationType"].ToString().ToUpper() == "STANDALONE")
+                                    {
+                                        l_SCS_SAPrductModel.relationship_type = "SA";
+                                    }
+                                    else
+                                    {
+                                        l_SCS_SAPrductModel.relationship_type = itemsSA["VariationType"].ToString();
+                                    }
+
+                                    l_SCS_SAPrductModel.seller_id = l_DestinationConnector.Realm;
+
+                                    Body = JsonConvert.SerializeObject(l_SCS_SAPrductModel);
+
+                                    route.SaveData("JSON-SNT", 0, Body, userNo);
+                                    l_CustomerProductCatalog.ProductId = Convert.ToInt32(itemsSA["ProductId"]);
+
+                                    l_CustomerProductCatalog.DeleteWithType(l_CustomerProductCatalog.ProductId, "REQ-SNT");
+                                    l_CustomerProductCatalog.SaveData("REQ-SNT", Body, userNo);
+
+                                    sourceResponse = RestConnector.Execute(l_DestinationConnector, Body).GetAwaiter().GetResult();
+
+                                    string l_Status = "PENDING";
+
+                                    if (sourceResponse.IsSuccessStatusCode)
+                                    {
+                                        route.SaveLog(LogTypeEnum.Debug, $"Item Sync request is accepted for {l_SCS_SAPrductModel.external_id}", string.Empty, userNo);
+                                        l_CustomerProductCatalog.DeleteWithType(l_CustomerProductCatalog.ProductId, "REQ-JSON");
+                                        l_CustomerProductCatalog.SaveData("REQ-JSON", sourceResponse.Content, userNo);
+                                    }
+                                    else
+                                    {
+                                        if (CommonUtils.IsTransientResponse(sourceResponse))
+                                        {
+                                            l_Status = "PENDING";
+
+                                            route.SaveLog(LogTypeEnum.Error, $"Transient error ({(sourceResponse.ResponseStatus == ResponseStatus.TimedOut ? "Timeout" : (int)sourceResponse.StatusCode + " " + sourceResponse.StatusCode)}) from SA Item Sync for item {l_SCS_SAPrductModel.external_id}. Item will be retried.", sourceResponse.Content, userNo);
+                                        }
+                                        else
+                                        {
+                                            l_Status = "ERROR";
+
+                                            route.SaveLog(LogTypeEnum.Error, $"Error ({(int)sourceResponse.StatusCode} {sourceResponse.StatusCode}) from SA Item Sync for item {l_SCS_SAPrductModel.external_id}. Marked as ERROR.", sourceResponse.Content, userNo);
+                                        }
+
+                                        l_CustomerProductCatalog.DeleteWithType(l_CustomerProductCatalog.ProductId, "REQ-ERR");
+                                        l_CustomerProductCatalog.SaveData("REQ-ERR", sourceResponse.Content, userNo);
+                                    }
+
+                                    l_CustomerProductCatalog.UpdateStatus(l_SCS_SAPrductModel.external_id, l_SCS_SAPrductModel.relationship_type, l_Status, "", l_SourceConnector.CustomerID, Convert.ToInt32(itemsSA["RetryCount"] == DBNull.Value ? 0 : itemsSA["RetryCount"]) + 1);
+                                    //l_CustomerProductCatalog.DeleteProductCatalogDiscrepencies(l_SCS_VAPProductCatalogModel.parent.external_id);
+
+                                    route.SaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
                                 }
-                                else
+                                catch (Exception itemEx)
                                 {
-                                    route.SaveLog(LogTypeEnum.Debug, $"Item Sync request is accepted for {l_SCS_SAPrductModel.external_id}", string.Empty, userNo);
-                                    l_CustomerProductCatalog.SaveData("REQ-JSON", sourceResponse.Content, userNo);
+                                    route.SaveLog(LogTypeEnum.Exception, $"Error processing SA item [{itemsSA["ItemID"]}].", itemEx.ToString(), userNo);
                                 }
-
-                                l_CustomerProductCatalog.UpdateStatus(l_SCS_SAPrductModel.external_id, l_SCS_SAPrductModel.relationship_type, l_Status,"", l_SourceConnector.CustomerID, Convert.ToInt32(itemsSA["RetryCount"] == DBNull.Value ? 0 : itemsSA["RetryCount"]) + 1);
-                                //l_CustomerProductCatalog.DeleteProductCatalogDiscrepencies(l_SCS_VAPProductCatalogModel.parent.external_id);
-
-                                route.SaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
                             }
                         }
 
@@ -186,111 +188,127 @@ namespace eSyncMate.Processor.Managers
                         {
                             foreach (var itemVAP in filteredVAPVCItems)
                             {
-                                if (itemVAP.Field<string>("VariationType").Equals("VAP"))
+                                try
                                 {
-
-                                    string l_Status = "PENDING";
-                                    CustomerProductCatalog l_Product = new CustomerProductCatalog();
-                                    l_ProductCatalogErrorModel = new ProductCatalogErrorModel();
-
-                                    l_SCS_VAPProductCatalogModel = new SCS_VAPProductCatalogModel();
-                                    l_SCS_VAPProductCatalogModel.parent = JsonConvert.DeserializeObject<SCS_VAPProductCatalogModel.Parent>(itemVAP["JsonData"].ToString());
-
-                                    l_SCS_VAPProductCatalogModel.parent.external_id = itemVAP["ItemID"].ToString();
-                                    l_SCS_VAPProductCatalogModel.parent.relationship_type = itemVAP["VariationType"].ToString();
-
-                                    var filteredVCItems = filteredVAPVCItems.Where(row => row.Field<string>("VariationType") == "VC"
-                                                                && row.Field<string>("ParentID") == l_SCS_VAPProductCatalogModel.parent.external_id);
-
-                                    if (filteredVCItems.Any())
+                                    if (itemVAP.Field<string>("VariationType").Equals("VAP"))
                                     {
-                                        foreach (var itemVC in filteredVCItems)
+
+                                        string l_Status = "PENDING";
+                                        CustomerProductCatalog l_Product = new CustomerProductCatalog();
+                                        l_ProductCatalogErrorModel = new ProductCatalogErrorModel();
+
+                                        l_SCS_VAPProductCatalogModel = new SCS_VAPProductCatalogModel();
+                                        l_SCS_VAPProductCatalogModel.parent = JsonConvert.DeserializeObject<SCS_VAPProductCatalogModel.Parent>(itemVAP["JsonData"].ToString());
+
+                                        l_SCS_VAPProductCatalogModel.parent.external_id = itemVAP["ItemID"].ToString();
+                                        l_SCS_VAPProductCatalogModel.parent.relationship_type = itemVAP["VariationType"].ToString();
+
+                                        var filteredVCItems = filteredVAPVCItems.Where(row => row.Field<string>("VariationType") == "VC"
+                                                                    && row.Field<string>("ParentID") == l_SCS_VAPProductCatalogModel.parent.external_id);
+
+                                        if (filteredVCItems.Any())
                                         {
-                                            VCChild l_VCChild = new VCChild();
-
-                                            l_VCChild = JsonConvert.DeserializeObject<VCChild>(itemVC["JsonData"].ToString());
-                                            l_VCChild.external_id = itemVC["ItemID"].ToString();
-                                            l_VCChild.relationship_type = itemVC["VariationType"].ToString();
-
-                                            l_SCS_VAPProductCatalogModel.children.Add(l_VCChild);
-                                        }
-                                    }
-
-                                    Body = JsonConvert.SerializeObject(l_SCS_VAPProductCatalogModel);
-                                    route.SaveData("JSON-SNT", 0, Body, userNo);
-
-                                    l_CustomerProductCatalog.ProductId = Convert.ToInt32(Convert.ToInt32(itemVAP["ProductId"].ToString()));
-                                    l_CustomerProductCatalog.SaveData("REQ-SNT", Body, userNo);
-
-                                    l_DestinationConnector.Url = l_DestinationConnector.BaseUrl + "product_variation_update";
-                                    l_DestinationConnector.Method = "POST";
-
-                                    sourceResponse = RestConnector.Execute(l_DestinationConnector, Body).GetAwaiter().GetResult();
-
-                                    l_Product.UseConnection(l_SourceConnector.ConnectionString);
-                                    l_Product.ProductId = Convert.ToInt32(itemVAP["ProductId"].ToString());
-
-                                    if (sourceResponse.StatusCode == System.Net.HttpStatusCode.BadRequest)
-                                    {
-                                        //l_Status = "ERROR";
-
-                                        if (!string.IsNullOrEmpty(sourceResponse.Content))
-                                        {
-                                            l_ProductCatalogErrorModel =  JsonConvert.DeserializeObject<ProductCatalogErrorModel>(sourceResponse.Content);
-
-                                            if (!l_ProductCatalogErrorModel.errors.Any() == true && Convert.ToInt32(itemVAP["RetryCount"] == DBNull.Value ? 0 : itemVAP["RetryCount"]) >= 3)
+                                            foreach (var itemVC in filteredVCItems)
                                             {
-                                                l_Status = "ERROR";
-                                            }
+                                                VCChild l_VCChild = new VCChild();
 
-                                            if (l_ProductCatalogErrorModel.errors.Any() == true)
-                                            {
-                                                l_Status = "ERROR";
+                                                l_VCChild = JsonConvert.DeserializeObject<VCChild>(itemVC["JsonData"].ToString());
+                                                l_VCChild.external_id = itemVC["ItemID"].ToString();
+                                                l_VCChild.relationship_type = itemVC["VariationType"].ToString();
+
+                                                l_SCS_VAPProductCatalogModel.children.Add(l_VCChild);
                                             }
                                         }
 
-                                        l_Product.DeleteWithType(l_Product.ProductId, "REQ-ERR");
-                                        l_Product.SaveData("REQ-ERR", sourceResponse.Content, userNo);
+                                        Body = JsonConvert.SerializeObject(l_SCS_VAPProductCatalogModel);
+                                        route.SaveData("JSON-SNT", 0, Body, userNo);
 
-                                        route.SaveLog(LogTypeEnum.Error, $"BadRequest received from VAP Item Sync for item {l_SCS_VAPProductCatalogModel.parent.external_id}.", sourceResponse.Content, userNo);
-                                    }
-                                    else
-                                    {
-                                        l_Product.SaveData("REQ-JSON", sourceResponse.Content, userNo);
+                                        l_CustomerProductCatalog.ProductId = Convert.ToInt32(Convert.ToInt32(itemVAP["ProductId"].ToString()));
+                                        l_CustomerProductCatalog.DeleteWithType(l_CustomerProductCatalog.ProductId, "REQ-SNT");
+                                        l_CustomerProductCatalog.SaveData("REQ-SNT", Body, userNo);
 
-                                        route.SaveLog(LogTypeEnum.Debug, $"Item Sync request is accepted for {l_SCS_VAPProductCatalogModel.parent.external_id}", string.Empty, userNo);
-                                    }
+                                        l_DestinationConnector.Url = l_DestinationConnector.BaseUrl + "product_variation_update";
+                                        l_DestinationConnector.Method = "POST";
 
-                                    route.SaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
-                                    l_CustomerProductCatalog.UpdateStatus(l_SCS_VAPProductCatalogModel.parent.external_id, l_SCS_VAPProductCatalogModel.parent.relationship_type, l_Status,"", l_SourceConnector.CustomerID, Convert.ToInt32(itemVAP["RetryCount"] == DBNull.Value ? 0 : itemVAP["RetryCount"]) + 1);
+                                        sourceResponse = RestConnector.Execute(l_DestinationConnector, Body).GetAwaiter().GetResult();
 
-                                    //l_CustomerProductCatalog.DeleteProductCatalogDiscrepencies(l_SCS_VAPProductCatalogModel.parent.external_id);
-                                    if (filteredVCItems.Any())
-                                    {
-                                        foreach (var itemVC in filteredVCItems)
+                                        l_Product.UseConnection(l_SourceConnector.ConnectionString);
+                                        l_Product.ProductId = Convert.ToInt32(itemVAP["ProductId"].ToString());
+
+                                        if (sourceResponse.IsSuccessStatusCode)
                                         {
-                                            if (!String.IsNullOrEmpty(sourceResponse.Content))
+                                            l_Product.DeleteWithType(l_Product.ProductId, "REQ-JSON");
+                                            l_Product.SaveData("REQ-JSON", sourceResponse.Content, userNo);
+
+                                            route.SaveLog(LogTypeEnum.Debug, $"Item Sync request is accepted for {l_SCS_VAPProductCatalogModel.parent.external_id}", string.Empty, userNo);
+                                        }
+                                        else
+                                        {
+                                            if (CommonUtils.IsTransientResponse(sourceResponse))
                                             {
-                                                SCSProductsResponse l_SCSProductsResponse = JsonConvert.DeserializeObject<SCSProductsResponse>(sourceResponse.Content);
+                                                l_Status = "PENDING";
 
-                                                var filteredResults = l_SCSProductsResponse.results
-                                                .Where(r => r.external_id == itemVC["ItemID"].ToString())
-                                                .ToList();
+                                                route.SaveLog(LogTypeEnum.Error, $"Transient error ({(sourceResponse.ResponseStatus == ResponseStatus.TimedOut ? "Timeout" : (int)sourceResponse.StatusCode + " " + sourceResponse.StatusCode)}) from VAP Item Sync for item {l_SCS_VAPProductCatalogModel.parent.external_id}. Item will be retried.", sourceResponse.Content, userNo);
+                                            }
+                                            else
+                                            {
+                                                l_Status = "ERROR";
 
-                                                string l_ChildResponse = JsonConvert.SerializeObject(filteredResults);
+                                                route.SaveLog(LogTypeEnum.Error, $"Error ({(int)sourceResponse.StatusCode} {sourceResponse.StatusCode}) from VAP Item Sync for item {l_SCS_VAPProductCatalogModel.parent.external_id}. Marked as ERROR.", sourceResponse.Content, userNo);
+                                            }
 
+                                            l_Product.DeleteWithType(l_Product.ProductId, "REQ-ERR");
+                                            l_Product.SaveData("REQ-ERR", sourceResponse.Content, userNo);
+                                        }
+
+                                        route.SaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
+                                        l_CustomerProductCatalog.UpdateStatus(l_SCS_VAPProductCatalogModel.parent.external_id, l_SCS_VAPProductCatalogModel.parent.relationship_type, l_Status, "", l_SourceConnector.CustomerID, Convert.ToInt32(itemVAP["RetryCount"] == DBNull.Value ? 0 : itemVAP["RetryCount"]) + 1);
+
+                                        //l_CustomerProductCatalog.DeleteProductCatalogDiscrepencies(l_SCS_VAPProductCatalogModel.parent.external_id);
+                                        if (filteredVCItems.Any())
+                                        {
+                                            foreach (var itemVC in filteredVCItems)
+                                            {
                                                 l_Product.UseConnection(l_SourceConnector.ConnectionString);
-
                                                 l_Product.ProductId = Convert.ToInt32(itemVC["ProductId"].ToString());
-                                                l_Product.SaveData("REQ-JSON", l_ChildResponse, userNo);
+
+                                                if (!sourceResponse.IsSuccessStatusCode)
+                                                {
+                                                    l_Product.DeleteWithType(l_Product.ProductId, "REQ-ERR");
+                                                    l_Product.SaveData("REQ-ERR", sourceResponse.Content, userNo);
+
+                                                    route.SaveLog(LogTypeEnum.Error, $"Error ({(int)sourceResponse.StatusCode} {sourceResponse.StatusCode}) from VC Item Sync for item {itemVC["ItemID"]}.", sourceResponse.Content, userNo);
+                                                }
+                                                else if (!String.IsNullOrEmpty(sourceResponse.Content))
+                                                {
+                                                    SCSProductsResponse l_SCSProductsResponse = JsonConvert.DeserializeObject<SCSProductsResponse>(sourceResponse.Content);
+
+                                                    string l_ChildResponse = "[]";
+
+                                                    if (l_SCSProductsResponse != null && l_SCSProductsResponse.results != null)
+                                                    {
+                                                        var filteredResults = l_SCSProductsResponse.results
+                                                        .Where(r => r.external_id == itemVC["ItemID"].ToString())
+                                                        .ToList();
+
+                                                        l_ChildResponse = JsonConvert.SerializeObject(filteredResults);
+                                                    }
+
+                                                    l_Product.DeleteWithType(l_Product.ProductId, "REQ-JSON");
+                                                    l_Product.SaveData("REQ-JSON", l_ChildResponse, userNo);
+                                                }
+
+
+                                                l_CustomerProductCatalog.UpdateStatus(itemVC["ItemID"].ToString(), itemVC["VariationType"].ToString(), l_Status, "", l_SourceConnector.CustomerID, Convert.ToInt32(itemVC["RetryCount"] == DBNull.Value ? 0 : itemVC["RetryCount"]) + 1);
+
+                                                //l_CustomerProductCatalog.DeleteProductCatalogDiscrepencies(itemVC["ItemID"].ToString());
                                             }
-
-                                            
-                                            l_CustomerProductCatalog.UpdateStatus(itemVC["ItemID"].ToString(), itemVC["VariationType"].ToString(), l_Status, "", l_SourceConnector.CustomerID, Convert.ToInt32(itemVC["RetryCount"] == DBNull.Value ? 0 : itemVC["RetryCount"]) + 1);
-
-                                            //l_CustomerProductCatalog.DeleteProductCatalogDiscrepencies(itemVC["ItemID"].ToString());
                                         }
                                     }
+                                }
+                                catch (Exception itemEx)
+                                {
+                                    route.SaveLog(LogTypeEnum.Exception, $"Error processing VAP/VC item [{itemVAP["ItemID"]}].", itemEx.ToString(), userNo);
                                 }
                             }
                         }
@@ -299,88 +317,105 @@ namespace eSyncMate.Processor.Managers
                         {
                             foreach (var unlistedItems in filteredUnlistedItems)
                             {
-                                if (string.IsNullOrEmpty(unlistedItems.Field<string>("id")))
-                                    continue;
-
-                                string destUrl = l_DestinationConnector.BaseUrl + "products/" + unlistedItems.Field<string>("id");
-
-                                l_DestinationConnector.Url = destUrl;
-                                l_DestinationConnector.Method = "GET";
-                                l_ProductCatalogErrorModel = new ProductCatalogErrorModel();
-
-                                route.SaveData("JSON-SNT", 0, l_DestinationConnector.Url, userNo);
-                                l_CustomerProductCatalog.ProductId = Convert.ToInt32(unlistedItems["ProductId"]);
-
-                                l_CustomerProductCatalog.SaveData("REQ-SNT", l_DestinationConnector.Url, userNo);
-
-                                sourceResponse = RestConnector.Execute(l_DestinationConnector, "").GetAwaiter().GetResult();
-
-                                SCS_ProductCatalogStatusResponseModel response = new SCS_ProductCatalogStatusResponseModel();
-
-                                if (sourceResponse.StatusCode == System.Net.HttpStatusCode.OK)
+                                try
                                 {
-                                    route.SaveLog(LogTypeEnum.Debug, $"Get Product request is accepted for {response.external_id}", string.Empty, userNo);
-                                    l_CustomerProductCatalog.SaveData("REQ-JSON", sourceResponse.Content, userNo);
+                                    if (string.IsNullOrEmpty(unlistedItems.Field<string>("id")))
+                                        continue;
 
-                                    response = JsonConvert.DeserializeObject<SCS_ProductCatalogStatusResponseModel>(sourceResponse.Content);
+                                    string destUrl = l_DestinationConnector.BaseUrl + "products/" + unlistedItems.Field<string>("id");
 
-                                    if (response != null)
+                                    l_DestinationConnector.Url = destUrl;
+                                    l_DestinationConnector.Method = "GET";
+                                    l_ProductCatalogErrorModel = new ProductCatalogErrorModel();
+
+                                    route.SaveData("JSON-SNT", 0, l_DestinationConnector.Url, userNo);
+                                    l_CustomerProductCatalog.ProductId = Convert.ToInt32(unlistedItems["ProductId"]);
+
+                                    l_CustomerProductCatalog.DeleteWithType(l_CustomerProductCatalog.ProductId, "REQ-SNT");
+                                    l_CustomerProductCatalog.SaveData("REQ-SNT", l_DestinationConnector.Url, userNo);
+
+                                    sourceResponse = RestConnector.Execute(l_DestinationConnector, "").GetAwaiter().GetResult();
+
+                                    SCS_ProductCatalogStatusResponseModel response = new SCS_ProductCatalogStatusResponseModel();
+
+                                    if (sourceResponse.IsSuccessStatusCode)
                                     {
-                                        destUrl = l_DestinationConnector.BaseUrl + "products/" + unlistedItems.Field<string>("id") + "/statuses/"+ response.product_statuses[0].id;
+                                        route.SaveLog(LogTypeEnum.Debug, $"Get Product request is accepted for {response.external_id}", string.Empty, userNo);
+                                        l_CustomerProductCatalog.DeleteWithType(l_CustomerProductCatalog.ProductId, "REQ-JSON");
+                                        l_CustomerProductCatalog.SaveData("REQ-JSON", sourceResponse.Content, userNo);
 
-                                        l_DestinationConnector.Url = destUrl;
-                                        l_DestinationConnector.Method = "PUT";
+                                        response = JsonConvert.DeserializeObject<SCS_ProductCatalogStatusResponseModel>(sourceResponse.Content);
 
-                                        var data = new
+                                        if (response != null && response.product_statuses != null && response.product_statuses.Any())
                                         {
-                                            listing_status = "UNLISTED"
-                                        };
+                                            destUrl = l_DestinationConnector.BaseUrl + "products/" + unlistedItems.Field<string>("id") + "/statuses/" + response.product_statuses[0].id;
 
-                                        Body = string.Empty;
+                                            l_DestinationConnector.Url = destUrl;
+                                            l_DestinationConnector.Method = "PUT";
 
-                                        Body = JsonConvert.SerializeObject(data);
-
-                                        route.SaveData("JSON-SNT", 0, Body, userNo);
-                                        l_CustomerProductCatalog.SaveData("REQ-SNT", l_DestinationConnector.Url, userNo);
-
-                                        sourceResponse = RestConnector.Execute(l_DestinationConnector, Body).GetAwaiter().GetResult();
-
-                                        string l_Status = "APPROVED";
-
-                                        if (sourceResponse.StatusCode == System.Net.HttpStatusCode.BadRequest)
-                                        {
-                                            //l_Status = "ERROR";
-
-                                            if (!string.IsNullOrEmpty(sourceResponse.Content))
+                                            var data = new
                                             {
-                                                l_ProductCatalogErrorModel = JsonConvert.DeserializeObject<ProductCatalogErrorModel>(sourceResponse.Content);
+                                                listing_status = "UNLISTED"
+                                            };
 
-                                                if (!l_ProductCatalogErrorModel.errors.Any() == true && Convert.ToInt32(unlistedItems["RetryCount"] == DBNull.Value ? 0 : unlistedItems["RetryCount"]) >= 3)
+                                            Body = string.Empty;
+
+                                            Body = JsonConvert.SerializeObject(data);
+
+                                            route.SaveData("JSON-SNT", 0, Body, userNo);
+                                            l_CustomerProductCatalog.DeleteWithType(l_CustomerProductCatalog.ProductId, "REQ-SNT");
+                                            l_CustomerProductCatalog.SaveData("REQ-SNT", l_DestinationConnector.Url, userNo);
+
+                                            sourceResponse = RestConnector.Execute(l_DestinationConnector, Body).GetAwaiter().GetResult();
+
+                                            string l_Status = "APPROVED";
+                                            bool l_Retryable = false;
+
+                                            if (sourceResponse.IsSuccessStatusCode)
+                                            {
+                                                route.SaveLog(LogTypeEnum.Debug, $"Unlist Item Sync request is accepted for {response.external_id}", string.Empty, userNo);
+                                                l_CustomerProductCatalog.DeleteWithType(l_CustomerProductCatalog.ProductId, "REQ-JSON");
+                                                l_CustomerProductCatalog.SaveData("REQ-JSON", sourceResponse.Content, userNo);
+                                            }
+                                            else
+                                            {
+                                                if (CommonUtils.IsTransientResponse(sourceResponse))
+                                                {
+                                                    l_Retryable = true;
+
+                                                    route.SaveLog(LogTypeEnum.Error, $"Transient error ({(sourceResponse.ResponseStatus == ResponseStatus.TimedOut ? "Timeout" : (int)sourceResponse.StatusCode + " " + sourceResponse.StatusCode)}) from Unlist Item Sync for item {response.external_id}. Item will be retried.", sourceResponse.Content, userNo);
+                                                }
+                                                else
                                                 {
                                                     l_Status = "ERROR";
+
+                                                    route.SaveLog(LogTypeEnum.Error, $"Error ({(int)sourceResponse.StatusCode} {sourceResponse.StatusCode}) from Unlist Item Sync for item {response.external_id}. Marked as ERROR.", sourceResponse.Content, userNo);
                                                 }
 
-                                                if (l_ProductCatalogErrorModel.errors.Any() == true)
-                                                {
-                                                    l_Status = "ERROR";
-                                                }
+                                                l_CustomerProductCatalog.DeleteWithType(l_CustomerProductCatalog.ProductId, "REQ-ERR");
+                                                l_CustomerProductCatalog.SaveData("REQ-ERR", sourceResponse.Content, userNo);
                                             }
 
-                                            route.SaveLog(LogTypeEnum.Error, $"BadRequest received from Unlist Item Sync for item {response.external_id}.", sourceResponse.Content, userNo);
+                                            if (!l_Retryable)
+                                            {
+                                                l_CustomerProductCatalog.UpdateStatus(response.external_id, response.relationship_type, l_Status, "", l_SourceConnector.CustomerID, Convert.ToInt32(unlistedItems["RetryCount"] == DBNull.Value ? 0 : unlistedItems["RetryCount"]) + 1);
+                                                l_CustomerProductCatalog.DeleteProductCatalogDiscrepencies(response.external_id);
+                                            }
 
-                                            l_CustomerProductCatalog.DeleteWithType(l_CustomerProductCatalog.ProductId, "REQ-ERR");
-                                            l_CustomerProductCatalog.SaveData("REQ-ERR", sourceResponse.Content, userNo);
+                                            route.SaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
                                         }
-                                        else
-                                        {
-                                            route.SaveLog(LogTypeEnum.Debug, $"Unlist Item Sync request is accepted for {response.external_id}", string.Empty, userNo);
-                                            l_CustomerProductCatalog.SaveData("REQ-JSON", sourceResponse.Content, userNo);
-                                        }
-
-                                        l_CustomerProductCatalog.UpdateStatus(response.external_id, response.relationship_type, l_Status, "", l_SourceConnector.CustomerID, Convert.ToInt32(unlistedItems["RetryCount"] == DBNull.Value ? 0 : unlistedItems["RetryCount"]) + 1);
-                                        l_CustomerProductCatalog.DeleteProductCatalogDiscrepencies(response.external_id);
-                                        route.SaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
                                     }
+                                    else
+                                    {
+                                        route.SaveLog(LogTypeEnum.Error, $"Error ({(int)sourceResponse.StatusCode} {sourceResponse.StatusCode}) getting product for unlist item id [{unlistedItems.Field<string>("id")}]. Item will be retried.", sourceResponse.Content, userNo);
+
+                                        l_CustomerProductCatalog.DeleteWithType(l_CustomerProductCatalog.ProductId, "REQ-ERR");
+                                        l_CustomerProductCatalog.SaveData("REQ-ERR", sourceResponse.Content, userNo);
+                                    }
+                                }
+                                catch (Exception itemEx)
+                                {
+                                    route.SaveLog(LogTypeEnum.Exception, $"Error processing unlist item id [{unlistedItems.Field<string>("id")}].", itemEx.ToString(), userNo);
                                 }
                             }
                         }
