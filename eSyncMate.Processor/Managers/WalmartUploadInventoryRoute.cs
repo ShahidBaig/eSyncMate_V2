@@ -182,7 +182,8 @@ namespace eSyncMate.Processor.Managers
             this.data                 = data;
             this.route                = JsonConvert.DeserializeObject<Routes>(JsonConvert.SerializeObject(route));
             this.feed                 = JsonConvert.DeserializeObject<SCSInventoryFeed>(JsonConvert.SerializeObject(feed));
-            this.destinationConnector = destinationConnector;
+            // Deep-clone so each thread owns its connector — prevents per-item Url race across threads
+            this.destinationConnector = JsonConvert.DeserializeObject<ConnectorDataModel>(JsonConvert.SerializeObject(destinationConnector));
             this.sourceConnector      = sourceConnector;
             this.userNo               = userNo;
             this.bacthID              = batchID;

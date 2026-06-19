@@ -192,7 +192,8 @@ namespace eSyncMate.Processor.Managers
             this.data                 = data;
             this.route                = JsonConvert.DeserializeObject<Routes>(JsonConvert.SerializeObject(route));
             this.feed                 = JsonConvert.DeserializeObject<SCSInventoryFeed>(JsonConvert.SerializeObject(feed));
-            this.destinationConnector = destinationConnector;
+            // Deep-clone so each thread owns its connector — prevents per-item Url race across threads
+            this.destinationConnector = JsonConvert.DeserializeObject<ConnectorDataModel>(JsonConvert.SerializeObject(destinationConnector));
             this.sourceConnector      = sourceConnector;
             this.userNo               = userNo;
             this.bacthID              = batchID;
@@ -266,11 +267,18 @@ namespace eSyncMate.Processor.Managers
                 this.route.UseConnection(this.sourceConnector.ConnectionString);
                 this.feed.UseConnection(this.sourceConnector.ConnectionString);
 
-                this.route.SaveData("JSON-SNT", 0, Body, userNo);
-                this.feed.SaveData("JSON-SNT", customerId, itemId, Body, this.userNo, this.bacthID);
-
                 //this.destinationConnector.Url = this.destinationConnector.BaseUrl + row["ProductId"] + "/quantities/" + row["ShipNode"].ToString();
                 this.destinationConnector.Url = this.destinationConnector.BaseUrl + row["ProductId"] + "/quantities/bulk";
+
+                string l_SentData = JsonConvert.SerializeObject(new
+                {
+                    url = this.destinationConnector.Url,
+                    postedAt = DateTime.Now.ToString("MM/dd/yyyy hh:mm:ss tt"),
+                    body = l_TargetPlusInventoryFeedWHSWiseRequestModel
+                });
+
+                this.route.SaveData("JSON-SNT", 0, l_SentData, userNo);
+                this.feed.SaveData("JSON-SNT", customerId, itemId, l_SentData, this.userNo, this.bacthID);
 
                 sourceResponse = RestConnector.Execute(this.destinationConnector, Body).GetAwaiter().GetResult();
 
