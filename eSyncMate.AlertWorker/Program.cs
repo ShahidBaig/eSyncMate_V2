@@ -50,6 +50,8 @@ namespace eSyncMate.AlertWorker
                     .Build();
 
                 CommonUtils.ConnectionString = configuration.GetConnectionString("DefaultConnection");
+                // All other config/secrets come from the ApplicationSettings table (not appsettings.json)
+                CommonUtils.LoadFromDatabase(CommonUtils.ConnectionString);
 
                 AlertEngine engine = new AlertEngine(configuration);
                 await engine.ExecuteLocal(alertId);

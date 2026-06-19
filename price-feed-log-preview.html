@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Price Feed Log — Popup Preview (Dummy Data)</title>
+<style>
+  body {
+    margin: 0;
+    background: #eceff1;
+    font-family: 'Segoe UI', Roboto, Arial, sans-serif;
+    padding: 30px;
+    color: #333;
+  }
+  .preview-note {
+    max-width: 1000px;
+    margin: 0 auto 20px;
+    background: #fff3e0;
+    border: 1px solid #ffcc80;
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 13px;
+    color: #5d4037;
+  }
+  .mat-icon { font-style: normal; }
+
+  /* ===== dialog (mirrors price-feed-log-dialog.component.scss) ===== */
+  .pfl-dialog {
+    max-width: 1000px;
+    margin: 0 auto 36px;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.18);
+    display: flex;
+    flex-direction: column;
+    max-height: 85vh;
+    overflow: hidden;
+  }
+  .pfl-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid #e0e0e0;
+  }
+  .pfl-header-left { display: flex; align-items: center; gap: 12px; }
+  .pfl-icon {
+    width: 40px; height: 40px; border-radius: 10px;
+    background: #E8834A; color: #fff;
+    display: flex; align-items: center; justify-content: center; font-size: 20px;
+  }
+  .pfl-title { margin: 0; font-size: 18px; font-weight: 600; color: #333; }
+  .pfl-subtitle { font-size: 12px; color: #888; }
+  .pfl-close {
+    border: none; background: transparent; cursor: pointer;
+    font-size: 20px; color: #777; width: 36px; height: 36px; border-radius: 50%;
+  }
+  .pfl-close:hover { background: #f2f2f2; }
+
+  .progress-bar { height: 3px; background: #f5b890; }
+
+  .pfl-body { flex: 1; overflow: auto; padding: 8px 0; }
+  .pfl-entries { padding: 12px 16px; }
+
+  .pfl-entry {
+    border: 1px solid #e6e6e6; border-radius: 8px;
+    margin-bottom: 12px; overflow: hidden;
+  }
+  .pfl-entry-head {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    padding: 8px 12px; background: #fafafa; border-bottom: 1px solid #eee;
+  }
+  .pfl-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 12px; font-weight: 600; padding: 3px 10px;
+    border-radius: 12px; border: 1px solid;
+  }
+  .pfl-badge.req { color: #1565c0; background: #e3f2fd; border-color: #90caf9; }
+  .pfl-badge.rsp { color: #2e7d32; background: #e8f5e9; border-color: #a5d6a7; }
+  .pfl-meta { font-size: 12px; color: #666; }
+  .pfl-date { margin-left: auto; font-size: 12px; color: #999; }
+  .pfl-data {
+    margin: 0; padding: 12px;
+    font-family: 'Consolas','Courier New',monospace; font-size: 12px;
+    line-height: 1.5; white-space: pre-wrap; word-break: break-word;
+    max-height: 320px; overflow: auto; background: #fff; color: #333;
+  }
+  .pfl-empty {
+    display: flex; flex-direction: column; align-items: center;
+    padding: 40px; color: #ccc;
+  }
+  .pfl-empty .mat-icon { font-size: 40px; margin-bottom: 10px; }
+  .pfl-empty p { margin: 0; font-size: 13px; font-weight: 500; }
+</style>
+</head>
+<body>
+
+  <div class="preview-note">
+    <b>Preview only (dummy data):</b> Ye real dialog ka exact markup + styling hai. Niche 3 cases:
+    (1) Product Prices — data ke saath, (2) Promo Prices — data ke saath, (3) Empty state.
+  </div>
+
+  <!-- ===== Case 1: Product Prices Feed Log (with data) ===== -->
+  <div class="pfl-dialog">
+    <div class="pfl-header">
+      <div class="pfl-header-left">
+        <div class="pfl-icon mat-icon">&#x21bb;</div>
+        <div>
+          <h2 class="pfl-title">Product Prices Feed Log</h2>
+          <span class="pfl-subtitle">TAR6266P &mdash; Item 100245</span>
+        </div>
+      </div>
+      <button class="pfl-close mat-icon">&times;</button>
+    </div>
+    <div class="progress-bar" style="visibility:hidden;"></div>
+    <div class="pfl-body">
+      <div class="pfl-entries">
+
+        <div class="pfl-entry">
+          <div class="pfl-entry-head">
+            <span class="pfl-badge rsp"><span class="mat-icon">&#x2199;</span> Response Received</span>
+            <span class="pfl-meta">Route #41</span>
+            <span class="pfl-meta">Product 8901-AB</span>
+            <span class="pfl-date">06/18/2026 03:42 PM</span>
+          </div>
+          <pre class="pfl-data">{
+  "status": "ACCEPTED",
+  "sku": "8901-AB",
+  "feedId": "f3c2a9d1-77b4-4e10-9b2a-5512ad77c001",
+  "message": "Price updated successfully"
+}</pre>
+        </div>
+
+        <div class="pfl-entry">
+          <div class="pfl-entry-head">
+            <span class="pfl-badge req"><span class="mat-icon">&#x2197;</span> Request Sent</span>
+            <span class="pfl-meta">Route #41</span>
+            <span class="pfl-meta">Product 8901-AB</span>
+            <span class="pfl-date">06/18/2026 03:42 PM</span>
+          </div>
+          <pre class="pfl-data">{
+  "sku": "8901-AB",
+  "itemId": "100245",
+  "listPrice": 149.99,
+  "mapPrice": 129.99,
+  "currency": "USD"
+}</pre>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Case 2: Promo Prices Feed Log (with data) ===== -->
+  <div class="pfl-dialog">
+    <div class="pfl-header">
+      <div class="pfl-header-left">
+        <div class="pfl-icon mat-icon">&#x21bb;</div>
+        <div>
+          <h2 class="pfl-title">Promo Prices Feed Log</h2>
+          <span class="pfl-subtitle">TAR6266PAH &mdash; Item 100245</span>
+        </div>
+      </div>
+      <button class="pfl-close mat-icon">&times;</button>
+    </div>
+    <div class="progress-bar" style="visibility:hidden;"></div>
+    <div class="pfl-body">
+      <div class="pfl-entries">
+
+        <div class="pfl-entry">
+          <div class="pfl-entry-head">
+            <span class="pfl-badge rsp"><span class="mat-icon">&#x2199;</span> Response Received</span>
+            <span class="pfl-meta">Route #65</span>
+            <span class="pfl-meta">Product 8901-AB</span>
+            <span class="pfl-date">06/17/2026 11:08 AM</span>
+          </div>
+          <pre class="pfl-data">{
+  "status": "ERROR",
+  "sku": "8901-AB",
+  "error": "Promo end date must be after start date"
+}</pre>
+        </div>
+
+        <div class="pfl-entry">
+          <div class="pfl-entry-head">
+            <span class="pfl-badge req"><span class="mat-icon">&#x2197;</span> Request Sent</span>
+            <span class="pfl-meta">Route #65</span>
+            <span class="pfl-meta">Product 8901-AB</span>
+            <span class="pfl-date">06/17/2026 11:08 AM</span>
+          </div>
+          <pre class="pfl-data">{
+  "sku": "8901-AB",
+  "itemId": "100245",
+  "promoPrice": 99.99,
+  "promoStartDate": "2026-06-18",
+  "promoEndDate": "2026-06-15"
+}</pre>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Case 3: Empty state ===== -->
+  <div class="pfl-dialog">
+    <div class="pfl-header">
+      <div class="pfl-header-left">
+        <div class="pfl-icon mat-icon">&#x21bb;</div>
+        <div>
+          <h2 class="pfl-title">Product Prices Feed Log</h2>
+          <span class="pfl-subtitle">TAR6266P &mdash; Item 999999</span>
+        </div>
+      </div>
+      <button class="pfl-close mat-icon">&times;</button>
+    </div>
+    <div class="progress-bar" style="visibility:hidden;"></div>
+    <div class="pfl-body">
+      <div class="pfl-entries">
+        <div class="pfl-empty">
+          <span class="mat-icon">&#x1F4E5;</span>
+          <p>No request/response records found</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

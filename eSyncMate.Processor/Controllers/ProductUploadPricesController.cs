@@ -545,5 +545,98 @@ namespace eSyncMate.Processor.Controllers
                 return StatusCode((int)HttpStatusCode.InternalServerError, ex);
             }
         }
+
+        [HttpGet]
+        [Route("getProductPriceFeedLog")]
+        public Task<object> GetProductPriceFeedLog([FromQuery] string customerID = "", [FromQuery] string itemID = "", [FromQuery] string mode = "product", [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
+        {
+            try
+            {
+                var claimsIdentity = User.Identity as ClaimsIdentity;
+                if (claimsIdentity?.Claims == null)
+                    return Task.FromResult<object>(new { code = 401, message = "Not Authorized" });
+
+                if (string.IsNullOrWhiteSpace(customerID) || string.IsNullOrWhiteSpace(itemID))
+                    return Task.FromResult<object>(new { code = 400, message = "customerID and itemID are required." });
+
+                // Route IDs come from per-customer ApplicationSettings tags — not hard-coded
+                // mode 'promo' -> PromoPrices_<cust>, otherwise ProductPrices_<cust>
+                string tagPrefix = string.Equals(mode, "promo", StringComparison.OrdinalIgnoreCase) ? "PromoPrices_" : "ProductPrices_";
+                List<int> routeIds = GetSettingRouteIds(tagPrefix + customerID);
+
+                if (routeIds.Count == 0)
+                    return Task.FromResult<object>(new { code = 200, message = "No price routes configured.", customerID, itemID, mode, totalCount = 0, entries = new List<object>() });
+
+                if (pageNumber < 1) pageNumber = 1;
+                if (pageSize < 1) pageSize = 10;
+
+                string routeInClause = string.Join(",", routeIds);
+                string safeCustomer = customerID.Replace("'", "''");
+                string safeItem = itemID.Replace("'", "''");
+                string l_Where = $"CustomerID = '{safeCustomer}' AND ItemID = '{safeItem}' AND RouteID IN ({routeInClause})";
+
+                DBConnector l_Conn = new DBConnector(CommonUtils.ConnectionString);
+
+                // Total count (for pager)
+                int totalCount = 0;
+                DataTable l_Count = new DataTable();
+                l_Conn.GetData($"SELECT COUNT(*) AS Cnt FROM ProductPriceFeedLog WHERE {l_Where}", ref l_Count);
+                if (l_Count.Rows.Count > 0)
+                    totalCount = Convert.ToInt32(l_Count.Rows[0]["Cnt"]);
+
+                // Page slice (server-side pagination)
+                int offset = (pageNumber - 1) * pageSize;
+                string l_PagedQuery = $@"SELECT RouteID, ProductID, Type, Data, CreatedDate
+                    FROM ProductPriceFeedLog
+                    WHERE {l_Where}
+                    ORDER BY CreatedDate DESC
+                    OFFSET {offset} ROWS FETCH NEXT {pageSize} ROWS ONLY";
+
+                DataTable l_Data = new DataTable();
+                l_Conn.GetData(l_PagedQuery, ref l_Data);
+
+                var entries = new List<object>();
+                foreach (DataRow row in l_Data.Rows)
+                {
+                    string type = row["Type"]?.ToString();
+                    entries.Add(new
+                    {
+                        routeID = row["RouteID"] != DBNull.Value ? Convert.ToInt32(row["RouteID"]) : 0,
+                        type = type,
+                        direction = type == "REQ-SNT" ? "Request Sent" : (type == "RSP-RVD" ? "Response Received" : type),
+                        productID = row["ProductID"]?.ToString(),
+                        data = row["Data"]?.ToString(),
+                        createdDate = row["CreatedDate"] != DBNull.Value ? Convert.ToDateTime(row["CreatedDate"]) : (DateTime?)null
+                    });
+                }
+
+                return Task.FromResult<object>(new { code = 200, message = "Success", customerID, itemID, mode, totalCount, entries });
+            }
+            catch (Exception ex)
+            {
+                return Task.FromResult<object>(new { code = 500, message = ex.Message });
+            }
+        }
+
+        // Reads a comma-separated list of Route IDs from ApplicationSettings.TagValue
+        private List<int> GetSettingRouteIds(string tagName)
+        {
+            List<int> ids = new List<int>();
+            try
+            {
+                DataTable dt = PublicFunctions.GetDataFromApplicationSettings(tagName, CommonUtils.ConnectionString);
+                if (dt != null && dt.Rows.Count > 0)
+                {
+                    string val = dt.Rows[0]["TagValue"]?.ToString() ?? string.Empty;
+                    foreach (string part in val.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
+                    {
+                        if (int.TryParse(part.Trim(), out int id))
+                            ids.Add(id);
+                    }
+                }
+            }
+            catch { }
+            return ids;
+        }
     }
 }

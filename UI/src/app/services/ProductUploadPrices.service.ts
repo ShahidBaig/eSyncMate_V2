@@ -46,6 +46,17 @@ export class ProductUploadPricesService {
     });
   }
 
+  getProductPriceFeedLog(customerID: string, itemID: string, mode: string = 'product', pageNumber: number = 1, pageSize: number = 10): Observable<any> {
+    const params = new HttpParams()
+      .set('customerID', customerID)
+      .set('itemID', itemID)
+      .set('mode', mode)
+      .set('pageNumber', pageNumber.toString())
+      .set('pageSize', pageSize.toString());
+
+    return this.http.get(`${this.apiUrl}api/ProductUploadPrices/getProductPriceFeedLog`, { params });
+  }
+
   priceDescripencies(CustomerID: string): Observable<any> {
     const url = `${this.apiUrl}api/ProductUploadPrices/PriceDescripencies`;
     const params = { CustomerID: CustomerID };

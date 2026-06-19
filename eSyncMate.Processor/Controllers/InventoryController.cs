@@ -56,7 +56,8 @@ namespace eSyncMate.Processor.Controllers
             {
                 Inventory l_Inventory = new Inventory();
 
-                string itemID     = filter.ItemID     ?? string.Empty;
+                string itemID      = filter.ItemID      ?? string.Empty;
+                string itemIDMatch = string.IsNullOrWhiteSpace(filter.ItemIDMatch) ? "LIKE" : filter.ItemIDMatch;
                 string status     = filter.Status     ?? string.Empty;
                 string fromDate   = filter.StartDate  ?? string.Empty;
                 string toDate     = filter.FinishDate ?? string.Empty;
@@ -83,7 +84,7 @@ namespace eSyncMate.Processor.Controllers
                 l_Inventory.GetInventoryFeedSummary(
                     itemID, customerID, fromDate, toDate, status,
                     pageNumber, pageSize,
-                    ref l_Data, out totalCount);
+                    ref l_Data, out totalCount, itemIDMatch);
 
                 this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - InventoryRow searched {{{l_Data.Rows.Count}}} of {totalCount} total.");
 

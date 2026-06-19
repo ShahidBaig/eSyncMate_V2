@@ -12,9 +12,10 @@ export class InventoryService {
   apiUrl = environment.apiUrl;
   constructor(private http: HttpClient, private jwt: JwtHelperService) { }
 
-  getInventory(itemID: string, fromDate: string, toDate: string, status: string, customerID: string, pageNumber: number = 1, pageSize: number = 10) {
+  getInventory(itemID: string, fromDate: string, toDate: string, status: string, customerID: string, pageNumber: number = 1, pageSize: number = 10, itemIDMatch: string = 'like') {
     const body = {
       itemID: itemID || '',
+      itemIDMatch: itemIDMatch || 'like',
       customerID: customerID || '',
       startDate: fromDate || '',
       finishDate: toDate || '',

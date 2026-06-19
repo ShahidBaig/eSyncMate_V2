@@ -40,9 +40,25 @@ namespace eSyncMate.Processor.Controllers
             _logger = logger;
         }
 
-        private string GenerateJSONWebToken(LoginModel user)
+        // Long-lived refresh token lifetime (stored in the "jwt" cookie).
+        // Access token stays short (15 min); the refresh token keeps the session
+        // alive while the user is active, refreshing the access token seamlessly.
+        private const int RefreshTokenMinutes = 8 * 60; // 8 hours
+
+        private void SetRefreshCookie(string refreshToken)
         {
-            var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]));
+            Response.Cookies.Append("jwt", refreshToken, new CookieOptions
+            {
+                HttpOnly = true,
+                SameSite = SameSiteMode.Lax,
+                Path = "/",
+                Expires = DateTimeOffset.Now.AddMinutes(RefreshTokenMinutes)
+            });
+        }
+
+        private string GenerateJSONWebToken(LoginModel user, int expiresMinutes = 15)
+        {
+            var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(CommonUtils.JwtKey));
             var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
             var claims = new[]
             {
@@ -62,10 +78,10 @@ namespace eSyncMate.Processor.Controllers
                 new Claim("roleName", user.RoleName ?? "")
             };
 
-            var token = new JwtSecurityToken(_config["Jwt:Issuer"],
-                _config["Jwt:Issuer"],
+            var token = new JwtSecurityToken(CommonUtils.JwtIssuer,
+                CommonUtils.JwtIssuer,
                 claims: claims,
-                expires: DateTime.Now.AddMinutes(15),
+                expires: DateTime.Now.AddMinutes(expiresMinutes),
                 signingCredentials: credentials);
 
             return new JwtSecurityTokenHandler().WriteToken(token);
@@ -153,16 +169,12 @@ namespace eSyncMate.Processor.Controllers
                 else
                 {
                     // No 2FA — normal login (original flow)
-                    var tokenString = GenerateJSONWebToken(user);
+                    var tokenString = GenerateJSONWebToken(user);                        // short access token (15 min)
+                    var refreshToken = GenerateJSONWebToken(user, RefreshTokenMinutes);   // long-lived refresh token (8 h)
                     Declarations.g_UserNo = user.Id;
                     var userMenus = GetUserMenuTree(user.Id, user.Company);
 
-                    Response.Cookies.Append("jwt", tokenString, new CookieOptions
-                    {
-                        HttpOnly = true,
-                        SameSite = SameSiteMode.Lax,
-                        Path = "/"
-                    });
+                    SetRefreshCookie(refreshToken);
 
                     response = Ok(new { token = tokenString, message = "Success", menus = userMenus });
                 }
@@ -425,14 +437,14 @@ namespace eSyncMate.Processor.Controllers
             try
             {
                 var tokenHandler = new JwtSecurityTokenHandler();
-                var key = Encoding.UTF8.GetBytes(_config["Jwt:Key"]);
+                var key = Encoding.UTF8.GetBytes(CommonUtils.JwtKey);
 
                 tokenHandler.ValidateToken(cookieToken, new TokenValidationParameters
                 {
                     ValidateIssuerSigningKey = true,
                     IssuerSigningKey = new SymmetricSecurityKey(key),
                     ValidateIssuer = true,
-                    ValidIssuer = _config["Jwt:Issuer"],
+                    ValidIssuer = CommonUtils.JwtIssuer,
                     ValidateAudience = false,
                     ValidateLifetime = true,
                     ClockSkew = TimeSpan.Zero
@@ -457,15 +469,11 @@ namespace eSyncMate.Processor.Controllers
                     RoleName = jwtToken.Claims.FirstOrDefault(c => c.Type == "roleName")?.Value ?? ""
                 };
 
-                var newToken = GenerateJSONWebToken(user);
+                var newToken = GenerateJSONWebToken(user);                          // new short access token (15 min)
+                var newRefreshToken = GenerateJSONWebToken(user, RefreshTokenMinutes); // rotate refresh token (8 h)
                 var userMenus = GetUserMenuTree(user.Id, user.Company);
 
-                Response.Cookies.Append("jwt", newToken, new CookieOptions
-                {
-                    HttpOnly = true,
-                    SameSite = SameSiteMode.Lax,
-                    Path = "/"
-                });
+                SetRefreshCookie(newRefreshToken);
 
                 return Ok(new { token = newToken, message = "Success", menus = userMenus });
             }
@@ -554,9 +562,12 @@ namespace eSyncMate.Processor.Controllers
                         RoleName = row.Table.Columns.Contains("RoleName") && row["RoleName"] != DBNull.Value ? Convert.ToString(row["RoleName"]) : "",
                     };
 
-                    var tokenString = GenerateJSONWebToken(user);
+                    var tokenString = GenerateJSONWebToken(user);                        // short access token (15 min)
+                    var refreshToken = GenerateJSONWebToken(user, RefreshTokenMinutes);   // long-lived refresh token (8 h)
                     Declarations.g_UserNo = user.Id;
                     var userMenus = GetUserMenuTree(user.Id, user.Company);
+
+                    SetRefreshCookie(refreshToken);
 
                     return Ok(new { code = 100, token = tokenString, message = "OTP is verified.", menus = userMenus });
                 }

@@ -15,6 +15,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialog } from '@angular/material/dialog';
 import { UploadPricesHelpDialogComponent } from './upload-prices-help-dialog/upload-prices-help-dialog.component';
+import { PriceFeedLogDialogComponent } from '../product-prices/price-feed-log-dialog/price-feed-log-dialog.component';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { CommonModule } from '@angular/common';
@@ -103,9 +104,23 @@ export class ProductUploadPricesComponent {
       'CreatedDate',
       'OldListPrice',
       'OldPromoPrice',
-      'OldMAPPrice'
+      'OldMAPPrice',
+      'Actions'
       //'Edit',
   ];
+
+  openPriceFeedLog(element: any) {
+    this.dialog.open(PriceFeedLogDialogComponent, {
+      width: '85%',
+      maxWidth: '1100px',
+      maxHeight: '85vh',
+      data: {
+        customerID: element.customerID,
+        itemID: element.itemID,
+        mode: 'promo'
+      }
+    });
+  }
 
     constructor(private api: ProductUploadPricesService, private fb: FormBuilder, private toast: NgToastService, private dialog: MatDialog, private userApi: ApiService, public languageService: LanguageService) {
     const permissions = this.userApi.getMenuPermissions('edi/productuploadprices');

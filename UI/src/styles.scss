@@ -679,3 +679,61 @@ input::-webkit-credentials-auto-fill-button {
   mat-icon { font-size: 32px; width: 32px; height: 32px; margin-bottom: 8px; }
   span { font-size: 13px; font-weight: 500; }
 }
+
+/* ============================================================================
+   Fancy toast notifications (top-right) — global override for ng-angular-popup
+   Component styles are encapsulated, so !important is used to win.
+   ============================================================================ */
+.toast-container .ng-toast {
+  width: 360px !important;
+  padding: 14px 16px !important;
+  border: none !important;
+  border-left: 5px solid #94a3b8 !important;
+  border-radius: 14px !important;
+  background: #ffffff !important;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.18), 0 2px 6px rgba(15, 23, 42, 0.08) !important;
+  align-items: center !important;
+}
+
+.toast-container .ng-toast .container-1 i { font-size: 26px !important; }
+
+.toast-container .ng-toast .container-2 { font-family: 'Poppins', sans-serif !important; }
+.toast-container .ng-toast .container-2 p:first-child {
+  font-weight: 700 !important;
+  font-size: 0.82rem !important;
+  letter-spacing: 0.3px;
+  text-transform: capitalize;
+  color: #0f172a !important;
+}
+.toast-container .ng-toast .container-2 p:last-child {
+  font-size: 0.82rem !important;
+  color: #475569 !important;
+  font-weight: 400 !important;
+}
+
+.toast-container .ng-toast #close {
+  color: #94a3b8 !important;
+  font-size: 20px !important;
+  align-self: flex-start !important;
+  transition: color 0.15s ease, transform 0.15s ease;
+}
+.toast-container .ng-toast #close:hover { color: #0f172a !important; transform: scale(1.15); }
+
+/* Type accents — colored left border + soft gradient tint + icon color */
+.toast-container .ng-toast.success { border-left-color: #16a34a !important; background: linear-gradient(90deg, #f0fdf4, #ffffff 55%) !important; }
+.toast-container .ng-toast.error   { border-left-color: #dc2626 !important; background: linear-gradient(90deg, #fef2f2, #ffffff 55%) !important; }
+.toast-container .ng-toast.warning { border-left-color: #d97706 !important; background: linear-gradient(90deg, #fffbeb, #ffffff 55%) !important; }
+.toast-container .ng-toast.info    { border-left-color: #2563eb !important; background: linear-gradient(90deg, #eff6ff, #ffffff 55%) !important; }
+
+.toast-container .ng-toast.success .container-1 i { color: #16a34a !important; }
+.toast-container .ng-toast.error   .container-1 i { color: #dc2626 !important; }
+.toast-container .ng-toast.warning .container-1 i { color: #d97706 !important; }
+.toast-container .ng-toast.info    .container-1 i { color: #2563eb !important; }
+
+/* Entrance pop (in addition to the library's slide-in) */
+.toast-container.active .ng-toast { animation: toastPop 0.4s cubic-bezier(0.21, 1.02, 0.73, 1); }
+@keyframes toastPop {
+  0%   { opacity: 0; transform: translateY(-6px) scale(0.97); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+

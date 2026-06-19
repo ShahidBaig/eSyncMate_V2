@@ -3,6 +3,7 @@ namespace eSyncMate.Processor.Models
     public class InventoryFilterModel
     {
         public string ItemID { get; set; }
+        public string ItemIDMatch { get; set; } = "LIKE";
         public string CustomerID { get; set; }
         public string StartDate { get; set; }
         public string FinishDate { get; set; }

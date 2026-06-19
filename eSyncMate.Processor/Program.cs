@@ -64,6 +64,12 @@ builder.Services.AddCors(o => o.AddDefaultPolicy(p => p
     .AllowAnyMethod()
     .AllowCredentials()));
 
+// -------------------- LOAD CONFIG FROM DB (everything except ConnectionStrings) --------------------
+// ConnectionString comes from appsettings.json (needed to reach the DB); all other config/secrets
+// live in the ApplicationSettings table and are loaded here — BEFORE JWT auth uses them.
+CommonUtils.ConnectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+CommonUtils.LoadFromDatabase(CommonUtils.ConnectionString);
+
 // -------------------- JWT AUTH --------------------
 builder.Services.AddAuthentication(o =>
 {
@@ -83,10 +89,10 @@ builder.Services.AddAuthentication(o =>
         ValidateAudience = false,
         ValidateLifetime = true,
         ValidateIssuerSigningKey = true,
-        ValidIssuer = builder.Configuration["Jwt:Issuer"],
-        ValidAudience = builder.Configuration["Jwt:Issuer"],
+        ValidIssuer = CommonUtils.JwtIssuer,
+        ValidAudience = CommonUtils.JwtIssuer,
         IssuerSigningKey = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]))
+            Encoding.UTF8.GetBytes(CommonUtils.JwtKey))
     };
 });
 
@@ -109,19 +115,9 @@ var app = builder.Build();
 
 // app.UseForwardedHeaders();   // HA / Nginx mode — uncomment when deploying behind Nginx
 
-// -------------------- BIND APP SETTINGS TO STATICS --------------------
-CommonUtils.ConnectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-CommonUtils.EncryptionKey   = builder.Configuration["EncryptionKey"] ?? "";
-CommonUtils.Company = builder.Configuration["CompanyName"];
-CommonUtils.UploadInventoryTotalThread = Convert.ToInt32(builder.Configuration["UploadInventoryTotalThread"]);
-CommonUtils.AmazonFeedMaxMessages = Convert.ToInt32(builder.Configuration["AmazonFeedMaxMessages"] ?? "20000");
-CommonUtils.MySqlConnectionString = builder.Configuration["MySQLConnection"];
-
-
-CommonUtils.SMTPHost = builder.Configuration["SMTPHost"];
-CommonUtils.SMTPPort = Convert.ToInt32(builder.Configuration["SMTPPort"]);
-CommonUtils.FromEmailAccount = builder.Configuration["FromEmailAccount"];
-CommonUtils.FromEmailPWD = builder.Configuration["FromEmailPWD"];
+// -------------------- APP SETTINGS --------------------
+// All config (except ConnectionStrings) is already loaded into CommonUtils from the
+// ApplicationSettings table above (CommonUtils.LoadFromDatabase).
 
 // -------------------- SWAGGER --------------------
 if (app.Environment.IsDevelopment() || app.Environment.IsProduction())

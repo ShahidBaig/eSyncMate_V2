@@ -182,12 +182,12 @@ namespace eSyncMate.Processor.Managers
 
         private static (string tenantId, string clientId, string clientSecret, string senderEmail) GetGraphSettings(IConfiguration config)
         {
-            var graphConfig = config.GetSection("MicrosoftGraph");
+            // Loaded from ApplicationSettings table (CommonUtils.LoadFromDatabase) — not appsettings.json
             return (
-                tenantId: graphConfig["TenantId"] ?? string.Empty,
-                clientId: graphConfig["ClientId"] ?? string.Empty,
-                clientSecret: graphConfig["ClientSecret"] ?? string.Empty,
-                senderEmail: graphConfig["SenderEmail"] ?? CommonUtils.FromEmailAccount
+                tenantId: CommonUtils.Graph_TenantId ?? string.Empty,
+                clientId: CommonUtils.Graph_ClientId ?? string.Empty,
+                clientSecret: CommonUtils.Graph_ClientSecret ?? string.Empty,
+                senderEmail: !string.IsNullOrWhiteSpace(CommonUtils.Graph_SenderEmail) ? CommonUtils.Graph_SenderEmail : CommonUtils.FromEmailAccount
             );
         }
 

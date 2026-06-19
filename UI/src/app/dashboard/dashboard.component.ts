@@ -78,6 +78,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   partnerStatusLoading: { [key: string]: boolean } = {};
   totalOrders = 0;
   customerStats: CustomerStat[] = [];
+  private rawCustomerWise: CustomerStat[] = [];
   statusStats: StatusStat[] = [];
   statusTiles: { key: string; label: string; icon: string; color: string; bg: string; count: number }[] = [];
   loading = true;
@@ -156,8 +157,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
   loadCustomers(): void {
     this.customerApi.getERPCustomers().subscribe({
       next: (res: any) => {
-        this.customersOptions = res.customers || [];
+        // Hide internal (non-trading-partner) customers
+        this.customersOptions = (res.customers || []).filter((c: CustomerOption) => !this.isExcludedCustomer(c.erpCustomerID));
         this.filteredCustomerOptions = this.customersOptions;
+        // Rebuild partner list so all customers appear (even with 0 orders)
+        this.buildCustomerStats();
       }
     });
   }
@@ -231,7 +235,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
       next: (res: any) => {
         if (res.code === 200) {
           this.totalOrders = res.totalOrders || 0;
-          this.customerStats = res.customerWise || [];
+          this.rawCustomerWise = res.customerWise || [];
+          this.buildCustomerStats();
           this.statusStats = res.statusWise || [];
 
           // Load partner-wise status breakdown from same response
@@ -406,6 +411,42 @@ export class DashboardComponent implements OnInit, OnDestroy {
       'TAR6266P': 'Target', 'TAR6266PAH': 'Target SEI', 'WAL4001MP': 'Walmart'
     };
     return map[customerID] || customerID;
+  }
+
+  // Internal (non-trading-partner) customers hidden from the dashboard
+  private excludedCustomerIDs = ['esyncmate', 'spars customer'];
+
+  private isExcludedCustomer(id: string): boolean {
+    return this.excludedCustomerIDs.includes((id || '').toLowerCase().trim());
+  }
+
+  buildCustomerStats(): void {
+    // Map order counts from API by customer ID
+    const countMap = new Map<string, CustomerStat>();
+    this.rawCustomerWise.forEach(s => {
+      if (s.erpCustomerID) countMap.set(s.erpCustomerID, s);
+    });
+
+    // Base list: selected customers when filtered, otherwise all customers
+    const baseIds = (this.selectedCustomerIDs.length > 0
+      ? this.selectedCustomerIDs
+      : this.customersOptions.map(c => c.erpCustomerID))
+      .filter(id => !!id && !this.isExcludedCustomer(id));
+
+    let merged: CustomerStat[];
+    if (baseIds.length > 0) {
+      // Show every customer — with its order count or 0 when no orders match the criteria
+      merged = baseIds.map(id => {
+        const found = countMap.get(id);
+        return found ? found : { customerName: id, erpCustomerID: id, orderCount: 0 };
+      });
+    } else {
+      // Customers not loaded yet — fall back to API result as-is
+      merged = this.rawCustomerWise.filter(s => !this.isExcludedCustomer(s.erpCustomerID));
+    }
+
+    merged.sort((a, b) => b.orderCount - a.orderCount);
+    this.customerStats = merged;
   }
 
   buildStatusTiles(): void {

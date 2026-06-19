@@ -459,7 +459,7 @@ namespace eSyncMate.DB.Entities
         public bool GetInventoryFeedSummary(
             string p_ItemID, string p_CustomerID, string p_FromDate, string p_ToDate,
             string p_Status, int p_PageNumber, int p_PageSize,
-            ref DataTable p_Data, out int p_TotalCount)
+            ref DataTable p_Data, out int p_TotalCount, string p_ItemIDMatch = "LIKE")
         {
             p_TotalCount = 0;
             string l_Param = string.Empty;
@@ -467,6 +467,9 @@ namespace eSyncMate.DB.Entities
 
             PublicFunctions.FieldToParam(p_ItemID ?? string.Empty, ref l_Param, Declarations.FieldTypes.String);
             l_Query += " @p_ItemID = " + l_Param;
+
+            PublicFunctions.FieldToParam(string.IsNullOrWhiteSpace(p_ItemIDMatch) ? "LIKE" : p_ItemIDMatch, ref l_Param, Declarations.FieldTypes.String);
+            l_Query += ", @p_ItemIDMatch = " + l_Param;
 
             PublicFunctions.FieldToParam(p_CustomerID ?? string.Empty, ref l_Param, Declarations.FieldTypes.String);
             l_Query += ", @p_CustomerID = " + l_Param;
