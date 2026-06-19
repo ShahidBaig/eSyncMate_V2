@@ -3,6 +3,7 @@ import { Component, ViewChild, OnInit } from '@angular/core';
 import { ApiService } from './services/api.service';
 import { MatSidenav } from '@angular/material/sidenav';
 import { LanguageService } from './services/language.service';
+import { DialogDraggableService } from './services/dialog-draggable.service';
 
 @Component({
   selector: 'app-root',
@@ -19,11 +20,14 @@ export class AppComponent implements OnInit {
   constructor(
     public api: ApiService,
     private languageService: LanguageService,
-    private inactivityService: InactivityService
+    private inactivityService: InactivityService,
+    private dialogDraggable: DialogDraggableService
   ) {}
 
   ngOnInit(): void {
     this.inactivityService.setup();
+    // Make every Material dialog in the app draggable (by its header)
+    this.dialogDraggable.init();
   }
 
   title = 'UI';

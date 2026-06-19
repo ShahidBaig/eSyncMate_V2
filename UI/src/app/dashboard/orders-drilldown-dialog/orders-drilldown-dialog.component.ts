@@ -1,6 +1,6 @@
 import { Component, Inject, OnInit } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
-import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
+import { MatDialogRef, MAT_DIALOG_DATA, MatDialog } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
@@ -8,6 +8,7 @@ import { MatTableModule } from '@angular/material/table';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { ApiService } from '../../services/api.service';
+import { OrderDetailComponent } from '../../orders/order-detail/order-detail.component';
 
 @Component({
   selector: 'orders-drilldown-dialog',
@@ -30,10 +31,14 @@ export class OrdersDrilldownDialogComponent implements OnInit {
     return this.errorStatuses.includes(this.data.status);
   }
 
+  // Actions column always shown (View Order available for every row)
   get columns(): string[] {
-    const cols = ['orderNumber', 'erpCustomerID', 'displayStatus', 'orderDate', 'createdDate'];
-    if (this.isErrorStatus) cols.push('actions');
-    return cols;
+    return ['orderNumber', 'erpCustomerID', 'displayStatus', 'orderDate', 'createdDate', 'actions'];
+  }
+
+  // Re-Process only applies to error rows
+  isRowError(row: any): boolean {
+    return this.errorStatuses.includes(row?.status);
   }
 
   constructor(
@@ -47,7 +52,8 @@ export class OrdersDrilldownDialogComponent implements OnInit {
       color: string;
       icon: string;
     },
-    private api: ApiService
+    private api: ApiService,
+    private dialog: MatDialog
   ) {}
 
   ngOnInit(): void {
@@ -93,6 +99,16 @@ export class OrdersDrilldownDialogComponent implements OnInit {
       error: () => {
         this.reprocessingId = null;
       }
+    });
+  }
+
+  viewOrder(row: any): void {
+    this.dialog.open(OrderDetailComponent, {
+      width: '80%',
+      maxWidth: '950px',
+      maxHeight: '92vh',
+      disableClose: true,
+      data: { orderData: row }
     });
   }
 

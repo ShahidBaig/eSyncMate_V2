@@ -18,6 +18,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { CommonModule } from '@angular/common';
 import { MatSelectModule } from '@angular/material/select';
+import { MatMenuModule } from '@angular/material/menu';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { LanguageService } from '../services/language.service';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
@@ -42,7 +43,7 @@ interface Customers {
     ReactiveFormsModule, MatFormFieldModule, MatInputModule, NgIf,
     MatButtonModule, MatDatepickerModule, MatNativeDateModule,
     MatTooltipModule, MatIconModule, MatProgressSpinnerModule,
-    MatProgressBarModule, CommonModule, MatSelectModule,
+    MatProgressBarModule, CommonModule, MatSelectModule, MatMenuModule,
     MatPaginatorModule, TranslateModule, FormsModule
   ],
   animations: [
@@ -98,6 +99,7 @@ export class InventoryComponent implements OnInit {
 
     this.InventoryForm = this.fb.group({
       itemID: fb.control(''),
+      itemIDMatch: fb.control('like'),
       startDate: new FormControl(today),
       finishDate: new FormControl(today),
       status: fb.control(''),
@@ -290,8 +292,17 @@ export class InventoryComponent implements OnInit {
     this.dialog.open(InventoryHelpDialogComponent, { width: '90%', maxWidth: '1200px', maxHeight: '90vh' });
   }
 
+  setMatch(value: string): void {
+    this.InventoryForm.get('itemIDMatch')?.setValue(value);
+  }
+
+  matchSymbol(value: string): string {
+    return value === 'equal' ? '=' : '*';
+  }
+
   getInventory(resetPage: boolean = false) {
     let itemID = (this.InventoryForm.get('itemID') as FormControl).value;
+    let itemIDMatch = (this.InventoryForm.get('itemIDMatch') as FormControl).value || 'like';
     let startDate = (this.InventoryForm.get('startDate') as FormControl).value;
     let finishDate = (this.InventoryForm.get('finishDate') as FormControl).value;
     let status = (this.InventoryForm.get('status') as FormControl).value;
@@ -323,7 +334,7 @@ export class InventoryComponent implements OnInit {
     }
 
     this.isLoading = true;
-    this.api.getInventory(itemID, stringFromDate, stringToDate, status, customerID, this.pageNumber, this.pageSize).subscribe({
+    this.api.getInventory(itemID, stringFromDate, stringToDate, status, customerID, this.pageNumber, this.pageSize, itemIDMatch).subscribe({
       next: (res: any) => {
         this.msg = res.message;
         this.code = res.code;

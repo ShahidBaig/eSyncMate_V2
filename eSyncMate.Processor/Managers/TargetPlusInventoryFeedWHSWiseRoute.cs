@@ -112,7 +112,8 @@ namespace eSyncMate.Processor.Managers
                     else
                     {
                         int i = 0;
-                        int totalThread = 50;
+                        // Configurable from ApplicationSettings ('TargetPlusWHSWiseThreads'); falls back to 50.
+                        int totalThread = CommonUtils.TargetPlusWHSWiseThreads > 0 ? CommonUtils.TargetPlusWHSWiseThreads : 50;
                         int chunkSize = l_data.Rows.Count / totalThread;
                         List<Thread> threads = new List<Thread>();
 

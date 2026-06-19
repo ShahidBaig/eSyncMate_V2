@@ -108,9 +108,9 @@ namespace eSyncMate.Processor
                     ValidateAudience = true,
                     ValidateLifetime = false,
                     ValidateIssuerSigningKey = true,
-                    ValidIssuer = Configuration["Jwt:Issuer"],
-                    ValidAudience = Configuration["Jwt:Issuer"],
-                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Configuration["Jwt:Key"])) //Configuration["JwtToken:SecretKey"]  
+                    ValidIssuer = eSyncMate.Processor.Models.CommonUtils.JwtIssuer,
+                    ValidAudience = eSyncMate.Processor.Models.CommonUtils.JwtIssuer,
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(eSyncMate.Processor.Models.CommonUtils.JwtKey))
                 };
             });
         }

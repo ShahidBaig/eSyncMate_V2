@@ -15,6 +15,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialog } from '@angular/material/dialog';
 import { ProductPricesHelpDialogComponent } from './product-prices-help-dialog/product-prices-help-dialog.component';
+import { PriceFeedLogDialogComponent } from './price-feed-log-dialog/price-feed-log-dialog.component';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { CommonModule } from '@angular/common';
@@ -117,6 +118,7 @@ export class ProductPricesComponent {
     'MapPrice',
     'OffPrice',
     'ActivityDate',
+    'Actions',
   ];
 
   constructor(private api: CustomerProductCatalogService, private uploadApi: ProductUploadPricesService, private fb: FormBuilder, private toast: NgToastService, private dialog: MatDialog, private userApi: ApiService, public languageService: LanguageService, private translate: TranslateService,) {
@@ -160,6 +162,19 @@ export class ProductPricesComponent {
       return this.itemTypesOptions;
 
     return this.itemTypesOptions?.filter(p => p.item_Type.includes(this.itemTypeFilter));
+  }
+
+  openPriceFeedLog(element: any) {
+    this.dialog.open(PriceFeedLogDialogComponent, {
+      width: '85%',
+      maxWidth: '1100px',
+      maxHeight: '85vh',
+      data: {
+        customerID: element.customerID,
+        itemID: element.itemID,
+        mode: 'product'
+      }
+    });
   }
 
   exportToExcel() {

@@ -211,16 +211,78 @@ namespace eSyncMate.Processor.Models
     {
         public static string ConnectionString { get; set; } = "Server=192.168.0.44,7100;Database=ESYNCMATE;UID=esyncmate;PWD=eSyncMate786$$$;";
         public static string MySqlConnectionString { get; set; } = "Server=162.241.63.30;Database=geckote1_edi;User=geckote1_esyncmate;Password=Gecko8079;";
-        public static string EncryptionKey { get; set; } = "eSyncMate@Dev#2026!!SecretKey";
-        public static string SMTPHost { get; set; } = "smtp.office365.com";
+        public static string EncryptionKey { get; set; } = "";
+        public static string SMTPHost { get; set; } = "";
         public static int SMTPPort { get; set; } = 587;
-        public static string FromEmailAccount { get; set; } = "alerts@SAFAVIEH.COM";
-        public static string FromEmailPWD { get; set; } = "J&510502696059ob";
+        public static string FromEmailAccount { get; set; } = "";
+        public static string FromEmailPWD { get; set; } = "";
+
+        // JWT (auth) — loaded from ApplicationSettings
+        public static string JwtKey { get; set; } = "";
+        public static string JwtIssuer { get; set; } = "";
+
+        // Microsoft Graph (email) — loaded from ApplicationSettings
+        public static string Graph_TenantId { get; set; } = "";
+        public static string Graph_ClientId { get; set; } = "";
+        public static string Graph_ClientSecret { get; set; } = "";
+        public static string Graph_SenderEmail { get; set; } = "";
 
         public static string Company = "eSyncMate";
 
         public static Int32 UploadInventoryTotalThread = 10;
         public static Int32 AmazonFeedMaxMessages = 20000;
+        public static Int32 TargetPlusWHSWiseThreads = 50;
+
+        /// <summary>
+        /// Loads all configuration (except ConnectionStrings) from the ApplicationSettings
+        /// table into the static fields above. Call ONCE at process startup, after
+        /// ConnectionString is set and BEFORE auth/consumers use these values.
+        /// Missing/blank tags keep their current (fallback) value so the app does not crash.
+        /// </summary>
+        public static void LoadFromDatabase(string connectionString)
+        {
+            if (string.IsNullOrWhiteSpace(connectionString))
+                return;
+
+            try
+            {
+                System.Data.DataTable l_Data = new System.Data.DataTable();
+                eSyncMate.DB.DBConnector l_Conn = new eSyncMate.DB.DBConnector(connectionString);
+                l_Conn.GetData("SELECT TagName, TagValue FROM ApplicationSettings", ref l_Data);
+
+                var map = new System.Collections.Generic.Dictionary<string, string>(System.StringComparer.OrdinalIgnoreCase);
+                foreach (System.Data.DataRow r in l_Data.Rows)
+                {
+                    string name = r["TagName"]?.ToString();
+                    if (!string.IsNullOrWhiteSpace(name))
+                        map[name.Trim()] = r["TagValue"]?.ToString() ?? "";
+                }
+
+                string Get(string key, string fallback) =>
+                    map.TryGetValue(key, out var v) && !string.IsNullOrWhiteSpace(v) ? v : fallback;
+
+                JwtKey                = Get("JwtKey", JwtKey);
+                JwtIssuer             = Get("JwtIssuer", JwtIssuer);
+                EncryptionKey         = Get("EncryptionKey", EncryptionKey);
+                MySqlConnectionString = Get("MySQLConnection", MySqlConnectionString);
+                SMTPHost              = Get("SMTPHost", SMTPHost);
+                SMTPPort              = int.TryParse(Get("SMTPPort", SMTPPort.ToString()), out var sp) ? sp : SMTPPort;
+                FromEmailAccount      = Get("FromEmailAccount", FromEmailAccount);
+                FromEmailPWD          = Get("FromEmailPWD", FromEmailPWD);
+                Graph_TenantId        = Get("Graph_TenantId", Graph_TenantId);
+                Graph_ClientId        = Get("Graph_ClientId", Graph_ClientId);
+                Graph_ClientSecret    = Get("Graph_ClientSecret", Graph_ClientSecret);
+                Graph_SenderEmail     = Get("Graph_SenderEmail", Graph_SenderEmail);
+                Company               = Get("CompanyName", Company);
+                UploadInventoryTotalThread = int.TryParse(Get("UploadInventoryTotalThread", UploadInventoryTotalThread.ToString()), out var ut) ? ut : UploadInventoryTotalThread;
+                AmazonFeedMaxMessages = int.TryParse(Get("AmazonFeedMaxMessages", AmazonFeedMaxMessages.ToString()), out var af) ? af : AmazonFeedMaxMessages;
+                TargetPlusWHSWiseThreads = int.TryParse(Get("TargetPlusWHSWiseThreads", TargetPlusWHSWiseThreads.ToString()), out var tpt) ? tpt : TargetPlusWHSWiseThreads;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[CommonUtils.LoadFromDatabase] Failed to load ApplicationSettings: {ex.Message}");
+            }
+        }
         public static RestSharp.Method GetRequestMethod(string p_Method)
         {
             RestSharp.Method l_Method = RestSharp.Method.Get;

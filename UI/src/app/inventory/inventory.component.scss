@@ -958,3 +958,58 @@ svg.expand-icon {
   color: #e65100;
   border: 1px solid #ffe0b2;
 }
+
+/* Item ID field with inline match-expression dropdown button in the left corner */
+.search-field-itemid {
+  .itemid-match-prefix {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    align-self: center;
+    box-sizing: border-box;
+    height: 24px;
+    line-height: 1;
+    margin: 0 8px 0 6px;
+    padding: 0 2px 0 6px;
+    border: none;
+    border-radius: 4px;
+    background: #E8834A;
+    cursor: pointer;
+    color: #ffffff;
+
+    .op-sym-trigger {
+      font-size: 13px;
+      font-weight: 700;
+      min-width: 16px;
+      text-align: center;
+      color: #ffffff;
+    }
+
+    .op-arrow {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+      line-height: 16px;
+      color: #ffffff;
+    }
+  }
+}
+
+/* Match-expression menu — symbol column + label (global, rendered in overlay) */
+::ng-deep .itemid-match-panel {
+  .op-sym {
+    display: inline-block;
+    min-width: 28px;
+    font-weight: 700;
+    color: #E8834A;
+  }
+
+  .op-active {
+    background: #E8834A;
+    font-weight: 700;
+    color: #ffffff;
+
+    .op-sym { color: #ffffff; }
+  }
+}

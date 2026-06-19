@@ -18,11 +18,22 @@
       </div>
       <form [formGroup]="InventoryForm">
         <div class="search-row">
-          <mat-form-field appearance="outline" class="search-field">
-            <mat-icon matPrefix>badge</mat-icon>
+          <mat-form-field appearance="outline" class="search-field search-field-itemid">
             <mat-label>{{ 'itemID' | translate }}</mat-label>
+            <button matPrefix type="button" class="itemid-match-prefix" matTooltip="Match type"
+                    [matMenuTriggerFor]="matchMenu" (click)="$event.stopPropagation()">
+              <span class="op-sym-trigger">{{ matchSymbol(InventoryForm.get('itemIDMatch')?.value) }}</span>
+              <mat-icon class="op-arrow">arrow_drop_down</mat-icon>
+            </button>
             <input matInput formControlName="itemID">
           </mat-form-field>
+
+          <mat-menu #matchMenu="matMenu" class="itemid-match-panel">
+            <button mat-menu-item type="button" (click)="setMatch('equal')"
+                    [class.op-active]="InventoryForm.get('itemIDMatch')?.value === 'equal'"><span class="op-sym">=</span> Equal</button>
+            <button mat-menu-item type="button" (click)="setMatch('like')"
+                    [class.op-active]="InventoryForm.get('itemIDMatch')?.value === 'like'"><span class="op-sym">*</span> Like</button>
+          </mat-menu>
 
           <mat-form-field appearance="outline" class="search-field">
             <mat-icon matPrefix>people</mat-icon>

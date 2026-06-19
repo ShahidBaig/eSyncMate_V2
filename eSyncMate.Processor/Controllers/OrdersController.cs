@@ -618,11 +618,12 @@ namespace eSyncMate.Processor.Controllers
                     customerWise.Add(new { customerName = row["CustomerName"]?.ToString(), erpCustomerID = row["ERPCustomerID"]?.ToString(), orderCount = count });
                 }
 
-                // Status-wise order counts
-                string l_StatusQuery = $@"SELECT ISNULL(Status,'') as Status, COUNT(*) as StatusCount
+                // Status-wise order counts — group by the effective (display) status so
+                // 'Partially Shipped'/'Partially Cancelled' etc. count correctly and match the drilldown.
+                string l_StatusQuery = $@"SELECT ISNULL(NULLIF(DisplayStatus,''), ISNULL(Status,'')) as Status, COUNT(*) as StatusCount
                     FROM VW_Orders
                     WHERE {l_DateFilter} AND Status <> 'DELETED'{l_CustomerFilter}
-                    GROUP BY Status ORDER BY StatusCount DESC";
+                    GROUP BY ISNULL(NULLIF(DisplayStatus,''), ISNULL(Status,'')) ORDER BY StatusCount DESC";
 
                 DataTable l_StatusDT = new DataTable();
                 l_Conn.GetData(l_StatusQuery, ref l_StatusDT);
@@ -633,10 +634,10 @@ namespace eSyncMate.Processor.Controllers
                 }
 
                 // Partner + Status breakdown (for expandable detail)
-                string l_PartnerStatusQuery = $@"SELECT ISNULL(ERPCustomerID,'') as ERPCustomerID, ISNULL(Status,'') as Status, COUNT(*) as StatusCount
+                string l_PartnerStatusQuery = $@"SELECT ISNULL(ERPCustomerID,'') as ERPCustomerID, ISNULL(NULLIF(DisplayStatus,''), ISNULL(Status,'')) as Status, COUNT(*) as StatusCount
                     FROM VW_Orders
                     WHERE {l_DateFilter} AND Status <> 'DELETED'{l_CustomerFilter}
-                    GROUP BY ERPCustomerID, Status ORDER BY ERPCustomerID, StatusCount DESC";
+                    GROUP BY ERPCustomerID, ISNULL(NULLIF(DisplayStatus,''), ISNULL(Status,'')) ORDER BY ERPCustomerID, StatusCount DESC";
 
                 DataTable l_PartnerStatusDT = new DataTable();
                 l_Conn.GetData(l_PartnerStatusQuery, ref l_PartnerStatusDT);
@@ -734,9 +735,9 @@ namespace eSyncMate.Processor.Controllers
                 if (!string.IsNullOrEmpty(fromDate) && !string.IsNullOrEmpty(toDate))
                     l_Criteria += $" AND CreatedDate >= '{fromDate}' AND CreatedDate < DATEADD(DAY, 1, CAST('{toDate}' AS DATE))";
 
-                // Status filter
+                // Status filter — match the effective (display) status, consistent with the dashboard tiles/breakdown
                 if (!string.IsNullOrEmpty(status))
-                    l_Criteria += $" AND (Status = '{status}' OR DisplayStatus = '{status}')";
+                    l_Criteria += $" AND ISNULL(NULLIF(DisplayStatus,''), Status) = '{status}'";
 
                 int totalCount = 0;
                 l_Order.GetViewListPaged(l_Criteria, string.Empty, ref l_Data, "CreatedDate DESC", pageNumber, pageSize, out totalCount);

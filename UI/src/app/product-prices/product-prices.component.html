@@ -204,6 +204,17 @@
           <td mat-cell *matCellDef="let element">{{ isValidDate(element.activityDate) ? (element.activityDate | date:'MM/dd/yyyy hh:mm a') : '' }}</td>
         </ng-container>
 
+        <ng-container matColumnDef="Actions">
+          <th mat-header-cell *matHeaderCellDef>{{ 'actions' | translate }}</th>
+          <td mat-cell *matCellDef="let element">
+            <button mat-icon-button class="btn-feed-log" matTooltip="View price submission details — request sent and response received"
+                    [disabled]="!element.customerID || !element.itemID"
+                    (click)="openPriceFeedLog(element)">
+              <mat-icon>history</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+
         <tr mat-header-row *matHeaderRowDef="columns"></tr>
         <tr mat-row *matRowDef="let row; columns: columns"></tr>
       </table>
