@@ -6,4 +6,14 @@
 .full-width { flex: 0 0 100% !important; }
 .btn-chip-add { background: #2563eb !important; color: white !important; height: 56px; }
 .btn-chip-add:hover { background: #1d4ed8 !important; }
-.chips-row { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 0; }
+.chips-row { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 0; max-width: 100%; }
+.chips-row .mat-mdc-chip { max-width: 100%; overflow: hidden; }
+.chip-text {
+  display: inline-block;
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+  cursor: pointer;
+}

@@ -25,7 +25,12 @@ builder.Services.AddHangfire(cfg => cfg
             UseRecommendedIsolationLevel = true,
             DisableGlobalLocks = true
         }));
-builder.Services.AddHangfireServer(); // background workers
+builder.Services.AddHangfireServer(options =>
+{
+    // Explicit worker count raised from the framework default (~20) to reduce the chance of
+    // worker-thread starvation while long-running inventory uploads are in progress.
+    options.WorkerCount = 40;
+}); // background workers
 
 // -------------------- MVC / JSON --------------------
 builder.Services.AddControllers().AddNewtonsoftJson();

@@ -89,6 +89,15 @@ namespace eSyncMate.Processor.Managers
                             route.SaveData("JSON-SNT", 0, l_SourceConnector.Url, userNo);
                             route.SaveData("JSON-RVD", 0, sourceResponse.Content ?? string.Empty, userNo);
 
+                            string l_Content = sourceResponse.Content?.TrimStart() ?? string.Empty;
+
+                            // API may return an HTML/XML error page (auth, gateway, etc.) instead of JSON — guard before deserializing
+                            if (!sourceResponse.IsSuccessful || string.IsNullOrEmpty(l_Content) || !(l_Content.StartsWith("{") || l_Content.StartsWith("[")))
+                            {
+                                route.SaveLog(LogTypeEnum.Error, $"Micheal Get Orders returned a non-JSON or failed response. HTTP {(int)sourceResponse.StatusCode} {sourceResponse.StatusCode}.", sourceResponse.Content ?? sourceResponse.ErrorMessage, userNo);
+                                break;
+                            }
+
                             OrdersList = JsonConvert.DeserializeObject<MichealGetOrderResponseModel>(sourceResponse.Content);
 
                             var data = OrdersList?.data;

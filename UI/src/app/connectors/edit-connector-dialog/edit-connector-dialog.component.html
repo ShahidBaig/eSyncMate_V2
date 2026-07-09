@@ -105,8 +105,8 @@
                     <button mat-flat-button class="btn-chip-add" (click)="addChips()"><mat-icon>add</mat-icon> {{ 'add' | translate }}</button>
                   </div>
                   <div class="chips-row" *ngIf="headerChipsValues.length > 0">
-                    <mat-chip *ngFor="let chip of headerChipsValues; let i = index" removable (removed)="removeChip(i)">
-                      {{ chip.name }}: {{ chip.value }}<mat-icon matChipRemove>cancel</mat-icon>
+                    <mat-chip *ngFor="let chip of headerChipsValues; let i = index" removable (removed)="removeChip(i)" (dblclick)="editChip(i)">
+                      <span class="chip-text" [title]="(chip.name + ': ' + chip.value) + ' (double-click to edit)'">{{ chip.name }}: {{ chip.value }}</span><mat-icon matChipRemove>cancel</mat-icon>
                     </mat-chip>
                   </div>
                 </div>
@@ -119,8 +119,8 @@
                     <button mat-flat-button class="btn-chip-add" (click)="addParameter()"><mat-icon>add</mat-icon> {{ 'add' | translate }}</button>
                   </div>
                   <div class="chips-row" *ngIf="paramValues.length > 0">
-                    <mat-chip *ngFor="let chip of paramValues; let i = index" removable (removed)="removeParam(i)">
-                      {{ chip.name }}: {{ chip.value }}<mat-icon matChipRemove>cancel</mat-icon>
+                    <mat-chip *ngFor="let chip of paramValues; let i = index" removable (removed)="removeParam(i)" (dblclick)="editParam(i)">
+                      <span class="chip-text" [title]="(chip.name + ': ' + chip.value) + ' (double-click to edit)'">{{ chip.name }}: {{ chip.value }}</span><mat-icon matChipRemove>cancel</mat-icon>
                     </mat-chip>
                   </div>
                 </div>

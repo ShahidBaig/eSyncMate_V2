@@ -161,6 +161,14 @@ export class AddConnectorDialogComponent implements OnInit {
     this.headerChipsValues.splice(index, 1);
   }
 
+  editChip(index: number)
+  {
+    const chip = this.headerChipsValues[index];
+    this.newConnectorForm.get('headerName')?.setValue(chip.name);
+    this.newConnectorForm.get('headerValue')?.setValue(chip.value);
+    this.headerChipsValues.splice(index, 1);
+  }
+
   addParameter()
   {
     const paramNameControl = this.newConnectorForm.get('paramName');
@@ -178,6 +186,14 @@ export class AddConnectorDialogComponent implements OnInit {
 
   removeParam(index: number)
   {
+    this.paramValues.splice(index, 1);
+  }
+
+  editParam(index: number)
+  {
+    const param = this.paramValues[index];
+    this.newConnectorForm.get('paramName')?.setValue(param.name);
+    this.newConnectorForm.get('paramValue')?.setValue(param.value);
     this.paramValues.splice(index, 1);
   }
 
