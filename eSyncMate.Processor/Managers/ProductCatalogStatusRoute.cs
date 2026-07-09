@@ -93,7 +93,7 @@ namespace eSyncMate.Processor.Managers
                         l_Product.UseConnection(l_SourceConnector.ConnectionString);
                         l_Product.ProductId = Convert.ToInt32(row["ProductId"].ToString());
 
-                        l_DestinationConnector.Url = l_DestinationConnector.BaseUrl + "external_id=" + row["ItemID"];
+                        l_DestinationConnector.Url = l_DestinationConnector.BaseUrl + "external_id=" + Uri.EscapeDataString(Convert.ToString(row["ItemID"]));
                         l_DestinationConnector.Method = "GET";
 
                         sourceResponse = RestConnector.Execute(l_DestinationConnector, Body).GetAwaiter().GetResult();
@@ -110,9 +110,9 @@ namespace eSyncMate.Processor.Managers
                             {
                                 SCS_ProductCatalogStatusResponseModel productStatus = productList[0];
 
-                                if (productStatus.product_statuses != null && productStatus.product_statuses.Any() && productStatus.product_statuses[0].listing_status == "APPROVED")
+                                if (productStatus.product_statuses != null && productStatus.product_statuses.Any() && productStatus.product_statuses[0].listing_status == "APPROVED" && !string.IsNullOrWhiteSpace(productStatus.id) && !string.Equals(Convert.ToString(productStatus.relationship_type.ToUpper()), "VAP", StringComparison.OrdinalIgnoreCase))
                                 {
-                                    l_DestinationConnector.Url = $"https://api.target.com/sellers/v1/sellers/{l_DestinationConnector.Realm.ToString()}/product_logistics/{row["Id"].ToString()}";
+                                    l_DestinationConnector.Url = $"https://api.target.com/sellers/v1/sellers/{l_DestinationConnector.Realm.ToString()}/product_logistics/{productStatus.id}";
                                     l_DestinationConnector.Method = "PUT";
 
                                     var fields = new List<Dictionary<string, string>>();
@@ -158,7 +158,9 @@ namespace eSyncMate.Processor.Managers
                                     Body = JsonConvert.SerializeObject(requestBody);
 
                                     l_Product.DeleteWithType(l_Product.ProductId, "REQ-JSON");
-                                    l_Product.SaveData("REQ-JSON", Body, userNo);
+                                    l_Product.SaveData("REQ-JSON", JsonConvert.SerializeObject(new { url = l_DestinationConnector.Url, method = l_DestinationConnector.Method, body = requestBody }), userNo);
+
+                                    route.SaveData("JSON-SNT", 0, JsonConvert.SerializeObject(new { url = l_DestinationConnector.Url, method = l_DestinationConnector.Method, body = requestBody }), userNo);
 
                                     sourceResponse = RestConnector.Execute(l_DestinationConnector, Body).GetAwaiter().GetResult();
 

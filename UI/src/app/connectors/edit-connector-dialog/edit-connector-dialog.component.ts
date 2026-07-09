@@ -234,6 +234,13 @@ export class EditConnectorDialogComponent implements OnInit {
     this.headerChipsValues.splice(index, 1);
   }
 
+  editChip(index: number) {
+    const chip = this.headerChipsValues[index];
+    this.updateConnectorForm.get('headerName')?.setValue(chip.name);
+    this.updateConnectorForm.get('headerValue')?.setValue(chip.value);
+    this.headerChipsValues.splice(index, 1);
+  }
+
   addParameter() {
     const paramNameControl = this.updateConnectorForm.get('paramName');
     const paramValueControl = this.updateConnectorForm.get('paramValue');
@@ -249,6 +256,13 @@ export class EditConnectorDialogComponent implements OnInit {
   }
 
   removeParam(index: number) {
+    this.paramValues.splice(index, 1);
+  }
+
+  editParam(index: number) {
+    const param = this.paramValues[index];
+    this.updateConnectorForm.get('paramName')?.setValue(param.name);
+    this.updateConnectorForm.get('paramValue')?.setValue(param.value);
     this.paramValues.splice(index, 1);
   }
 
