@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Route Execution Lock & Flow Coordination — Analysis | eSyncMate</title>
+<style>
+  :root{--brand:#E8834A;--brand-dark:#c96a34;--ink:#1f2933;--muted:#5a6772;--line:#e3e8ee;--bg-soft:#f7f9fc;--ok:#1f8a44;--warn:#b9770a;--bad:#c0392b;}
+  *{box-sizing:border-box;}
+  body{font-family:"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;color:var(--ink);line-height:1.6;margin:0;background:#eef1f5;}
+  .page{max-width:960px;margin:32px auto;background:#fff;padding:56px 64px;box-shadow:0 2px 18px rgba(0,0,0,.08);border-radius:6px;}
+  header.report-head{border-bottom:4px solid var(--brand);padding-bottom:22px;margin-bottom:34px;}
+  header.report-head .eyebrow{text-transform:uppercase;letter-spacing:2px;font-size:12px;color:var(--brand-dark);font-weight:700;}
+  h1{font-size:27px;margin:8px 0 14px;line-height:1.25;}
+  .meta-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:4px 36px;font-size:13.5px;color:var(--muted);margin-top:12px;}
+  .meta-grid b{color:var(--ink);font-weight:600;}
+  h2{font-size:20px;margin:40px 0 12px;padding-bottom:7px;border-bottom:1px solid var(--line);color:var(--brand-dark);}
+  h3{font-size:15.5px;margin:22px 0 6px;}
+  p{margin:10px 0;}
+  table{width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top;}
+  th{background:var(--bg-soft);font-weight:600;}
+  tr:nth-child(even) td{background:#fcfdfe;}
+  pre{background:#1e2430;color:#d7e0ea;padding:18px 20px;border-radius:6px;overflow-x:auto;font-family:"Cascadia Code","Consolas",monospace;font-size:12.5px;line-height:1.5;}
+  code:not(pre code){background:var(--bg-soft);border:1px solid var(--line);border-radius:4px;padding:1px 6px;font-family:"Cascadia Code","Consolas",monospace;font-size:12.5px;color:var(--brand-dark);}
+  blockquote{margin:16px 0;padding:12px 20px;border-left:4px solid var(--brand);background:var(--bg-soft);font-style:italic;}
+  ul,ol{margin:10px 0;padding-left:24px;}
+  li{margin:5px 0;}
+  .callout{border:1px solid var(--line);border-left:4px solid var(--brand);background:var(--bg-soft);border-radius:4px;padding:14px 18px;margin:18px 0;font-size:14px;}
+  .badge{display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:11px;letter-spacing:.4px;}
+  .badge.review{background:#fff3e6;color:var(--brand-dark);border:1px solid #f3cfae;}
+  .sev-crit{color:var(--bad);font-weight:700;}
+  .sev-high{color:var(--warn);font-weight:700;}
+  .sev-med{color:#8a6d0a;font-weight:700;}
+  .issue{border:1px solid var(--line);border-radius:6px;padding:6px 18px 14px;margin:16px 0;background:#fff;}
+  .issue h3{margin-top:14px;}
+  .cmp{display:grid;grid-template-columns:1fr 1fr;gap:0;margin:10px 0;border:1px solid var(--line);border-radius:6px;overflow:hidden;font-size:13.5px;}
+  .cmp>div{padding:10px 14px;}
+  .cmp .now{background:#fdf1ef;border-right:1px solid var(--line);}
+  .cmp .should{background:#eef8f1;}
+  .cmp .lbl{font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;}
+  .cmp .now .lbl{color:var(--bad);}
+  .cmp .should .lbl{color:var(--ok);}
+  footer.report-foot{margin-top:44px;padding-top:18px;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted);}
+  @media print{body{background:#fff;}.page{box-shadow:none;margin:0;max-width:100%;padding:24px 28px;}h2{page-break-after:avoid;}table,pre,blockquote,.issue,.cmp{page-break-inside:avoid;}}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="report-head">
+    <div class="eyebrow">Technical Analysis Report &nbsp;·&nbsp; <span class="badge review">FOR SENIOR REVIEW</span></div>
+    <h1>Route Execution Lock &amp; Flow Coordination — Current State, Issues &amp; Recommended Changes</h1>
+    <div class="meta-grid">
+      <div><b>Project:</b> eSyncMate_V2 (EDI Platform)</div>
+      <div><b>Area:</b> Inventory route dispatch coordination</div>
+      <div><b>Components:</b> RouteEngine, RouteExecutionLock, RouteAbortFlag</div>
+      <div><b>Environment:</b> Production — <code>EMS</code> / <code>ESYNCMATESCHEDULER</code></div>
+      <div><b>Date:</b> 2026-06-30</div>
+      <div><b>Author:</b> Development Team</div>
+    </div>
+  </header>
+
+  <h2>1. Executive Summary</h2>
+  <p>Inventory routes (Full Feed, Differential, Upload) within a Flow must not run at the same time, otherwise the trading partner (Walmart, Macy's, Lowe's, etc.) receives overlapping/inconsistent inventory. Today this coordination is enforced using a single database table — <code>RouteExecutionLock</code> — that serves <b>two different purposes at once</b>:</p>
+  <ol>
+    <li><b>Self-lock</b> — "is <i>this</i> route already running?" (duplicate prevention)</li>
+    <li><b>Flow coordination</b> — "is <i>another</i> inventory route in the same Flow running?" (via <code>Sp_IsOtherFlowInventoryRouteRunning</code>, which reads the same lock table)</li>
+  </ol>
+  <p>Because both mechanisms depend on the same <code>IsActive = 1</code> rows, and because a lock is <b>acquired before the skip decision</b> and is <b>not always released reliably</b>, the design exhibits several defects ranging from <b>missed inventory feeds</b> to <b>broken coordination on long-running feeds</b>.</p>
+
+  <h2>2. How It Works Today (Current State)</h2>
+  <p>When an inventory route fires (Hangfire → <code>RouteEngine.Execute</code> → <code>ExecuteExternal</code>):</p>
+<pre>[1] Load route. If IN-ACTIVE -> remove job, return.
+
+[2] AcquireLock(Customer, TypeId, RouteId, TimeoutMinutes)        &lt;- acquires its OWN lock
+       - If a lock already exists  -> log "already running (DB lock held)" -> RETURN
+       - Else  -> row inserted (IsActive = 1), continue
+
+[3] If inventory route -> GetFlowIdForRoute -> IsOtherFlowInventoryRouteRunning?
+       (SP counts OTHER inventory routes in the Flow with IsActive = 1 AND age &lt;= 60 min)
+       - Full Feed   -> WAIT up to 30 min, then proceed or skip
+       - Upload      -> Full running -> SKIP; Differential running -> WAIT; else SKIP
+       - Differential-> SKIP immediately
+       - On skip/timeout -> RETURN (no process launched)
+
+[4] Spawn RouteWorker.exe (--routeId, --lockToken). processLaunched = true.
+
+[5] Release lock:
+       - Launched  -> child RouteWorker finally + parent Process.Exited (backstop)
+       - Skipped   -> parent finally: if(!processLaunched) ReleaseRouteLock()</pre>
+  <p>The coordination check (stored procedure):</p>
+<pre>SELECT COUNT(1) AS RunningCount
+FROM RouteExecutionLock rel
+  INNER JOIN FlowDetails fd ON fd.RouteId = rel.RouteId
+  INNER JOIN Routes r ON r.Id = fd.RouteId
+WHERE fd.FlowId = @FlowId
+  AND fd.RouteId != @ExcludeRouteId
+  AND r.TypeId IN (@InventoryTypeIds)
+  AND rel.IsActive = 1
+  AND DATEDIFF(MINUTE, rel.AcquiredAt, GETDATE()) &lt;= 60;   -- hardcoded 60</pre>
+
+  <h2>3. Issues in the Current Design</h2>
+
+  <div class="issue">
+    <h3><span class="sev-crit">🔴 A (Critical)</span> — Coordination breaks after 60 minutes on long feeds</h3>
+    <p><b>Now:</b> The SP only counts locks aged <code>&lt;= 60</code> min. Full Feeds run <b>3–6 hours</b>. <b>Failure:</b> At T+61 min a sibling route no longer "sees" the still-running Full Feed and runs <b>concurrently</b> with it → partner receives overlapping inventory. The coordination fails for exactly the long feeds it is meant to protect.</p>
+  </div>
+
+  <div class="issue">
+    <h3><span class="sev-crit">🔴 B (Critical)</span> — Orphaned lock → whole-Flow skip cascade</h3>
+    <p><b>Now:</b> On skip/wait the lock is not released reliably, leaving <code>IsActive = 1</code> stuck. <b>Failure:</b> One stuck lock makes the SP report "running" for <b>every</b> other inventory route in that Flow for up to 60 min → the whole Flow's inventory routes skip → inventory stops syncing. Observed 2026-06-30 (routes 44, 45, 76 in Flows 19 &amp; 24 repeatedly skipping; no RouteWorker process alive while locks stayed <code>IsActive=1</code>).</p>
+  </div>
+
+  <div class="issue">
+    <h3><span class="sev-high">🟠 C (High)</span> — Mutual-skip race (two siblings fire together → both skip)</h3>
+    <p><b>Now:</b> A route acquires its <b>own</b> lock <i>before</i> checking coordination. <b>Failure:</b> If two inventory routes in the same Flow fire near-simultaneously, each acquires its lock, then each sees the <i>other's</i> lock and <b>both skip</b> — no route runs. Missed feeds even with no orphan; chronic if they share a schedule.</p>
+  </div>
+
+  <div class="issue">
+    <h3><span class="sev-med">🟡 D (Medium)</span> — Lock is acquired before the skip decision</h3>
+    <p><b>Now:</b> Even a route about to skip first creates an <code>IsActive=1</code> row. <b>Failure:</b> that premature row pollutes sibling coordination (C) and becomes an orphan if its release fails (B). The lock is held when no work is being done.</p>
+  </div>
+
+  <div class="issue">
+    <h3><span class="sev-med">🟡 E (Medium)</span> — Timeout inconsistency (SP hardcodes 60; AcquireLock uses a column)</h3>
+    <p><b>Now:</b> <code>AcquireLock</code>/<code>CleanStaleLocks</code> use each lock's <code>TimeoutMinutes</code> column; the SP hardcodes <code>&lt;= 60</code>. <b>Failure:</b> setting <code>RouteLockTimeoutMinutes</code> to anything but 60 makes duplicate-prevention and coordination disagree — configuration silently breaks coordination.</p>
+  </div>
+
+  <div class="issue">
+    <h3><span class="sev-med">🟡 F (Medium)</span> — The 30-minute wait holds both a worker and a lock</h3>
+    <p><b>Now:</b> Full Feed / Upload "wait" loops <code>Thread.Sleep(30s)</code> up to 30 min while holding a Hangfire worker <b>and</b> the lock. <b>Failure:</b> waiting (not working) routes consume workers, and a waiting route appears "running" to siblings though it has done no work.</p>
+  </div>
+
+  <h2>4. What It Should Be (Target Behaviour)</h2>
+  <table>
+    <tr><th>#</th><th>Today</th><th>Should Be</th></tr>
+    <tr><td>A</td><td>Coordination valid only for first 60 min of a run</td><td>Coordination valid for the <b>entire</b> real run, any duration</td></tr>
+    <tr><td>B</td><td>Stuck lock blocks the whole Flow for ≤ 60 min</td><td>A finished/dead route <b>never</b> blocks others; release reliable + self-healing in minutes</td></tr>
+    <tr><td>C</td><td>Two simultaneous siblings both skip</td><td>Exactly <b>one</b> wins and runs; the other skips deterministically</td></tr>
+    <tr><td>D</td><td>Lock held even when skipping</td><td>Lock/"running" state exists <b>only while actually executing</b></td></tr>
+    <tr><td>E</td><td>Two different timeout values</td><td><b>One</b> source of truth for the timeout</td></tr>
+    <tr><td>F</td><td>Waiting consumes a worker + lock</td><td>Waiting is worker-free (re-schedule) and not marked as "running work"</td></tr>
+  </table>
+  <blockquote>Underlying principle: separate "<b>is this route's dispatch in flight</b>" (a short-lived dispatch guard) from "<b>is this route actually executing work right now</b>" (the signal coordination should use). Coordination should be driven by real execution state with liveness — not by a dispatch lock acquired early and released unreliably.</blockquote>
+
+  <h2>5. Recommended Changes</h2>
+  <p>Ordered by priority. Changes 1–3 stop the active production pain; 4–6 remove the structural defects.</p>
+  <table>
+    <tr><th>#</th><th>Change</th><th>Fixes</th><th>Effort</th></tr>
+    <tr><td>1</td><td><b>Reliable release on skip/wait paths</b> — release the lock explicitly at each skip/timeout return <b>with a log line</b> (success/failure visible), not only via <code>finally</code>.</td><td>B</td><td>0.5 day</td></tr>
+    <tr><td>2</td><td><b>Self-healing janitor + startup cleanup</b> — store child <code>ProcessId</code> on launch; a job every ~3 min (and on startup) releases locks whose process is dead, or whose <code>ProcessId</code> is NULL and age exceeds the max wait window. Keep <code>CleanStaleLocks</code> as final backstop.</td><td>B</td><td>1 day</td></tr>
+    <tr><td>3</td><td><b>SP uses per-row timeout</b> — replace <code>DATEDIFF(...) &lt;= 60</code> with <code>&lt;= rel.TimeoutMinutes</code>; set <code>TimeoutMinutes</code> per route type to exceed the longest run (e.g. full feed = 480).</td><td>A, E</td><td>0.5 day</td></tr>
+    <tr><td>4</td><td><b>Acquire the lock only when proceeding to launch</b> — move <code>AcquireLock</code> to <i>after</i> the coordination decision, so skip/wait routes never hold a lock.</td><td>C, D</td><td>0.5 day</td></tr>
+    <tr><td>5</td><td><b>Atomic single-winner claim</b> — make "check others + claim" a single atomic DB operation (or a flow-level claim) so two simultaneous siblings cannot both skip; exactly one wins.</td><td>C</td><td>1 day</td></tr>
+    <tr><td>6</td><td><b>Worker-free wait</b> — replace the 30-min <code>Thread.Sleep</code> wait loops with re-scheduling (requeue after a delay) so no worker/lock is held while waiting.</td><td>F</td><td>1 day</td></tr>
+  </table>
+  <div class="callout"><b>Stretch / proper redesign (later sprint):</b> introduce an explicit <code>RouteRunState</code> (Started/Finished + heartbeat) written by the RouteWorker at actual start and finish, and base flow-coordination on <i>that</i> (with liveness) instead of the dispatch lock. This cleanly separates the two responsibilities <code>RouteExecutionLock</code> currently overloads and removes Issues A–F at the root.</div>
+
+  <h2>6. Suggested Sequencing</h2>
+  <ol>
+    <li><b>Hotfix (this week):</b> Changes 1 + 2 + 3 — stop the orphan cascade, make coordination valid for long feeds, self-heal in minutes. Low risk, no change to actual route work.</li>
+    <li><b>Hardening (next):</b> Changes 4 + 5 — remove the mutual-skip race and early-acquire coupling.</li>
+    <li><b>Cleanup (later sprint):</b> Change 6 + the <code>RouteRunState</code> redesign.</li>
+  </ol>
+
+  <h2>7. Risks &amp; Notes</h2>
+  <ul>
+    <li>All lock changes are <b>reversible</b> and involve <b>no change to the actual route execution logic</b> (only when/where the lock is acquired/released and how coordination reads state).</li>
+    <li>The janitor and per-row timeout require a small schema touch (<code>ProcessId</code> column) and an SP edit — both additive and backward-compatible.</li>
+    <li><code>TimeoutMinutes</code> too low risks clearing a live long lock (duplicate); too high delays orphan cleanup. The liveness-based janitor removes this trade-off by not waiting for the timeout.</li>
+    <li>Single-server today (<code>EMS</code>); the janitor's process-liveness check must be scoped to its own <code>MachineName</code> if the deployment ever becomes multi-node.</li>
+  </ul>
+
+  <h2>8. Recommendation</h2>
+  <div class="callout">Approve Changes <b>1–3 as a hotfix</b> to immediately stop missed/halted inventory feeds, followed by <b>4–6</b> to remove the structural race and coupling. Plan the <code>RouteRunState</code> redesign for a later sprint as the permanent separation of dispatch-locking from execution-state coordination.</div>
+
+  <h2>Appendix — Affected Files</h2>
+  <ul>
+    <li><code>eSyncMate.Processor/Managers/RouteEngine.cs</code> — <code>ExecuteExternal</code> (acquire/skip/wait/launch/release), <code>Execute</code> (in-process path)</li>
+    <li><code>eSyncMate.DB/Entities/RouteExecutionLock.cs</code> — <code>AcquireLock</code>, <code>ReleaseLock</code>, <code>CleanStaleLocks</code>, schema</li>
+    <li><code>eSyncMate.DB/Entities/RouteAbortFlag.cs</code> — <code>IsOtherFlowInventoryRouteRunning</code></li>
+    <li><code>Sp_IsOtherFlowInventoryRouteRunning</code> (SQL) — the <code>&lt;= 60</code> hardcode</li>
+    <li><code>eSyncMate.RouteWorker/Program.cs</code> — child lock release (<code>--lockToken</code>)</li>
+  </ul>
+
+  <footer class="report-foot">
+    eSyncMate_V2 — Route Execution Lock &amp; Flow Coordination Analysis &nbsp;·&nbsp; Prepared 2026-06-30 &nbsp;·&nbsp; For Senior Review
+  </footer>
+
+</div>
+</body>
+</html>

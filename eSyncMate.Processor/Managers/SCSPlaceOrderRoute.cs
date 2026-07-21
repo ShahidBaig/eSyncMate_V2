@@ -124,52 +124,11 @@ namespace eSyncMate.Processor.Managers
 
             route.UseConnection(CommonUtils.ConnectionString);
 
-            string routeName = string.Empty;
-
-            if (customerName == "TAR6266P")
-            {
-                routeName = "Target - Place Orders in ERP";
-            }
-            else if (customerName == "WAL4001MP")
-            {
-                routeName = "Walmart - Place Orders in ERP";
-            }
-            else if (customerName == "MAC0149M")
-            {
-                routeName = "Macys - Place Orders in ERP";
-            }
-            else if (customerName == "TAR6266PAH")
-            {
-                routeName = "Target SEI - Place Orders in ERP";
-            }
-            else if (customerName == "AMA1005")
-            {
-                routeName = "Amazon - Place Orders in ERP";
-            }
-            else if (customerName == "AMA1000")
-            {
-                routeName = "Amazon Pacific Rugs - Place Orders in ERP";
-            }
-            else if (customerName == "LOW2221MP")
-            {
-                routeName = "Lowes - Place Orders in ERP";
-            }
-            else if (customerName == "KNO8068")
-            {
-                routeName = "Knot - Place Orders in ERP";
-            }
-            else if (customerName == "MIC1300MP")
-            {
-                routeName = "Michaels - Place Orders in ERP";
-            }
-            else
+            // Place-Order route is identified by RouteType SCSPlaceOrder (9) + CustomerName —
+            // no hardcoded route names, so new customers work without a code change.
+            if (!route.GetObject("TypeId", (int)RouteTypesEnum.SCSPlaceOrder, "CustomerName", customerName).IsSuccess)
             {
                 return $"No route configured for customer: {customerName}";
-            }
-
-            if (!route.GetObject("Name", routeName, "CustomerName", customerName).IsSuccess)
-            {
-                return "Order processing route is not setup.";
             }
 
             if (route.Status.ToUpper() == "IN-ACTIVE")

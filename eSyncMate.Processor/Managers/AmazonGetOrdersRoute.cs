@@ -92,6 +92,12 @@ namespace eSyncMate.Processor.Managers
                         sourceResponse = RestConnector.Execute(l_SourceConnector, string.Empty).GetAwaiter().GetResult();
                         route.SaveData("JSON-RVD", 0,sourceResponse.Content, userNo);
 
+                        if (sourceResponse == null || string.IsNullOrWhiteSpace(sourceResponse.Content))
+                        {
+                            route.SaveLog(LogTypeEnum.Error, $"Amazon Get Orders returned empty response on page [{page}] (StatusCode: {sourceResponse?.StatusCode}). Error: {sourceResponse?.ErrorMessage}", sourceResponse?.Content ?? string.Empty, userNo);
+                            break;
+                        }
+
                         var pageResult = JsonConvert.DeserializeObject<AmazonGetOrdersResponseModel>(sourceResponse.Content);
 
                         if (pageResult?.payload?.Orders != null && pageResult.payload.Orders.Any())

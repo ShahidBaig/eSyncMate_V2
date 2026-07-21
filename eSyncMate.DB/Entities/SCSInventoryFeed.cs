@@ -427,6 +427,31 @@ namespace eSyncMate.DB.Entities
             }
         }
 
+        // ── CustomerID → Amazon SellerId via SP (seller IDs hardcoded in SP) ──
+        public static string GetAmazonSellerId(string connectionString, string customerID)
+        {
+            if (string.IsNullOrEmpty(customerID)) return null;
+
+            try
+            {
+                using (SqlConnection conn = new SqlConnection(connectionString))
+                {
+                    conn.Open();
+                    using (SqlCommand cmd = new SqlCommand(
+                        "EXEC [dbo].[Sp_GetAmazonSellerId] @p_CustomerID", conn))
+                    {
+                        cmd.Parameters.AddWithValue("@p_CustomerID", customerID);
+                        var result = cmd.ExecuteScalar();
+                        return (result == null || result == DBNull.Value) ? null : result.ToString();
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+
         // ── Returns inventory data columns for a log table via SP ─────────
         public static string[] GetLogTableColumns(string connectionString, string logTableName)
         {
