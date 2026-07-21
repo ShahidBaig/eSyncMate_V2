@@ -455,15 +455,7 @@ namespace eSyncMate.Processor.Managers
 
                 AmazonInventoryRequestModel l_AmazonInventoryRequestModel = new AmazonInventoryRequestModel();
 
-                if (customerID.ToUpper() == "AMA1005")
-                {
-                    l_AmazonInventoryRequestModel.header.sellerId = "A3NX96R6O9JSG4";
-                }
-
-                if (customerID.ToUpper() == "AMA1000")
-                {
-                    l_AmazonInventoryRequestModel.header.sellerId = "A2MYQVBOMVK2ZL";
-                }
+                l_AmazonInventoryRequestModel.header.sellerId = SCSInventoryFeed.GetAmazonSellerId(ConnectionString, customerID);
 
                 l_AmazonInventoryRequestModel.header.version = "2.0";
                 l_AmazonInventoryRequestModel.header.issueLocale = "en_US";
@@ -485,7 +477,7 @@ namespace eSyncMate.Processor.Managers
                         var l_Fulfillment_Availability = new Fulfillment_Availability
                         {
                             fulfillment_channel_code = item["ShipNode"].ToString(),
-                            quantity = item["ShipNode"]?.ToString() == "DEFAULT" ? (row["Total_ATS"] == DBNull.Value ? 0 : Convert.ToInt32(row["Total_ATS"])): (row[$"ATS_{item["WHSID"]}"] == DBNull.Value ? 0 : Convert.ToInt32(row[$"ATS_{item["WHSID"]}"])),
+                            quantity = item["ShipNode"]?.ToString() == "DEFAULT" ? (CommonUtils.AmazonDefaultShipNodeSendZero ? 0 : (row["Total_ATS"] == DBNull.Value ? 0 : Convert.ToInt32(row["Total_ATS"]))): (row[$"ATS_{item["WHSID"]}"] == DBNull.Value ? 0 : Convert.ToInt32(row[$"ATS_{item["WHSID"]}"])),
                             lead_time_to_ship_max_days = 1
                         };
 

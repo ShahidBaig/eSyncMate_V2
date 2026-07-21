@@ -233,6 +233,10 @@ namespace eSyncMate.Processor.Models
         public static Int32 AmazonFeedMaxMessages = 20000;
         public static Int32 TargetPlusWHSWiseThreads = 50;
 
+        // When true, the DEFAULT Amazon ShipNode quantity is sent as 0;
+        // when false, it uses Total_ATS (previous behaviour).
+        public static bool AmazonDefaultShipNodeSendZero = true;
+
         /// <summary>
         /// Loads all configuration (except ConnectionStrings) from the ApplicationSettings
         /// table into the static fields above. Call ONCE at process startup, after
@@ -277,6 +281,7 @@ namespace eSyncMate.Processor.Models
                 UploadInventoryTotalThread = int.TryParse(Get("UploadInventoryTotalThread", UploadInventoryTotalThread.ToString()), out var ut) ? ut : UploadInventoryTotalThread;
                 AmazonFeedMaxMessages = int.TryParse(Get("AmazonFeedMaxMessages", AmazonFeedMaxMessages.ToString()), out var af) ? af : AmazonFeedMaxMessages;
                 TargetPlusWHSWiseThreads = int.TryParse(Get("TargetPlusWHSWiseThreads", TargetPlusWHSWiseThreads.ToString()), out var tpt) ? tpt : TargetPlusWHSWiseThreads;
+                AmazonDefaultShipNodeSendZero = bool.TryParse(Get("AmazonDefaultShipNodeSendZero", AmazonDefaultShipNodeSendZero.ToString()), out var adsz) ? adsz : AmazonDefaultShipNodeSendZero;
             }
             catch (Exception ex)
             {

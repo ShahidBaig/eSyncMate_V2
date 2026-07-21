@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Analysis Report — Migrating Hangfire to a Windows Service | eSyncMate</title>
+<style>
+  :root {
+    --brand: #E8834A;
+    --brand-dark: #c96a34;
+    --ink: #1f2933;
+    --muted: #5a6772;
+    --line: #e3e8ee;
+    --bg-soft: #f7f9fc;
+    --ok: #1f8a44;
+    --warn: #b9770a;
+    --bad: #c0392b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    color: var(--ink);
+    line-height: 1.6;
+    margin: 0;
+    background: #eef1f5;
+  }
+  .page {
+    max-width: 940px;
+    margin: 32px auto;
+    background: #fff;
+    padding: 56px 64px;
+    box-shadow: 0 2px 18px rgba(0,0,0,.08);
+    border-radius: 6px;
+  }
+  header.report-head {
+    border-bottom: 4px solid var(--brand);
+    padding-bottom: 22px;
+    margin-bottom: 34px;
+  }
+  header.report-head .eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    font-size: 12px;
+    color: var(--brand-dark);
+    font-weight: 700;
+  }
+  h1 {
+    font-size: 28px;
+    margin: 8px 0 14px;
+    color: var(--ink);
+    line-height: 1.25;
+  }
+  .meta-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 4px 36px;
+    font-size: 13.5px;
+    color: var(--muted);
+    margin-top: 12px;
+  }
+  .meta-grid b { color: var(--ink); font-weight: 600; }
+  h2 {
+    font-size: 20px;
+    margin: 40px 0 12px;
+    padding-bottom: 7px;
+    border-bottom: 1px solid var(--line);
+    color: var(--brand-dark);
+  }
+  h3 { font-size: 15.5px; margin: 24px 0 8px; color: var(--ink); }
+  p { margin: 10px 0; }
+  a { color: var(--brand-dark); }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 13.5px;
+  }
+  th, td {
+    border: 1px solid var(--line);
+    padding: 9px 12px;
+    text-align: left;
+    vertical-align: top;
+  }
+  th { background: var(--bg-soft); font-weight: 600; color: var(--ink); }
+  tr:nth-child(even) td { background: #fcfdfe; }
+  pre {
+    background: #1e2430;
+    color: #d7e0ea;
+    padding: 18px 20px;
+    border-radius: 6px;
+    overflow-x: auto;
+    font-family: "Cascadia Code", "Consolas", monospace;
+    font-size: 12.5px;
+    line-height: 1.5;
+  }
+  code:not(pre code) {
+    background: var(--bg-soft);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-family: "Cascadia Code", "Consolas", monospace;
+    font-size: 12.5px;
+    color: var(--brand-dark);
+  }
+  blockquote {
+    margin: 16px 0;
+    padding: 12px 20px;
+    border-left: 4px solid var(--brand);
+    background: var(--bg-soft);
+    color: var(--ink);
+    font-style: italic;
+  }
+  ul, ol { margin: 10px 0; padding-left: 24px; }
+  li { margin: 5px 0; }
+  .callout {
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--brand);
+    background: var(--bg-soft);
+    border-radius: 4px;
+    padding: 14px 18px;
+    margin: 18px 0;
+    font-size: 14px;
+  }
+  .badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 9px;
+    border-radius: 11px;
+    letter-spacing: .4px;
+  }
+  .badge.review { background: #fff3e6; color: var(--brand-dark); border: 1px solid #f3cfae; }
+  .tag-ok { color: var(--ok); font-weight: 600; }
+  .tag-warn { color: var(--warn); font-weight: 600; }
+  .tag-bad { color: var(--bad); font-weight: 600; }
+  footer.report-foot {
+    margin-top: 44px;
+    padding-top: 18px;
+    border-top: 1px solid var(--line);
+    font-size: 12.5px;
+    color: var(--muted);
+  }
+  @media print {
+    body { background: #fff; }
+    .page { box-shadow: none; margin: 0; max-width: 100%; padding: 24px 28px; }
+    h2 { page-break-after: avoid; }
+    table, pre, blockquote { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="report-head">
+    <div class="eyebrow">Technical Analysis Report &nbsp;·&nbsp; <span class="badge review">FOR SENIOR REVIEW</span></div>
+    <h1>Migrating Hangfire from IIS In-Process to a Dedicated Windows Service</h1>
+    <div class="meta-grid">
+      <div><b>Project:</b> eSyncMate_V2 (EDI Processing Platform)</div>
+      <div><b>Component:</b> eSyncMate.Processor — Hangfire Scheduler</div>
+      <div><b>Environment:</b> Production — <code>ems.safavieh.com:8085</code></div>
+      <div><b>Server:</b> Single node (<code>EMS</code>), Hangfire 1.8.5</div>
+      <div><b>Author:</b> Development Team</div>
+      <div><b>Date:</b> 2026-06-30</div>
+    </div>
+  </header>
+
+  <h2>1. Executive Summary</h2>
+  <p>The eSyncMate background-job engine (Hangfire) currently runs <b>inside the IIS worker process</b> (<code>w3wp.exe</code>) because <code>eSyncMate.Processor</code> is hosted with <code>hostingModel="inprocess"</code>. This couples <b>job execution</b> to the <b>IIS request/recycle lifecycle</b>. As a result, whenever IIS recycles, the application pool restarts, the server reboots, or a startup dependency hiccups, <b>all scheduled jobs silently stop running</b> until a user request "wakes up" the application.</p>
+  <p>This has caused <b>repeated production incidents</b> (most recently on 2026-06-30, a ~2.5-hour outage from 01:00 to 03:29 AM during which no EDI jobs ran). It has also introduced <b>orphaned execution locks</b> that block routes from re-running.</p>
+  <p>This report recommends a <b>low-risk, industry-standard remedy</b>: move the <b>Hangfire job-processing server</b> into a <b>dedicated always-on Windows Service</b>, while <b>keeping the existing Hangfire Dashboard exactly as-is in IIS</b>. Both halves continue to share the same SQL storage, so there is <b>no loss of monitoring or UI</b> and <b>no change to the dashboard URL</b>.</p>
+
+  <h2>2. Current Architecture</h2>
+<pre>                 ┌─────────────────────────────────────────────┐
+                 │            IIS  (w3wp.exe)                    │
+   HTTP/JWT ───► │   eSyncMate.Processor  (hostingModel=         │
+                 │                          inprocess)           │
+                 │   ┌─────────────────────────────────────┐    │
+                 │   │ Hangfire SERVER  (processes jobs)     │    │
+                 │   │ Hangfire DASHBOARD (/dashboard UI)    │    │
+                 │   └─────────────────────────────────────┘    │
+                 └───────────────────┬─────────────────────────┘
+                                     │
+                                     ▼
+                       SQL Server  ESYNCMATESCHEDULER
+                       (192.168.0.44,7100)  — Hangfire storage
+                                     ▲
+                                     │  spawns child process per route
+                                     ▼
+                       eSyncMate.RouteWorker.exe  (route execution)</pre>
+  <p><b>Key facts</b></p>
+  <ul>
+    <li>Hangfire version: 1.8.5.</li>
+    <li>The Hangfire <b>BackgroundJobServer lives inside <code>w3wp.exe</code></b>. When <code>w3wp</code> is not running the application, Hangfire is <b>not processing jobs</b> — even if the IIS Application Pool status shows "Started" (green).</li>
+    <li>Job execution is <b>fire-and-forget</b>: the Hangfire job spawns <code>eSyncMate.RouteWorker.exe</code> as a child process (long inventory feeds run 3–6 hours).</li>
+    <li>A <code>RouteExecutionLock</code> table provides cross-process duplicate-prevention and full-vs-differential feed coordination.</li>
+  </ul>
+
+  <h2>3. Problem Statement</h2>
+
+  <h3>3.1 Job execution is coupled to the IIS lifecycle</h3>
+  <p>Because Hangfire runs in-process, <b>any event that restarts or fails to warm <code>w3wp</code> stops all scheduled jobs</b>:</p>
+  <ul>
+    <li>Application Pool recycle (scheduled or manual, e.g. during deployment)</li>
+    <li>Server reboot (e.g. Windows Update)</li>
+    <li>A transient startup-dependency failure (e.g. SQL maintenance window)</li>
+  </ul>
+  <p>When this happens, jobs only resume after the <b>next HTTP request</b> loads the application — the textbook IIS in-process signature.</p>
+
+  <h3>3.2 Documented production incident (2026-06-30)</h3>
+  <table>
+    <tr><th>Observation</th><th>Value</th></tr>
+    <tr><td>Hangfire history graph</td><td>Steady ~400 jobs/period, then <b>dropped to 0 at ~01:00 AM</b></td></tr>
+    <tr><td>Hangfire "Server Started"</td><td><b>~03:29 AM</b> (the app only re-initialised on a user request)</td></tr>
+    <tr><td>Outage window</td><td><span class="tag-bad">01:00 → 03:29 AM (~2.5 hours, no jobs ran)</span></td></tr>
+    <tr><td>Recurring jobs missed</td><td>Hangfire fires an overdue recurring job only <b>once</b> on recovery — <b>no back-fill</b>, so partner feeds (inventory, orders, ASN) in that window were skipped</td></tr>
+  </table>
+  <p>The IIS warm-up configuration (App Pool <code>AlwaysRunning</code>, site <code>Preload</code>, Application Initialization module, <code>web.config</code> init block) was verified to be <b>correctly in place</b> — yet the outage still occurred, demonstrating that <b>warm-up configuration alone cannot guarantee availability</b>. The leading trigger is an unrecoverable 1:00 AM event (suspected SQL maintenance/restart during which the warm-up preload request failed; Application Initialization does not retry).</p>
+
+  <h3>3.3 Orphaned execution locks</h3>
+  <p>Route execution locks are released by an <b>in-process <code>Process.Exited</code> event handler</b> inside <code>w3wp</code>. If the application dies before the child process exits (recycle, crash, reboot, or the 1 AM event), <b>the handler never runs and the lock remains <code>IsActive = 1</code></b>, blocking that route from re-running until an hourly cleanup job reclaims it (up to ~60 minutes later). Seven such orphaned locks were observed during the 2026-06-30 incident.</p>
+
+  <h2>4. Root Cause</h2>
+  <blockquote>The single root cause is architectural: a long-running background job scheduler is hosted inside a request-driven web server (IIS) whose lifecycle is optimised for HTTP requests, not for 24/7 background processing.</blockquote>
+  <p>Every symptom above (silent job stoppage, dependency on a "wake-up" request, orphaned locks on recycle) is a direct consequence of this coupling. Tactical mitigations (warm-up settings, lock cleanup jobs) reduce the frequency but <b>cannot eliminate</b> the failure mode while Hangfire remains in-process.</p>
+
+  <h2>5. Proposed Solution</h2>
+  <p>Split Hangfire into its two independent responsibilities:</p>
+  <table>
+    <tr><th>Responsibility</th><th>API</th><th>New Home</th></tr>
+    <tr><td><b>Job Server</b> (processes jobs)</td><td><code>AddHangfireServer()</code></td><td><b>New dedicated Windows Service</b> (always-on)</td></tr>
+    <tr><td><b>Dashboard</b> (monitoring UI)</td><td><code>UseHangfireDashboard()</code></td><td><b>Stays in the IIS app, unchanged</b></td></tr>
+  </table>
+  <p>Both continue to point at the <b>same SQL storage (<code>ESYNCMATESCHEDULER</code>)</b>, so the dashboard keeps showing all jobs, recurring jobs, retries and servers — including the new Windows Service, which registers itself in the <b>Servers</b> tab.</p>
+
+  <h3>5.1 Target Architecture</h3>
+<pre>   ┌────────────────────────────────┐
+   │        IIS  (w3wp.exe)          │       ┌──────────────────────────────┐
+   │  eSyncMate.Processor            │       │   Windows Service (always-on) │
+   │  • REST APIs                    │       │   eSyncMate.Scheduler         │
+   │  • Hangfire DASHBOARD (/dashboard)│     │   • Hangfire SERVER           │
+   │  • NO AddHangfireServer()       │       │   • spawns RouteWorker.exe    │
+   └───────────────┬────────────────┘       └───────────────┬──────────────┘
+                   │                                         │
+                   └──────────────┬──────────────────────────┘
+                                  ▼
+                  SQL Server  ESYNCMATESCHEDULER  (shared Hangfire storage)</pre>
+
+  <h3>5.2 What changes vs. what stays the same</h3>
+  <table>
+    <tr><th>Aspect</th><th>Before</th><th>After</th></tr>
+    <tr><td>Dashboard URL</td><td><code>ems.safavieh.com:8085/dashboard</code></td><td><b>Unchanged</b></td></tr>
+    <tr><td>Dashboard content</td><td>Jobs / Recurring / Servers / graphs</td><td><b>Unchanged</b> (reads same DB)</td></tr>
+    <tr><td>Job processing</td><td>Inside <code>w3wp</code> (dies on recycle)</td><td><span class="tag-ok">In Windows Service (recycle-proof)</span></td></tr>
+    <tr><td>Recurring job definitions</td><td>DB-driven (Flow system)</td><td><b>Unchanged</b> (service picks them up)</td></tr>
+    <tr><td>Route execution</td><td>Spawns <code>RouteWorker.exe</code></td><td><b>Unchanged</b></td></tr>
+    <tr><td>Deployment of jobs</td><td>Stop App Pool → copy → start</td><td>Stop Service → copy → start</td></tr>
+  </table>
+
+  <h2>6. Benefits</h2>
+  <ol>
+    <li><b>Eliminates the primary outage class</b> — IIS recycles, deployments, reboots and warm-up failures no longer stop job processing.</li>
+    <li><b>Eliminates recycle-induced orphaned locks</b> — the job host is no longer torn down by App-Pool-OFF during deployments.</li>
+    <li><b>Cleaner, safer deployments</b> — restarting the API no longer disrupts running jobs; the scheduler is restarted independently and intentionally.</li>
+    <li><b>No loss of visibility</b> — the Hangfire Dashboard remains fully functional at the same URL.</li>
+    <li><b>Consistent with the existing design</b> — <code>RouteWorker.exe</code>, <code>AlertWorker.exe</code>, and <code>eSyncmateApiMonitor</code> already run as independent processes/services; this aligns the scheduler with that proven pattern.</li>
+    <li><b>Better diagnostics</b> — the scheduler gets its own service logs and its own Windows Service auto-restart-on-failure policy.</li>
+  </ol>
+
+  <h2>7. Risks and Mitigations</h2>
+  <table>
+    <tr><th>Risk</th><th>Likelihood</th><th>Mitigation</th></tr>
+    <tr><td>Both IIS and the Service accidentally run a Hangfire <b>Server</b> → jobs run twice</td><td><span class="tag-warn">Medium</span></td><td>Remove <code>AddHangfireServer()</code> from the IIS app; verify only the Service appears in the dashboard <b>Servers</b> tab. Hangfire's distributed locks also prevent most double-execution.</td></tr>
+    <tr><td>Service cannot resolve job types (e.g. <code>RouteEngine</code>)</td><td><span class="tag-ok">Low</span></td><td>Service references the same <code>eSyncMate.Processor</code> assemblies that define the job methods (same as RouteWorker today).</td></tr>
+    <tr><td>Configuration / connection-string drift between IIS app and Service</td><td><span class="tag-ok">Low</span></td><td>Both load configuration from the shared <code>ApplicationSettings</code> table (already the project standard); only the connection string is in <code>appsettings.json</code>.</td></tr>
+    <tr><td>Service account lacks permissions (DB, file paths, spawning child processes)</td><td><span class="tag-warn">Medium</span></td><td>Run the Service under the same identity currently used by the App Pool; validate DB access and <code>RouteWorker.exe</code> path on first start.</td></tr>
+    <tr><td>Operational unfamiliarity (start/stop/monitor a service)</td><td><span class="tag-ok">Low</span></td><td>Use NSSM (already used in HA tooling) for install/auto-start; document start/stop and add the Service to <code>eSyncmateApiMonitor</code> health checks.</td></tr>
+  </table>
+  <div class="callout"><b>Rollback:</b> trivial — re-enable <code>AddHangfireServer()</code> in the IIS app and stop the Windows Service. The system returns to the current behaviour with <b>no schema changes</b>.</div>
+
+  <h2>8. Implementation Plan (high level)</h2>
+  <table>
+    <tr><th>Phase</th><th>Task</th><th>Est. Effort</th></tr>
+    <tr><td>1</td><td>Create <code>eSyncMate.Scheduler</code> Windows Service project (.NET 8 Worker), referencing <code>eSyncMate.Processor</code>; configure Hangfire <b>Server only</b> against <code>ESYNCMATESCHEDULER</code></td><td>0.5 day</td></tr>
+    <tr><td>2</td><td>Move recurring-job registration/bootstrap (if any) so the Service owns it; confirm Flow-driven jobs are picked up</td><td>0.5 day</td></tr>
+    <tr><td>3</td><td>Remove <code>AddHangfireServer()</code> from <code>eSyncMate.Processor</code>; keep <code>UseHangfireDashboard()</code></td><td>0.25 day</td></tr>
+    <tr><td>4</td><td>Package + install via NSSM (auto-start, restart-on-failure); run under the App-Pool identity</td><td>0.5 day</td></tr>
+    <tr><td>5</td><td>Add the Service to <code>eSyncmateApiMonitor</code> health checks; logging/alerting</td><td>0.5 day</td></tr>
+    <tr><td>6</td><td>Staging validation: recycle IIS and confirm jobs keep running; deploy test; failover/restart test</td><td>1 day</td></tr>
+    <tr><td>7</td><td>Production cutover + monitoring</td><td>0.5 day</td></tr>
+    <tr><td colspan="2"><b>Total</b></td><td><b>~3.5–4 days</b></td></tr>
+  </table>
+
+  <h2>9. Interim Mitigations Already Applied (Tactical)</h2>
+  <p>These reduce impact <b>today</b>, but do <b>not</b> replace the strategic migration:</p>
+  <ol>
+    <li><b>IIS warm-up settings verified</b> — App Pool <code>Start Mode = AlwaysRunning</code>, <code>Idle Time-out = 0</code>, site <code>Preload = True</code>, Application Initialization module enabled, <code>web.config</code> init block present (preloads <code>/api/health</code>).</li>
+    <li><b>Deterministic lock release (code fix, 2026-06-30)</b> — <code>eSyncMate.RouteWorker</code> now releases its <b>own</b> execution lock in a <code>finally</code> block (via a new <code>--lockToken</code> argument) instead of relying solely on the parent process's <code>Process.Exited</code> handler. The parent handler and the hourly cleanup remain as idempotent backstops.</li>
+    <li><b>Lock timeout alignment (config)</b> — <code>ApplicationSettings.RouteLockTimeoutMinutes</code> to be set greater than the longest route run (e.g. 480 min) so a still-running multi-hour feed's lock is not prematurely reclaimed (which could cause a duplicate run).</li>
+    <li><b>Deploy practice</b> — verify no <code>RouteWorker.exe</code> is running before stopping the App Pool, to avoid orphaning in-flight runs.</li>
+  </ol>
+
+  <h2>10. Recommendation</h2>
+  <div class="callout">
+    Approve the migration of the <b>Hangfire job server to a dedicated Windows Service</b>, retaining the dashboard in IIS. It is a <b>low-risk, reversible, ~4-day</b> change that <b>permanently eliminates</b> the recurring class of background-job outages and orphaned-lock issues, with <b>no loss of monitoring capability</b> and <b>no database schema changes</b>. The tactical fixes in Section 9 should remain in place as defence-in-depth.
+  </div>
+
+  <h2>Appendix A — Glossary</h2>
+  <ul>
+    <li><b>In-process hosting</b> — the .NET app runs inside the IIS worker process (<code>w3wp.exe</code>) rather than a separate <code>dotnet.exe</code>.</li>
+    <li><b>Application Pool recycle</b> — IIS periodically (or on demand) restarts the worker process; in-process apps lose all in-memory state, including a running Hangfire server.</li>
+    <li><b>Application Initialization / Preload</b> — IIS feature that sends a warm-up request to the app after a restart so it initialises without waiting for a real user request.</li>
+    <li><b>Hangfire Server vs Dashboard</b> — the Server processes jobs; the Dashboard is a read-only web UI over the same storage. They are independent and need not share a process.</li>
+  </ul>
+
+  <footer class="report-foot">
+    eSyncMate_V2 — Hangfire Windows Service Migration Analysis &nbsp;·&nbsp; Prepared 2026-06-30 &nbsp;·&nbsp; For Senior Review
+  </footer>
+
+</div>
+</body>
+</html>
