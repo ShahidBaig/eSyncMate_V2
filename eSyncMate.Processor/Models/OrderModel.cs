@@ -95,5 +95,11 @@ namespace eSyncMate.Processor.Models
         public string? ShipToZip { get; set; }
         public string? ShipToCountry { get; set; }
         public string? ShipToName { get; set; }
+
+        // Shipping instructions sent to the ERP sales order
+        public string? WarehouseCode { get; set; }
+        public string? ShippingCode { get; set; }
+        public string? ShippingAgentCode { get; set; }
+        public string? ShipDate { get; set; }
     }
 }

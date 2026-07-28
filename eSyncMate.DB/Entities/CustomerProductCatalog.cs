@@ -762,6 +762,176 @@ namespace eSyncMate.DB.Entities
             return l_Result;
         }
 
+        /// <summary>
+        /// Same paged list, plus the latest error payload for each row so the grid can show it
+        /// on hover. Errors live in SCS_CustomerProductCatalogData as RSP-ERR (marketplace),
+        /// REQ-ERR (request rejected) or Internal (validation done here).
+        /// The page is taken first, so the lookup only runs for the rows being displayed.
+        /// </summary>
+        public bool GetViewListPagedWithError(string p_Criteria, string p_Fields, ref DataTable p_Data, string p_OrderBy, int pageNumber, int pageSize, out int totalCount)
+        {
+            totalCount = 0;
+
+            string l_CountQuery = "SELECT COUNT(*) FROM [" + CustomerProductCatalog.ViewName + "]";
+            if (!string.IsNullOrEmpty(p_Criteria))
+                l_CountQuery += " WHERE " + p_Criteria;
+
+            var l_CountData = new DataTable();
+            Connection.GetData(l_CountQuery, ref l_CountData);
+            if (l_CountData.Rows.Count > 0)
+                totalCount = Convert.ToInt32(l_CountData.Rows[0][0]);
+            l_CountData.Dispose();
+
+            string l_OrderBy = !string.IsNullOrEmpty(p_OrderBy) ? p_OrderBy : "ProductId DESC";
+            int offset = (pageNumber - 1) * pageSize;
+
+            string l_Query = "WITH PagedCatalog AS (SELECT "
+                           + (string.IsNullOrEmpty(p_Fields) ? "*" : p_Fields)
+                           + " FROM [" + CustomerProductCatalog.ViewName + "]";
+
+            if (!string.IsNullOrEmpty(p_Criteria))
+                l_Query += " WHERE " + p_Criteria;
+
+            l_Query += $" ORDER BY {l_OrderBy} OFFSET {offset} ROWS FETCH NEXT {pageSize} ROWS ONLY)";
+
+            // A rejection carries no *-ERR row: the reasons sit inside the RSP-JSON response,
+            // so that is used as a fallback for REJECTED rows only (it is a large payload).
+            l_Query += " SELECT P.*, ERR.ErrorData, ERR.ErrorType, ERR.ErrorDate FROM PagedCatalog P"
+                    + " OUTER APPLY (SELECT TOP 1 LEFT(D.Data, 8000) AS ErrorData, D.Type AS ErrorType, D.CreatedDate AS ErrorDate"
+                    + " FROM [SCS_CustomerProductCatalogData] D"
+                    + " WHERE D.ProductId = P.ProductId"
+                    + " AND (D.Type IN ('RSP-ERR', 'REQ-ERR', 'Internal')"
+                    + "      OR (D.Type = 'RSP-JSON' AND P.SyncStatus = 'REJECTED'))"
+                    + " ORDER BY CASE WHEN D.Type = 'RSP-JSON' THEN 1 ELSE 0 END, D.CreatedDate DESC, D.Id DESC) ERR"
+                    + $" ORDER BY {l_OrderBy}";
+
+            return Connection.GetData(l_Query, ref p_Data);
+        }
+
+        /// <summary>
+        /// Builds a quoted, comma-separated IN() list from the supplied item ids.
+        /// Single quotes are doubled so a value cannot break the statement.
+        /// </summary>
+        private static string BuildItemIdList(IEnumerable<string> p_ItemIDs)
+        {
+            var l_Values = new List<string>();
+
+            foreach (string l_Item in p_ItemIDs)
+            {
+                if (string.IsNullOrWhiteSpace(l_Item)) continue;
+                l_Values.Add("'" + l_Item.Trim().Replace("'", "''") + "'");
+            }
+
+            return string.Join(",", l_Values);
+        }
+
+        /// <summary>
+        /// What a delete would touch, for the confirmation step: one row per item id found,
+        /// with how many catalog rows and how many customers it appears under.
+        /// </summary>
+        public bool GetProductsByItemIDs(List<string> p_ItemIDs, ref DataTable p_Data)
+        {
+            string l_List = BuildItemIdList(p_ItemIDs);
+
+            if (string.IsNullOrEmpty(l_List))
+            {
+                return false;
+            }
+
+            string l_Query = "SELECT ItemID, COUNT(*) AS ProductCount, COUNT(DISTINCT CustomerID) AS CustomerCount,"
+                           + " STUFF((SELECT ', ' + C2.CustomerID FROM [" + CustomerProductCatalog.TableName + "] C2"
+                           + "        WHERE C2.ItemID = C1.ItemID GROUP BY C2.CustomerID FOR XML PATH('')), 1, 2, '') AS Customers"
+                           + " FROM [" + CustomerProductCatalog.TableName + "] C1"
+                           + " WHERE ItemID IN (" + l_List + ")"
+                           + " GROUP BY ItemID ORDER BY ItemID";
+
+            return Connection.GetData(l_Query, ref p_Data);
+        }
+
+        /// <summary>
+        /// Permanently removes catalog rows for the supplied item ids across every customer,
+        /// together with their detail rows. Header and detail go in one transaction so the
+        /// 2M-row data table can never be left with orphans.
+        /// </summary>
+        public Result DeleteProductsByItemIDs(List<string> p_ItemIDs, out int p_DeletedProducts, out int p_DeletedData)
+        {
+            Result l_Result = Result.GetFailureResult();
+            bool l_Trans = false;
+            p_DeletedProducts = 0;
+            p_DeletedData = 0;
+
+            string l_List = BuildItemIdList(p_ItemIDs);
+
+            if (string.IsNullOrEmpty(l_List))
+            {
+                return l_Result;
+            }
+
+            try
+            {
+                // Count first so the caller can report what was removed
+                DataTable l_Counts = new DataTable();
+                string l_CountQuery = "SELECT"
+                    + " (SELECT COUNT(*) FROM [" + CustomerProductCatalog.TableName + "] WHERE ItemID IN (" + l_List + ")) AS ProductCount,"
+                    + " (SELECT COUNT(*) FROM [SCS_CustomerProductCatalogData] WHERE ProductId IN"
+                    + "   (SELECT ProductId FROM [" + CustomerProductCatalog.TableName + "] WHERE ItemID IN (" + l_List + "))) AS DataCount";
+
+                if (Connection.GetData(l_CountQuery, ref l_Counts) && l_Counts.Rows.Count > 0)
+                {
+                    p_DeletedProducts = PublicFunctions.ConvertNullAsInteger(l_Counts.Rows[0]["ProductCount"], 0);
+                    p_DeletedData = PublicFunctions.ConvertNullAsInteger(l_Counts.Rows[0]["DataCount"], 0);
+                }
+                l_Counts.Dispose();
+
+                if (p_DeletedProducts == 0)
+                {
+                    return Result.GetNoRecordResult();
+                }
+
+                l_Trans = this.Connection.BeginTransaction();
+
+                // Detail rows first — they are keyed on the products about to go
+                bool l_Process = this.Connection.Execute(
+                    "DELETE FROM [SCS_CustomerProductCatalogData] WHERE ProductId IN"
+                  + " (SELECT ProductId FROM [" + CustomerProductCatalog.TableName + "] WHERE ItemID IN (" + l_List + "))");
+
+                if (l_Process)
+                {
+                    l_Process = this.Connection.Execute(
+                        "DELETE FROM [" + CustomerProductCatalog.TableName + "] WHERE ItemID IN (" + l_List + ")");
+                }
+
+                if (l_Trans)
+                {
+                    if (l_Process)
+                    {
+                        this.Connection.CommitTransaction();
+                        l_Result = Result.GetSuccessResult();
+                    }
+                    else
+                    {
+                        this.Connection.RollbackTransaction();
+                        p_DeletedProducts = 0;
+                        p_DeletedData = 0;
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                if (l_Trans)
+                {
+                    this.Connection.RollbackTransaction();
+                }
+
+                p_DeletedProducts = 0;
+                p_DeletedData = 0;
+
+                throw;
+            }
+
+            return l_Result;
+        }
+
         public bool GetProductsData(int ID, ref DataTable p_Data)
         {
             string l_SQL = string.Empty;

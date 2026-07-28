@@ -88,6 +88,21 @@ retry:
                     
                     request.AddHeader("x-amz-access-token", AmazonConnector.Token);
                 }
+
+                // Only take the OAuth path when the customer's UseNewAuthentication flag is ON;
+                // otherwise legacy header auth (x-api-key / x-seller-token) applies as before.
+                if (connector.AuthType == "TargetGetToken" && TargetConnector.IsNewAuthEnabled(connector.CustomerID))
+                {
+                    // Credentials + tokens live on the Customers OAuth columns, resolved by CustomerID (ERP id).
+                    TargetConnector l_TargetConnector = new TargetConnector();
+
+                    string l_TargetToken = await l_TargetConnector.GetAccessToken(connector.CustomerID);
+
+                    if (!string.IsNullOrEmpty(l_TargetToken))
+                    {
+                        request.AddHeader("Authorization", $"Bearer {l_TargetToken}");
+                    }
+                }
                 if (connector.AuthType == "RepaintGetToken")
                 {
                     RepaintConnector l_RepaintConnector = new RepaintConnector();

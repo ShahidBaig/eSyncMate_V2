@@ -602,7 +602,7 @@ namespace eSyncMate.Processor.Controllers
                     l_DateFilter = " CreatedDate >= DATEADD(HOUR, -24, GETDATE())";
 
                 // Customer-wise order counts
-                string l_CustomerQuery = $@"SELECT ISNULL(CustomerName,'') as CustomerName, ISNULL(ERPCustomerID,'') as ERPCustomerID, COUNT(*) as OrderCount
+                string l_CustomerQuery = $@"SELECT ISNULL(CustomerName,'') as CustomerName, ISNULL(ERPCustomerID,'') as ERPCustomerID, COUNT(*) as OrderCount, MAX(CreatedDate) as LastOrderDate
                     FROM VW_Orders
                     WHERE {l_DateFilter} AND Status <> 'DELETED'{l_CustomerFilter}
                     GROUP BY CustomerName, ERPCustomerID ORDER BY OrderCount DESC";
@@ -611,16 +611,19 @@ namespace eSyncMate.Processor.Controllers
                 l_Conn.GetData(l_CustomerQuery, ref l_CustomerDT);
                 var customerWise = new List<object>();
                 int totalOrders = 0;
+                DateTime? totalLastOrderDate = null;
                 foreach (DataRow row in l_CustomerDT.Rows)
                 {
                     int count = Convert.ToInt32(row["OrderCount"]);
                     totalOrders += count;
-                    customerWise.Add(new { customerName = row["CustomerName"]?.ToString(), erpCustomerID = row["ERPCustomerID"]?.ToString(), orderCount = count });
+                    DateTime? l_Lod = row["LastOrderDate"] == DBNull.Value ? (DateTime?)null : Convert.ToDateTime(row["LastOrderDate"]);
+                    if (l_Lod.HasValue && (!totalLastOrderDate.HasValue || l_Lod > totalLastOrderDate)) totalLastOrderDate = l_Lod;
+                    customerWise.Add(new { customerName = row["CustomerName"]?.ToString(), erpCustomerID = row["ERPCustomerID"]?.ToString(), orderCount = count, lastOrderDate = l_Lod });
                 }
 
                 // Status-wise order counts — group by the effective (display) status so
                 // 'Partially Shipped'/'Partially Cancelled' etc. count correctly and match the drilldown.
-                string l_StatusQuery = $@"SELECT ISNULL(NULLIF(DisplayStatus,''), ISNULL(Status,'')) as Status, COUNT(*) as StatusCount
+                string l_StatusQuery = $@"SELECT ISNULL(NULLIF(DisplayStatus,''), ISNULL(Status,'')) as Status, COUNT(*) as StatusCount, MAX(CreatedDate) as LastOrderDate
                     FROM VW_Orders
                     WHERE {l_DateFilter} AND Status <> 'DELETED'{l_CustomerFilter}
                     GROUP BY ISNULL(NULLIF(DisplayStatus,''), ISNULL(Status,'')) ORDER BY StatusCount DESC";
@@ -630,11 +633,11 @@ namespace eSyncMate.Processor.Controllers
                 var statusWise = new List<object>();
                 foreach (DataRow row in l_StatusDT.Rows)
                 {
-                    statusWise.Add(new { status = row["Status"]?.ToString(), statusCount = Convert.ToInt32(row["StatusCount"]) });
+                    statusWise.Add(new { status = row["Status"]?.ToString(), statusCount = Convert.ToInt32(row["StatusCount"]), lastOrderDate = row["LastOrderDate"] == DBNull.Value ? (DateTime?)null : Convert.ToDateTime(row["LastOrderDate"]) });
                 }
 
                 // Partner + Status breakdown (for expandable detail)
-                string l_PartnerStatusQuery = $@"SELECT ISNULL(ERPCustomerID,'') as ERPCustomerID, ISNULL(NULLIF(DisplayStatus,''), ISNULL(Status,'')) as Status, COUNT(*) as StatusCount
+                string l_PartnerStatusQuery = $@"SELECT ISNULL(ERPCustomerID,'') as ERPCustomerID, ISNULL(NULLIF(DisplayStatus,''), ISNULL(Status,'')) as Status, COUNT(*) as StatusCount, MAX(CreatedDate) as LastOrderDate
                     FROM VW_Orders
                     WHERE {l_DateFilter} AND Status <> 'DELETED'{l_CustomerFilter}
                     GROUP BY ERPCustomerID, ISNULL(NULLIF(DisplayStatus,''), ISNULL(Status,'')) ORDER BY ERPCustomerID, StatusCount DESC";
@@ -647,10 +650,10 @@ namespace eSyncMate.Processor.Controllers
                     string custId = row["ERPCustomerID"]?.ToString() ?? "";
                     if (!partnerStatusWise.ContainsKey(custId))
                         partnerStatusWise[custId] = new List<object>();
-                    partnerStatusWise[custId].Add(new { status = row["Status"]?.ToString(), statusCount = Convert.ToInt32(row["StatusCount"]) });
+                    partnerStatusWise[custId].Add(new { status = row["Status"]?.ToString(), statusCount = Convert.ToInt32(row["StatusCount"]), lastOrderDate = row["LastOrderDate"] == DBNull.Value ? (DateTime?)null : Convert.ToDateTime(row["LastOrderDate"]) });
                 }
 
-                return Task.FromResult<object>(new { code = 200, message = "Success", customerWise, statusWise, totalOrders, partnerStatusWise });
+                return Task.FromResult<object>(new { code = 200, message = "Success", customerWise, statusWise, totalOrders, totalLastOrderDate, partnerStatusWise });
             }
             catch (Exception ex)
             {
@@ -740,7 +743,7 @@ namespace eSyncMate.Processor.Controllers
                     l_Criteria += $" AND ISNULL(NULLIF(DisplayStatus,''), Status) = '{status}'";
 
                 int totalCount = 0;
-                l_Order.GetViewListPaged(l_Criteria, string.Empty, ref l_Data, "CreatedDate DESC", pageNumber, pageSize, out totalCount);
+                l_Order.GetViewListPagedWithErpInfo(l_Criteria, ref l_Data, "CreatedDate DESC", pageNumber, pageSize, out totalCount);
 
                 l_Response.OrdersData = l_Data;
                 l_Response.TotalCount = totalCount;
@@ -843,7 +846,7 @@ namespace eSyncMate.Processor.Controllers
                 this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Staring order search.");
 
                 int totalCount = 0;
-                l_Order.GetViewListPaged(l_Criteria, string.Empty, ref l_Data, "Id DESC", pageNumber, pageSize, out totalCount);
+                l_Order.GetViewListPagedWithErpInfo(l_Criteria, ref l_Data, "Id DESC", pageNumber, pageSize, out totalCount);
 
                 this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Orders searched {{{l_Data.Rows.Count}}} of {totalCount} total.");
                 this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Populating orders.");
@@ -1252,6 +1255,13 @@ namespace eSyncMate.Processor.Controllers
                             l_Result = order.UpdateShippingAddress(orderModel.Id, orderModel.ShipToAddress1, orderModel.ShipToAddress2, orderModel.ShipToCity, orderModel.ShipToState, orderModel.ShipToZip, orderModel.ShipToCountry, orderModel.ShipToName, orderModel.ShipToCompanyName);
 
                         }
+
+                        // Warehouse / shipping instructions are kept only on the stored payload —
+                        // the same copy the transformation map reads, so there is nothing to keep in sync.
+                        if (l_Result != null && l_Result.IsSuccess)
+                        {
+                            l_Result = order.UpdateShippingFieldsInfo(orderModel.Id, orderModel.WarehouseCode, orderModel.ShippingCode, orderModel.ShippingAgentCode, orderModel.ShipDate);
+                        }
                     }
 
                     l_Response.Code = l_Result.IsSuccess ? (int)ResponseCodes.Success : (int)ResponseCodes.Error;
@@ -1333,6 +1343,107 @@ namespace eSyncMate.Processor.Controllers
             }
 
             return BadRequest(new { code = 400, message = $"Failed to set order status for OrderId {OrderId}: {l_Result?.Description ?? "Unknown error"}" });
+        }
+
+        // Resubmit an already-SYNCED order to the ERP. Like Reprocess, the ERP is asked first
+        // (Get_OrderInfo): the order is posted again ONLY if it does not exist in SPARS, or exists with a
+        // Cancelled/Void status. Differences from Reprocess: previous OrderData logs are kept (not replaced),
+        // and the order stays SYNCED until it is actually posted (Reprocess flips it to InProgress up front).
+        [HttpPost]
+        [Route("resubmitOrder")]
+        public IActionResult ResubmitOrder(int OrderId, string CustomerName)
+        {
+            if (OrderId <= 0)
+            {
+                return BadRequest(new { code = 400, message = "Invalid orderId" });
+            }
+
+            // The order is left SYNCED here on purpose — the ERP is asked first, and the status is only
+            // moved to InProgress inside the route at the moment the order is actually posted.
+            string result = SCSPlaceOrderRoute.ExecuteSingle(_config, OrderId, CustomerName, true, out string l_InfoMessage);
+
+            if (string.IsNullOrEmpty(result))
+            {
+                // The ERP already had the order with a live status — it was not posted again.
+                if (!string.IsNullOrEmpty(l_InfoMessage))
+                {
+                    return Ok(new { code = 200, message = $"Order {OrderId} was not resubmitted. {l_InfoMessage}" });
+                }
+
+                return Ok(new { code = 200, message = $"Order {OrderId} resubmitted to ERP successfully." });
+            }
+
+            return BadRequest(new { code = 400, message = $"Order {OrderId} failed to resubmit: {result}" });
+        }
+
+        // Re-Transmit the ASN for a SHIPPED order: (1) fetch the ASN from the ERP (SPARS) again for
+        // this order, (2) re-send it to the customer's marketplace. Order status is left unchanged.
+        [HttpPost]
+        [Route("reTransmitASN")]
+        public IActionResult ReTransmitASN(int OrderId, string CustomerName)
+        {
+            if (OrderId <= 0)
+            {
+                return BadRequest(new { code = 400, message = "Invalid orderId" });
+            }
+
+            // Step 1 — get the ASN from the ERP again (refreshes the stored ERPASN-JSON).
+            string getResult = SCSASNRoute.ExecuteSingle(_config, OrderId, CustomerName);
+            if (!string.IsNullOrEmpty(getResult))
+            {
+                return BadRequest(new { code = 400, message = $"ASN fetch from ERP failed: {getResult}" });
+            }
+
+            // Find which marketplace ASN route this customer uses.
+            string l_AsnTypeList = string.Join(",", new[]
+            {
+                (int)RouteTypesEnum.ASNShipmentNotification,
+                (int)RouteTypesEnum.WalmartASNShipmentNotification,
+                (int)RouteTypesEnum.MacysASNShipmentNotification,
+                (int)RouteTypesEnum.LowesASNShipmentNotification,
+                (int)RouteTypesEnum.AmazonASNShipmentNotification,
+                (int)RouteTypesEnum.KnotASNShipmentNotification,
+                (int)RouteTypesEnum.MichealASNShipmentNotification
+            });
+
+            int l_AsnType = 0;
+            DBConnector l_Conn = new DBConnector(CommonUtils.ConnectionString);
+            DataTable l_Dt = new DataTable();
+            l_Conn.GetData($"SELECT TOP 1 TypeId FROM Routes WHERE CustomerName = '{CustomerName}' AND TypeId IN ({l_AsnTypeList})", ref l_Dt);
+            if (l_Dt.Rows.Count > 0)
+            {
+                l_AsnType = Convert.ToInt32(l_Dt.Rows[0]["TypeId"]);
+            }
+            l_Dt.Dispose();
+
+            // Step 2 — re-send the ASN to the marketplace via the matching partner route.
+            string sendResult;
+            switch (l_AsnType)
+            {
+                case (int)RouteTypesEnum.WalmartASNShipmentNotification:
+                    sendResult = WalmartASNShipmentNotificationRoute.ExecuteSingle(_config, OrderId, CustomerName); break;
+                case (int)RouteTypesEnum.MacysASNShipmentNotification:
+                    sendResult = MacysASNShipmentNotificationRoute.ExecuteSingle(_config, OrderId, CustomerName); break;
+                case (int)RouteTypesEnum.LowesASNShipmentNotification:
+                    sendResult = LowesASNShipmentNotificationRoute.ExecuteSingle(_config, OrderId, CustomerName); break;
+                case (int)RouteTypesEnum.AmazonASNShipmentNotification:
+                    sendResult = AmazonASNShipmentNotificationRoute.ExecuteSingle(_config, OrderId, CustomerName); break;
+                case (int)RouteTypesEnum.KnotASNShipmentNotification:
+                    sendResult = KnotASNShipmentNotificationRoute.ExecuteSingle(_config, OrderId, CustomerName); break;
+                case (int)RouteTypesEnum.MichealASNShipmentNotification:
+                    sendResult = MichealASNShipmentNotificationRoute.ExecuteSingle(_config, OrderId, CustomerName); break;
+                case (int)RouteTypesEnum.ASNShipmentNotification:
+                    sendResult = ASNShipmentNotificationRoute.ExecuteSingle(_config, OrderId, CustomerName); break;
+                default:
+                    return BadRequest(new { code = 400, message = $"No marketplace ASN route configured for customer {CustomerName}." });
+            }
+
+            if (string.IsNullOrEmpty(sendResult))
+            {
+                return Ok(new { code = 200, message = $"Order {OrderId} ASN re-transmitted successfully." });
+            }
+
+            return BadRequest(new { code = 400, message = $"Order {OrderId} ASN re-transmit failed: {sendResult}" });
         }
     }
 }

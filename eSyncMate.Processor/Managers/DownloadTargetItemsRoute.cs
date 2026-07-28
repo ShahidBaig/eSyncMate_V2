@@ -94,7 +94,7 @@ namespace eSyncMate.Processor.Managers
 
                     dataTable = new DataTable();
 
-                    GetAlItems("", route.Id,  ref dataTable,ref l_CustomerProductCatalogPricesDT, l_SourceConnector.CustomerID);
+                    GetAlItems(l_DestinationConnector, "", route.Id, ref dataTable, ref l_CustomerProductCatalogPricesDT, l_SourceConnector.CustomerID);
 
                     if (dataTable.Rows.Count > 0)
                     {
@@ -265,12 +265,12 @@ namespace eSyncMate.Processor.Managers
             }
         }
 
-        static DataTable GetAlItems(string ItemTypeID,int Id,ref DataTable l_data,ref DataTable l_ProductCatalogData, string CustomerID)
+        static DataTable GetAlItems(ConnectorDataModel connector,string ItemTypeID,int Id,ref DataTable l_data,ref DataTable l_ProductCatalogData, string CustomerID)
         {
             string after_id = string.Empty;
             StringBuilder data = new StringBuilder();
             DataTable dt = new DataTable();
-            
+
             AddStaticColumns(ref l_data);
 
             do
@@ -278,13 +278,24 @@ namespace eSyncMate.Processor.Managers
                 int retryCount = 0;
 
             retryGetItems:
-                string json = GetItems(after_id, ItemTypeID, Id, CustomerID);
+                string json = GetItems(connector, after_id, ItemTypeID, Id, CustomerID);
 
                 if (!string.IsNullOrEmpty(json))
                 {
                     TargetItems[] items = JsonConvert.DeserializeObject<TargetItems[]>(json);
 
-                    if (items.Count() > 0)
+                    if (items == null)
+                    {
+                        DB.Entities.Routes l_route = new DB.Entities.Routes();
+                        l_route.Id = Id;
+                        l_route.UseConnection(CommonUtils.ConnectionString);
+                        l_route.SaveLog(LogTypeEnum.Error, $"Items response could not be parsed for customer [{CustomerID}]. Stopping pagination.", json, 1);
+
+                        after_id = string.Empty;
+                        continue;
+                    }
+
+                    if (items.Length > 0)
                     {
                         foreach (TargetItems item in items)
                         {
@@ -312,54 +323,36 @@ namespace eSyncMate.Processor.Managers
             return l_data;
         }
 
-        static string GetItems(string after_id,string ItemTypeID,int id, string CustomerID)
+        static string GetItems(ConnectorDataModel connector, string after_id, string ItemTypeID, int id, string CustomerID)
         {
-            RestClient client;
-            RestRequest request;
-            RestResponse response;
-            DB.Entities.Routes l_route = new DB.Entities.Routes();
-            RestClientOptions options = new RestClientOptions("https://api.target.com/sellers/v1/")
+            // Deep-clone the connector for thread safety and per-page parameter mutation.
+            ConnectorDataModel l_Connector = JsonConvert.DeserializeObject<ConnectorDataModel>(JsonConvert.SerializeObject(connector));
+
+            if (l_Connector.Parmeters == null)
+                l_Connector.Parmeters = new List<eSyncMate.Processor.Models.Parameter>();
+
+            // after_id drives pagination; only sent from the second page onwards.
+            if (!string.IsNullOrEmpty(after_id))
             {
-                MaxTimeout = -1,
-            };
+                eSyncMate.Processor.Models.Parameter afterParam = l_Connector.Parmeters.FirstOrDefault(p => p.Name == "after_id");
 
-            client = new RestClient(options);
-
-            if (CustomerID == "TAR6266P")
-            {
-                if (string.IsNullOrEmpty(after_id))
-                    request = new RestRequest($"sellers/5d949496fcd4b70097dfad5e/products_catalog?per_page=1000&expand=fields", Method.Get);
-
+                if (afterParam != null)
+                    afterParam.Value = after_id;
                 else
-                    request = new RestRequest($"sellers/5d949496fcd4b70097dfad5e/products_catalog?per_page=1000&expand=fields&after_id={after_id}", Method.Get);
-
-                request.AddHeader("x-api-key", "64dd4d52f0e4a4ffa1c25cbdca78d33906cc3af8");
-                request.AddHeader("x-seller-token", "0902d4a0688a4cdeaaee926fc1f70155");
-                request.AddHeader("x-seller-id", "5d949496fcd4b70097dfad5e");
-            }
-            else
-            {
-                if (string.IsNullOrEmpty(after_id))
-                    request = new RestRequest($"sellers/6802accd146a9b60e3850f70/products_catalog?per_page=1000&expand=fields", Method.Get);
-
-                else
-                    request = new RestRequest($"sellers/6802accd146a9b60e3850f70/products_catalog?per_page=1000&expand=fields&after_id={after_id}", Method.Get);
-
-                request.AddHeader("x-api-key", "80951e9d352afdd7725961817c62a51baf637658");
-                request.AddHeader("x-seller-token", "d061a03b9bbc48c48c63b93559bd48a8");
-                request.AddHeader("x-seller-id", "6802accd146a9b60e3850f70");
+                    l_Connector.Parmeters.Add(new eSyncMate.Processor.Models.Parameter { Name = "after_id", Value = after_id });
             }
 
-            response = client.Execute(request);
+            RestResponse response = RestConnector.Execute(l_Connector, "").GetAwaiter().GetResult();
 
             if (response.StatusCode == System.Net.HttpStatusCode.OK)
             {
-                l_route.Id  = id;
+                DB.Entities.Routes l_route = new DB.Entities.Routes();
+                l_route.Id = id;
                 l_route.UseConnection(CommonUtils.ConnectionString);
                 l_route.SaveData("JSON-RVD", 0, response.Content, 1);
             }
 
-            return response.Content.ToString();
+            return response.Content?.ToString();
         }
 
         static void AddStaticColumns(ref DataTable l_data)

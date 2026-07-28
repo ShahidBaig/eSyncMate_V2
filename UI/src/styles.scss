@@ -530,8 +530,88 @@ router-outlet + * {
 }
 
 // ============================================================
+// V2-specific: Elevated (3D) dialog shell — drilldown & order logs popups
+// ============================================================
+.elevated-dialog-panel .mat-mdc-dialog-container {
+  --mdc-dialog-container-shape: 16px;
+}
+
+.elevated-dialog-panel .mat-mdc-dialog-container .mdc-dialog__surface {
+  border-radius: 16px;
+  overflow: hidden;
+  background: linear-gradient(180deg, #ffffff 0%, #f6f8fb 100%);
+  // Layered depth: hairline edge, contact shadow, mid lift, wide ambient cast
+  box-shadow:
+    0 0 0 1px rgba(15, 23, 42, 0.06),
+    0 1px 2px rgba(15, 23, 42, 0.10),
+    0 12px 28px -8px rgba(15, 23, 42, 0.32),
+    0 40px 80px -32px rgba(15, 23, 42, 0.50);
+}
+
+.elevated-dialog-panel .mat-mdc-dialog-surface::before {
+  // Top highlight so the panel edge catches the light
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.85);
+  z-index: 1;
+  pointer-events: none;
+}
+
+.elevated-dialog-backdrop {
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(3px);
+}
+
+// ============================================================
 // V2-specific: Tooltips
 // ============================================================
+// Order status tooltip — multi-line, readable, elevated
+.status-tooltip.mat-mdc-tooltip .mdc-tooltip__surface {
+  max-width: 460px !important;
+  white-space: pre-line !important;
+  text-align: left !important;
+  font-family: 'Poppins', 'Segoe UI', sans-serif !important;
+  font-size: 13px !important;
+  line-height: 1.75 !important;
+  padding: 14px 18px !important;
+  border-radius: 12px !important;
+  background: #ffffff !important;
+  color: #1e293b !important;
+  box-shadow:
+    0 0 0 1px rgba(15, 23, 42, 0.08),
+    0 2px 4px rgba(15, 23, 42, 0.10),
+    0 12px 28px -8px rgba(15, 23, 42, 0.35) !important;
+}
+
+// First line is the heading — bold it so the eye lands there first
+.status-tooltip.mat-mdc-tooltip .mdc-tooltip__surface::first-line {
+  font-weight: 700;
+  letter-spacing: 0.4px;
+}
+
+// ERP error variant — dark slate card with a red rail. Red stays an accent (rail + heading)
+// instead of a full-bleed background, which is harsh to read on a 460px card.
+.error-tooltip.mat-mdc-tooltip .mdc-tooltip__surface {
+  background: #1e293b !important;
+  border-left: 4px solid #ef4444 !important;
+  color: #e2e8f0 !important;
+  box-shadow:
+    0 0 0 1px rgba(239, 68, 68, 0.25),
+    0 2px 4px rgba(15, 23, 42, 0.30),
+    0 12px 28px -8px rgba(15, 23, 42, 0.55) !important;
+}
+
+// "ERP ERROR" heading — soft red so it signals failure without glare
+.error-tooltip.mat-mdc-tooltip .mdc-tooltip__surface::first-line {
+  color: #fca5a5;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+}
+
 .diagram-tooltip.mat-mdc-tooltip .mdc-tooltip__surface {
   max-width: 320px !important;
   white-space: pre-line !important;
@@ -736,4 +816,23 @@ input::-webkit-credentials-auto-fill-button {
   0%   { opacity: 0; transform: translateY(-6px) scale(0.97); }
   100% { opacity: 1; transform: translateY(0) scale(1); }
 }
+
+/* Target OAuth dialog — 3D elevated panel */
+.tod-panel {
+  .mat-mdc-dialog-container .mdc-dialog__surface {
+    padding: 0;
+    border-radius: 16px;
+    overflow: hidden;
+    background: transparent;
+    box-shadow:
+      0 12px 24px rgba(15, 23, 42, 0.18),
+      0 32px 64px rgba(15, 23, 42, 0.28) !important;
+  }
+}
+
+@keyframes todPopIn {
+  0%   { opacity: 0; transform: translateY(10px) scale(0.96); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+.tod-panel .mat-mdc-dialog-container { animation: todPopIn 0.22s ease-out; }
 

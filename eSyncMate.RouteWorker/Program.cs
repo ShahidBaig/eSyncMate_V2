@@ -464,6 +464,10 @@ namespace eSyncMate.RouteWorker
                 {
                     StaleLockCleanupRoute.Execute(config, route);
                 }
+                else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.ErrorOrderRetry))
+                {
+                    ErrorOrderRetryRoute.Execute(config, route);
+                }
                 else
                 {
                     string errorMsg = $"Unknown route type: {route.TypeId}";

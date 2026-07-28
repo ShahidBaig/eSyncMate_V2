@@ -1,0 +1,46 @@
+@import "../../shared-dialog.scss";
+
+.delete-icon { color: #dc2626; }
+
+.confirm-text {
+  margin: 0 0 16px;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.confirm-detail {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 4px 14px;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 8px 0;
+
+  & + .detail-row { border-top: 1px solid #f1f5f9; }
+}
+
+.detail-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  flex: none;
+}
+
+.detail-value {
+  font-size: 13px;
+  color: #1e293b;
+  text-align: right;
+  word-break: break-all;
+}
+
+.btn-delete {
+  background: #dc2626 !important;
+  color: white !important;
+
+  &:hover { background: #b91c1c !important; }
+  &:disabled { background: #cbd5e1 !important; color: #94a3b8 !important; }
+}

@@ -106,6 +106,8 @@
                   <th>Add</th>
                   <th>Edit</th>
                   <th>Delete</th>
+                  <th *ngIf="showResubmitCol && moduleHasOrders(moduleName)">Resubmit</th>
+                  <th *ngIf="showReTransmitCol && moduleHasOrders(moduleName)">Re-Transmit</th>
                 </tr>
               </thead>
               <tbody>
@@ -115,6 +117,12 @@
                   <td><mat-checkbox [(ngModel)]="menu.canAdd"></mat-checkbox></td>
                   <td><mat-checkbox [(ngModel)]="menu.canEdit"></mat-checkbox></td>
                   <td><mat-checkbox [(ngModel)]="menu.canDelete"></mat-checkbox></td>
+                  <td *ngIf="showResubmitCol && moduleHasOrders(moduleName)">
+                    <mat-checkbox *ngIf="isOrdersMenu(menu)" [(ngModel)]="menu.canResubmit"></mat-checkbox>
+                  </td>
+                  <td *ngIf="showReTransmitCol && moduleHasOrders(moduleName)">
+                    <mat-checkbox *ngIf="isOrdersMenu(menu)" [(ngModel)]="menu.canReTransmit"></mat-checkbox>
+                  </td>
                 </tr>
               </tbody>
             </table>

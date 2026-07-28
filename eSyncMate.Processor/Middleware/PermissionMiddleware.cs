@@ -89,6 +89,12 @@ namespace eSyncMate.Processor.Middleware
         {
             var lower = path.ToLower();
 
+            if (lower.Contains("retransmit") || lower.Contains("re-transmit"))
+                return perm.CanReTransmit;
+
+            if (lower.Contains("resubmit"))
+                return perm.CanResubmit;
+
             if (lower.Contains("delete") || lower.Contains("remove"))
                 return perm.CanDelete;
 
@@ -144,7 +150,10 @@ namespace eSyncMate.Processor.Middleware
                         CanView   = reader.GetBoolean(2),
                         CanAdd    = reader.GetBoolean(3),
                         CanEdit   = reader.GetBoolean(4),
-                        CanDelete = reader.GetBoolean(5)
+                        CanDelete = reader.GetBoolean(5),
+                        // Guarded so it still works if the SP hasn't been updated yet
+                        CanResubmit   = reader.FieldCount > 6 && !reader.IsDBNull(6) && reader.GetBoolean(6),
+                        CanReTransmit = reader.FieldCount > 7 && !reader.IsDBNull(7) && reader.GetBoolean(7)
                     });
                 }
             }
@@ -164,5 +173,7 @@ namespace eSyncMate.Processor.Middleware
         public bool   CanAdd    { get; set; }
         public bool   CanEdit   { get; set; }
         public bool   CanDelete { get; set; }
+        public bool   CanResubmit   { get; set; }
+        public bool   CanReTransmit { get; set; }
     }
 }

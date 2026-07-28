@@ -1,0 +1,39 @@
+<div class="dialog-container">
+  <div class="dialog-header">
+    <div class="dialog-header-left">
+      <mat-icon class="dialog-header-icon delete-icon">delete_outline</mat-icon>
+      <h2 class="dialog-header-title">{{ 'deleteShipCode' | translate }}</h2>
+    </div>
+    <button mat-icon-button class="dialog-close-btn" (click)="onCancel()"><mat-icon>close</mat-icon></button>
+  </div>
+
+  <div mat-dialog-content class="dialog-body">
+    <p class="confirm-text">{{ 'deleteShipCodeConfirm' | translate }}</p>
+
+    <div class="confirm-detail">
+      <div class="detail-row">
+        <span class="detail-label">{{ 'ERPCustomerID' | translate }}</span>
+        <span class="detail-value">{{ data.shipCode.customerID }}</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">{{ 'sourceMethod' | translate }}</span>
+        <span class="detail-value">{{ data.shipCode.sourceMethod || '—' }}</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">{{ 'levelOfService' | translate }}</span>
+        <span class="detail-value">{{ data.shipCode.levelOfService || '—' }}</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">{{ 'shippingMethod' | translate }}</span>
+        <span class="detail-value">{{ data.shipCode.shippingMethod || '—' }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div mat-dialog-actions class="dialog-footer">
+    <button mat-button class="btn-cancel" (click)="onCancel()">{{ 'cancel' | translate }}</button>
+    <button mat-raised-button class="btn-delete" [disabled]="isDeleting" (click)="onDelete()">
+      <mat-icon>delete</mat-icon> {{ 'delete' | translate }}
+    </button>
+  </div>
+</div>

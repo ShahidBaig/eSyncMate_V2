@@ -17,6 +17,8 @@ import { PartnerGroupsComponent } from './partnergroups/partnergroups.component'
 import { RoutesComponent } from './routes/routes.component';
 import { CustomerProductCatalogComponent } from './customer-product-catalog/customer-product-catalog.component';
 import { RouteTypesComponent } from './route-types/route-types.component';
+import { ShipNodesComponent } from './ship-nodes/ship-nodes.component';
+import { ShipCodesComponent } from './ship-codes/ship-codes.component';
 import { RouteExceptionComponent } from './route-exception/route-exception.component';
 import { CarrierLoadTenderComponent } from './carrier-load-tender/carrier-load-tender.component';
 import { ProductUploadPricesComponent } from './product-upload-prices/product-upload-prices.component';
@@ -126,6 +128,16 @@ const routes: Routes = [
   {
     path: 'edi/routeTypes',
     component: RouteTypesComponent,
+    canActivate: [AuthorizationGuard],
+  },
+  {
+    path: 'edi/shipNodes',
+    component: ShipNodesComponent,
+    canActivate: [AuthorizationGuard],
+  },
+  {
+    path: 'edi/shipCodes',
+    component: ShipCodesComponent,
     canActivate: [AuthorizationGuard],
   },
   {

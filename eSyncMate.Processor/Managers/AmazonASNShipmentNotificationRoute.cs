@@ -360,5 +360,220 @@ namespace eSyncMate.Processor.Managers
                 l_dataTable.Dispose();
             }
         }
+
+        // ================= Re-Transmit ASN (single order) — fully self-contained =================
+        // Resolves this customer's Amazon ASN route and re-sends ONLY the given order. Its own copy of
+        // the send logic — the batch Execute above is never touched. Source SP is constrained with
+        // @p_OrderId so a SHIPPED order is re-picked. Order status is NOT changed here.
+        public static string ExecuteSingle(IConfiguration config, int orderId, string customerName)
+        {
+            int userNo = 1;
+            string Body = string.Empty;
+            int l_ID = 0;
+            DataTable l_dataTable = new DataTable();
+            RestResponse sourceResponse = new RestResponse();
+
+            Routes route = new Routes();
+            route.UseConnection(CommonUtils.ConnectionString);
+
+            if (!route.GetObject("TypeId", (int)RouteTypesEnum.AmazonASNShipmentNotification, "CustomerName", customerName).IsSuccess)
+            {
+                return $"No ASN route configured for customer: {customerName}";
+            }
+
+            if (route.Status.ToUpper() == "IN-ACTIVE")
+            {
+                return "ASN route is not active.";
+            }
+
+            try
+            {
+                ConnectorDataModel? l_SourceConnector = ConnectorDataModel.Deserialize(route.SourceConnectorObject.Data);
+                ConnectorDataModel? l_DestinationConnector = ConnectorDataModel.Deserialize(route.DestinationConnectorObject.Data);
+
+                if (l_SourceConnector == null || l_DestinationConnector == null)
+                {
+                    return "ASN route connectors are not setup properly.";
+                }
+
+                route.SaveLog(LogTypeEnum.Info, $"[Re-Transmit ASN] Started for order [{orderId}] on route [{route.Id}]", string.Empty, userNo);
+
+                if (l_SourceConnector.ConnectivityType == ConnectorTypesEnum.SqlServer.ToString())
+                {
+                    DBConnector connection = new DBConnector(l_SourceConnector.ConnectionString);
+
+                    l_SourceConnector.Command = l_SourceConnector.Command.Replace("@DATATYPE@", "ERPASN-JSON");
+                    l_SourceConnector.Command = l_SourceConnector.Command.Replace("@ORDERSTATUS@", "SYNCED");
+                    l_SourceConnector.Command = l_SourceConnector.Command.Replace("@ORDERDATASTATUS@", "ASNGEN");
+                    l_SourceConnector.Command += $", @p_OrderId = {orderId}";
+
+                    if (l_SourceConnector.CommandType == "SP")
+                    {
+                        connection.GetDataSP(l_SourceConnector.Command, ref l_dataTable);
+                    }
+                }
+
+                if (l_dataTable.Rows.Count == 0)
+                {
+                    return $"No ASN shipment data found for order [{orderId}] to re-transmit.";
+                }
+
+                if (l_DestinationConnector.ConnectivityType == ConnectorTypesEnum.Rest.ToString() && l_dataTable.Rows.Count > 0)
+                {
+                    DataTable l_Orders = l_dataTable.DefaultView.ToTable(true, new string[] { "Id", "OrderNumber", "ExternalId" });
+
+                    l_Orders.Columns.Add("Data", typeof(string));
+                    l_Orders.Columns.Add("Trackings", typeof(string));
+
+                    foreach (DataRow l_Row in l_Orders.Rows)
+                    {
+                        string trackings = string.Empty;
+                        AmazonASNRequestModel l_AmazonASNRequestModel = new AmazonASNRequestModel();
+                        AmazonOrderitem l_AmazonOrderitem = new AmazonOrderitem();
+                        l_AmazonASNRequestModel = new AmazonASNRequestModel();
+                        Boolean OrderAsnResponse = false;
+
+                        l_dataTable.DefaultView.RowFilter = $"Id = {l_Row["Id"].ToString()}";
+
+                        var firstRows = l_dataTable.DefaultView
+                                         .Cast<DataRowView>()
+                                         .GroupBy(v => (v["TrackingNo"] ?? "").ToString(), StringComparer.OrdinalIgnoreCase)
+                                         .Select(g => g.First().Row);
+
+                        DataTable distinctByTrackingNo =
+                            firstRows.Any() ? firstRows.CopyToDataTable() : l_dataTable.Clone();
+
+                        OrderData l_OrderData = new OrderData();
+
+                        int packageReferenceId = 1;
+
+                        foreach (DataRow item in distinctByTrackingNo.Rows)
+                        {
+                            l_AmazonASNRequestModel = new AmazonASNRequestModel();
+
+                            l_AmazonASNRequestModel.marketplaceId = "ATVPDKIKX0DER";
+
+                            l_AmazonASNRequestModel.packageDetail.packageReferenceId = item["OrderDetailID"].ToString();
+                            l_AmazonASNRequestModel.packageDetail.carrierCode = item["LevelOfService"].ToString();
+                            l_AmazonASNRequestModel.packageDetail.trackingNumber = item["TrackingNo"].ToString();
+                            l_AmazonASNRequestModel.packageDetail.shipDate = Convert.ToDateTime(item["ShippedDate"]).ToString("yyyy-MM-ddTHH:mm:ssZ");
+
+                            l_dataTable.DefaultView.RowFilter = $"Id = {l_Row["Id"].ToString()} AND TrackingNo = '{l_AmazonASNRequestModel.packageDetail.trackingNumber}'";
+
+                            foreach (DataRowView l_VRow in l_dataTable.DefaultView)
+                            {
+                                l_AmazonOrderitem = new AmazonOrderitem();
+
+                                l_AmazonOrderitem.orderItemId = l_VRow["order_line_id"].ToString();
+                                l_AmazonOrderitem.quantity = l_VRow["LineQty"].ToString();
+
+                                l_AmazonASNRequestModel.packageDetail.orderItems.Add(l_AmazonOrderitem);
+                            }
+
+                            trackings += $"{item["TrackingNo"].ToString()},";
+
+                            l_Row["Trackings"] = trackings;
+                            l_Row["Data"] = JsonConvert.SerializeObject(l_AmazonASNRequestModel);
+
+                            Body = PublicFunctions.ConvertNullAsString(l_Row["Data"], string.Empty);
+                            l_ID = PublicFunctions.ConvertNullAsInteger(l_Row["Id"], 0);
+
+                            route.SaveData("JSON-SNT", 0, Body, userNo);
+
+                            l_DestinationConnector.Url = l_DestinationConnector.BaseUrl + $"/orders/v0/orders/{l_Row["OrderNumber"]}/shipmentConfirmation";
+
+                            l_OrderData.UseConnection(l_SourceConnector.ConnectionString);
+
+                            l_OrderData.Type = "ASN-SNT";
+                            l_OrderData.Data = Body;
+                            l_OrderData.CreatedBy = userNo;
+                            l_OrderData.CreatedDate = DateTime.Now;
+                            l_OrderData.OrderId = Convert.ToInt32(l_Row["Id"]);
+                            l_OrderData.OrderNumber = PublicFunctions.ConvertNullAsString(l_Row["OrderNumber"], string.Empty);
+
+                            l_OrderData.SaveNew();
+
+                            sourceResponse = RestConnector.Execute(l_DestinationConnector, Body).GetAwaiter().GetResult();
+
+                            if (sourceResponse.StatusCode == System.Net.HttpStatusCode.NoContent)
+                            {
+                                OrderAsnResponse = true;
+                            }
+
+                            route.SaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
+                            route.SaveLog(LogTypeEnum.Debug, $"[Re-Transmit ASN] processed for order [{l_Row["Id"]}].", string.Empty, userNo);
+
+                            packageReferenceId++;
+
+                            if (OrderAsnResponse == true)
+                            {
+                                var data = new
+                                {
+                                    Response = sourceResponse.Content + $"Tracking Update Successfully. TrackingNo:{item["TrackingNo"].ToString()}",
+                                };
+
+                                l_OrderData = new OrderData();
+
+                                l_OrderData.UseConnection(l_SourceConnector.ConnectionString);
+
+                                l_OrderData.Type = "ASN-RES";
+                                l_OrderData.Data = sourceResponse.Content;
+                                l_OrderData.CreatedBy = userNo;
+                                l_OrderData.CreatedDate = DateTime.Now;
+                                l_OrderData.OrderId = Convert.ToInt32(l_Row["Id"]);
+                                l_OrderData.OrderNumber = PublicFunctions.ConvertNullAsString(l_Row["OrderNumber"], string.Empty);
+
+                                l_OrderData.SaveNew();
+                            }
+                            else
+                            {
+                                l_OrderData = new OrderData();
+
+                                l_OrderData.UseConnection(l_SourceConnector.ConnectionString);
+
+                                l_OrderData.Type = "ASN-ERR";
+                                l_OrderData.Data = sourceResponse.Content;
+                                l_OrderData.CreatedBy = userNo;
+                                l_OrderData.CreatedDate = DateTime.Now;
+                                l_OrderData.OrderId = Convert.ToInt32(l_Row["Id"]);
+                                l_OrderData.OrderNumber = PublicFunctions.ConvertNullAsString(l_Row["OrderNumber"], string.Empty);
+
+                                l_OrderData.SaveNew();
+                            }
+                        }
+
+                        if (OrderAsnResponse)
+                        {
+                            OrderDetail l_Detail = new OrderDetail();
+
+                            l_Detail.UseConnection(l_SourceConnector.ConnectionString);
+                            foreach (string tracking in l_Row["Trackings"].ToString().Split(','))
+                            {
+                                if (!string.IsNullOrEmpty(tracking))
+                                    l_Detail.UpdateASNSent(Convert.ToInt32(l_Row["Id"]), tracking);
+                            }
+
+                            route.SaveLog(LogTypeEnum.Debug, $"[Re-Transmit ASN] Update order status processed for order [{l_Row["Id"]}].", string.Empty, userNo);
+                        }
+                        else
+                        {
+                            return $"ASN re-transmit failed for order [{orderId}]: {sourceResponse.Content}";
+                        }
+                    }
+                }
+
+                route.SaveLog(LogTypeEnum.Info, $"[Re-Transmit ASN] Completed for order [{orderId}]", string.Empty, userNo);
+                return string.Empty;
+            }
+            catch (Exception ex)
+            {
+                route.SaveLog(LogTypeEnum.Exception, $"[Re-Transmit ASN] Error for order [{orderId}]", ex.ToString(), userNo);
+                return $"ASN re-transmit error: {ex.Message}";
+            }
+            finally
+            {
+                l_dataTable.Dispose();
+            }
+        }
     }
 }

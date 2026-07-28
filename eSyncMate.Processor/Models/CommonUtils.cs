@@ -191,7 +191,9 @@ namespace eSyncMate.Processor.Models
         GenerateEDI810ForRepaintRoute = 505,
         // System/Maintenance Routes
         StaleLockCleanup = 72,
-        WalmartWHSWInventoryUpload = 73
+        WalmartWHSWInventoryUpload = 73,
+        // Auto-retries error orders (Period / Timeout / No Response from SPARS) via the single-order reprocess
+        ErrorOrderRetry = 74
 
     }
 
@@ -211,7 +213,7 @@ namespace eSyncMate.Processor.Models
     {
         public static string ConnectionString { get; set; } = "Server=192.168.0.44,7100;Database=ESYNCMATE;UID=esyncmate;PWD=eSyncMate786$$$;";
         public static string MySqlConnectionString { get; set; } = "Server=162.241.63.30;Database=geckote1_edi;User=geckote1_esyncmate;Password=Gecko8079;";
-        public static string EncryptionKey { get; set; } = "";
+        public static string EncryptionKey { get; set; } = "eSyncMate@Dev#2026!!SecretKey";
         public static string SMTPHost { get; set; } = "";
         public static int SMTPPort { get; set; } = 587;
         public static string FromEmailAccount { get; set; } = "";

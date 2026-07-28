@@ -485,6 +485,26 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+// Last order created date/time under each tile
+.kpi-tile-date {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-top: 5px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #9aa1ac;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+
+  mat-icon {
+    font-size: 12px;
+    width: 12px;
+    height: 12px;
+    color: #b6bcc6;
+  }
+}
+
 // Color-coded bottom accent line — uses --tile-color CSS variable
 .kpi-tile::after {
   content: '';

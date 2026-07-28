@@ -1,13 +1,22 @@
 .drilldown-dialog {
   font-family: 'Poppins', sans-serif;
   min-width: 700px;
+  background: linear-gradient(180deg, #ffffff 0%, #f6f8fb 100%);
+  border-radius: 14px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  max-height: 94vh;
 }
 
 .drilldown-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 24px 14px;
+  padding: 20px 24px 16px;
+  background: linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%);
+  border-bottom: 1px solid #e2e8f0;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.9) inset, 0 4px 12px -6px rgba(15, 23, 42, 0.18);
 }
 
 .drilldown-header-left {
@@ -17,60 +26,211 @@
 }
 
 .drilldown-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 3px 10px rgba(0,0,0,0.15);
-  mat-icon { font-size: 22px; width: 22px; height: 22px; color: #fff; }
+  position: relative;
+  box-shadow: 0 6px 14px -4px rgba(15, 23, 42, 0.45),
+              0 2px 4px rgba(15, 23, 42, 0.2),
+              0 1px 0 rgba(255, 255, 255, 0.35) inset;
+
+  // Glossy highlight across the top half
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 14px;
+    background: linear-gradient(160deg, rgba(255, 255, 255, 0.38) 0%, rgba(255, 255, 255, 0) 55%);
+    pointer-events: none;
+  }
+
+  mat-icon { font-size: 22px; width: 22px; height: 22px; color: #fff; position: relative; z-index: 1; }
 }
 
 .drilldown-title-wrap { display: flex; flex-direction: column; }
-.drilldown-title { font-size: 18px; font-weight: 700; color: #1e293b; margin: 0; }
-.drilldown-subtitle { font-size: 12px; color: #94a3b8; font-weight: 500; }
+.drilldown-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+.drilldown-subtitle {
+  font-size: 12px;
+  color: #94a3b8;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.drilldown-lastorder {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #64748b;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+
+  mat-icon {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+    color: #94a3b8;
+  }
+}
 
 .drilldown-close {
   color: #94a3b8;
-  &:hover { color: #64748b; }
+  transition: all 0.15s ease;
+  &:hover {
+    color: #475569;
+    background: #ffffff;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.15);
+  }
 }
 
+// Wide dialog fits the table so no scrollbars show on normal screens; overflow-x
+// stays auto (never clips columns — e.g. the wider 9-column SHIPPED view).
 .drilldown-body {
-  padding: 0 24px 20px;
+  padding: 18px 24px 20px;
+  flex: 1 1 auto;
+  overflow-x: auto;
+  overflow-y: auto;
+}
+
+.drilldown-body::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.drilldown-body::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+  &:hover { background: #94a3b8; }
+}
+
+.drilldown-body::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 table {
   width: 100%;
-  border-radius: 10px;
+  min-width: 1040px;
+  border-radius: 12px;
   overflow: hidden;
   border: 1px solid #e2e8f0;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06),
+              0 6px 16px -6px rgba(15, 23, 42, 0.18),
+              0 16px 32px -20px rgba(15, 23, 42, 0.25);
 }
 
-::ng-deep .mat-mdc-header-row { background: #f8fafc; }
+::ng-deep .mat-mdc-header-row {
+  background: linear-gradient(180deg, #ffffff 0%, #eef2f7 100%);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.9) inset;
+}
 ::ng-deep .mat-mdc-header-cell {
   color: #64748b;
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  border-bottom: 2px solid #e2e8f0;
+  border-bottom: 1px solid #cbd5e1;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 ::ng-deep .mat-mdc-cell {
   font-size: 13px;
   color: #1e293b;
   border-bottom: 1px solid #f1f5f9;
+  transition: background 0.15s ease;
 }
-::ng-deep .mat-mdc-row:hover .mat-mdc-cell { background: #f8fafc; }
+::ng-deep .mat-mdc-row {
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+::ng-deep .mat-mdc-row:hover {
+  box-shadow: 0 4px 14px -6px rgba(15, 23, 42, 0.35);
+}
+::ng-deep .mat-mdc-row:hover .mat-mdc-cell {
+  background: linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%);
+}
+
+// Customer PO numbers are long (e.g. 902001739550006-7249056710) — give them room
+::ng-deep .mat-column-orderNumber {
+  min-width: 220px;
+  white-space: nowrap;
+  padding-right: 16px;
+  font-weight: 600;
+}
+
+::ng-deep .mat-column-externalId {
+  min-width: 110px;
+  white-space: nowrap;
+}
+
+// Dates always on a single line, never wrapped mid-timestamp
+::ng-deep .mat-column-orderDate,
+::ng-deep .mat-column-createdDate,
+::ng-deep .mat-column-erpCreatedDate,
+::ng-deep .mat-column-shippedDate {
+  min-width: 150px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
 
 .status-chip {
   display: inline-block;
-  padding: 3px 10px;
+  padding: 4px 11px;
   border: 1.5px solid;
   border-radius: 12px;
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.12),
+              0 1px 0 rgba(255, 255, 255, 0.9) inset;
+}
+
+.status-error-icon {
+  font-size: 13px;
+  width: 13px;
+  height: 13px;
+  vertical-align: -2px;
+  margin-left: 3px;
+  opacity: 0.85;
+  cursor: help;
+}
+
+::ng-deep .mat-column-actions {
+  min-width: 130px;
+  white-space: nowrap;
+}
+
+.view-btn,
+.files-btn,
+.reprocess-btn {
+  transition: all 0.15s ease;
+
+  &:hover:not(:disabled) {
+    background: linear-gradient(180deg, #ffffff 0%, #eef2f7 100%);
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.2),
+                0 1px 0 rgba(255, 255, 255, 0.9) inset;
+    transform: translateY(-1px);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.25) inset;
+  }
+}
+
+.files-btn {
+  color: #0277bd !important;
+  &:hover { color: #01579b !important; }
 }
 
 .reprocess-btn {
@@ -86,6 +246,11 @@ table {
   text-align: center;
   padding: 40px;
   color: #94a3b8;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06),
+              0 6px 16px -8px rgba(15, 23, 42, 0.2);
   mat-icon { font-size: 48px; width: 48px; height: 48px; margin-bottom: 10px; }
   p { font-size: 14px; }
 }

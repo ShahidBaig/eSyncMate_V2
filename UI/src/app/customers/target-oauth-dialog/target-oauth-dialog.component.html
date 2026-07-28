@@ -1,0 +1,111 @@
+<div class="tod-dialog">
+  <h2 class="tod-title">
+    <mat-icon>vpn_key</mat-icon>
+    <span>Target OAuth 2.0 &mdash; {{ data.customerName }}</span>
+    <button mat-icon-button class="tod-close" (click)="close()" matTooltip="Close"><mat-icon>close</mat-icon></button>
+  </h2>
+
+  <div class="tod-body">
+
+    <div class="tod-row">
+      <!-- Status -->
+      <div class="tod-section tod-status-section">
+        <div class="tod-section-title">Connection Status</div>
+        <div class="tod-status-row">
+          <span class="tod-chip" [ngClass]="authorized ? 'chip-ok' : 'chip-warn'">
+            <mat-icon>{{ authorized ? 'check_circle' : 'gpp_maybe' }}</mat-icon>
+            {{ authorized ? 'Authorized' : 'Not Authorized' }}
+          </span>
+          <mat-progress-spinner *ngIf="loadingStatus" diameter="20" mode="indeterminate"></mat-progress-spinner>
+        </div>
+
+        <div class="tod-meta" *ngIf="authorized">
+          <div *ngIf="refreshExpiry"><mat-icon>autorenew</mat-icon><span>Refresh expiry</span>{{ refreshExpiry | date:'MM/dd/yyyy hh:mm a' }}</div>
+          <div *ngIf="accessExpiry"><mat-icon>vpn_key</mat-icon><span>Access expiry</span>{{ accessExpiry | date:'MM/dd/yyyy hh:mm a' }}</div>
+          <div *ngIf="lastUpdated"><mat-icon>schedule</mat-icon><span>Last updated</span>{{ lastUpdated | date:'MM/dd/yyyy hh:mm a' }}</div>
+        </div>
+
+        <p class="tod-status-empty" *ngIf="!authorized && !loadingStatus">
+          This customer isn't connected to Target yet. Save the credentials, then click
+          <b>Authorize with Target</b> to establish the connection.
+        </p>
+      </div>
+
+      <!-- Flag -->
+      <div class="tod-section tod-flag">
+        <mat-slide-toggle [(ngModel)]="useNewAuthentication" (change)="onToggleFlag()" color="primary">
+          Use New Authentication (OAuth)
+        </mat-slide-toggle>
+        <p class="tod-note">When <b>OFF</b>, the legacy header authentication is used. Turn <b>ON</b> only after authorization succeeds.</p>
+      </div>
+    </div>
+
+    <!-- Credentials -->
+    <div class="tod-section">
+      <div class="tod-section-title">
+        Credentials
+        <span class="tod-chip chip-ok" *ngIf="hasCredentials" style="margin-left:8px;">
+          <mat-icon>check_circle</mat-icon> Saved
+        </span>
+      </div>
+      <p class="tod-note" *ngIf="hasCredentials">Credentials are already saved. Leave the <b>Client Secret</b> blank to keep it &mdash; you don't need to re-enter it. Fill the fields only when you want to change them.</p>
+      <div class="tod-form">
+        <mat-form-field appearance="outline" class="tod-field">
+          <mat-label>Client ID</mat-label>
+          <input matInput [(ngModel)]="creds.clientId" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="tod-field">
+          <mat-label>Client Secret</mat-label>
+          <input matInput type="password" [(ngModel)]="creds.clientSecret"
+                 [placeholder]="hasSecret ? '•••••••• (saved — leave blank to keep)' : ''" />
+          <mat-hint *ngIf="hasSecret">Saved. Leave blank to keep the existing secret.</mat-hint>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="tod-field tod-field-full">
+          <mat-label>Authorization URL</mat-label>
+          <input matInput [(ngModel)]="creds.authUrl" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="tod-field tod-field-full">
+          <mat-label>Token URL</mat-label>
+          <input matInput [(ngModel)]="creds.tokenUrl" />
+        </mat-form-field>
+      </div>
+      <button mat-stroked-button color="primary" (click)="saveCredentials()" [disabled]="savingCreds">
+        <mat-icon>save</mat-icon> Save Credentials
+      </button>
+    </div>
+
+    <!-- Authorize -->
+    <div class="tod-section">
+      <div class="tod-section-title">Authorization</div>
+      <button mat-raised-button color="primary" (click)="authorize()" [disabled]="authorizing || !hasCredentials">
+        <mat-icon>login</mat-icon> Authorize with Target
+      </button>
+      <p class="tod-note" *ngIf="!hasCredentials">Save the <b>Client ID</b> and <b>Client Secret</b> first to enable authorization.</p>
+
+      <div class="tod-waiting" *ngIf="authorizing">
+        <mat-progress-spinner diameter="22" mode="indeterminate"></mat-progress-spinner>
+        <span>Waiting for Target login in the popup&hellip;</span>
+      </div>
+
+      <!-- Result panel -->
+      <div class="tod-result" *ngIf="resultSuccess !== null" [ngClass]="resultSuccess ? 'res-ok' : 'res-err'">
+        <div class="tod-result-head">
+          <mat-icon>{{ resultSuccess ? 'check_circle' : 'error' }}</mat-icon>
+          <span>{{ resultSuccess ? 'Authorization Successful' : 'Authorization Failed' }}</span>
+        </div>
+        <p class="tod-result-msg">{{ resultMessage }}</p>
+        <table class="tod-result-table" *ngIf="resultInfo">
+          <tr *ngFor="let item of resultInfo | keyvalue">
+            <td class="k">{{ item.key }}</td>
+            <td class="v">{{ item.value }}</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="tod-actions">
+    <button mat-button (click)="close()">Close</button>
+  </div>
+</div>

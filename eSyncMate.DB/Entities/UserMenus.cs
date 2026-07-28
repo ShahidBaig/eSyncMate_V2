@@ -15,6 +15,8 @@ namespace eSyncMate.DB.Entities
         public bool CanAdd { get; set; }
         public bool CanEdit { get; set; }
         public bool CanDelete { get; set; }
+        public bool CanResubmit { get; set; }
+        public bool CanReTransmit { get; set; }
         public DateTime CreatedDate { get; set; }
         public int CreatedBy { get; set; }
 

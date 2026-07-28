@@ -241,6 +241,88 @@ namespace eSyncMate.DB.Entities
             return Connection.GetData(l_Query, ref p_Data);
         }
 
+        public bool GetViewListPagedWithErpInfo(string p_Criteria, ref DataTable p_Data, string p_OrderBy, int pageNumber, int pageSize, out int totalCount)
+        {
+            totalCount = 0;
+
+            string l_CountQuery = "SELECT COUNT(*) FROM [" + Orders.ViewName + "]";
+            if (!string.IsNullOrEmpty(p_Criteria))
+                l_CountQuery += " WHERE " + p_Criteria;
+
+            var l_CountData = new DataTable();
+            Connection.GetData(l_CountQuery, ref l_CountData);
+            if (l_CountData.Rows.Count > 0)
+                totalCount = Convert.ToInt32(l_CountData.Rows[0][0]);
+            l_CountData.Dispose();
+
+            string l_OrderBy = !string.IsNullOrEmpty(p_OrderBy) ? p_OrderBy : "Id DESC";
+            int offset = (pageNumber - 1) * pageSize;
+
+            // Page first, then look up the ERP columns for the current page only
+            string l_Query = "WITH PagedOrders AS (SELECT * FROM [" + Orders.ViewName + "]";
+
+            if (!string.IsNullOrEmpty(p_Criteria))
+                l_Query += " WHERE " + p_Criteria;
+
+            l_Query += $" ORDER BY {l_OrderBy} OFFSET {offset} ROWS FETCH NEXT {pageSize} ROWS ONLY)";
+
+            l_Query += " SELECT P.*, ERP.ERPCreatedDate, SHP.ShippedDate, ERR.ErrorData, ERR.ErrorDate, ERR.ErrorType,"
+                    + " SHIPF.WarehouseCode, SHIPF.ShippingCode, SHIPF.ShippingAgentCode, SHIPF.ShipDate"
+                    + " FROM PagedOrders P";
+
+            // Date the order was created in the ERP = when the ERP place-order response was stored
+            l_Query += " OUTER APPLY (SELECT TOP 1 OD.CreatedDate AS ERPCreatedDate FROM [OrderData] OD"
+                    + " WHERE OD.OrderId = P.Id AND OD.Type = 'ERP-JSON' ORDER BY OD.CreatedDate DESC) ERP";
+
+            // Shipped date returned by the ERP after the ASN = latest shipped line
+            l_Query += " OUTER APPLY (SELECT COALESCE(CONVERT(VARCHAR(30), TRY_CONVERT(DATETIME, MAX(D.ShippedDate)), 126), MAX(D.ShippedDate)) AS ShippedDate"
+                    + " FROM [OrderDetail] D WHERE D.OrderId = P.Id AND ISNULL(D.ShippedDate, '') <> '') SHP";
+
+            // Latest error payload (order / ASN / ACK) — shown on hover over the status badge
+            l_Query += " OUTER APPLY (SELECT TOP 1 LEFT(OD.Data, 4000) AS ErrorData, OD.CreatedDate AS ErrorDate, OD.Type AS ErrorType FROM [OrderData] OD"
+                    + " WHERE OD.OrderId = P.Id AND OD.Type IN ('ERP-ERROR', 'ERPASN-ERR', 'ASN-ERR') ORDER BY OD.CreatedDate DESC) ERR";
+
+            // Shipping instructions live on the stored marketplace payload — the same copy the
+            // transformation map reads — so screen and ERP can never drift apart.
+            // Which field of which partner holds which value is configuration, not code:
+            // OrderFieldMappings carries a path per customer and the code walks it. A partner
+            // changing their JSON is a row change; a partner with no row simply shows nothing.
+            l_Query += " OUTER APPLY (SELECT TOP 1 OD.Data FROM [OrderData] OD"
+                    + " WHERE OD.OrderId = P.Id AND OD.Type = 'API-JSON' ORDER BY OD.Id DESC) PAY";
+
+            l_Query += " OUTER APPLY (SELECT"
+                    + "   MAX(CASE WHEN R.FieldName = 'WarehouseCode'     THEN R.Val END) AS WarehouseCode,"
+                    + "   MAX(CASE WHEN R.FieldName = 'ShippingCode'      THEN R.Val END) AS ShippingCode,"
+                    + "   MAX(CASE WHEN R.FieldName = 'ShippingAgentCode' THEN R.Val END) AS ShippingAgentCode,"
+                    + "   MAX(CASE WHEN R.FieldName = 'ShipDate'          THEN R.Val END) AS ShipDate"
+                    + " FROM (SELECT V.FieldName, V.Val,"
+                    + "         ROW_NUMBER() OVER (PARTITION BY V.FieldName ORDER BY V.Priority) AS Rn"
+                    + "       FROM (SELECT FM.FieldName, FM.Priority,"
+                    + "               CASE FM.ValueType"
+                    // plain value
+                    + "                 WHEN 'TEXT' THEN NULLIF(JSON_VALUE(PAY.Data, FM.ReadPath), '')"
+                    // "L55 Whitestown IN" / "L65, Patterson CA" -> the code in front
+                    + "                 WHEN 'FIRST_TOKEN' THEN NULLIF(REPLACE(LEFT(JSON_VALUE(PAY.Data, FM.ReadPath),"
+                    + "                      CHARINDEX(' ', JSON_VALUE(PAY.Data, FM.ReadPath) + ' ') - 1), ',', ''), '')"
+                    + "                 WHEN 'ISO_DATE' THEN CONVERT(VARCHAR(10), TRY_CONVERT(DATETIME, JSON_VALUE(PAY.Data, FM.ReadPath)), 101)"
+                    + "                 WHEN 'EPOCH_MS_NUM' THEN CONVERT(VARCHAR(10), DATEADD(SECOND,"
+                    + "                      TRY_CONVERT(BIGINT, JSON_VALUE(PAY.Data, FM.ReadPath)) / 1000, '1970-01-01'), 101)"
+                    + "                 WHEN 'EPOCH_MS_STR' THEN CONVERT(VARCHAR(10), DATEADD(SECOND,"
+                    + "                      TRY_CONVERT(BIGINT, JSON_VALUE(PAY.Data, FM.ReadPath)) / 1000, '1970-01-01'), 101)"
+                    // Target sends a distribution centre; the warehouse behind it lives in the ship node table
+                    + "                 WHEN 'TARGET_SHIPNODE' THEN (SELECT TOP 1 T.WHSID FROM [TargetPlusShipNodes] T"
+                    + "                      WHERE T.ShipNode = JSON_VALUE(PAY.Data, FM.ReadPath) AND T.CustomerID = P.ERPCustomerID)"
+                    + "               END AS Val"
+                    + "             FROM [OrderFieldMappings] FM"
+                    + "             WHERE FM.IsActive = 1 AND FM.CustomerID = P.ERPCustomerID) V"
+                    + "       WHERE V.Val IS NOT NULL) R"
+                    + " WHERE R.Rn = 1) SHIPF";
+
+            l_Query += $" ORDER BY {l_OrderBy}";
+
+            return Connection.GetData(l_Query, ref p_Data);
+        }
+
         /// <summary>
         /// TODO: Update summary.
         /// </summary>
@@ -761,6 +843,259 @@ namespace eSyncMate.DB.Entities
         }
 
         //public Result UpdateShippingAddress(int orderId, string address1, string address2, string city, string state, string postalCode, string country,string ShipToName,string ShipViaCode)
+        /// <summary>
+        /// Configured paths for one customer, straight from Sp_GetOrderFieldMappings.
+        /// A customer with no rows has no editable shipping fields at all.
+        /// </summary>
+        private DataTable GetFieldMappings(string p_CustomerID)
+        {
+            DataTable l_Data = new DataTable();
+
+            string l_Query = "EXEC [Sp_GetOrderFieldMappings] @p_CustomerID = '"
+                           + PublicFunctions.ConvertNullAsString(p_CustomerID, string.Empty).Replace("'", "''") + "'";
+
+            this.Connection.GetData(l_Query, ref l_Data);
+
+            return l_Data;
+        }
+
+        /// <summary>
+        /// Writes one edited value back to the path the mapping names, in the shape the partner
+        /// sent it. A path the payload does not have is left alone — nothing is invented.
+        /// </summary>
+        private void ApplyMappedValue(Newtonsoft.Json.Linq.JObject p_Json, int p_OrderId, DataRow p_Mapping, string p_Value)
+        {
+            if (string.IsNullOrWhiteSpace(p_Value)) return;
+
+            string l_Path = PublicFunctions.ConvertNullAsString(p_Mapping["WritePath"], string.Empty);
+            string l_Type = PublicFunctions.ConvertNullAsString(p_Mapping["ValueType"], "TEXT").ToUpper();
+            string l_Value = p_Value.Trim();
+
+            if (string.IsNullOrWhiteSpace(l_Path)) return;
+
+            switch (l_Type)
+            {
+                case "ISO_DATE":
+                case "EPOCH_MS_NUM":
+                case "EPOCH_MS_STR":
+
+                    if (!DateTime.TryParse(l_Value, System.Globalization.CultureInfo.InvariantCulture,
+                                           System.Globalization.DateTimeStyles.None, out DateTime l_Date))
+                    {
+                        return;
+                    }
+
+                    // The screen edits a date only, so the partner's own time of day is carried over
+                    SetJsonValue(p_Json, l_Path, l_Existing =>
+                        l_Type == "ISO_DATE" ? (Newtonsoft.Json.Linq.JToken)IsoWithOriginalTime(l_Existing, l_Date)
+                        : l_Type == "EPOCH_MS_NUM" ? EpochWithOriginalTime(l_Existing, l_Date)
+                        : EpochWithOriginalTime(l_Existing, l_Date).ToString());
+                    break;
+
+                case "TARGET_SHIPNODE":
+
+                    // The payload holds a distribution centre, the screen shows a warehouse
+                    string l_ShipNode = GetShipNodeForWarehouse(p_OrderId, l_Value);
+
+                    if (!string.IsNullOrWhiteSpace(l_ShipNode))
+                        SetJsonValue(p_Json, l_Path, l_Existing => l_ShipNode);
+
+                    break;
+
+                default:
+                    SetJsonValue(p_Json, l_Path, l_Existing => l_Value);
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// Sets every match of a JSON path — '[*]' covers all elements of an array. A container the
+        /// partner sent as null (a Mirakl line's empty warehouse) is filled in; a path that is not
+        /// part of this payload at all writes nothing.
+        /// </summary>
+        private static void SetJsonValue(Newtonsoft.Json.Linq.JObject p_Json, string p_Path,
+                                         Func<Newtonsoft.Json.Linq.JToken, Newtonsoft.Json.Linq.JToken> p_Value)
+        {
+            int l_Split = p_Path.LastIndexOf('.');
+
+            if (l_Split <= 0) return;
+
+            string l_ParentPath = p_Path.Substring(0, l_Split);
+            string l_Leaf = p_Path.Substring(l_Split + 1);
+
+            foreach (var l_Parent in p_Json.SelectTokens(l_ParentPath).ToList())
+            {
+                if (l_Parent is Newtonsoft.Json.Linq.JObject l_Object)
+                {
+                    l_Object[l_Leaf] = p_Value(l_Object[l_Leaf]);
+                }
+                else if (l_Parent.Type == Newtonsoft.Json.Linq.JTokenType.Null)
+                {
+                    // e.g. "warehouse": null — give it the object it is meant to hold
+                    l_Parent.Replace(new Newtonsoft.Json.Linq.JObject { [l_Leaf] = p_Value(null) });
+                }
+            }
+        }
+
+        /// <summary>
+        /// The screen edits a date only, so the time of day the marketplace sent (a cut-off such
+        /// as 06:59:59Z) is carried over instead of being reset to midnight.
+        /// </summary>
+        private static string IsoWithOriginalTime(Newtonsoft.Json.Linq.JToken p_Existing, DateTime p_NewDate)
+        {
+            TimeSpan l_Time = TimeSpan.Zero;
+
+            if (DateTime.TryParse(p_Existing?.ToString(), System.Globalization.CultureInfo.InvariantCulture,
+                                  System.Globalization.DateTimeStyles.AdjustToUniversal, out DateTime l_Original))
+            {
+                l_Time = l_Original.TimeOfDay;
+            }
+
+            return p_NewDate.Date.Add(l_Time).ToString("yyyy-MM-ddTHH:mm:ssZ");
+        }
+
+        private static long EpochWithOriginalTime(Newtonsoft.Json.Linq.JToken p_Existing, DateTime p_NewDate)
+        {
+            TimeSpan l_Time = TimeSpan.Zero;
+
+            if (long.TryParse(p_Existing?.ToString(), out long l_OriginalEpoch) && l_OriginalEpoch > 0)
+            {
+                l_Time = DateTimeOffset.FromUnixTimeMilliseconds(l_OriginalEpoch).UtcDateTime.TimeOfDay;
+            }
+
+            DateTime l_Result = DateTime.SpecifyKind(p_NewDate.Date.Add(l_Time), DateTimeKind.Utc);
+
+            return new DateTimeOffset(l_Result).ToUnixTimeMilliseconds();
+        }
+
+        /// <summary>
+        /// Target ship node for a warehouse code, scoped to the order's customer.
+        /// Returns an empty string when the pair is not mapped in TargetPlusShipNodes.
+        /// </summary>
+        private string GetShipNodeForWarehouse(int orderId, string warehouseCode)
+        {
+            DataTable l_Data = new DataTable();
+
+            string l_Query = "SELECT TOP 1 T.ShipNode FROM [TargetPlusShipNodes] T"
+                           + " JOIN [VW_Orders] O ON O.ERPCustomerID = T.CustomerID"
+                           + $" WHERE O.Id = {orderId} AND T.WHSID = '{warehouseCode.Replace("'", "''")}'";
+
+            if (!this.Connection.GetData(l_Query, ref l_Data) || l_Data.Rows.Count == 0)
+            {
+                l_Data.Dispose();
+                return string.Empty;
+            }
+
+            string l_ShipNode = PublicFunctions.ConvertNullAsString(l_Data.Rows[0]["ShipNode"], string.Empty);
+            l_Data.Dispose();
+
+            return l_ShipNode;
+        }
+
+        /// <summary>
+        /// Writes the four edited values back into the stored marketplace payload
+        /// (OrderData 'API-JSON') — into that customer's own fields, at the paths configured in
+        /// OrderFieldMappings. The payload keeps its shape: nothing is added to it, and a field the
+        /// partner does not send is simply not written.
+        /// Mirrors UpdateShippingInfo, which does this for the shipping address.
+        /// </summary>
+        public Result UpdateShippingFieldsInfo(int orderId, string warehouseCode, string shippingCode, string shippingAgentCode, string shipDate)
+        {
+            Result l_Result = new Result();
+            bool l_Trans = false;
+            DataTable l_Data = new DataTable();
+            DataTable l_Mappings = null;
+
+            try
+            {
+                l_Trans = this.Connection.BeginTransaction();
+
+                string l_Query = "SELECT TOP 1 O.ERPCustomerID, D.Data FROM [OrderData] D"
+                               + " JOIN [VW_Orders] O ON O.Id = D.OrderId"
+                               + $" WHERE D.OrderId = {orderId} AND D.Type = 'API-JSON' ORDER BY D.Id DESC";
+
+                bool l_Retrieved = this.Connection.GetData(l_Query, ref l_Data, p_Timeout: 0, p_IsSetRole: true, p_IsConnectionCheck: true);
+
+                if (!l_Retrieved || l_Data.Rows.Count == 0)
+                {
+                    // No stored payload (e.g. an order created outside the marketplace flow)
+                    if (l_Trans) this.Connection.CommitTransaction();
+                    return Result.GetSuccessResult();
+                }
+
+                string l_Json = l_Data.Rows[0]["Data"].ToString();
+
+                if (string.IsNullOrWhiteSpace(l_Json))
+                {
+                    if (l_Trans) this.Connection.CommitTransaction();
+                    return Result.GetSuccessResult();
+                }
+
+                Newtonsoft.Json.Linq.JObject l_OrderJson;
+
+                try
+                {
+                    l_OrderJson = Newtonsoft.Json.Linq.JObject.Parse(l_Json);
+                }
+                catch (Newtonsoft.Json.JsonReaderException ex)
+                {
+                    if (l_Trans) this.Connection.RollbackTransaction();
+
+                    l_Result.IsSuccess = false;
+                    l_Result.Description = $"Error parsing JSON data: {ex.Message}";
+
+                    return l_Result;
+                }
+
+                // Where each value belongs is configuration — one row per field, per customer
+                l_Mappings = GetFieldMappings(PublicFunctions.ConvertNullAsString(l_Data.Rows[0]["ERPCustomerID"], string.Empty));
+
+                foreach (DataRow l_Mapping in l_Mappings.Rows)
+                {
+                    string l_Field = PublicFunctions.ConvertNullAsString(l_Mapping["FieldName"], string.Empty);
+
+                    string l_Edited = l_Field == "WarehouseCode" ? warehouseCode
+                                    : l_Field == "ShippingCode" ? shippingCode
+                                    : l_Field == "ShippingAgentCode" ? shippingAgentCode
+                                    : l_Field == "ShipDate" ? shipDate
+                                    : string.Empty;
+
+                    ApplyMappedValue(l_OrderJson, orderId, l_Mapping, l_Edited);
+                }
+
+                string l_Updated = l_OrderJson.ToString(Newtonsoft.Json.Formatting.None).Replace("'", "''");
+
+                bool l_Process = this.Connection.Execute(
+                    $"UPDATE OrderData SET Data = '{l_Updated}' WHERE OrderId = {orderId} AND Type = 'API-JSON'");
+
+                if (l_Trans)
+                {
+                    if (l_Process)
+                    {
+                        this.Connection.CommitTransaction();
+                        l_Result = Result.GetSuccessResult();
+                    }
+                    else
+                    {
+                        this.Connection.RollbackTransaction();
+                        l_Result = Result.GetFailureResult();
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                if (l_Trans) this.Connection.RollbackTransaction();
+                throw;
+            }
+            finally
+            {
+                l_Data.Dispose();
+                if (l_Mappings != null) l_Mappings.Dispose();
+            }
+
+            return l_Result;
+        }
+
         public Result UpdateShippingAddress(int orderId, string address1, string address2, string city, string state, string postalCode, string country, string ShipToName, string ShipToCompanyName = "")
 
         {

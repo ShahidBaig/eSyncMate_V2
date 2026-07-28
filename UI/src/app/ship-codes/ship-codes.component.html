@@ -1,0 +1,124 @@
+<h2 class="page-title">
+  <mat-icon>local_shipping</mat-icon>
+  <span class="title-text">{{ 'nav.shipCodes' | translate }}</span>
+  <button mat-icon-button class="help-btn" matTooltip="Help Guide" (click)="openHelp()">
+    <mat-icon>help_outline</mat-icon>
+  </button>
+</h2>
+
+<div class="mat-table-container">
+
+  <div class="info-note">
+    <mat-icon class="info-note-icon">info</mat-icon>
+    <span class="info-note-text">{{ 'shipCodeDefaultNote' | translate }}</span>
+  </div>
+
+  <mat-card class="search-card">
+    <mat-card-content>
+      <div class="search-header">
+        <div class="search-header-left">
+          <mat-icon class="search-header-icon">filter_list</mat-icon>
+          <span class="search-header-title">Search &amp; Filter</span>
+        </div>
+      </div>
+
+      <div class="search-row">
+        <mat-form-field appearance="outline" color="accent" class="search-field">
+          <mat-icon matPrefix>storefront</mat-icon>
+          <mat-label>{{ 'customerName' | translate }}</mat-label>
+          <mat-select [(ngModel)]="selectedCustomer" (openedChange)="onCustomerSelectOpened($event)">
+            <div class="select-search-container">
+              <input matInput class="select-search-input" placeholder="Search Customer..."
+                     [(ngModel)]="customerSearchText" [ngModelOptions]="{standalone: true}"
+                     (input)="filterCustomerOptions()" (keydown)="$event.stopPropagation()">
+            </div>
+            <mat-option value="EMPTY">All Customers</mat-option>
+            <mat-option *ngFor="let customer of filteredCustomerOptions" [value]="customer">
+              {{ customer }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" color="accent" class="search-field">
+          <mat-icon matPrefix>search</mat-icon>
+          <mat-label>{{ 'sourceMethod' | translate }}</mat-label>
+          <input matInput [(ngModel)]="searchValue" (keyup.enter)="getShipCodes(true)">
+        </mat-form-field>
+
+        <button mat-flat-button class="search-btn" (click)="getShipCodes(true)">
+          <mat-icon>search</mat-icon>
+          <span>Search</span>
+        </button>
+
+        <button mat-flat-button class="btn-add" (click)="openAddDialog()" *ngIf="canAdd">
+          <mat-icon>add</mat-icon>
+          <span>Add</span>
+        </button>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card>
+    <mat-card-content>
+      <mat-progress-bar [style.visibility]="isLoading ? 'visible' : 'hidden'" mode="indeterminate" color="accent"></mat-progress-bar>
+
+      <table mat-table [dataSource]="shipCodesToDisplay">
+
+        <ng-container matColumnDef="customerID">
+          <th mat-header-cell *matHeaderCellDef>{{ 'ERPCustomerID' | translate }}</th>
+          <td mat-cell *matCellDef="let element">
+            {{ element.customerID }}
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="sourceMethod">
+          <th mat-header-cell *matHeaderCellDef>{{ 'sourceMethod' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{ element.sourceMethod || '—' }} </td>
+        </ng-container>
+
+        <ng-container matColumnDef="matchType">
+          <th mat-header-cell *matHeaderCellDef>{{ 'matchType' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{ element.matchType }} </td>
+        </ng-container>
+
+        <ng-container matColumnDef="levelOfService">
+          <th mat-header-cell *matHeaderCellDef>{{ 'levelOfService' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{ element.levelOfService || '—' }} </td>
+        </ng-container>
+
+        <ng-container matColumnDef="shippingMethod">
+          <th mat-header-cell *matHeaderCellDef>{{ 'shippingMethod' | translate }}</th>
+          <td mat-cell *matCellDef="let element"> {{ element.shippingMethod || '—' }} </td>
+        </ng-container>
+
+        <ng-container matColumnDef="isDefault">
+          <th mat-header-cell *matHeaderCellDef>{{ 'default' | translate }}</th>
+          <td mat-cell *matCellDef="let element">
+            <span *ngIf="element.isDefault" class="default-badge">{{ 'default' | translate }}</span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="Actions">
+          <th mat-header-cell *matHeaderCellDef>{{ 'actions' | translate }}</th>
+          <td mat-cell *matCellDef="let element">
+            <button mat-icon-button color="accent" *ngIf="canEdit"
+                    matTooltip="Edit Mapping" matTooltipPosition="above" (click)="openEditDialog(element)">
+              <mat-icon>edit</mat-icon>
+            </button>
+            <button mat-icon-button color="warn" *ngIf="canDelete"
+                    matTooltip="Delete Mapping" matTooltipPosition="above" (click)="openDeleteDialog(element)">
+              <mat-icon>delete</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="columns"></tr>
+        <tr mat-row *matRowDef="let row; columns: columns"></tr>
+      </table>
+
+      <mat-paginator [length]="totalCount" [pageSize]="pageSize" [pageSizeOptions]="[5, 10, 25, 100]"
+        (page)="onPageChange($event)" showFirstLastButtons>
+      </mat-paginator>
+    </mat-card-content>
+  </mat-card>
+</div>

@@ -1,0 +1,75 @@
+<div class="dialog-container">
+  <div class="dialog-header">
+    <div class="dialog-header-left">
+      <mat-icon class="dialog-header-icon">add_circle</mat-icon>
+      <h2 class="dialog-header-title">{{ 'addShipCode' | translate }}</h2>
+    </div>
+    <button mat-icon-button class="dialog-close-btn" (click)="onCancel()"><mat-icon>close</mat-icon></button>
+  </div>
+
+  <div mat-dialog-content class="dialog-body">
+    <form [formGroup]="form" class="dialog-form">
+      <div class="form-row">
+        <mat-form-field appearance="outline">
+          <mat-label>{{ 'ERPCustomerID' | translate }}</mat-label>
+          <mat-select formControlName="customerID">
+            <mat-option *ngFor="let customer of data.customers" [value]="customer.erpCustomerID">
+              {{ customer.erpCustomerID }}
+            </mat-option>
+          </mat-select>
+          <mat-icon matPrefix>storefront</mat-icon>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>{{ 'matchType' | translate }}</mat-label>
+          <mat-select formControlName="matchType">
+            <mat-option value="EXACT">EXACT</mat-option>
+            <mat-option value="LIKE">LIKE</mat-option>
+          </mat-select>
+          <mat-icon matPrefix>rule</mat-icon>
+        </mat-form-field>
+      </div>
+
+      <div class="form-row">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>{{ 'sourceMethod' | translate }}</mat-label>
+          <input matInput formControlName="sourceMethod">
+          <mat-icon matPrefix>local_shipping</mat-icon>
+        </mat-form-field>
+      </div>
+
+      <div class="form-row">
+        <mat-form-field appearance="outline">
+          <mat-label>{{ 'levelOfService' | translate }}</mat-label>
+          <input matInput formControlName="levelOfService">
+          <mat-icon matPrefix>badge</mat-icon>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>{{ 'shippingMethod' | translate }}</mat-label>
+          <input matInput formControlName="shippingMethod">
+          <mat-icon matPrefix>qr_code</mat-icon>
+        </mat-form-field>
+      </div>
+
+      <div class="form-row form-row-inline">
+        <mat-form-field appearance="outline" class="priority-field">
+          <mat-label>{{ 'priority' | translate }}</mat-label>
+          <input matInput type="number" formControlName="priority" min="1">
+          <mat-icon matPrefix>low_priority</mat-icon>
+        </mat-form-field>
+
+        <mat-checkbox formControlName="isDefault" class="default-check">
+          {{ 'shipCodeIsDefault' | translate }}
+        </mat-checkbox>
+      </div>
+    </form>
+  </div>
+
+  <div mat-dialog-actions class="dialog-footer">
+    <button mat-button class="btn-cancel" (click)="onCancel()">{{ 'cancel' | translate }}</button>
+    <button mat-raised-button class="btn-save" [disabled]="!form.valid || isSaving" (click)="onSave()">
+      <mat-icon>save</mat-icon> {{ 'save' | translate }}
+    </button>
+  </div>
+</div>

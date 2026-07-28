@@ -1,4 +1,4 @@
-using eSyncMate.DB;
+﻿using eSyncMate.DB;
 using eSyncMate.DB.Entities;
 using eSyncMate.Processor.Connections;
 using eSyncMate.Processor.Models;
@@ -263,6 +263,214 @@ namespace eSyncMate.Processor.Managers
                 route.SaveLog(LogTypeEnum.Exception, $"Error executing the route [{route.Id}]", ex.ToString(), userNo);
             }
             finally 
+            {
+                l_dataTable.Dispose();
+            }
+        }
+
+        // ================= Re-Transmit ASN (single order) â€” fully self-contained =================
+        // Resolves this customer's Lowes ASN route and re-sends ONLY the given order. Its own copy of
+        // the send logic â€” the batch Execute above is never touched. Source SP is constrained with
+        // @p_OrderId so a SHIPPED order is re-picked. Order status is NOT changed here.
+        public static string ExecuteSingle(IConfiguration config, int orderId, string customerName)
+        {
+            int userNo = 1;
+            string Body = string.Empty;
+            int l_ID = 0;
+            DataTable l_dataTable = new DataTable();
+            RestResponse sourceResponse = new RestResponse();
+
+            Routes route = new Routes();
+            route.UseConnection(CommonUtils.ConnectionString);
+
+            if (!route.GetObject("TypeId", (int)RouteTypesEnum.LowesASNShipmentNotification, "CustomerName", customerName).IsSuccess)
+            {
+                return $"No ASN route configured for customer: {customerName}";
+            }
+
+            if (route.Status.ToUpper() == "IN-ACTIVE")
+            {
+                return "ASN route is not active.";
+            }
+
+            try
+            {
+                ConnectorDataModel? l_SourceConnector = ConnectorDataModel.Deserialize(route.SourceConnectorObject.Data);
+                ConnectorDataModel? l_DestinationConnector = ConnectorDataModel.Deserialize(route.DestinationConnectorObject.Data);
+
+                if (l_SourceConnector == null || l_DestinationConnector == null)
+                {
+                    return "ASN route connectors are not setup properly.";
+                }
+
+                route.SaveLog(LogTypeEnum.Info, $"[Re-Transmit ASN] Started for order [{orderId}] on route [{route.Id}]", string.Empty, userNo);
+
+                if (l_SourceConnector.ConnectivityType == ConnectorTypesEnum.SqlServer.ToString())
+                {
+                    DBConnector connection = new DBConnector(l_SourceConnector.ConnectionString);
+
+                    l_SourceConnector.Command = l_SourceConnector.Command.Replace("@DATATYPE@", "ERPASN-JSON");
+                    l_SourceConnector.Command = l_SourceConnector.Command.Replace("@ORDERSTATUS@", "SYNCED");
+                    l_SourceConnector.Command = l_SourceConnector.Command.Replace("@ORDERDATASTATUS@", "ASNGEN");
+                    l_SourceConnector.Command += $", @p_OrderId = {orderId}";
+
+                    if (l_SourceConnector.CommandType == "SP")
+                    {
+                        connection.GetDataSP(l_SourceConnector.Command, ref l_dataTable);
+                    }
+                }
+
+                if (l_dataTable.Rows.Count == 0)
+                {
+                    return $"No ASN shipment data found for order [{orderId}] to re-transmit.";
+                }
+
+                if (l_DestinationConnector.ConnectivityType == ConnectorTypesEnum.Rest.ToString() && l_dataTable.Rows.Count > 0)
+                {
+                    DataTable l_Orders = l_dataTable.DefaultView.ToTable(true, new string[] { "Id", "OrderNumber", "ExternalId" });
+
+                    l_Orders.Columns.Add("Data", typeof(string));
+                    l_Orders.Columns.Add("Trackings", typeof(string));
+
+                    foreach (DataRow l_Row in l_Orders.Rows)
+                    {
+                        string trackings = string.Empty;
+                        LowesAsnRequestModel l_LowesAsnRequestModel = new LowesAsnRequestModel();
+                        LowesShipment l_LowesShipment = new LowesShipment();
+                        LowesShipment_Lines LowesShipment_Lines = new LowesShipment_Lines();
+
+                        l_dataTable.DefaultView.RowFilter = $"Id = {l_Row["Id"].ToString()}";
+
+                        foreach (DataRowView l_VRow in l_dataTable.DefaultView)
+                        {
+                            l_LowesShipment = new LowesShipment();
+                            LowesShipment_Lines = new LowesShipment_Lines();
+
+                            l_LowesShipment.order_id = l_VRow["OrderNumber"].ToString();
+                            l_LowesShipment.invoice_reference = l_VRow["TrackingNo"].ToString();
+                            l_LowesShipment.tracking.carrier_code = l_VRow["LevelOfService"].ToString();
+                            l_LowesShipment.tracking.carrier_name = l_VRow["LevelOfService"].ToString();
+                            l_LowesShipment.tracking.tracking_number = l_VRow["TrackingNo"].ToString();
+
+                            LowesShipment_Lines.offer_sku = l_VRow["ItemID"].ToString();
+                            LowesShipment_Lines.quantity = Convert.ToInt32(l_VRow["LineQty"]);
+                            l_LowesShipment.shipment_lines.Add(LowesShipment_Lines);
+
+                            l_LowesAsnRequestModel.shipments.Add(l_LowesShipment);
+
+                            trackings += $"{l_VRow["TrackingNo"].ToString()},";
+                        }
+
+                        l_Row["Trackings"] = trackings;
+                        l_Row["Data"] = JsonConvert.SerializeObject(l_LowesAsnRequestModel);
+                    }
+
+                    foreach (DataRow l_Row in l_Orders.Rows)
+                    {
+                        Body = PublicFunctions.ConvertNullAsString(l_Row["Data"], string.Empty);
+                        l_ID = PublicFunctions.ConvertNullAsInteger(l_Row["Id"], 0);
+
+                        route.SaveData("JSON-SNT", 0, Body, userNo);
+
+                        l_DestinationConnector.Url = l_DestinationConnector.BaseUrl + "/api/shipments";
+                        l_DestinationConnector.Method = "POST";
+
+                        OrderData l_OrderData = new OrderData();
+
+                        l_OrderData.UseConnection(l_SourceConnector.ConnectionString);
+
+                        l_OrderData.Type = "ASN-SNT";
+                        l_OrderData.Data = Body;
+                        l_OrderData.CreatedBy = userNo;
+                        l_OrderData.CreatedDate = DateTime.Now;
+                        l_OrderData.OrderId = Convert.ToInt32(l_Row["Id"]);
+                        l_OrderData.OrderNumber = PublicFunctions.ConvertNullAsString(l_Row["OrderNumber"], string.Empty);
+
+                        l_OrderData.SaveNew();
+
+                        sourceResponse = RestConnector.Execute(l_DestinationConnector, Body).GetAwaiter().GetResult();
+
+                        route.SaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
+                        route.SaveLog(LogTypeEnum.Debug, $"[Re-Transmit ASN] processed for order [{l_Row["Id"]}].", string.Empty, userNo);
+
+                        if (sourceResponse.StatusCode == System.Net.HttpStatusCode.OK || sourceResponse.StatusCode == System.Net.HttpStatusCode.Created)
+                        {
+                            OrderDetail l_Detail = new OrderDetail();
+
+                            l_Detail.UseConnection(l_SourceConnector.ConnectionString);
+                            foreach (string tracking in l_Row["Trackings"].ToString().Split(','))
+                            {
+                                if (!string.IsNullOrEmpty(tracking))
+                                    l_Detail.UpdateASNSent(Convert.ToInt32(l_Row["Id"]), tracking);
+                            }
+
+                            OrderData l_ResData = new OrderData();
+
+                            l_ResData.UseConnection(l_SourceConnector.ConnectionString);
+                            l_ResData.DeleteWithType(Convert.ToInt32(l_Row["Id"]), "ASN-RES", "Bad Request");
+
+                            l_ResData.Type = "ASN-RES";
+                            l_ResData.Data = sourceResponse.Content;
+                            l_ResData.CreatedBy = userNo;
+                            l_ResData.CreatedDate = DateTime.Now;
+                            l_ResData.OrderId = Convert.ToInt32(l_Row["Id"]);
+                            l_ResData.OrderNumber = PublicFunctions.ConvertNullAsString(l_Row["OrderNumber"], string.Empty);
+
+                            l_ResData.SaveNew();
+                        }
+                        else
+                        {
+                            OrderData l_ErrData = new OrderData();
+
+                            l_ErrData.UseConnection(l_SourceConnector.ConnectionString);
+
+                            l_ErrData.Type = "ASN-ERR";
+                            l_ErrData.Data = sourceResponse.Content;
+                            l_ErrData.CreatedBy = userNo;
+                            l_ErrData.CreatedDate = DateTime.Now;
+                            l_ErrData.OrderId = Convert.ToInt32(l_Row["Id"]);
+                            l_ErrData.OrderNumber = PublicFunctions.ConvertNullAsString(l_Row["OrderNumber"], string.Empty);
+
+                            l_ErrData.SaveNew();
+
+                            return $"ASN re-transmit failed for order [{orderId}]: {sourceResponse.Content}";
+                        }
+
+                        string sql = $@"SELECT  O.Id
+                                        FROM Orders O WITH (NOLOCK)
+	                                        JOIN OrderDetail D WITH (NOLOCK) ON O.Id = D.OrderId
+                                        WHERE O.OrderNumber = '{l_Row["OrderNumber"].ToString()}'
+                                        GROUP BY O.Id
+                                        HAVING SUM(D.LineQty) - SUM(ISNULL(D.CancelQty,0)) <> SUM(ISNULL(D.ASNQty,0))";
+
+                        DBConnector conn = new DBConnector(l_SourceConnector.ConnectionString);
+                        DataTable l_Data = new DataTable();
+
+                        conn.GetData(sql, ref l_Data);
+
+                        if (l_Data.Rows.Count == 0)
+                        {
+                            l_DestinationConnector.Url = l_DestinationConnector.BaseUrl + $"/api/orders/{l_Row["OrderNumber"].ToString()}/ship";
+                            l_DestinationConnector.Method = "PUT";
+
+                            route.SaveData("JSON-SNT", 0, l_DestinationConnector.Url, userNo);
+
+                            sourceResponse = RestConnector.Execute(l_DestinationConnector, Body).GetAwaiter().GetResult();
+
+                            route.SaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
+                        }
+                    }
+                }
+
+                route.SaveLog(LogTypeEnum.Info, $"[Re-Transmit ASN] Completed for order [{orderId}]", string.Empty, userNo);
+                return string.Empty;
+            }
+            catch (Exception ex)
+            {
+                route.SaveLog(LogTypeEnum.Exception, $"[Re-Transmit ASN] Error for order [{orderId}]", ex.ToString(), userNo);
+                return $"ASN re-transmit error: {ex.Message}";
+            }
+            finally
             {
                 l_dataTable.Dispose();
             }

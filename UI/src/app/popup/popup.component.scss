@@ -1,5 +1,11 @@
 .popup-container {
   font-family: 'Poppins', sans-serif;
+  background: linear-gradient(180deg, #ffffff 0%, #f6f8fb 100%);
+  border-radius: 14px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  max-height: 82vh;
 }
 
 // ===== HEADER =====
@@ -7,21 +13,30 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 24px;
+  padding: 16px 24px;
+  background: linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%);
   border-bottom: 1px solid #e2e8f0;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.9) inset, 0 4px 12px -6px rgba(15, 23, 42, 0.18);
 }
 
 .header-left {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
 .header-icon {
-  font-size: 24px;
-  width: 24px;
-  height: 24px;
-  color: #2563eb;
+  font-size: 22px;
+  width: 42px;
+  height: 42px;
+  line-height: 42px;
+  text-align: center;
+  color: #ffffff;
+  border-radius: 12px;
+  background: linear-gradient(160deg, #3b82f6 0%, #2563eb 60%, #1d4ed8 100%);
+  box-shadow: 0 6px 14px -4px rgba(37, 99, 235, 0.55),
+              0 2px 4px rgba(15, 23, 42, 0.2),
+              0 1px 0 rgba(255, 255, 255, 0.35) inset;
 }
 
 .header-title {
@@ -29,6 +44,7 @@
   font-size: 16px;
   font-weight: 600;
   color: #1e293b;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 
 .header-subtitle {
@@ -39,34 +55,46 @@
 
 .close-btn {
   color: #94a3b8;
-  &:hover { color: #1e293b; }
+  transition: all 0.15s ease;
+  &:hover {
+    color: #1e293b;
+    background: #ffffff;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.15);
+  }
 }
 
 // ===== BODY =====
+// Scroll lives here (outside the table card) so the scrollbar never sits inside the grid
 .popup-body {
-  padding: 16px 24px;
+  padding: 18px 24px 20px;
+  flex: 1 1 auto;
+  overflow-y: auto;
 }
 
 // ===== TABLE =====
 .table-wrapper {
   border: 1px solid #e2e8f0;
-  border-radius: 10px;
+  border-radius: 12px;
   overflow: hidden;
-  max-height: 500px;
-  overflow-y: auto;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06),
+              0 6px 16px -6px rgba(15, 23, 42, 0.18),
+              0 16px 32px -20px rgba(15, 23, 42, 0.25);
 }
 
 .logs-table {
   width: 100%;
 
   th {
-    background: #f8fafc;
+    background: linear-gradient(180deg, #ffffff 0%, #eef2f7 100%);
     color: #64748b;
     font-size: 12px;
-    font-weight: 600;
+    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.3px;
     padding: 12px 16px;
+    border-bottom: 1px solid #cbd5e1;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.9);
   }
 
   td {
@@ -74,10 +102,19 @@
     color: #1e293b;
     padding: 10px 16px;
     border-bottom: 1px solid #f1f5f9;
+    transition: background 0.15s ease;
+  }
+
+  tr {
+    transition: box-shadow 0.15s ease;
+  }
+
+  tr:hover {
+    box-shadow: 0 4px 14px -6px rgba(15, 23, 42, 0.35);
   }
 
   tr:hover td {
-    background: #f8fafc;
+    background: linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%);
   }
 }
 
@@ -124,22 +161,34 @@
   width: 34px;
   height: 34px;
   line-height: 34px;
+  transition: all 0.15s ease;
 
   mat-icon {
     font-size: 18px;
     width: 18px;
     height: 18px;
   }
+
+  &:hover:not(:disabled) {
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.2),
+                0 1px 0 rgba(255, 255, 255, 0.9) inset;
+    transform: translateY(-1px);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.25) inset;
+  }
 }
 
 .download-btn {
   color: #2563eb;
-  &:hover { background: #eff6ff; }
+  &:hover { background: linear-gradient(180deg, #ffffff 0%, #eff6ff 100%); }
 }
 
 .view-btn {
   color: #059669;
-  &:hover { background: #ecfdf5; }
+  &:hover { background: linear-gradient(180deg, #ffffff 0%, #ecfdf5 100%); }
 }
 
 // ===== ACTIONS =====
@@ -163,15 +212,16 @@
 }
 
 // ===== SCROLLBAR =====
-.table-wrapper::-webkit-scrollbar {
-  width: 6px;
+.popup-body::-webkit-scrollbar {
+  width: 8px;
 }
 
-.table-wrapper::-webkit-scrollbar-thumb {
+.popup-body::-webkit-scrollbar-thumb {
   background: #cbd5e1;
-  border-radius: 3px;
+  border-radius: 4px;
+  &:hover { background: #94a3b8; }
 }
 
-.table-wrapper::-webkit-scrollbar-track {
-  background: #f1f5f9;
+.popup-body::-webkit-scrollbar-track {
+  background: transparent;
 }

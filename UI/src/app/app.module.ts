@@ -47,6 +47,11 @@ import { AuthInterceptor } from './services/AuthInterceptor';
 import { HistoryCustomerProductCatalogDialogComponent } from './customer-product-catalog/history-customer-product-catalog-dialog/history-customer-product-catalog-dialog.component';
 import { RouteLogDialogComponent } from './routes/route-log-dialog/route-log-dialog.component';
 import { RouteTypesComponent } from './route-types/route-types.component';
+import { ShipNodesComponent } from './ship-nodes/ship-nodes.component';
+import { AddShipNodeDialogComponent } from './ship-nodes/add-ship-node-dialog/add-ship-node-dialog.component';
+import { EditShipNodeDialogComponent } from './ship-nodes/edit-ship-node-dialog/edit-ship-node-dialog.component';
+import { DeleteShipNodeDialogComponent } from './ship-nodes/delete-ship-node-dialog/delete-ship-node-dialog.component';
+import { ShipNodesHelpDialogComponent } from './ship-nodes/ship-nodes-help-dialog/ship-nodes-help-dialog.component';
 import { AddRouteTypesDialogComponent } from './route-types/add-route-types-dialog/add-route-types-dialog.component';
 import { EditRouteTypesDialogComponent } from './route-types/edit-route-types-dialog/edit-route-types-dialog.component';
 import { RouteDataDialogComponent } from './routes/route-data-dialog/route-data-dialog.component';
@@ -139,6 +144,11 @@ import { PrivacyPolicyComponent } from './privacy-policy/privacy-policy.componen
     HistoryCustomerProductCatalogDialogComponent,
     RouteLogDialogComponent,
     RouteTypesComponent,
+    ShipNodesComponent,
+    AddShipNodeDialogComponent,
+    EditShipNodeDialogComponent,
+    DeleteShipNodeDialogComponent,
+    ShipNodesHelpDialogComponent,
     AddRouteTypesDialogComponent,
     EditRouteTypesDialogComponent,
     RouteDataDialogComponent,

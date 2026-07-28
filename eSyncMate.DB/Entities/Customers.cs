@@ -28,6 +28,20 @@ namespace eSyncMate.DB.Entities
         public int ModifiedBy { get; set; }
         public List<CustomerMaps> Maps { get; set; }
         public List<CustomerConnectors> Connectors { get; set; }
+
+        // ── Target Plus OAuth (declared AFTER ModifiedBy/Maps/Connectors so the
+        //    ordinal ORM excludes them; managed via the dedicated OAuth methods below) ──
+        public bool UseNewAuthentication { get; set; }
+        public string OAuthClientId { get; set; }
+        public string OAuthClientSecret { get; set; }
+        public string OAuthAuthUrl { get; set; }
+        public string OAuthTokenUrl { get; set; }
+        public string OAuthRefreshToken { get; set; }
+        public DateTime? OAuthRefreshTokenExpiry { get; set; }
+        public string OAuthAccessToken { get; set; }
+        public DateTime? OAuthAccessTokenExpiry { get; set; }
+        public DateTime? OAuthTokenUpdatedDate { get; set; }
+
         private static string TableName { get; set; }
         private static string ViewName { get; set; }
         private static string PrimaryKeyName { get; set; }
@@ -468,6 +482,155 @@ namespace eSyncMate.DB.Entities
 
             return l_Result;
         }
+
+        #region Target Plus OAuth (dedicated direct-SQL — bypasses the ordinal ORM)
+
+        // SQL literal helpers (encrypted tokens are base64 = safe, but escape anyway).
+        private static string SqlStr(string p_Value)
+        {
+            return p_Value == null ? "NULL" : "N'" + p_Value.Replace("'", "''") + "'";
+        }
+
+        private static string SqlDate(DateTime? p_Value)
+        {
+            return p_Value.HasValue ? "'" + p_Value.Value.ToString("yyyy-MM-dd HH:mm:ss") + "'" : "NULL";
+        }
+
+        /// <summary>
+        /// Load the OAuth columns (flag, credentials, tokens) for a customer by Id.
+        /// Token/secret values are returned AS STORED (encrypted) — decrypt in the caller.
+        /// </summary>
+        public bool LoadOAuth(int p_Id)
+        {
+            DataTable l_Data = new DataTable();
+
+            string l_Query =
+                "SELECT UseNewAuthentication, OAuthClientId, OAuthClientSecret, OAuthAuthUrl, OAuthTokenUrl, " +
+                "OAuthRefreshToken, OAuthRefreshTokenExpiry, OAuthAccessToken, OAuthAccessTokenExpiry, OAuthTokenUpdatedDate " +
+                "FROM Customers WITH (NOLOCK) WHERE Id = " + p_Id;
+
+            if (!Connection.GetData(l_Query, ref l_Data) || l_Data.Rows.Count == 0)
+            {
+                l_Data.Dispose();
+                return false;
+            }
+
+            DataRow r = l_Data.Rows[0];
+            this.Id = p_Id;
+            this.UseNewAuthentication = r["UseNewAuthentication"] != DBNull.Value && Convert.ToBoolean(r["UseNewAuthentication"]);
+            this.OAuthClientId = r["OAuthClientId"] as string;
+            this.OAuthClientSecret = r["OAuthClientSecret"] as string;
+            this.OAuthAuthUrl = r["OAuthAuthUrl"] as string;
+            this.OAuthTokenUrl = r["OAuthTokenUrl"] as string;
+            this.OAuthRefreshToken = r["OAuthRefreshToken"] as string;
+            this.OAuthRefreshTokenExpiry = r["OAuthRefreshTokenExpiry"] == DBNull.Value ? (DateTime?)null : DateTime.SpecifyKind(Convert.ToDateTime(r["OAuthRefreshTokenExpiry"]), DateTimeKind.Utc);
+            this.OAuthAccessToken = r["OAuthAccessToken"] as string;
+            this.OAuthAccessTokenExpiry = r["OAuthAccessTokenExpiry"] == DBNull.Value ? (DateTime?)null : DateTime.SpecifyKind(Convert.ToDateTime(r["OAuthAccessTokenExpiry"]), DateTimeKind.Utc);
+            this.OAuthTokenUpdatedDate = r["OAuthTokenUpdatedDate"] == DBNull.Value ? (DateTime?)null : DateTime.SpecifyKind(Convert.ToDateTime(r["OAuthTokenUpdatedDate"]), DateTimeKind.Utc);
+
+            l_Data.Dispose();
+            return true;
+        }
+
+        /// <summary>
+        /// Load the OAuth columns for a customer by ERPCustomerID (resolves and sets Id too).
+        /// Token/secret values are returned AS STORED (encrypted) — decrypt in the caller.
+        /// </summary>
+        public bool LoadOAuthByERP(string p_ERPCustomerID)
+        {
+            DataTable l_Data = new DataTable();
+
+            string l_Query =
+                "SELECT Id, UseNewAuthentication, OAuthClientId, OAuthClientSecret, OAuthAuthUrl, OAuthTokenUrl, " +
+                "OAuthRefreshToken, OAuthRefreshTokenExpiry, OAuthAccessToken, OAuthAccessTokenExpiry, OAuthTokenUpdatedDate " +
+                "FROM Customers WITH (NOLOCK) WHERE ERPCustomerID = " + SqlStr(p_ERPCustomerID);
+
+            if (!Connection.GetData(l_Query, ref l_Data) || l_Data.Rows.Count == 0)
+            {
+                l_Data.Dispose();
+                return false;
+            }
+
+            DataRow r = l_Data.Rows[0];
+            this.Id = Convert.ToInt32(r["Id"]);
+            this.UseNewAuthentication = r["UseNewAuthentication"] != DBNull.Value && Convert.ToBoolean(r["UseNewAuthentication"]);
+            this.OAuthClientId = r["OAuthClientId"] as string;
+            this.OAuthClientSecret = r["OAuthClientSecret"] as string;
+            this.OAuthAuthUrl = r["OAuthAuthUrl"] as string;
+            this.OAuthTokenUrl = r["OAuthTokenUrl"] as string;
+            this.OAuthRefreshToken = r["OAuthRefreshToken"] as string;
+            this.OAuthRefreshTokenExpiry = r["OAuthRefreshTokenExpiry"] == DBNull.Value ? (DateTime?)null : DateTime.SpecifyKind(Convert.ToDateTime(r["OAuthRefreshTokenExpiry"]), DateTimeKind.Utc);
+            this.OAuthAccessToken = r["OAuthAccessToken"] as string;
+            this.OAuthAccessTokenExpiry = r["OAuthAccessTokenExpiry"] == DBNull.Value ? (DateTime?)null : DateTime.SpecifyKind(Convert.ToDateTime(r["OAuthAccessTokenExpiry"]), DateTimeKind.Utc);
+            this.OAuthTokenUpdatedDate = r["OAuthTokenUpdatedDate"] == DBNull.Value ? (DateTime?)null : DateTime.SpecifyKind(Convert.ToDateTime(r["OAuthTokenUpdatedDate"]), DateTimeKind.Utc);
+
+            l_Data.Dispose();
+            return true;
+        }
+
+        /// <summary>
+        /// Save the full token set — used after first authorize and after every refresh
+        /// (refresh token ROTATES, so it is written every time). Pass ENCRYPTED values.
+        /// </summary>
+        public bool SaveOAuthTokens(int p_Id, string p_RefreshToken, DateTime? p_RefreshExpiry, string p_AccessToken, DateTime? p_AccessExpiry)
+        {
+            string l_Query =
+                "UPDATE Customers SET " +
+                "OAuthRefreshToken = " + SqlStr(p_RefreshToken) + ", " +
+                "OAuthRefreshTokenExpiry = " + SqlDate(p_RefreshExpiry) + ", " +
+                "OAuthAccessToken = " + SqlStr(p_AccessToken) + ", " +
+                "OAuthAccessTokenExpiry = " + SqlDate(p_AccessExpiry) + ", " +
+                "OAuthTokenUpdatedDate = GETUTCDATE() " +
+                "WHERE Id = " + p_Id;
+
+            return Connection.Execute(l_Query);
+        }
+
+        /// <summary>
+        /// Save only the access token (when it expires but the refresh token was not rotated).
+        /// Pass ENCRYPTED value.
+        /// </summary>
+        public bool SaveOAuthAccessToken(int p_Id, string p_AccessToken, DateTime? p_AccessExpiry)
+        {
+            string l_Query =
+                "UPDATE Customers SET " +
+                "OAuthAccessToken = " + SqlStr(p_AccessToken) + ", " +
+                "OAuthAccessTokenExpiry = " + SqlDate(p_AccessExpiry) + ", " +
+                "OAuthTokenUpdatedDate = GETUTCDATE() " +
+                "WHERE Id = " + p_Id;
+
+            return Connection.Execute(l_Query);
+        }
+
+        /// <summary>
+        /// Save the static OAuth credentials + endpoints (one-time setup). Pass ENCRYPTED secret.
+        /// </summary>
+        public bool SaveOAuthCredentials(int p_Id, string p_ClientId, string p_ClientSecret, string p_AuthUrl, string p_TokenUrl)
+        {
+            string l_Query =
+                "UPDATE Customers SET " +
+                "OAuthClientId = " + SqlStr(p_ClientId) + ", " +
+                "OAuthClientSecret = " + SqlStr(p_ClientSecret) + ", " +
+                "OAuthAuthUrl = " + SqlStr(p_AuthUrl) + ", " +
+                "OAuthTokenUrl = " + SqlStr(p_TokenUrl) + " " +
+                "WHERE Id = " + p_Id;
+
+            return Connection.Execute(l_Query);
+        }
+
+        /// <summary>
+        /// Toggle the new-OAuth flag for a customer (ON = OAuth path, OFF = legacy headers).
+        /// </summary>
+        public bool SetUseNewAuthentication(int p_Id, bool p_Value)
+        {
+            string l_Query =
+                "UPDATE Customers SET UseNewAuthentication = " + (p_Value ? "1" : "0") +
+                " WHERE Id = " + p_Id;
+
+            return Connection.Execute(l_Query);
+        }
+
+        #endregion
 
         #region IDisposable Support
         private bool disposedValue; // To detect redundant calls

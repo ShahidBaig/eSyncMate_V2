@@ -110,23 +110,24 @@ namespace eSyncMate.Processor.Controllers
                 }
                 else if (searchModel.SearchOption == "ERP CustomerID")
                 {
-                    l_Criteria = $" CustomerID = '{searchModel.SearchValue}'";
+                    l_Criteria = $" CustomerID = '{SqlSearchHelper.EscapeLiteral(searchModel.SearchValue)}'";
                 }
                 else if (searchModel.SearchOption == "ItemID")
                 {
-                    l_Criteria = $" ItemID LIKE '%{searchModel.SearchValue}%'";
+                    // Item ids such as 512N-60(3A)[7PC]BKS contain LIKE wildcards
+                    l_Criteria = SqlSearchHelper.Contains("ItemID", searchModel.SearchValue);
                 }
                 else if (searchModel.SearchOption == "Item Type Name")
                 {
-                    l_Criteria = $" ItemTypeName LIKE '%{searchModel.SearchValue}%'";
+                    l_Criteria = SqlSearchHelper.Contains("ItemTypeName", searchModel.SearchValue);
                 }
                 else if (searchModel.SearchOption == "Parent ID")
                 {
-                    l_Criteria = $" ParentID LIKE '%{searchModel.SearchValue}%'";
+                    l_Criteria = SqlSearchHelper.Contains("ParentID", searchModel.SearchValue);
                 }
                 else if (searchModel.SearchOption == "Status")
                 {
-                    l_Criteria = $" SyncStatus LIKE '%{searchModel.SearchValue}%'";
+                    l_Criteria = SqlSearchHelper.Contains("SyncStatus", searchModel.SearchValue);
                 }
 
                 if (string.IsNullOrEmpty(l_Criteria) && !userData.IsSuperAdmin)
@@ -139,7 +140,7 @@ namespace eSyncMate.Processor.Controllers
                 this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Staring PartnerGroup search.");
 
                 int totalCount = 0;
-                l_CustomerProductCatalog.GetViewListPaged(l_Criteria, string.Empty, ref l_Data, "Id DESC", searchModel.PageNumber, searchModel.PageSize, out totalCount);
+                l_CustomerProductCatalog.GetViewListPagedWithError(l_Criteria, string.Empty, ref l_Data, "Id DESC", searchModel.PageNumber, searchModel.PageSize, out totalCount);
 
                 this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - CustomerProductCatalog searched {{{l_Data.Rows.Count}}} of {totalCount} total.");
                 this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Populating CustomerProductCatalog.");
@@ -227,16 +228,16 @@ namespace eSyncMate.Processor.Controllers
                 }
                 else if (searchModel.SearchOption == "ERP CustomerID")
                 {
-                    l_Criteria = $" CustomerID = '{searchModel.SearchValue}'";
+                    l_Criteria = $" CustomerID = '{SqlSearchHelper.EscapeLiteral(searchModel.SearchValue)}'";
                 }
                 else if (searchModel.SearchOption == "ItemID")
                 {
-                    l_Criteria = $" ItemID LIKE '%{searchModel.SearchValue}%'";
+                    l_Criteria = SqlSearchHelper.Contains("ItemID", searchModel.SearchValue);
                 }
 
                 else if (searchModel.SearchOption == "Status")
                 {
-                    l_Criteria = $" SyncStatus LIKE '%{searchModel.SearchValue}%'";
+                    l_Criteria = SqlSearchHelper.Contains("SyncStatus", searchModel.SearchValue);
                 }
 
                 if (string.IsNullOrEmpty(l_Criteria) && !userData.IsSuperAdmin)
@@ -1236,6 +1237,230 @@ namespace eSyncMate.Processor.Controllers
             });
         }
 
+
+        /// <summary>
+        /// Reads item ids out of the uploaded CSV and reports what a delete would remove.
+        /// Nothing is changed here — this feeds the confirmation step.
+        /// </summary>
+        [HttpPost]
+        [Route("previewDeleteProducts")]
+        public async Task<DeleteProductsPreviewResponseModel> PreviewDeleteProducts(IFormFile file)
+        {
+            MethodBase l_Me = MethodBase.GetCurrentMethod();
+            DeleteProductsPreviewResponseModel l_Response = new DeleteProductsPreviewResponseModel();
+            DataTable l_Data = new DataTable();
+
+            l_Response.Found = new List<DeleteProductsPreviewRow>();
+            l_Response.NotFound = new List<string>();
+
+            try
+            {
+                l_Response.Code = (int)ResponseCodes.Error;
+
+                List<string> l_ItemIDs = ReadItemIDsFromCsv(file);
+
+                l_Response.TotalItemIDs = l_ItemIDs.Count;
+
+                if (l_ItemIDs.Count == 0)
+                {
+                    l_Response.Code = (int)ResponseCodes.Error;
+                    l_Response.Message = "No Item IDs were found in the file. The file should have a single ItemID column.";
+
+                    return l_Response;
+                }
+
+                DB.Entities.CustomerProductCatalog l_Catalog = new DB.Entities.CustomerProductCatalog();
+                l_Catalog.UseConnection(CommonUtils.ConnectionString);
+                l_Catalog.GetProductsByItemIDs(l_ItemIDs, ref l_Data);
+
+                var l_FoundIDs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                foreach (DataRow l_Row in l_Data.Rows)
+                {
+                    string l_ItemID = PublicFunctions.ConvertNullAsString(l_Row["ItemID"], string.Empty);
+                    l_FoundIDs.Add(l_ItemID);
+
+                    l_Response.Found.Add(new DeleteProductsPreviewRow
+                    {
+                        ItemID = l_ItemID,
+                        ProductCount = PublicFunctions.ConvertNullAsInteger(l_Row["ProductCount"], 0),
+                        CustomerCount = PublicFunctions.ConvertNullAsInteger(l_Row["CustomerCount"], 0),
+                        Customers = PublicFunctions.ConvertNullAsString(l_Row["Customers"], string.Empty)
+                    });
+                }
+
+                foreach (string l_ItemID in l_ItemIDs)
+                {
+                    if (!l_FoundIDs.Contains(l_ItemID)) l_Response.NotFound.Add(l_ItemID);
+                }
+
+                l_Response.TotalProducts = l_Response.Found.Sum(f => f.ProductCount);
+                l_Response.Code = (int)ResponseCodes.Success;
+                l_Response.Message = "File read successfully.";
+            }
+            catch (Exception ex)
+            {
+                l_Response.Code = (int)ResponseCodes.Exception;
+                l_Response.Message = ex.Message;
+                this._logger.LogCritical($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - {ex}");
+            }
+            finally
+            {
+                l_Data.Dispose();
+            }
+
+            return l_Response;
+        }
+
+        /// <summary>
+        /// Permanently removes catalog rows for the given item ids across every customer,
+        /// along with their detail rows.
+        /// </summary>
+        [HttpPost]
+        [Route("deleteProducts")]
+        public async Task<DeleteProductsResponseModel> DeleteProducts([FromBody] DeleteProductsRequestModel request)
+        {
+            MethodBase l_Me = MethodBase.GetCurrentMethod();
+            DeleteProductsResponseModel l_Response = new DeleteProductsResponseModel();
+
+            try
+            {
+                l_Response.Code = (int)ResponseCodes.Error;
+
+                List<string> l_ItemIDs = (request?.ItemIDs ?? new List<string>())
+                    .Where(i => !string.IsNullOrWhiteSpace(i))
+                    .Select(i => i.Trim())
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+                if (l_ItemIDs.Count == 0)
+                {
+                    l_Response.Message = "No Item IDs were supplied.";
+
+                    return l_Response;
+                }
+
+                DB.Entities.CustomerProductCatalog l_Catalog = new DB.Entities.CustomerProductCatalog();
+                l_Catalog.UseConnection(CommonUtils.ConnectionString);
+
+                int l_DeletedProducts = 0;
+                int l_DeletedData = 0;
+
+                Result l_Result = l_Catalog.DeleteProductsByItemIDs(l_ItemIDs, out l_DeletedProducts, out l_DeletedData);
+
+                l_Response.DeletedProducts = l_DeletedProducts;
+                l_Response.DeletedProductData = l_DeletedData;
+
+                if (l_Result.IsSuccess)
+                {
+                    l_Response.Code = (int)ResponseCodes.Success;
+                    l_Response.Message = $"{l_DeletedProducts} product(s) and {l_DeletedData} data row(s) deleted.";
+
+                    this._logger.LogWarning($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Deleted {l_DeletedProducts} catalog product(s) / {l_DeletedData} data row(s) for {l_ItemIDs.Count} item id(s): {string.Join(",", l_ItemIDs)}");
+                }
+                else
+                {
+                    l_Response.Code = (int)ResponseCodes.Error;
+                    l_Response.Message = "No matching products were found to delete.";
+                }
+            }
+            catch (Exception ex)
+            {
+                l_Response.Code = (int)ResponseCodes.Exception;
+                l_Response.Message = ex.Message;
+                this._logger.LogCritical($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - {ex}");
+            }
+
+            return l_Response;
+        }
+
+        /// <summary>
+        /// First CSV field of a line, honouring quotes so ids such as "512N-60(3A)[7PC]BKS"
+        /// — or a quoted value that itself contains a comma — survive intact.
+        /// </summary>
+        private static string ReadFirstCsvField(string p_Line)
+        {
+            string l_Line = p_Line.TrimStart('﻿');
+
+            if (!l_Line.StartsWith("\""))
+            {
+                int l_Comma = l_Line.IndexOf(',');
+                return (l_Comma >= 0 ? l_Line.Substring(0, l_Comma) : l_Line).Trim();
+            }
+
+            var l_Field = new System.Text.StringBuilder();
+
+            for (int i = 1; i < l_Line.Length; i++)
+            {
+                if (l_Line[i] == '"')
+                {
+                    // "" inside a quoted field is a literal quote
+                    if (i + 1 < l_Line.Length && l_Line[i + 1] == '"')
+                    {
+                        l_Field.Append('"');
+                        i++;
+                        continue;
+                    }
+
+                    break;
+                }
+
+                l_Field.Append(l_Line[i]);
+            }
+
+            return l_Field.ToString().Trim();
+        }
+
+        /// <summary>
+        /// Single-column CSV of item ids. A header row named ItemID/Item ID/SKU is skipped when present.
+        /// </summary>
+        private static List<string> ReadItemIDsFromCsv(IFormFile file)
+        {
+            var l_ItemIDs = new List<string>();
+            var l_Seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            if (file == null || file.Length == 0)
+            {
+                return l_ItemIDs;
+            }
+
+            using (var l_Stream = file.OpenReadStream())
+            using (var l_Reader = new StreamReader(l_Stream))
+            {
+                bool l_FirstLine = true;
+
+                while (!l_Reader.EndOfStream)
+                {
+                    string l_Line = l_Reader.ReadLine();
+                    if (string.IsNullOrWhiteSpace(l_Line)) continue;
+
+                    // Only the first column is used, so extra columns are simply ignored
+                    string l_Value = ReadFirstCsvField(l_Line);
+
+                    if (l_FirstLine)
+                    {
+                        l_FirstLine = false;
+
+                        string l_Header = l_Value.Replace(" ", string.Empty).Replace("_", string.Empty);
+                        if (l_Header.Equals("ItemID", StringComparison.OrdinalIgnoreCase)
+                            || l_Header.Equals("Item", StringComparison.OrdinalIgnoreCase)
+                            || l_Header.Equals("SKU", StringComparison.OrdinalIgnoreCase))
+                        {
+                            continue;
+                        }
+                    }
+
+                    if (string.IsNullOrWhiteSpace(l_Value)) continue;
+
+                    if (l_Seen.Add(l_Value))
+                    {
+                        l_ItemIDs.Add(l_Value);
+                    }
+                }
+            }
+
+            return l_ItemIDs;
+        }
 
         [HttpPost]
         [Route("deleteItemsData")]

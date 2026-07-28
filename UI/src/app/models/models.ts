@@ -44,6 +44,8 @@ export interface UserMenuItem {
   canAdd: boolean;
   canEdit: boolean;
   canDelete: boolean;
+  canResubmit: boolean;
+  canReTransmit: boolean;
 }
 
 export interface UserMenuModule {
@@ -77,6 +79,8 @@ export interface RoleMenu {
   canAdd: boolean;
   canEdit: boolean;
   canDelete: boolean;
+  canResubmit: boolean;
+  canReTransmit: boolean;
 }
 
 export interface MenuDef {

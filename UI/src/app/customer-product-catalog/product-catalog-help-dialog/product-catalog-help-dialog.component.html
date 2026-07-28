@@ -230,6 +230,41 @@
           <p>Product has been removed from the marketplace listing. It is no longer visible to customers but still exists in eSyncMate.</p>
         </div>
       </div>
+
+      <div class="tip-box">
+        <mat-icon>info_outline</mat-icon>
+        <span>An <strong>ⓘ</strong> beside a status means eSyncMate stored the reason behind it. <strong>Hover the status</strong> to read it — no need to download the rejected CSV first.</span>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Reading a failure -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>error_outline</mat-icon> Why a Product Failed</h3>
+      <p class="help-text">Hovering a failed status shows what came back, with the time it was recorded. Four kinds of failure are reported:</p>
+      <div class="status-card-grid" style="grid-template-columns: 1fr;">
+        <div class="status-card status-card-red">
+          <div class="sc-header"><mat-icon>storefront</mat-icon><span>Rejected by marketplace</span></div>
+          <p>Listing-level reasons straight from the partner, each with its error code — for example <em>"445 — Item provides too many selections. Found 2, only 1 allowed."</em> or an attribute value that is not in their allowed list. Fix the attribute and re-upload.</p>
+        </div>
+        <div class="status-card status-card-red">
+          <div class="sc-header"><mat-icon>cloud_off</mat-icon><span>Marketplace error</span></div>
+          <p>The partner refused the payload — e.g. <em>"Bad Request — fields size must be between 1 and 10"</em>. Usually a template or item-type mismatch.</p>
+        </div>
+        <div class="status-card status-card-amber">
+          <div class="sc-header"><mat-icon>upload_file</mat-icon><span>Request error</span></div>
+          <p>The request itself was invalid before the partner could process it — e.g. <em>"children size must be between 1 and 2000"</em>, typically a parent with too many or no variation children.</p>
+        </div>
+        <div class="status-card status-card-purple">
+          <div class="sc-header"><mat-icon>rule</mat-icon><span>Validation error</span></div>
+          <p>Caught by eSyncMate before sending, so the item never reached the marketplace — e.g. <em>"Parent ID Missing — Parent ID is missing for this Variation Child (VC) item."</em> or an invalid UPC.</p>
+        </div>
+      </div>
+      <div class="tip-box">
+        <mat-icon>schedule</mat-icon>
+        <span>The date in the tooltip heading is when the failure was recorded, which can be later than the product's created date if it was retried.</span>
+      </div>
     </section>
 
     <mat-divider></mat-divider>
@@ -281,6 +316,50 @@
             <p class="ac-desc">Reset all products stuck in Error status so eSyncMate can reprocess them. This clears the error flag and allows the system to retry.</p>
           </div>
         </div>
+        <div class="action-card">
+          <div class="ac-icon" style="background:#fef2f2;"><mat-icon style="color:#dc2626;">delete_forever</mat-icon></div>
+          <div class="ac-body">
+            <span class="ac-title">Delete Products</span>
+            <p class="ac-desc">Remove products from the catalog by uploading a CSV of Item IDs. Visible only to roles that carry the <strong>Delete</strong> permission for this screen in Role Management. See the section below before using it.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Delete Products -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>delete_forever</mat-icon> Deleting Products</h3>
+      <p class="help-text">Delete Products removes catalog entries in bulk. It works on <strong>Item ID</strong> alone — an Item ID in the file is removed for <strong>every customer</strong> it belongs to, not just the one selected on screen.</p>
+
+      <div class="log-timeline">
+        <div class="log-step">
+          <div class="log-num">1</div>
+          <div class="log-body">
+            <span class="log-title">Prepare the file</span>
+            <span class="log-desc">One column of Item IDs. Use <strong>Sample</strong> in the dialog for an empty template — a header row named ItemID is skipped automatically, and ids containing brackets or parentheses such as 512-60(3A)[7PC]BKS are handled as-is</span>
+          </div>
+        </div>
+        <div class="log-step">
+          <div class="log-num">2</div>
+          <div class="log-body">
+            <span class="log-title">Check File</span>
+            <span class="log-desc">Nothing is deleted yet — eSyncMate reports how many Item IDs were read, how many catalog rows they match, which customers those rows belong to, and which ids were not found at all</span>
+          </div>
+        </div>
+        <div class="log-step">
+          <div class="log-num">3</div>
+          <div class="log-body">
+            <span class="log-title">Confirm and delete</span>
+            <span class="log-desc">Tick the confirmation box, then Delete Products. The catalog rows and their product data are removed together in a single operation</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="tip-box">
+        <mat-icon>warning_amber</mat-icon>
+        <span><strong>This cannot be undone.</strong> Deleting here removes the product from eSyncMate only — a listing already published to the marketplace stays live there until it is removed through the marketplace's own delete flow.</span>
       </div>
     </section>
 

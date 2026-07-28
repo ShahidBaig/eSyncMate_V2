@@ -109,6 +109,10 @@ export class OrderDetailComponent {
       shipToPhone: [''],
       status: [''],
       shipToName: [''],
+      warehouseCode: [''],
+      shippingCode: [''],
+      shippingAgentCode: [''],
+      shipDate: [''],
     });
   }
 
@@ -140,6 +144,11 @@ export class OrderDetailComponent {
       shipToPhone: this.orderData.shipToPhone,
       status: this.orderData.status,
       shipToName: this.orderData.shipToName,
+      // A partner that does not send one of these leaves it null — keep the box empty
+      warehouseCode: this.orderData.warehouseCode ?? '',
+      shippingCode: this.orderData.shippingCode ?? '',
+      shippingAgentCode: this.orderData.shippingAgentCode ?? '',
+      shipDate: this.orderData.shipDate ? new Date(this.orderData.shipDate) : null,
     });
   }
 
@@ -194,6 +203,12 @@ export class OrderDetailComponent {
       shipToZip: this.orderDetailForm.get('shipToZip')?.value,
       shipToCountry: this.orderDetailForm.get('shipToCountry')?.value,
       shipToName: this.orderDetailForm.get('shipToName')?.value,
+      warehouseCode: this.orderDetailForm.get('warehouseCode')?.value,
+      shippingCode: this.orderDetailForm.get('shippingCode')?.value,
+      shippingAgentCode: this.orderDetailForm.get('shippingAgentCode')?.value,
+      shipDate: this.orderDetailForm.get('shipDate')?.value
+        ? this.datePipe.transform(this.orderDetailForm.get('shipDate')?.value, 'MM/dd/yyyy')
+        : '',
     };
 
     this.orderService.updateSalesOrder(orderModel).subscribe({

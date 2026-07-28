@@ -19,6 +19,8 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { StoresOrderComponent } from '../stores-order/stores-order.component';
+import { ResubmitConfirmDialogComponent } from './resubmit-confirm-dialog/resubmit-confirm-dialog.component';
+import { ReTransmitConfirmDialogComponent } from './retransmit-confirm-dialog/retransmit-confirm-dialog.component';
 import { CommonModule } from '@angular/common';
 import { MatSelectChange, MatSelectModule } from '@angular/material/select';
 import { MatPaginatorModule } from '@angular/material/paginator';
@@ -109,6 +111,11 @@ export class OrdersComponent implements OnInit {
   canAdd = false;
   canEdit = false;
   canDelete = false;
+  canResubmit = false;
+  canReTransmit = false;
+  // Global feature toggles (live from ApplicationSettings) — turn the whole action on/off without redeploy
+  showResubmitAction = false;
+  showReTransmitAction = false;
   totalCount: number = 0;
   pageNumber: number = 1;
   pageSize: number = 10;
@@ -130,8 +137,9 @@ export class OrdersComponent implements OnInit {
     'Status',
     'CustomerName',
     'OrderNumber',
-    'ERPSoNum',
     'OrderDate',
+    'ERPSoNum',
+    'ERPSyncDate',
     'CreatedDate',
     'Actions',
     'ERPCustomerID'
@@ -163,18 +171,33 @@ export class OrdersComponent implements OnInit {
   ngOnInit(): void {
     this.getOrders(true);
     this.isCompany = this.api.getTokenUserInfo()?.company.toLocaleLowerCase();
+    const isAdmin = ["ADMIN", "WRITER"].includes(this.api.getTokenUserInfo()?.userType || '');
     const permissions = this.api.getMenuPermissions('edi/all-orders');
     if (permissions) {
       this.canAdd = permissions.canAdd;
       this.canEdit = permissions.canEdit;
       this.canDelete = permissions.canDelete;
+      // New action flags: use the assigned value when present; if missing (older cached
+      // menus that predate these flags), fall back to admin so admins aren't locked out.
+      this.canResubmit = permissions.canResubmit ?? isAdmin;
+      this.canReTransmit = permissions.canReTransmit ?? isAdmin;
     } else {
-      const isAdmin = ["ADMIN", "WRITER"].includes(this.api.getTokenUserInfo()?.userType || '');
       this.canAdd = isAdmin;
       this.canEdit = isAdmin;
       this.canDelete = isAdmin;
+      this.canResubmit = isAdmin;
+      this.canReTransmit = isAdmin;
       this.isAdminUser = isAdmin;
     }
+
+    // Global feature toggles (live) — flag 0 hides the action button entirely, no redeploy
+    this.api.getActionColumnVisibility().subscribe({
+      next: (res: any) => {
+        this.showResubmitAction = !!res?.showResubmit;
+        this.showReTransmitAction = !!res?.showReTransmit;
+      },
+      error: () => { /* default hidden */ }
+    });
     // if (!this.canEdit) {
     //   const editIndex = this.columns.indexOf('ProcessShipment');
     //   if (editIndex !== -1) {
@@ -233,8 +256,77 @@ export class OrdersComponent implements OnInit {
   getTooltipWithTranslation(element: any): string {
     const displayStatus = element.displayStatus || element.status || '';
     const tooltipData = this.getStatusTooltip(displayStatus, element.customerName || '');
-    if (!tooltipData || !tooltipData.key) return '';
-    return this.translate.instant(tooltipData.key, tooltipData.params);
+    const statusText = (tooltipData && tooltipData.key) ? this.translate.instant(tooltipData.key, tooltipData.params) : '';
+
+    // Errored orders show the actual ERP payload (OrderData Type = 'ERP-ERROR') instead of the
+    // generic status text — the ERP message is what the user needs to act on.
+    const errorText = this.getErpErrorText(element);
+    return errorText || statusText;
+  }
+
+  hasErpError(element: any): boolean {
+    return !!this.getErpErrorText(element);
+  }
+
+  // OrderData.Type → tooltip heading
+  private errorTypeHeadings: { [key: string]: string } = {
+    'ERP-ERROR': 'ERP ERROR',
+    'ERPASN-ERR': 'ERP ASN ERROR',
+    'ASN-ERR': 'ASN ERROR'
+  };
+
+  /** Formats the raw error payload (OrderData) into readable tooltip lines. */
+  getErpErrorText(element: any): string {
+    const raw = element?.errorData;
+    if (!raw) return '';
+
+    const label = this.errorTypeHeadings[element?.errorType] || 'ERROR';
+    const when = element?.errorDate ? formatDate(element.errorDate, 'MM/dd/yyyy hh:mm a', 'en-US') : '';
+
+    // Date sits on the heading line itself
+    const heading = when ? `${label}  ·  ${when}` : label;
+
+    let message = '';
+    const detailItems: string[] = [];
+
+    let parsed: any = null;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      // Not JSON (plain text / EDI payload) — show it as-is under the heading
+    }
+
+    if (parsed) {
+      const output = parsed?.OutPut || parsed?.output || parsed;
+
+      message = String(output?.Message || output?.message || '');
+
+      const details = output?.ErrorDetail || output?.errorDetail || [];
+      if (Array.isArray(details)) {
+        details.forEach((d: any) => {
+          const no = d?.ErrorNo || d?.errorNo || '';
+          const desc = d?.ErrorDescription || d?.errorDescription || '';
+          if (no || desc) detailItems.push(no ? `${no} — ${desc}` : String(desc));
+        });
+      }
+    }
+
+    // Nothing recognisable in the payload — fall back to the raw text
+    if (!message && detailItems.length === 0) message = String(raw).trim();
+
+    const parts = [heading];
+
+    if (message) {
+      parts.push('');
+      parts.push(message);
+    }
+
+    if (detailItems.length > 0) {
+      parts.push('');
+      parts.push(detailItems.map(l => `•  ${l}`).join('\n'));
+    }
+
+    return parts.join('\n');
   }
 
   getStatusClass(status: string): string {
@@ -292,7 +384,7 @@ export class OrdersComponent implements OnInit {
     let status = element.status
     let customerOrderNumber = element.orderNumber
     let isASNError = ASNError;
-    this.showSpinner = true;
+    this.isLoading = true;
 
     this.api.ReProccess(orderNo, customerName, status, customerOrderNumber, isASNError).subscribe({
       next: (res: any) => {
@@ -307,13 +399,86 @@ export class OrdersComponent implements OnInit {
           this.toast.info({ detail: "INFO", summary: message, duration: 5000, position: 'topRight' });
         }
 
-        this.showSpinner = false;
+        this.isLoading = false;
       },
       error: (err: any) => {
         const msg = err?.error?.message || err.message || 'Unexpected error';
         this.toast.error({ detail: "ERROR", summary: msg, duration: 5000, position: 'topRight' });
-        this.showSpinner = false;
+        this.isLoading = false;
       }
+    });
+  }
+
+  ResubmitToERP(element: any) {
+    const dialogRef = this.dialog.open(ResubmitConfirmDialogComponent, {
+      width: '460px',
+      disableClose: true,
+      data: { orderNumber: element.orderNumber }
+    });
+
+    dialogRef.afterClosed().subscribe((confirmed: boolean) => {
+      if (!confirmed) return;
+
+      this.isLoading = true;
+      this.api.ResubmitOrder(element.id, element.erpCustomerID).subscribe({
+        next: (res: any) => {
+          const { code, message } = res;
+          if (code === 200) {
+            this.toast.success({ detail: "SUCCESS", summary: message, duration: 5000, position: 'topRight' });
+            this.getOrders(false);
+          } else if (code === 400) {
+            this.toast.error({ detail: "ERROR", summary: message, duration: 5000, position: 'topRight' });
+          } else {
+            this.toast.info({ detail: "INFO", summary: message, duration: 5000, position: 'topRight' });
+          }
+          this.isLoading = false;
+        },
+        error: (err: any) => {
+          const msg = err?.error?.message || err.message || 'Unexpected error';
+          this.toast.error({ detail: "ERROR", summary: msg, duration: 5000, position: 'topRight' });
+          this.isLoading = false;
+        }
+      });
+    });
+  }
+
+  // Status arrives as DisplayStatus ('Shipped'/'Synced', mixed case) — compare case-insensitively.
+  private rowStatus(el: any): string {
+    return ((el?.status ?? el?.displayStatus ?? '') + '').toUpperCase();
+  }
+  isSynced(el: any): boolean { return this.rowStatus(el) === 'SYNCED'; }
+  isShipped(el: any): boolean { return this.rowStatus(el) === 'SHIPPED'; }
+
+  ReTransmitASN(element: any) {
+    const dialogRef = this.dialog.open(ReTransmitConfirmDialogComponent, {
+      width: '460px',
+      disableClose: true,
+      data: { orderNumber: element.orderNumber }
+    });
+
+    dialogRef.afterClosed().subscribe((confirmed: boolean) => {
+      if (!confirmed) return;
+
+      this.isLoading = true;
+      this.api.ReTransmitASN(element.id, element.erpCustomerID).subscribe({
+        next: (res: any) => {
+          const { code, message } = res;
+          if (code === 200) {
+            this.toast.success({ detail: "SUCCESS", summary: message, duration: 5000, position: 'topRight' });
+            this.getOrders(false);
+          } else if (code === 400) {
+            this.toast.error({ detail: "ERROR", summary: message, duration: 5000, position: 'topRight' });
+          } else {
+            this.toast.info({ detail: "INFO", summary: message, duration: 5000, position: 'topRight' });
+          }
+          this.isLoading = false;
+        },
+        error: (err: any) => {
+          const msg = err?.error?.message || err.message || 'Unexpected error';
+          this.toast.error({ detail: "ERROR", summary: msg, duration: 5000, position: 'topRight' });
+          this.isLoading = false;
+        }
+      });
     });
   }
 
@@ -619,6 +784,8 @@ export class OrdersComponent implements OnInit {
           width: '85%',
           maxWidth: '1200px',
           disableClose: true,
+          panelClass: 'elevated-dialog-panel',
+          backdropClass: 'elevated-dialog-backdrop',
           data: {
             listOfOrderFiles: this.listOfOrderFiles,
             orderNumber: element.orderNumber

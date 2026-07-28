@@ -1,0 +1,216 @@
+<div class="help-container">
+  <!-- Header -->
+  <div class="help-header">
+    <div class="header-left">
+      <mat-icon class="header-icon">hub</mat-icon>
+      <div>
+        <h2 class="header-title">Ship Nodes — Help Guide</h2>
+        <span class="header-subtitle">Map each warehouse to the ship node a marketplace expects</span>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button mat-icon-button class="download-btn" matTooltip="Download Help Guide" (click)="downloadHelp()"><mat-icon>download</mat-icon></button>
+      <button mat-icon-button class="close-btn" (click)="close()"><mat-icon>close</mat-icon></button>
+    </div>
+  </div>
+
+  <mat-dialog-content #helpContent class="help-content">
+
+    <!-- What Ship Nodes Are -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>info</mat-icon> What Ship Nodes Are</h3>
+      <p class="help-text">A ship node is the marketplace's own name for one of your warehouses:</p>
+      <div class="status-card-grid" style="grid-template-columns: 1fr;">
+        <div class="status-card status-card-blue">
+          <div class="sc-header"><mat-icon>hub</mat-icon><span>Overview</span></div>
+          <p>Your ERP knows warehouses by codes like <b>L10</b> or <b>L55</b>. Marketplaces know the same locations by their own identifiers — a GUID for Target Plus and Amazon, a long number for Walmart. Every inventory feed uses this screen's mapping to translate one into the other. If a warehouse is not mapped here, its stock is never sent to that marketplace.</p>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- The two lists -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>storefront</mat-icon> Two Sets of Mappings, One Screen</h3>
+      <p class="help-text">The list shows both sets together. The <b>Partner</b> column tells you which one a row belongs to:</p>
+      <div class="card-grid">
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#eff6ff;"><mat-icon style="color:#2563eb;">storefront</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Partner Ship Nodes</span>
+            <span class="info-card-desc">Used by Target Plus, Amazon, Lowe's, Knot and the other partners</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#fff7ed;"><mat-icon style="color:#E8834A;">shopping_basket</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Walmart Ship Nodes</span>
+            <span class="info-card-desc">Walmart keeps its own list; the API name is filled in for you</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Columns -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>view_column</mat-icon> What Each Column Means</h3>
+      <div class="card-grid">
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#eff6ff;"><mat-icon style="color:#2563eb;">badge</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Customer</span>
+            <span class="info-card-desc">The trading partner account the mapping belongs to, e.g. AMA1005</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#f5f3ff;"><mat-icon style="color:#7c3aed;">storefront</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Partner</span>
+            <span class="info-card-desc">Which list the row lives in — Partner or Walmart</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#ecfdf5;"><mat-icon style="color:#059669;">warehouse</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Warehouse</span>
+            <span class="info-card-desc">Your ERP warehouse code, such as L10 or DEFAULT</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#fef2f2;"><mat-icon style="color:#dc2626;">hub</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Ship Node</span>
+            <span class="info-card-desc">The identifier the marketplace gave you for that location</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Searching -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>search</mat-icon> Finding a Mapping</h3>
+      <div class="card-grid">
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#eff6ff;"><mat-icon style="color:#2563eb;">storefront</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Customer</span>
+            <span class="info-card-desc">Only customers that already have mappings are listed. Type in the box at the top of the dropdown to narrow it down.</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#ecfdf5;"><mat-icon style="color:#059669;">search</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Warehouse / Ship Node</span>
+            <span class="info-card-desc">Matches part of either value — type L2 to see L21 and L28, or paste a ship node to find who owns it.</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Adding -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>add_circle</mat-icon> Adding a Mapping</h3>
+      <p class="help-text">Click <b>Add</b> and fill in four fields:</p>
+      <div class="help-table">
+        <div class="help-row step-row">
+          <span class="step-num">1</span>
+          <div>
+            <span class="help-label">Partner</span>
+            <span class="help-desc">Choose Partner Ship Nodes or Walmart Ship Nodes — this decides where the mapping is stored.</span>
+          </div>
+        </div>
+        <div class="help-row step-row">
+          <span class="step-num">2</span>
+          <div>
+            <span class="help-label">Customer</span>
+            <span class="help-desc">Pick the trading partner account this warehouse ships for.</span>
+          </div>
+        </div>
+        <div class="help-row step-row">
+          <span class="step-num">3</span>
+          <div>
+            <span class="help-label">Warehouse</span>
+            <span class="help-desc">Start typing to pick an existing code, or enter a brand-new one for a warehouse being added.</span>
+          </div>
+        </div>
+        <div class="help-row step-row">
+          <span class="step-num">4</span>
+          <div>
+            <span class="help-label">Ship Node</span>
+            <span class="help-desc">Paste the identifier exactly as the marketplace portal shows it — a wrong character means the feed silently skips that warehouse.</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Rules -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>rule</mat-icon> The One-to-One Rule</h3>
+      <p class="help-text">A customer's warehouse can hold only one ship node, and that ship node cannot be reused on another warehouse of the same customer. If a mapping already exists you will see a warning instead of a duplicate:</p>
+      <div class="status-card-grid" style="grid-template-columns: 1fr;">
+        <div class="status-card status-card-amber">
+          <div class="sc-header"><mat-icon>warning_amber</mat-icon><span>Warehouse already mapped</span></div>
+          <p>"Warehouse [ L10 ] already has a ship node for customer [ AMA1005 ]." — edit the existing row instead of adding a second one.</p>
+        </div>
+        <div class="status-card status-card-amber">
+          <div class="sc-header"><mat-icon>warning_amber</mat-icon><span>Ship node already used</span></div>
+          <p>"Ship node [ … ] is already mapped to another warehouse of customer [ … ]." — check the marketplace portal; two warehouses cannot share one node.</p>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Editing / deleting -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>build</mat-icon> Editing and Deleting</h3>
+      <div class="card-grid">
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#eff6ff;"><mat-icon style="color:#2563eb;">edit</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Edit</span>
+            <span class="info-card-desc">Change the customer, warehouse or ship node. The same one-to-one rule is re-checked on save.</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#fef2f2;"><mat-icon style="color:#dc2626;">delete</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Delete</span>
+            <span class="info-card-desc">A confirmation shows the customer, warehouse and node first. Once removed, inventory for that warehouse stops going to the marketplace.</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Good to know -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>lightbulb</mat-icon> Good to Know</h3>
+      <div class="status-card-grid" style="grid-template-columns: 1fr;">
+        <div class="status-card status-card-gray">
+          <div class="sc-header"><mat-icon>inventory_2</mat-icon><span>DEFAULT warehouse</span></div>
+          <p>A row with warehouse <b>DEFAULT</b> is the fallback node used when stock is not tied to a specific warehouse. Leave it in place unless you know it is no longer needed.</p>
+        </div>
+        <div class="status-card status-card-blue">
+          <div class="sc-header"><mat-icon>schedule</mat-icon><span>When changes take effect</span></div>
+          <p>Mappings are read each time an inventory feed runs — no restart needed. The next scheduled run picks up your change.</p>
+        </div>
+        <div class="status-card status-card-green">
+          <div class="sc-header"><mat-icon>visibility</mat-icon><span>What you can see</span></div>
+          <p>You only see mappings for the customers assigned to your account. Admins see every partner.</p>
+        </div>
+      </div>
+    </section>
+
+  </mat-dialog-content>
+</div>
