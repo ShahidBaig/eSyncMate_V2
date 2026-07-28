@@ -98,13 +98,13 @@ export class ApiService {
     return false;
   }
 
-  getMenuPermissions(route: string): { canView: boolean, canAdd: boolean, canEdit: boolean, canDelete: boolean } | null {
+  getMenuPermissions(route: string): { canView: boolean, canAdd: boolean, canEdit: boolean, canDelete: boolean, canResubmit: boolean, canReTransmit: boolean } | null {
     const menus = this.getUserMenus();
     if (!menus || !menus.modules) return null;
     for (const mod of menus.modules) {
       for (const item of mod.menuItems) {
         if (item.route === route) {
-          return { canView: item.canView, canAdd: item.canAdd, canEdit: item.canEdit, canDelete: item.canDelete };
+          return { canView: item.canView, canAdd: item.canAdd, canEdit: item.canEdit, canDelete: item.canDelete, canResubmit: item.canResubmit, canReTransmit: item.canReTransmit };
         }
       }
     }
@@ -140,6 +140,11 @@ export class ApiService {
     return this.http.get(`${this.apiUrl}api/Role/getRoleMenus?roleId=${roleId}`);
   }
 
+  // Live config: whether the Resubmit / Re-Transmit permission columns show in the Role grid
+  getActionColumnVisibility(): Observable<any> {
+    return this.http.get(`${this.apiUrl}api/Role/getActionColumnVisibility`);
+  }
+
   saveRoleMenus(data: any): Observable<any> {
     return this.http.post(`${this.apiUrl}api/Role/saveRoleMenus`, data);
   }
@@ -163,6 +168,23 @@ export class ApiService {
 
   saveUserMenusDirect(data: any): Observable<any> {
     return this.http.post(`${this.apiUrl}api/Role/saveUserMenusDirect`, data);
+  }
+
+  // Target Plus OAuth 2.0
+  buildTargetAuthUrl(customerId: number): Observable<any> {
+    return this.http.get(`${this.apiUrl}api/Customers/buildTargetAuthUrl/${customerId}`);
+  }
+
+  getTargetOAuthStatus(customerId: number): Observable<any> {
+    return this.http.get(`${this.apiUrl}api/Customers/getTargetOAuthStatus/${customerId}`);
+  }
+
+  setUseNewAuthentication(customerId: number, enabled: boolean): Observable<any> {
+    return this.http.post(`${this.apiUrl}api/Customers/setUseNewAuthentication?customerId=${customerId}&enabled=${enabled}`, {});
+  }
+
+  saveTargetOAuthCredentials(customerId: number, body: any): Observable<any> {
+    return this.http.post(`${this.apiUrl}api/Customers/saveTargetOAuthCredentials/${customerId}`, body);
   }
 
   getTokenUserInfo(): User | null {
@@ -387,6 +409,22 @@ export class ApiService {
   ReProccess(orderNumber: string, customerName: string, status: any, customerOrderNumber: string, isASNError: number) {
     return this.http.post(
       `${this.apiUrl}EDIProcessor/api/v1/orders/reprocessOrder?OrderId=${orderNumber}&CustomerName=${customerName}&Status=${status}&OrderNumber=${customerOrderNumber}&isASNError=${isASNError}`,
+      {}
+    );
+  }
+
+  // Force-resubmit an already-SYNCED order to the ERP (no SPARS check; may duplicate).
+  ResubmitOrder(orderId: string, customerName: string) {
+    return this.http.post(
+      `${this.apiUrl}EDIProcessor/api/v1/orders/resubmitOrder?OrderId=${orderId}&CustomerName=${customerName}`,
+      {}
+    );
+  }
+
+  // Re-Transmit the ASN for a SHIPPED order: get ASN from ERP again, then re-send to the marketplace.
+  ReTransmitASN(orderId: string, customerName: string) {
+    return this.http.post(
+      `${this.apiUrl}EDIProcessor/api/v1/orders/reTransmitASN?OrderId=${orderId}&CustomerName=${customerName}`,
       {}
     );
   }

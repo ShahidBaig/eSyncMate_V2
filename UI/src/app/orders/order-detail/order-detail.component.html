@@ -104,6 +104,28 @@
                   <input [readonly]="isReadonly()" type="text" formControlName="shipToCountry" matInput>
                 </mat-form-field>
               </div>
+
+              <!-- Row 4: shipping instructions sent to the ERP -->
+              <div class="address-row">
+                <mat-form-field appearance="outline">
+                  <mat-label>{{ 'warehouseCode' | translate }}</mat-label>
+                  <input [readonly]="isReadonly()" type="text" formControlName="warehouseCode" matInput>
+                </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>{{ 'shippingCode' | translate }}</mat-label>
+                  <input [readonly]="isReadonly()" type="text" formControlName="shippingCode" matInput>
+                </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>{{ 'shippingAgentCode' | translate }}</mat-label>
+                  <input [readonly]="isReadonly()" type="text" formControlName="shippingAgentCode" matInput>
+                </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>{{ 'shipDate' | translate }}</mat-label>
+                  <input [readonly]="isReadonly()" formControlName="shipDate" matInput [matDatepicker]="shipDatePicker">
+                  <mat-datepicker-toggle matSuffix [for]="shipDatePicker" [disabled]="isReadonly()"></mat-datepicker-toggle>
+                  <mat-datepicker #shipDatePicker></mat-datepicker>
+                </mat-form-field>
+              </div>
             </div>
           </div>
         </mat-tab>

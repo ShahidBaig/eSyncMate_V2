@@ -107,6 +107,34 @@
 
     <mat-divider></mat-divider>
 
+    <!-- ERP columns -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>sync_alt</mat-icon> ERP Columns in the List</h3>
+      <p class="help-text">Two columns show what happened once the order reached your ERP:</p>
+      <div class="card-grid">
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#ecfdf5;"><mat-icon style="color:#059669;">receipt_long</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">ERP SO#</span>
+            <span class="info-card-desc">The Sales Order number your ERP created for this order. Blank means the order has not been accepted by the ERP yet.</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#eff6ff;"><mat-icon style="color:#2563eb;">schedule</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">ERP Sync Date</span>
+            <span class="info-card-desc">When the ERP actually created the Sales Order. Compare it with eSyncMate Date to see how long the sync took.</span>
+          </div>
+        </div>
+      </div>
+      <div class="tip-box">
+        <mat-icon>info</mat-icon>
+        <span>A dash (—) in either column simply means that step has not happened yet — it is not an error on its own.</span>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
     <!-- Understanding Order Statuses -->
     <section class="help-section">
       <h3 class="section-title"><mat-icon>label</mat-icon> Understanding Order Statuses</h3>
@@ -149,6 +177,37 @@
           <p>Order acknowledgment failed to send to the marketplace.</p>
         </div>
       </div>
+
+      <div class="tip-box">
+        <mat-icon>info_outline</mat-icon>
+        <span>An <strong>ⓘ</strong> next to a status means the ERP sent back a reason. <strong>Hover the status</strong> to read it — the tooltip shows the error type, when it happened, the ERP message, and each item-level error underneath.</span>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Reading an error -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>error_outline</mat-icon> Reading an Error</h3>
+      <p class="help-text">Hovering an errored status shows exactly what the ERP or the marketplace rejected:</p>
+      <div class="status-card-grid" style="grid-template-columns: 1fr;">
+        <div class="status-card status-card-red">
+          <div class="sc-header"><mat-icon>hub</mat-icon><span>ERP ERROR</span></div>
+          <p>The ERP refused to create the Sales Order — for example <em>"Order cannot be generated"</em> with a line such as <em>ERRNEG20 — Please Check ItemID: …</em>. Fix the item or the account issue, then use <strong>Re-Process</strong>.</p>
+        </div>
+        <div class="status-card status-card-amber">
+          <div class="sc-header"><mat-icon>local_shipping</mat-icon><span>ERP ASN ERROR</span></div>
+          <p>The shipment could not be created in the ERP — usually a missing tracking number or a shipped quantity higher than the ordered quantity.</p>
+        </div>
+        <div class="status-card status-card-amber">
+          <div class="sc-header"><mat-icon>assignment_late</mat-icon><span>ASN ERROR</span></div>
+          <p>The trading partner rejected the shipment notification — for example a duplicate SSCC label or a ship date in the future.</p>
+        </div>
+      </div>
+      <div class="tip-box">
+        <mat-icon>schedule</mat-icon>
+        <span>The date in the tooltip heading is when the error was recorded, which can be later than the order date if the sync was retried.</span>
+      </div>
     </section>
 
     <mat-divider></mat-divider>
@@ -173,10 +232,24 @@
           </div>
         </div>
         <div class="action-card">
-          <div class="ac-icon" style="background:#fef2f2;"><mat-icon style="color:#dc2626;">refresh</mat-icon></div>
+          <div class="ac-icon" style="background:#fef2f2;"><mat-icon style="color:#dc2626;">restart_alt</mat-icon></div>
           <div class="ac-body">
             <span class="ac-title">Re-Process Order</span>
-            <p class="ac-desc">Available only for orders in <strong>Error</strong> status. eSyncMate will retry processing the order and sending it to your ERP.</p>
+            <p class="ac-desc">Available only for orders in <strong>Error</strong> status. eSyncMate will retry processing the order and sending it to your ERP. Before re-sending, it first checks the ERP — if the order already exists there (and is not cancelled/void) it is simply marked <strong>Synced</strong> instead of being created twice.</p>
+          </div>
+        </div>
+        <div class="action-card">
+          <div class="ac-icon" style="background:#f0fdfa;"><mat-icon style="color:#0891b2;">cloud_sync</mat-icon></div>
+          <div class="ac-body">
+            <span class="ac-title">Resubmit to ERP</span>
+            <p class="ac-desc">Available for orders already in <strong>Synced</strong> status. It asks the ERP first (same check as Re-Process) and posts the order <strong>again only if</strong> the order does not exist in the ERP, or exists there with a <strong>Cancelled / Void</strong> status — so a duplicate is not created. If the order already exists with a live status, nothing is posted and a message tells you the existing SO number. The order's previous history is <strong>kept</strong> (nothing is removed), and a note is recorded so it is clear the order was resubmitted. A confirmation is shown before it runs.</p>
+          </div>
+        </div>
+        <div class="action-card">
+          <div class="ac-icon" style="background:#f0fdfa;"><mat-icon style="color:#0d9488;">forward_to_inbox</mat-icon></div>
+          <div class="ac-body">
+            <span class="ac-title">Re-Transmit The ASN</span>
+            <p class="ac-desc">Available for orders in <strong>Shipped</strong> status. It re-sends the shipment notification (ASN) to the marketplace in two steps: first it fetches the ASN data from the ERP <strong>again</strong>, then it re-transmits it to the customer's marketplace. A confirmation is shown first. The order stays in <strong>Shipped</strong> status (nothing is reset). Use this when the marketplace did not receive the ASN, or the shipment needs to be sent again.</p>
           </div>
         </div>
       </div>

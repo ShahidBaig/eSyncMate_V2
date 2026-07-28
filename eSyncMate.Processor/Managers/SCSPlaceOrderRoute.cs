@@ -118,8 +118,17 @@ namespace eSyncMate.Processor.Managers
             }
         }
 
-        public static string ExecuteSingle(IConfiguration config, int orderId, string customerName)
+        public static string ExecuteSingle(IConfiguration config, int orderId, string customerName, bool isResubmit = false)
         {
+            return ExecuteSingle(config, orderId, customerName, isResubmit, out _);
+        }
+
+        // infoMessage = a non-error outcome to show the user (e.g. the order already exists in the ERP
+        // with a live status, so it was NOT re-placed).
+        public static string ExecuteSingle(IConfiguration config, int orderId, string customerName, bool isResubmit, out string infoMessage)
+        {
+            infoMessage = string.Empty;
+
             Routes route = new Routes();
 
             route.UseConnection(CommonUtils.ConnectionString);
@@ -136,11 +145,16 @@ namespace eSyncMate.Processor.Managers
                 return "Order processing route is not active.";
             }
 
-            return ExecuteSingle(config, route, orderId);
+            return ExecuteSingle(config, route, orderId, isResubmit, out infoMessage);
         }
 
-        private static string ExecuteSingle(IConfiguration config, Routes route, int orderId)
+        // isResubmit = user-triggered resubmit of an already-SYNCED order. The SPARS existence/status
+        // check STILL runs (only a missing or cancelled/void order is re-placed, exactly like Reprocess);
+        // the flag only keeps the previous OrderData logs instead of replacing them.
+        private static string ExecuteSingle(IConfiguration config, Routes route, int orderId, bool isResubmit, out string infoMessage)
         {
+            infoMessage = string.Empty;
+
             int userNo = 1;
             DataTable l_dataTable = new DataTable();
 
@@ -163,7 +177,6 @@ namespace eSyncMate.Processor.Managers
                     return "Destination Connector is not setup properly";
                 }
 
-                //l_SourceConnector.ConnectionString = "Server=110.93.227.0,1433;Database=ESYNCMATE;UID=sa;PWD=eSoft#123456;";
                 eSyncMate.DB.Entities.Maps map = new eSyncMate.DB.Entities.Maps();
                 string l_TransformationMap = string.Empty;
 
@@ -186,7 +199,9 @@ namespace eSyncMate.Processor.Managers
                     DataTable l_Data = new DataTable();
 
                     l_SourceConnector.Command = l_SourceConnector.Command.Replace("@DATATYPE@", "API-JSON");
-                    l_SourceConnector.Command = l_SourceConnector.Command.Replace("@ORDERSTATUS@", "InProgress");
+                    // Resubmit picks up the order while it is still SYNCED — its status is only moved to
+                    // InProgress later, at the moment the order is actually posted to the ERP.
+                    l_SourceConnector.Command = l_SourceConnector.Command.Replace("@ORDERSTATUS@", isResubmit ? "InProgress,SYNCED" : "InProgress");
                     l_SourceConnector.Command += $", @p_OrderId = {orderId}";
 
                     if (l_SourceConnector.CommandType == "SP")
@@ -203,7 +218,12 @@ namespace eSyncMate.Processor.Managers
 
                     foreach (DataRow l_Row in l_dataTable.Rows)
                     {
-                        ProcessOrder(l_Row, route, l_DestinationConnector, l_SourceConnector, l_TransformationMap, userNo);
+                        string l_Info = ProcessOrder(l_Row, route, l_DestinationConnector, l_SourceConnector, l_TransformationMap, userNo, isResubmit);
+
+                        if (!string.IsNullOrEmpty(l_Info))
+                        {
+                            infoMessage = l_Info;
+                        }
                     }
 
                     route.SaveLog(LogTypeEnum.Debug, "Destination connector processed.", string.Empty, userNo);
@@ -223,7 +243,9 @@ namespace eSyncMate.Processor.Managers
             return string.Empty;
         }
 
-        private static void ProcessOrder(DataRow l_Row, Routes route, ConnectorDataModel destinationConnector, ConnectorDataModel sourceConnector, string transformationMap, int userNo)
+        // Returns an informational message when the order was intentionally NOT posted (already exists
+        // in the ERP with a live status); empty string means the order was posted.
+        private static string ProcessOrder(DataRow l_Row, Routes route, ConnectorDataModel destinationConnector, ConnectorDataModel sourceConnector, string transformationMap, int userNo, bool isResubmit = false)
         {
             RestResponse sourceResponse = new RestResponse();
             SCSPlaceOrderResponse l_SCSPlaceOrderResponse = new SCSPlaceOrderResponse();
@@ -241,7 +263,15 @@ namespace eSyncMate.Processor.Managers
 
             try
             {
-                if (OrderStatus.ToUpper() == "INPROGRESS")
+                if (isResubmit)
+                {
+                    route.SaveLog(LogTypeEnum.Info, $"Order [{l_ID}] is being RESUBMITTED to ERP by user — SPARS check applies and previous logs are kept.", string.Empty, userNo);
+                }
+
+                // The SPARS existence/cancelled/void check runs for BOTH Reprocess and Resubmit — an order
+                // that already exists in the ERP with a live status is never posted again. On resubmit the
+                // order is still SYNCED at this point, so the status condition is bypassed.
+                if (OrderStatus.ToUpper() == "INPROGRESS" || isResubmit)
                 {
                     destinationConnector.Url = "Get_OrderInfo";
 
@@ -263,22 +293,31 @@ namespace eSyncMate.Processor.Managers
 
                         if (l_SCSGetOrderInfoModel.OutPut.Order != null)
                         {
-                            Orders l_OrdersStaus = new Orders();
-                            l_OrdersStaus.UseConnection(sourceConnector.ConnectionString);
-                            string l_CustomerPO = PublicFunctions.ConvertNullAsString(l_Row["OrderNumber"], string.Empty);
+                            string l_SparsStatus = PublicFunctions.ConvertNullAsString(l_SCSGetOrderInfoModel.OutPut.Order.Header.Status, string.Empty).ToUpper();
 
-                            bool success = l_OrdersStaus.UpdateStatusAndExternalID(l_ID, l_CustomerPO, Convert.ToString(l_SCSGetOrderInfoModel.OutPut.Order.Header.OrderNo), "SYNCED");
-
-                            if (success)
+                            // A cancelled/void order in SPARS is not a valid creation — do not mark it
+                            // SYNCED; fall through and re-place it. Any other status = already created.
+                            if (l_SparsStatus != "CANCELLED" &&  l_SparsStatus != "CANCEL" && l_SparsStatus != "VOID" && l_SparsStatus != "VOIDED")
                             {
-                                route.SaveLog(LogTypeEnum.Info, $"Order [{l_ID}] marked as SYNCED with SO# [{l_SCSGetOrderInfoModel.OutPut.Order.Header.OrderNo}]", "", userNo);
-                            }
-                            else
-                            {
-                                route.SaveLog(LogTypeEnum.Warning, $"Order [{l_ID}] update failed (SO# = {l_SCSGetOrderInfoModel.OutPut.Order.Header.OrderNo})", "", userNo);
+                                Orders l_OrdersStaus = new Orders();
+                                l_OrdersStaus.UseConnection(sourceConnector.ConnectionString);
+                                string l_CustomerPO = PublicFunctions.ConvertNullAsString(l_Row["OrderNumber"], string.Empty);
+
+                                bool success = l_OrdersStaus.UpdateStatusAndExternalID(l_ID, l_CustomerPO, Convert.ToString(l_SCSGetOrderInfoModel.OutPut.Order.Header.OrderNo), "SYNCED");
+
+                                if (success)
+                                {
+                                    route.SaveLog(LogTypeEnum.Info, $"Order [{l_ID}] marked as SYNCED with SO# [{l_SCSGetOrderInfoModel.OutPut.Order.Header.OrderNo}]", "", userNo);
+                                }
+                                else
+                                {
+                                    route.SaveLog(LogTypeEnum.Warning, $"Order [{l_ID}] update failed (SO# = {l_SCSGetOrderInfoModel.OutPut.Order.Header.OrderNo})", "", userNo);
+                                }
+
+                                return $"Order already exists in ERP with SO# {l_SCSGetOrderInfoModel.OutPut.Order.Header.OrderNo} (status: {l_SparsStatus}) — not posted again.";
                             }
 
-                            return;
+                            route.SaveLog(LogTypeEnum.Info, $"Order [{l_ID}] exists in SPARS but is [{l_SparsStatus}] — re-placing the order.", "", userNo);
                         }
                     }
                 }
@@ -295,7 +334,11 @@ namespace eSyncMate.Processor.Managers
                 route.SaveData("JSON-SNT", 0, jsonTransformation, userNo);
 
                 l_OrderData.UseConnection(sourceConnector.ConnectionString);
-                l_OrderData.DeleteWithType(l_ID, "ERP-SNT");
+                // Resubmit keeps the previous logs (append, don't replace) so the order history shows it was re-posted.
+                if (!isResubmit)
+                {
+                    l_OrderData.DeleteWithType(l_ID, "ERP-SNT");
+                }
 
                 l_OrderData.Type = "ERP-SNT";
                 l_OrderData.Data = jsonTransformation;
@@ -329,7 +372,10 @@ namespace eSyncMate.Processor.Managers
                     l_OrderData = new OrderData();
 
                     l_OrderData.UseConnection(sourceConnector.ConnectionString);
-                    l_OrderData.DeleteWithType(l_ID, "ERP-JSON");
+                    if (!isResubmit)
+                    {
+                        l_OrderData.DeleteWithType(l_ID, "ERP-JSON");
+                    }
 
                     l_OrderData.Type = "ERP-JSON";
                     l_OrderData.Data = sourceResponse.Content;
@@ -356,7 +402,10 @@ namespace eSyncMate.Processor.Managers
                     string orderNumber = PublicFunctions.ConvertNullAsString(l_Row["OrderNumber"], string.Empty);
 
                     l_OrderData.UseConnection(sourceConnector.ConnectionString);
-                    l_OrderData.DeleteWithType(l_ID, "ERP-ERROR");
+                    if (!isResubmit)
+                    {
+                        l_OrderData.DeleteWithType(l_ID, "ERP-ERROR");
+                    }
 
                     l_OrderData.Type = "ERP-ERROR";
                     l_OrderData.Data = errorContent;
@@ -417,6 +466,8 @@ namespace eSyncMate.Processor.Managers
 
                 route.SaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
                 route.SaveLog(LogTypeEnum.Debug, $"SCSPlaceOrder processed for order [{l_ID}].", string.Empty, userNo);
+
+                return string.Empty;
             }
             catch (Exception)
             {
@@ -440,7 +491,10 @@ namespace eSyncMate.Processor.Managers
                 string orderNumber = PublicFunctions.ConvertNullAsString(l_Row["OrderNumber"], string.Empty);
 
                 l_OrderData.UseConnection(sourceConnector.ConnectionString);
-                l_OrderData.DeleteWithType(l_ID, "ERP-ERROR");
+                if (!isResubmit)
+                {
+                    l_OrderData.DeleteWithType(l_ID, "ERP-ERROR");
+                }
 
                 l_OrderData.Type = "ERP-ERROR";
                 l_OrderData.Data = errorContent;
@@ -451,6 +505,7 @@ namespace eSyncMate.Processor.Managers
                 l_OrderData.SaveNew();
             }
 
+            return string.Empty;
         }
     }
 }

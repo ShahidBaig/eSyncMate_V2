@@ -29,6 +29,7 @@ import { CustomerProductCatalogService } from '../services/customerProductCatalo
 import { LanguageService } from '../services/language.service';
 import { TranslateModule } from '@ngx-translate/core';
 import { CustomerAlertsDialogComponent } from './customer-alerts-dialog/customer-alerts-dialog.component';
+import { TargetOauthDialogComponent } from './target-oauth-dialog/target-oauth-dialog.component';
 
 
 @Component({
@@ -200,6 +201,29 @@ export class CustomersComponent implements OnInit {
     });
   }
 
+
+  // Target OAuth action is available only for Target customers (TAR6266P / TAR6266PAH).
+  isTargetCustomer(customer: any): boolean {
+    const erp = (customer?.erpCustomerID ?? '').toString().toUpperCase();
+    const market = (customer?.marketplace ?? '').toString().toLowerCase();
+    return erp.startsWith('TAR') || market === 'target';
+  }
+
+  openTargetOAuth(customer: Customer): void {
+    if (!this.isTargetCustomer(customer)) {
+      return;
+    }
+    this.dialog.open(TargetOauthDialogComponent, {
+      width: '860px',
+      maxWidth: '92vw',
+      panelClass: 'tod-panel',
+      disableClose: false,
+      data: {
+        customerId: customer.id,
+        customerName: customer.name
+      }
+    });
+  }
 
   get label(): string {
     return this.selectedOption === 'Select Customer' ? 'Select Customer' : this.selectedOption;

@@ -141,6 +141,25 @@ table {
   }
 }
 
+/* Error indicator inside the status badge */
+.status-error-icon {
+  font-size: 14px;
+  width: 14px;
+  height: 14px;
+  vertical-align: -2px;
+  margin-left: 4px;
+  opacity: 0.85;
+  cursor: help;
+}
+
+/* Date columns — single line, digits aligned */
+::ng-deep .mat-column-ERPSyncDate,
+::ng-deep .mat-column-OrderDate,
+::ng-deep .mat-column-CreatedDate {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
 /* Actions column */
 .actions-cell {
   display: flex;

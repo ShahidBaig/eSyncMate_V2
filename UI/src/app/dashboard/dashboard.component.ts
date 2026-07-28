@@ -19,6 +19,7 @@ import { CustomerProductCatalogService } from '../services/customerProductCatalo
 import { TranslateModule } from '@ngx-translate/core';
 import { MatDialog } from '@angular/material/dialog';
 import { OrdersDrilldownDialogComponent } from './orders-drilldown-dialog/orders-drilldown-dialog.component';
+import { DashboardHelpDialogComponent } from './dashboard-help-dialog/dashboard-help-dialog.component';
 
 interface CustomerOption {
   erpCustomerID: string;
@@ -33,6 +34,7 @@ interface CustomerStat {
 interface StatusStat {
   status: string;
   statusCount: number;
+  lastOrderDate?: string | null;
 }
 
 interface InventoryCustomerStat {
@@ -70,17 +72,18 @@ interface InventoryCustomerStat {
 export class DashboardComponent implements OnInit, OnDestroy {
   today = new Date();
   yesterday = new Date(new Date().setDate(new Date().getDate() - 1));
-  filterFrom: Date = new Date(new Date().setDate(new Date().getDate() - 1));
+  filterFrom: Date = new Date();
   filterTo: Date = new Date();
-  activePreset: string = '24h';
+  activePreset: string = 'today';
   expandedPartner: string | null = null;
   partnerStatuses: { [key: string]: StatusStat[] } = {};
   partnerStatusLoading: { [key: string]: boolean } = {};
   totalOrders = 0;
+  totalLastOrderDate: string | null = null;
   customerStats: CustomerStat[] = [];
   private rawCustomerWise: CustomerStat[] = [];
   statusStats: StatusStat[] = [];
-  statusTiles: { key: string; label: string; icon: string; color: string; bg: string; count: number }[] = [];
+  statusTiles: { key: string; label: string; icon: string; color: string; bg: string; count: number; lastOrderDate?: string | null }[] = [];
   loading = true;
   refreshing = false;
   private refreshInterval: any;
@@ -208,6 +211,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.applyDateFilter();
   }
 
+  openHelp(): void {
+    this.dialog.open(DashboardHelpDialogComponent, { width: '90%', maxWidth: '1200px', maxHeight: '90vh' });
+  }
+
   manualRefresh(): void {
     this.loadStats();
     this.loadInventoryStats();
@@ -235,6 +242,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       next: (res: any) => {
         if (res.code === 200) {
           this.totalOrders = res.totalOrders || 0;
+          this.totalLastOrderDate = res.totalLastOrderDate || null;
           this.rawCustomerWise = res.customerWise || [];
           this.buildCustomerStats();
           this.statusStats = res.statusWise || [];
@@ -265,6 +273,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.filterTo = new Date(now);
 
     switch (preset) {
+      case 'today':
+        this.filterFrom = new Date(now);
+        break;
       case '24h':
         this.filterFrom = new Date(new Date().setDate(now.getDate() - 1));
         break;
@@ -324,12 +335,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   loadInventoryStats(): void {
     this.inventoryLoading = true;
-    const now = new Date();
-    const yesterday = new Date(now);
-    yesterday.setDate(yesterday.getDate() - 1);
-    const pad = (n: number) => n.toString().padStart(2, '0');
-    const fromDate = `${yesterday.getFullYear()}-${pad(yesterday.getMonth() + 1)}-${pad(yesterday.getDate())}`;
-    const toDate = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+    const fromDate = this.formatDate(this.filterFrom);
+    const toDate = this.formatDate(this.filterTo);
 
     this.inventoryApi.getInventory('', fromDate, toDate, '', '').subscribe({
       next: (res: any) => {
@@ -463,7 +470,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
         icon: config.icon,
         color: config.color,
         bg: config.bg,
-        count: found ? found.statusCount : 0
+        count: found ? found.statusCount : 0,
+        lastOrderDate: found ? found.lastOrderDate ?? null : null
       };
     });
   }
@@ -485,10 +493,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const partnerLabel = customerID ? ` — ${customerID}` : '';
 
     this.dialog.open(OrdersDrilldownDialogComponent, {
-      width: '85%',
-      maxWidth: '1000px',
-      maxHeight: '85vh',
+      width: '92%',
+      maxWidth: '1550px',
+      maxHeight: '94vh',
       disableClose: false,
+      panelClass: 'elevated-dialog-panel',
+      backdropClass: 'elevated-dialog-backdrop',
       data: {
         status: status,
         customerID: customerID,
@@ -504,10 +514,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
   openTotalDrilldown(customerID: string = ''): void {
     const partnerLabel = customerID ? ` — ${customerID}` : '';
     this.dialog.open(OrdersDrilldownDialogComponent, {
-      width: '85%',
-      maxWidth: '1000px',
-      maxHeight: '85vh',
+      width: '92%',
+      maxWidth: '1550px',
+      maxHeight: '94vh',
       disableClose: false,
+      panelClass: 'elevated-dialog-panel',
+      backdropClass: 'elevated-dialog-backdrop',
       data: {
         status: '',
         customerID: customerID,

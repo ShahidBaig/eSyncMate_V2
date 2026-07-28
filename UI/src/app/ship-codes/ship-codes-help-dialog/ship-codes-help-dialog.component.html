@@ -1,0 +1,242 @@
+<div class="help-container">
+  <!-- Header -->
+  <div class="help-header">
+    <div class="header-left">
+      <mat-icon class="header-icon">local_shipping</mat-icon>
+      <div>
+        <h2 class="header-title">ShipCodes Mapping — Help Guide</h2>
+        <span class="header-subtitle">Translate each partner's shipping method into the codes the ERP expects</span>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button mat-icon-button class="download-btn" matTooltip="Download Help Guide" (click)="downloadHelp()"><mat-icon>download</mat-icon></button>
+      <button mat-icon-button class="close-btn" (click)="close()"><mat-icon>close</mat-icon></button>
+    </div>
+  </div>
+
+  <mat-dialog-content #helpContent class="help-content">
+
+    <!-- What this screen is -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>info</mat-icon> What ShipCodes Mapping Is</h3>
+      <p class="help-text">When an ASN (shipment) is sent to a marketplace, each order line's incoming carrier text has to be turned into the two codes the ERP expects:</p>
+      <div class="status-card-grid" style="grid-template-columns: 1fr;">
+        <div class="status-card status-card-blue">
+          <div class="sc-header"><mat-icon>swap_horiz</mat-icon><span>Overview</span></div>
+          <p>An order arrives with a shipping method such as <b>FEDEX GROUND</b>. Per customer, that value is mapped to a <b>Level Of Service</b> (e.g. <b>G2</b>) and a <b>Shipping Method</b> code (e.g. <b>FedExGround</b>). These used to be hardcoded per customer inside the ASN stored procedure — this screen holds those same values as editable rows, so a change is a row edit, not a code change.</p>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Columns -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>view_column</mat-icon> What Each Column Means</h3>
+      <div class="card-grid">
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#eff6ff;"><mat-icon style="color:#2563eb;">storefront</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Customer</span>
+            <span class="info-card-desc">The trading-partner account the mapping belongs to, e.g. AMA1005 or TAR6266P.</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#f5f3ff;"><mat-icon style="color:#7c3aed;">local_shipping</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Source Method</span>
+            <span class="info-card-desc">The incoming carrier value to match, exactly as it arrives on the order — e.g. FEDEX GROUND.</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#fffbeb;"><mat-icon style="color:#d97706;">rule</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Match Type</span>
+            <span class="info-card-desc">EXACT for a full value, or LIKE for a starts-with match (see below).</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#ecfdf5;"><mat-icon style="color:#059669;">badge</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Level Of Service</span>
+            <span class="info-card-desc">First output — the service-level code sent in the ASN, e.g. G2, fedex, UPSG.</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#f0fdfa;"><mat-icon style="color:#0891b2;">qr_code</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Shipping Method</span>
+            <span class="info-card-desc">Second output — the carrier method code, e.g. FedExGround. Blank for Walmart (it uses another source).</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#fff7ed;"><mat-icon style="color:#E8834A;">flag</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Default</span>
+            <span class="info-card-desc">Marks the customer's fallback row, used when nothing else matches. Its Source Method is empty.</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Match type -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>rule</mat-icon> Exact vs Like</h3>
+      <div class="status-card-grid" style="grid-template-columns: 1fr 1fr;">
+        <div class="status-card status-card-blue">
+          <div class="sc-header"><mat-icon>check_circle</mat-icon><span>EXACT</span></div>
+          <p>The incoming value must match the Source Method exactly — e.g. <b>FEDEX GROUND</b> matches only <b>FEDEX GROUND</b>.</p>
+        </div>
+        <div class="status-card status-card-green">
+          <div class="sc-header"><mat-icon>manage_search</mat-icon><span>LIKE</span></div>
+          <p>A starts-with match. Type just the base text — for example <b>UPS</b> — and the <b>%</b> is added for you, so it matches <b>UPS Ground Service</b>, <b>UPS SurePost…</b> and so on. You never type the % yourself.</p>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Default rule -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>flag</mat-icon> The Default Row (Mandatory)</h3>
+      <div class="status-card-grid" style="grid-template-columns: 1fr;">
+        <div class="status-card status-card-orange">
+          <div class="sc-header"><mat-icon>priority_high</mat-icon><span>Every customer needs one Default</span></div>
+          <p>When you set up mapping for a <b>new customer</b>, you must add exactly <b>one</b> row marked as <b>Default</b>. Tick the Default box — the Source Method is cleared automatically and left empty. It is the fallback used whenever the shipping method does not match any EXACT or LIKE row. A customer may have only one Default; a second is rejected.</p>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Adding -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>add_circle</mat-icon> Adding a Mapping</h3>
+      <p class="help-text">Click <b>Add</b> and fill in the fields (all are required for a new row):</p>
+      <div class="help-table">
+        <div class="help-row step-row">
+          <span class="step-num">1</span>
+          <div>
+            <span class="help-label">Customer</span>
+            <span class="help-desc">Pick the trading-partner account this mapping is for.</span>
+          </div>
+        </div>
+        <div class="help-row step-row">
+          <span class="step-num">2</span>
+          <div>
+            <span class="help-label">Match Type</span>
+            <span class="help-desc">EXACT for a full value, or LIKE for a starts-with base such as UPS.</span>
+          </div>
+        </div>
+        <div class="help-row step-row">
+          <span class="step-num">3</span>
+          <div>
+            <span class="help-label">Source Method</span>
+            <span class="help-desc">The incoming carrier value. Leave it empty only when the row is the Default.</span>
+          </div>
+        </div>
+        <div class="help-row step-row">
+          <span class="step-num">4</span>
+          <div>
+            <span class="help-label">Level Of Service &amp; Shipping Method</span>
+            <span class="help-desc">The two output codes the ASN will carry for this method.</span>
+          </div>
+        </div>
+        <div class="help-row step-row">
+          <span class="step-num">5</span>
+          <div>
+            <span class="help-label">Default</span>
+            <span class="help-desc">Tick only for the customer's single fallback row — this empties the Source Method.</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Warnings -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>warning_amber</mat-icon> When Saving Is Blocked</h3>
+      <div class="status-card-grid" style="grid-template-columns: 1fr;">
+        <div class="status-card status-card-amber">
+          <div class="sc-header"><mat-icon>flag</mat-icon><span>Default already exists</span></div>
+          <p>"Customer [ … ] already has a Default row. Only one Default is allowed per customer." — edit the existing Default instead of adding another.</p>
+        </div>
+        <div class="status-card status-card-amber">
+          <div class="sc-header"><mat-icon>content_copy</mat-icon><span>Duplicate mapping</span></div>
+          <p>"A mapping for customer [ … ] and source method [ … ] already exists." — the same customer, source method and match type is already mapped; edit that row.</p>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Searching -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>search</mat-icon> Finding a Mapping</h3>
+      <div class="card-grid">
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#eff6ff;"><mat-icon style="color:#2563eb;">storefront</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Customer</span>
+            <span class="info-card-desc">Filter the list to one customer. Type in the box at the top of the dropdown to narrow it down.</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#ecfdf5;"><mat-icon style="color:#059669;">search</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Source Method</span>
+            <span class="info-card-desc">Matches part of the Source Method only — type Fedex to find the Fedex rows.</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Editing / deleting -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>build</mat-icon> Editing and Deleting</h3>
+      <div class="card-grid">
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#eff6ff;"><mat-icon style="color:#2563eb;">edit</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Edit</span>
+            <span class="info-card-desc">Change any value. The Default and duplicate rules are re-checked on save.</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#fef2f2;"><mat-icon style="color:#dc2626;">delete</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Delete</span>
+            <span class="info-card-desc">A confirmation shows the row first. After deleting, that method falls back to the next matching rule (or the Default).</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Good to know -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>lightbulb</mat-icon> Good to Know</h3>
+      <div class="status-card-grid" style="grid-template-columns: 1fr;">
+        <div class="status-card status-card-blue">
+          <div class="sc-header"><mat-icon>schedule</mat-icon><span>When changes take effect</span></div>
+          <p>The mapping is read every time an ASN runs — no restart needed. The next run picks up your change.</p>
+        </div>
+        <div class="status-card status-card-gray">
+          <div class="sc-header"><mat-icon>shopping_basket</mat-icon><span>Walmart is special</span></div>
+          <p>For Walmart only the Level Of Service is mapped; its Shipping Method output comes from the address, so that column stays blank on Walmart rows.</p>
+        </div>
+        <div class="status-card status-card-green">
+          <div class="sc-header"><mat-icon>groups</mat-icon><span>Each partner is independent</span></div>
+          <p>Every customer has its own rows. There is no shared "all customers" mapping — a partner with no rows produces no codes for its ASN.</p>
+        </div>
+      </div>
+    </section>
+
+  </mat-dialog-content>
+</div>

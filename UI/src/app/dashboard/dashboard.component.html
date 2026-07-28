@@ -50,6 +50,7 @@
 
       <!-- Quick Presets -->
       <div class="preset-chips">
+        <button class="preset-chip" [class.active]="activePreset === 'today'" (click)="setPreset('today')">TODAY</button>
         <button class="preset-chip" [class.active]="activePreset === '24h'" (click)="setPreset('24h')">24H</button>
         <button class="preset-chip" [class.active]="activePreset === '7d'" (click)="setPreset('7d')">7D</button>
         <button class="preset-chip" [class.active]="activePreset === '30d'" (click)="setPreset('30d')">30D</button>
@@ -71,6 +72,11 @@
       <!-- Refresh -->
       <button mat-icon-button (click)="manualRefresh()" [disabled]="loading || inventoryLoading" class="refresh-btn" [matTooltip]="'dashboard.refresh' | translate">
         <mat-icon [class.spinning]="loading || inventoryLoading">sync</mat-icon>
+      </button>
+
+      <!-- Help -->
+      <button mat-icon-button class="refresh-btn" matTooltip="Help Guide" (click)="openHelp()">
+        <mat-icon>help_outline</mat-icon>
       </button>
     </div>
   </div>
@@ -111,6 +117,9 @@
         <div class="kpi-tile-data">
           <span class="kpi-tile-value">{{ totalOrders }}</span>
           <span class="kpi-tile-label">{{ 'dashboard.totalOrders' | translate }}</span>
+          <span class="kpi-tile-date" *ngIf="totalLastOrderDate">
+            <mat-icon>schedule</mat-icon>{{ totalLastOrderDate | date:'MM/dd/yyyy hh:mm a' }}
+          </span>
         </div>
       </div>
       <div class="kpi-tile kpi-clickable" *ngFor="let tile of statusTiles" [style.--tile-color]="tile.color" (click)="openStatusDrilldown(tile.key)">
@@ -120,6 +129,9 @@
         <div class="kpi-tile-data">
           <span class="kpi-tile-value" [style.color]="tile.color">{{ tile.count }}</span>
           <span class="kpi-tile-label">{{ tile.label }}</span>
+          <span class="kpi-tile-date" *ngIf="tile.lastOrderDate">
+            <mat-icon>schedule</mat-icon>{{ tile.lastOrderDate | date:'MM/dd/yyyy hh:mm a' }}
+          </span>
         </div>
       </div>
     </div>

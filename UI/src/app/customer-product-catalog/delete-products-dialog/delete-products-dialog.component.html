@@ -1,0 +1,109 @@
+<div class="dialog-container">
+  <div class="dialog-header">
+    <div class="dialog-header-left">
+      <mat-icon class="dialog-header-icon delete-icon">delete_forever</mat-icon>
+      <h2 class="dialog-header-title">Delete Products</h2>
+    </div>
+    <button mat-icon-button class="dialog-close-btn" (click)="onCancel()"><mat-icon>close</mat-icon></button>
+  </div>
+
+  <mat-progress-bar [style.visibility]="isLoading || isDeleting ? 'visible' : 'hidden'" mode="indeterminate" color="accent"></mat-progress-bar>
+
+  <div mat-dialog-content class="dialog-body">
+
+    <!-- Step 1 — file -->
+    <div class="step-row">
+      <p class="step-label">1. Upload a CSV containing the Item IDs to delete</p>
+      <button mat-flat-button class="btn-sample-csv" matTooltip="Download a sample CSV" (click)="downloadSample()">
+        <mat-icon>file_download</mat-icon>
+        <span>Sample</span>
+      </button>
+    </div>
+
+    <div class="file-row">
+      <div class="file-drop-zone" (click)="fileInput.click()">
+        <input #fileInput type="file" class="file-hidden" (change)="onFileSelected($event)" accept=".csv">
+        <mat-icon class="drop-icon">description</mat-icon>
+        <span class="drop-text" *ngIf="!selectedFile">Choose CSV file</span>
+        <span class="drop-file" *ngIf="selectedFile">{{ selectedFile.name }}</span>
+      </div>
+
+      <button mat-icon-button class="btn-clear-file" *ngIf="selectedFile" matTooltip="Remove file"
+              (click)="clearFile(); $event.stopPropagation()">
+        <mat-icon>close</mat-icon>
+      </button>
+
+      <button mat-flat-button class="btn-check" [disabled]="!selectedFile || isLoading" (click)="loadPreview()">
+        <mat-icon>fact_check</mat-icon>
+        <span>Check File</span>
+      </button>
+    </div>
+
+    <p class="file-hint">
+      One column of Item IDs. A header row named <strong>ItemID</strong> is skipped automatically.
+      Matching items are deleted for <strong>every customer</strong> they belong to.
+    </p>
+
+    <!-- Step 2 — what will be removed -->
+    <ng-container *ngIf="previewLoaded">
+      <div class="summary-row">
+        <div class="summary-box">
+          <span class="summary-value">{{ totalItemIDs }}</span>
+          <span class="summary-label">Item IDs in file</span>
+        </div>
+        <div class="summary-box summary-danger">
+          <span class="summary-value">{{ totalProducts }}</span>
+          <span class="summary-label">Products to delete</span>
+        </div>
+        <div class="summary-box summary-muted">
+          <span class="summary-value">{{ notFound.length }}</span>
+          <span class="summary-label">Not found</span>
+        </div>
+      </div>
+
+      <div class="preview-wrap" *ngIf="found.length > 0">
+        <table mat-table [dataSource]="found" class="preview-table">
+          <ng-container matColumnDef="itemID">
+            <th mat-header-cell *matHeaderCellDef>Item ID</th>
+            <td mat-cell *matCellDef="let row">{{ row.itemID }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="productCount">
+            <th mat-header-cell *matHeaderCellDef>Rows</th>
+            <td mat-cell *matCellDef="let row">{{ row.productCount }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="customers">
+            <th mat-header-cell *matHeaderCellDef>Customers</th>
+            <td mat-cell *matCellDef="let row">{{ row.customers }}</td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="previewColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: previewColumns"></tr>
+        </table>
+      </div>
+
+      <div class="notfound-box" *ngIf="notFound.length > 0">
+        <mat-icon>info</mat-icon>
+        <div>
+          <strong>{{ notFound.length }}</strong> Item ID(s) are not in the catalog and will be ignored:
+          <span class="notfound-list">{{ notFound.join(', ') }}</span>
+        </div>
+      </div>
+
+      <label class="confirm-check" *ngIf="found.length > 0">
+        <input type="checkbox" [checked]="confirmed" (change)="confirmed = !confirmed">
+        <span>I understand this permanently removes {{ totalProducts }} product row(s) and their product data. This cannot be undone.</span>
+      </label>
+    </ng-container>
+
+  </div>
+
+  <div mat-dialog-actions class="dialog-footer">
+    <button mat-button class="btn-cancel" (click)="onCancel()">{{ 'cancel' | translate }}</button>
+    <button mat-raised-button class="btn-delete" [disabled]="!canDelete" (click)="onDelete()">
+      <mat-icon>delete_forever</mat-icon>
+      <span>Delete Products</span>
+    </button>
+  </div>
+</div>

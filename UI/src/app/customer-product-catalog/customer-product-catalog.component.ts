@@ -15,6 +15,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialog } from '@angular/material/dialog';
 import { ProductCatalogHelpDialogComponent } from './product-catalog-help-dialog/product-catalog-help-dialog.component';
+import { DeleteProductsDialogComponent } from './delete-products-dialog/delete-products-dialog.component';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { CommonModule } from '@angular/common';
@@ -162,8 +163,11 @@ export class CustomerProductCatalogComponent {
       const isAdmin = ["ADMIN", "WRITER"].includes(this.userApi.getTokenUserInfo()?.userType || '');
       this.canAdd = isAdmin;
       this.canEdit = isAdmin;
-      this.canDelete = isAdmin;
       this.isAdminUser = isAdmin;
+
+      // Delete Products is destructive and irreversible — it is granted only by the role's
+      // Delete permission in Role Management, never by the legacy userType fallback.
+      this.canDelete = false;
     }
   }
 
@@ -589,6 +593,17 @@ export class CustomerProductCatalogComponent {
     });
   }
 
+  openDeleteProductsDialog(): void {
+    const dialogRef = this.dialog.open(DeleteProductsDialogComponent, {
+      width: '900px',
+      disableClose: true,
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result === 'deleted') this.getCustomerProductCatalog();
+    });
+  }
+
   downloadRejectProductCSV(customerID: any) {
     if (!customerID) {
       this.showInfoToast(this.languageService.getTranslation('eRPCustID'));
@@ -871,8 +886,115 @@ export class CustomerProductCatalogComponent {
   }
 
   getTooltipWithTranslation(element: any): string {
+    // A failed item shows what actually went wrong instead of the generic status text
+    const errorText = this.getCatalogErrorText(element);
+    if (errorText) return errorText;
+
     const tooltipData = this.getStatusTooltip(element.syncStatus.toUpperCase(), element.customerID);
     return this.translate.instant(tooltipData.key, tooltipData.params);
+  }
+
+  // SCS_CustomerProductCatalogData.Type -> tooltip heading
+  private catalogErrorHeadings: { [key: string]: string } = {
+    'RSP-ERR': 'MARKETPLACE ERROR',
+    'REQ-ERR': 'REQUEST ERROR',
+    'Internal': 'VALIDATION ERROR',
+    'RSP-JSON': 'REJECTED BY MARKETPLACE'
+  };
+
+  /**
+   * A rejection response is an array of products, each carrying product_statuses[] with the
+   * listing errors. Returns the distinct reasons, worst case falling back to a text scan when
+   * the payload was truncated and no longer parses.
+   */
+  private readRejectionReasons(raw: string, parsed: any): string[] {
+    const reasons: string[] = [];
+    const seen = new Set<string>();
+
+    const push = (text: string) => {
+      const value = (text || '').trim();
+      if (value && !seen.has(value)) { seen.add(value); reasons.push(value); }
+    };
+
+    if (Array.isArray(parsed)) {
+      parsed.forEach((product: any) => {
+        (product?.product_statuses || []).forEach((status: any) => {
+          (status?.errors || []).forEach((err: any) => {
+            const code = err?.error_code ? `${err.error_code} — ` : '';
+            push(`${code}${err?.reason || err?.category || ''}`);
+          });
+        });
+      });
+    }
+
+    // Truncated JSON still contains readable "reason" values
+    if (reasons.length === 0) {
+      const matches = raw.match(/"reason"\s*:\s*"((?:[^"\\]|\\.)*)"/g) || [];
+      matches.forEach(m => {
+        const value = m.replace(/^"reason"\s*:\s*"/, '').replace(/"$/, '').replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+        push(value);
+      });
+    }
+
+    return reasons;
+  }
+
+  hasCatalogError(element: any): boolean {
+    return !!this.getCatalogErrorText(element);
+  }
+
+  /** Formats the stored error payload into readable tooltip lines. */
+  getCatalogErrorText(element: any): string {
+    const raw = element?.errorData;
+    if (!raw) return '';
+
+    const label = this.catalogErrorHeadings[element?.errorType] || 'ERROR';
+    const when = element?.errorDate ? formatDate(element.errorDate, 'MM/dd/yyyy hh:mm a', 'en-US') : '';
+    const heading = when ? `${label}  ·  ${when}` : label;
+
+    let message = '';
+    const detailItems: string[] = [];
+
+    let parsed: any = null;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      // Not JSON — show the payload as-is under the heading
+    }
+
+    if (element?.errorType === 'RSP-JSON' || Array.isArray(parsed)) {
+      // Rejection response — reasons live inside product_statuses[].errors[]
+      const reasons = this.readRejectionReasons(String(raw), parsed);
+      message = reasons.length === 1 ? '' : 'The marketplace rejected this listing:';
+      reasons.forEach(r => detailItems.push(r));
+    } else if (parsed) {
+      // Error payloads use either "message" or "Message"
+      message = String(parsed.message || parsed.Message || '');
+
+      const errors = parsed.errors || parsed.Errors || [];
+      if (Array.isArray(errors)) {
+        errors.forEach((e: any) => {
+          const text = typeof e === 'string' ? e : (e?.description || e?.Description || JSON.stringify(e));
+          if (text) detailItems.push(String(text));
+        });
+      }
+    }
+
+    if (!message && detailItems.length === 0) message = String(raw).trim();
+
+    const parts = [heading];
+
+    if (message) {
+      parts.push('');
+      parts.push(message);
+    }
+
+    if (detailItems.length > 0) {
+      parts.push('');
+      parts.push(detailItems.map(l => `•  ${l}`).join('\n'));
+    }
+
+    return parts.join('\n');
   }
 
   getStatusClass(status: string): string {

@@ -124,6 +124,13 @@
                       matTooltip="Alerts Configuration">
                 <mat-icon>notifications</mat-icon>
               </button>
+              <button mat-icon-button
+                      color="accent"
+                      [disabled]="!isTargetCustomer(element)"
+                      (click)="openTargetOAuth(element)"
+                      [matTooltip]="isTargetCustomer(element) ? 'Target OAuth' : 'Available for Target customers only'">
+                <mat-icon>vpn_key</mat-icon>
+              </button>
 
             </td>
           </ng-container>

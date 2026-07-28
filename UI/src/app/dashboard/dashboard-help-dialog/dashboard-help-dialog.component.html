@@ -1,0 +1,191 @@
+<div class="help-container">
+  <!-- Header -->
+  <div class="help-header">
+    <div class="header-left">
+      <mat-icon class="header-icon">dashboard</mat-icon>
+      <div>
+        <h2 class="header-title">Dashboard — Help Guide</h2>
+        <span class="header-subtitle">See today's order flow at a glance and drill into anything that needs attention</span>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button mat-icon-button class="download-btn" matTooltip="Download Help Guide" (click)="downloadHelp()"><mat-icon>download</mat-icon></button>
+      <button mat-icon-button class="close-btn" (click)="close()"><mat-icon>close</mat-icon></button>
+    </div>
+  </div>
+
+  <mat-dialog-content #helpContent class="help-content">
+
+    <!-- What the dashboard shows -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>info</mat-icon> What the Dashboard Shows</h3>
+      <div class="status-card-grid" style="grid-template-columns: 1fr;">
+        <div class="status-card status-card-blue">
+          <div class="sc-header"><mat-icon>dashboard</mat-icon><span>Overview</span></div>
+          <p>Everything on this page is driven by the date range and customer filter at the top. Counts are based on <b>when the order reached eSyncMate</b>, not the marketplace order date — so an old order that arrived today still counts as today's.</p>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Date range -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>event</mat-icon> Choosing the Date Range</h3>
+      <p class="help-text">The dashboard opens on <b>TODAY</b>. Switch ranges with the chips or pick your own dates:</p>
+      <div class="card-grid">
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#fff7ed;"><mat-icon style="color:#E8834A;">today</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">TODAY (default)</span>
+            <span class="info-card-desc">Only what arrived today — the view you want when starting your day</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#eff6ff;"><mat-icon style="color:#2563eb;">schedule</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">24H / 7D / 30D</span>
+            <span class="info-card-desc">Rolling windows ending today — useful for spotting a trend</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#f5f3ff;"><mat-icon style="color:#7c3aed;">date_range</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Custom range</span>
+            <span class="info-card-desc">Pick a start and end date; the chips clear and Custom becomes active</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#ecfdf5;"><mat-icon style="color:#059669;">storefront</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Customer filter</span>
+            <span class="info-card-desc">Select one or more partners; chips below the bar show what is applied</span>
+          </div>
+        </div>
+      </div>
+      <div class="tip-box">
+        <mat-icon>info</mat-icon>
+        <span>The <strong>Inventory</strong> section follows the same range as the orders section — change the range once and both update together.</span>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Tiles -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>grid_view</mat-icon> KPI Tiles and Partner Cards</h3>
+      <div class="card-grid">
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#eff6ff;"><mat-icon style="color:#2563eb;">shopping_cart</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Total Orders</span>
+            <span class="info-card-desc">Every order in the range. Click to open the full list.</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#fef2f2;"><mat-icon style="color:#dc2626;">warning_amber</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Status tiles</span>
+            <span class="info-card-desc">One tile per status — New, Synced, Shipped, Error and so on. Click any tile to see just those orders.</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#f5f3ff;"><mat-icon style="color:#7c3aed;">store</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Partner cards</span>
+            <span class="info-card-desc">Order count per trading partner. Expand a card to see that partner's status breakdown.</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#ecfdf5;"><mat-icon style="color:#059669;">inventory_2</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Inventory section</span>
+            <span class="info-card-desc">Feed batches in the same range — how many are processing, completed or errored.</span>
+          </div>
+        </div>
+      </div>
+      <div class="tip-box">
+        <mat-icon>refresh</mat-icon>
+        <span>The page refreshes itself every <strong>15 minutes</strong>. Use the refresh button in the header when you need the numbers right now.</span>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Drilldown -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>open_in_new</mat-icon> The Drill-Down Window</h3>
+      <p class="help-text">Clicking a tile, a partner card or a status inside a card opens the matching orders. What you see there:</p>
+      <div class="card-grid">
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#eff6ff;"><mat-icon style="color:#2563eb;">confirmation_number</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">Customer PO</span>
+            <span class="info-card-desc">The purchase order number the marketplace sent</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#ecfdf5;"><mat-icon style="color:#059669;">receipt_long</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">ERP SO No</span>
+            <span class="info-card-desc">Sales Order created in the ERP — shown once the order has reached it</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#f5f3ff;"><mat-icon style="color:#7c3aed;">schedule</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">ERP Sync Date</span>
+            <span class="info-card-desc">When the ERP created that Sales Order</span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-icon" style="background:#fff7ed;"><mat-icon style="color:#E8834A;">local_shipping</mat-icon></div>
+          <div class="info-card-body">
+            <span class="info-card-title">ERP Shipped Date</span>
+            <span class="info-card-desc">Latest shipment date returned by the ERP. Shown for Shipped, Partially Shipped and Cancelled only.</span>
+          </div>
+        </div>
+      </div>
+      <div class="tip-box">
+        <mat-icon>visibility</mat-icon>
+        <span>These ERP columns appear for orders that already exist in the ERP — <strong>Total Orders, Synced, Shipped, Cancelled, Partially Shipped, Partially Cancelled</strong>. New and error views keep the shorter layout.</span>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Actions -->
+    <section class="help-section">
+      <h3 class="section-title"><mat-icon>touch_app</mat-icon> Actions Inside the Drill-Down</h3>
+      <p class="help-text">The Actions column sits first so it is always reachable, even on wide tables:</p>
+      <div class="action-card-grid">
+        <div class="action-card">
+          <div class="ac-icon" style="background:#eff6ff;"><mat-icon style="color:#2563eb;">visibility</mat-icon></div>
+          <div class="ac-body">
+            <span class="ac-title">View Order</span>
+            <p class="ac-desc">Opens the full order — shipping address, line items, quantities and line statuses.</p>
+          </div>
+        </div>
+        <div class="action-card">
+          <div class="ac-icon" style="background:#e1f5fe;"><mat-icon style="color:#0277bd;">folder_open</mat-icon></div>
+          <div class="ac-body">
+            <span class="ac-title">Show Files</span>
+            <p class="ac-desc">Opens the Order Logs window — every exchange between eSyncMate, the ERP and the marketplace, with download and preview for each file.</p>
+          </div>
+        </div>
+        <div class="action-card">
+          <div class="ac-icon" style="background:#fff7ed;"><mat-icon style="color:#E8834A;">refresh</mat-icon></div>
+          <div class="ac-body">
+            <span class="ac-title">Re-Process</span>
+            <p class="ac-desc">Shown only for errored orders. Retries sending the order to the ERP.</p>
+          </div>
+        </div>
+      </div>
+      <div class="tip-box">
+        <mat-icon>error_outline</mat-icon>
+        <span>An <strong>ⓘ</strong> beside a status means the ERP returned a reason. <strong>Hover the status</strong> to read the error type, when it happened and each item-level message.</span>
+      </div>
+    </section>
+
+  </mat-dialog-content>
+</div>

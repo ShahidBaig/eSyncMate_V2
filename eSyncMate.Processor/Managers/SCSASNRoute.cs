@@ -115,48 +115,97 @@ namespace eSyncMate.Processor.Managers
             }
         }
 
-        public static string ExecuteSingle(IConfiguration config, string orderNumber)
+        // Single-order ASN fetch from the ERP (SPARS) — step 1 of Re-Transmit ASN. Mirrors the batch
+        // Execute above; only difference is the row fetch (direct by Id, because SP_GETSCSASN is
+        // SYNCED-only and would exclude a SHIPPED order). Order status is NOT changed.
+        public static string ExecuteSingle(IConfiguration config, int orderId, string customerName)
         {
             int userNo = 1;
-            Routes route = new Routes();
+            DataTable l_dataTable = new DataTable();
 
+            Routes route = new Routes();
             route.UseConnection(CommonUtils.ConnectionString);
 
-            if (!route.GetObject("Name", "Get ASNs").IsSuccess)
+            if (!route.GetObject("TypeId", (int)RouteTypesEnum.SCSASN, "CustomerName", customerName).IsSuccess)
             {
-                return "Order processing route is not setup.";
+                return $"No ASN get route configured for customer: {customerName}";
             }
 
             if (route.Status.ToUpper() == "IN-ACTIVE")
             {
-                return "Order processing route is not active.";
+                return "ASN get route is not active.";
             }
 
-            ConnectorDataModel? l_SourceConnector = ConnectorDataModel.Deserialize(route.SourceConnectorObject.Data);
-            ConnectorDataModel? l_DestinationConnector = ConnectorDataModel.Deserialize(route.DestinationConnectorObject.Data);
+            try
+            {
+                ConnectorDataModel? l_SourceConnector = ConnectorDataModel.Deserialize(route.SourceConnectorObject.Data);
+                ConnectorDataModel? l_DestinationConnector = ConnectorDataModel.Deserialize(route.DestinationConnectorObject.Data);
 
-            l_SourceConnector.ConnectionString = CommonUtils.ConnectionString;
+                route.SaveLog(LogTypeEnum.Info, $"[Re-Transmit GET] Started for order [{orderId}] on route [{route.Id}]", string.Empty, userNo);
 
-            DBConnector connection = new DBConnector(l_SourceConnector.ConnectionString);
-            DataTable l_dataTable = new DataTable();
+                if (l_SourceConnector == null)
+                {
+                    route.SaveLog(LogTypeEnum.Error, "Source Connector is not setup properly", string.Empty, userNo);
+                    return "Source Connector is not setup properly";
+                }
 
-            l_dataTable.Columns.Add("Id");
-            l_dataTable.Columns.Add("ExternalId");
-            l_dataTable.Columns.Add("OrderNumber");
+                if (l_DestinationConnector == null)
+                {
+                    route.SaveLog(LogTypeEnum.Error, "Destination Connector is not setup properly", string.Empty, userNo);
+                    return "Destination Connector is not setup properly";
+                }
 
-            DataRow l_Row = l_dataTable.NewRow();
+                if (l_SourceConnector.ConnectivityType == ConnectorTypesEnum.SqlServer.ToString())
+                {
+                    route.SaveLog(LogTypeEnum.Debug, "Source connector processing start...", string.Empty, userNo);
 
-            l_Row["Id"] = "4938";
-            l_Row["ExternalId"] = "122072329";
-            l_Row["OrderNumber"] = "902001788678848-7275896692";
+                    if (l_SourceConnector.Parmeters != null)
+                    {
+                        foreach (Models.Parameter l_Parameter in l_SourceConnector.Parmeters)
+                        {
+                            l_Parameter.Value = l_Parameter.Value.Replace("@CUSTOMERID@", route.SourcePartyObject?.ERPCustomerID ?? string.Empty);
+                        }
+                    }
 
-            l_dataTable.Rows.Add(l_Row);
+                    DBConnector connection = new DBConnector(l_SourceConnector.ConnectionString);
 
-            ExecuteSingle(l_dataTable.Rows[0], route, l_DestinationConnector, l_SourceConnector, userNo);
+                    l_SourceConnector.Command = l_SourceConnector.Command.Replace("@CUSTOMERID@", l_SourceConnector.CustomerID);
 
-            l_dataTable.Dispose();
+                    // Single order (Re-Transmit): fetch this order's keys directly. SP_GETSCSASN is
+                    // SYNCED-only and would exclude a SHIPPED order, so read the columns straight from Orders.
+                    connection.GetData($"SELECT ExternalId, Id, OrderNumber FROM Orders WITH (NOLOCK) WHERE Id = {orderId}", ref l_dataTable);
 
-            return string.Empty;
+                    route.SaveLog(LogTypeEnum.Debug, "Source connector processed.", string.Empty, userNo);
+                }
+
+                if (l_dataTable.Rows.Count == 0)
+                {
+                    return $"Order {orderId} was not found for the ASN fetch.";
+                }
+
+                if (l_DestinationConnector.ConnectivityType == ConnectorTypesEnum.Rest.ToString() && l_dataTable.Rows.Count > 0)
+                {
+                    route.SaveLog(LogTypeEnum.Debug, "Destination connector processing start...", string.Empty, userNo);
+
+                    l_DestinationConnector.Url = l_DestinationConnector.BaseUrl + l_DestinationConnector.Url;
+
+                    ExecuteSingle(l_dataTable.Rows[0], route, l_DestinationConnector, l_SourceConnector, userNo);
+
+                    route.SaveLog(LogTypeEnum.Debug, "Destination connector processed..", string.Empty, userNo);
+                }
+
+                route.SaveLog(LogTypeEnum.Info, $"[Re-Transmit GET] Completed for order [{orderId}]", string.Empty, userNo);
+                return string.Empty;
+            }
+            catch (Exception ex)
+            {
+                route.SaveLog(LogTypeEnum.Exception, $"[Re-Transmit GET] Order [{orderId}] ASN fetch error", ex.ToString(), userNo);
+                return $"ASN fetch failed: {ex.Message}";
+            }
+            finally
+            {
+                l_dataTable.Dispose();
+            }
         }
 
         private static void ExecuteSingle(DataRow l_Row, Routes route, ConnectorDataModel destinationConnector, ConnectorDataModel sourceConnector, int userNo)
@@ -209,15 +258,15 @@ namespace eSyncMate.Processor.Managers
                         Int32.TryParse(response.OutPut.TrackingInfo[0].APIOrderLineNo, out lineNo);
                     }
 
-                    if (lineNo == 0)
-                    {
-                        SCSGetOrderResponseModel order = GetOrdersData(l_Row["OrderNumber"].ToString());
+                    //if (lineNo == 0)
+                    //{
+                    //    SCSGetOrderResponseModel order = GetOrdersData(l_Row["OrderNumber"].ToString());
 
-                        foreach (TrackingInfo line in response.OutPut.TrackingInfo)
-                        {
-                            line.OrderLineNo = order.order_lines[Convert.ToInt32(line.OrderLineNo) - 1].order_line_number;
-                        }
-                    }
+                    //    foreach (TrackingInfo line in response.OutPut.TrackingInfo)
+                    //    {
+                    //        line.OrderLineNo = order.order_lines[Convert.ToInt32(line.OrderLineNo) - 1].order_line_number;
+                    //    }
+                    //}
 
                     DBConnector connection = new DBConnector(sourceConnector.ConnectionString);
                     string Command = string.Empty;

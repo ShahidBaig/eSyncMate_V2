@@ -33,6 +33,19 @@ export class CustomerProductCatalogService {
     return this.http.post(url, formData);
   }
 
+  /** Reads item ids from the CSV and reports what a delete would remove — changes nothing. */
+  previewDeleteProducts(file: File): Observable<any> {
+    const formData = new FormData();
+    formData.append('file', file, file.name);
+
+    return this.http.post(`${this.apiUrl}api/CustomerProductCatalog/previewDeleteProducts`, formData);
+  }
+
+  /** Permanently removes the given item ids from the catalog, for every customer. */
+  deleteProducts(itemIDs: string[]): Observable<any> {
+    return this.http.post(`${this.apiUrl}api/CustomerProductCatalog/deleteProducts`, { itemIDs });
+  }
+
   getHistoryCustomerProductCatalog(ERPCustomerID: string): Observable<any> {
     const url = `${this.apiUrl}api/CustomerProductCatalog/getHistoryCustomerProductCatalog?ERPCustomerID=${ERPCustomerID}`;
     return this.http.get(url);

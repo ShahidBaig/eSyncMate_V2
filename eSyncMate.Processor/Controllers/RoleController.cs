@@ -20,6 +20,43 @@ namespace eSyncMate.Processor.Controllers
             _logger = logger;
         }
 
+        /// <summary>
+        /// Live-read config flags that control whether the Resubmit / Re-Transmit
+        /// permission columns show in the Role Management grid. Read fresh from
+        /// ApplicationSettings so a script UPDATE takes effect WITHOUT a redeploy/restart.
+        /// </summary>
+        [HttpGet]
+        [Route("getActionColumnVisibility")]
+        public IActionResult GetActionColumnVisibility()
+        {
+            return Ok(new
+            {
+                showResubmit = ReadSettingFlag("ShowResubmitActionInRoles"),
+                showReTransmit = ReadSettingFlag("ShowReTransmitActionInRoles")
+            });
+        }
+
+        private bool ReadSettingFlag(string tagName)
+        {
+            try
+            {
+                DataTable l_Data = new DataTable();
+                Common l_Common = new Common();
+                l_Common.UseConnection(CommonUtils.ConnectionString);
+                l_Common.GetList($"SELECT TagValue FROM ApplicationSettings WHERE TagName = '{tagName}'", ref l_Data);
+                if (l_Data.Rows.Count > 0)
+                {
+                    string l_Val = (l_Data.Rows[0]["TagValue"]?.ToString() ?? string.Empty).Trim();
+                    return l_Val == "1" || string.Equals(l_Val, "true", StringComparison.OrdinalIgnoreCase);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"[RoleController.ReadSettingFlag] - {tagName}");
+            }
+            return false;
+        }
+
         [HttpGet]
         [Route("getRoles")]
         public async Task<GetRolesResponseModel> GetRoles()
@@ -286,6 +323,8 @@ namespace eSyncMate.Processor.Controllers
                     l_NewEntity.CanAdd = menuItem.CanAdd;
                     l_NewEntity.CanEdit = menuItem.CanEdit;
                     l_NewEntity.CanDelete = menuItem.CanDelete;
+                    l_NewEntity.CanResubmit = menuItem.CanResubmit;
+                    l_NewEntity.CanReTransmit = menuItem.CanReTransmit;
                     l_NewEntity.CreatedDate = DateTime.Now;
                     l_NewEntity.CreatedBy = 0;
 
@@ -444,7 +483,9 @@ namespace eSyncMate.Processor.Controllers
                         CanView = Convert.ToBoolean(l_Row["CanView"]),
                         CanAdd = Convert.ToBoolean(l_Row["CanAdd"]),
                         CanEdit = Convert.ToBoolean(l_Row["CanEdit"]),
-                        CanDelete = Convert.ToBoolean(l_Row["CanDelete"])
+                        CanDelete = Convert.ToBoolean(l_Row["CanDelete"]),
+                        CanResubmit = l_Row.Table.Columns.Contains("CanResubmit") && Convert.ToBoolean(l_Row["CanResubmit"]),
+                        CanReTransmit = l_Row.Table.Columns.Contains("CanReTransmit") && Convert.ToBoolean(l_Row["CanReTransmit"])
                     });
                 }
 
@@ -569,6 +610,8 @@ namespace eSyncMate.Processor.Controllers
                     l_NewEntity.CanAdd = menuItem.CanAdd;
                     l_NewEntity.CanEdit = menuItem.CanEdit;
                     l_NewEntity.CanDelete = menuItem.CanDelete;
+                    l_NewEntity.CanResubmit = menuItem.CanResubmit;
+                    l_NewEntity.CanReTransmit = menuItem.CanReTransmit;
                     l_NewEntity.CreatedDate = DateTime.Now;
                     l_NewEntity.CreatedBy = 0;
 

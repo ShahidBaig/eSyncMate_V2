@@ -807,6 +807,10 @@ namespace eSyncMate.Processor.Managers
                 {
                     StaleLockCleanupRoute.Execute(_config, route);
                 }
+                else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.ErrorOrderRetry))
+                {
+                    ErrorOrderRetryRoute.Execute(_config, route);
+                }
 
                 //DB.Entities.RouteExecutionLogger.LogEnd(
                 //    CommonUtils.ConnectionString, execLogId, "Completed");

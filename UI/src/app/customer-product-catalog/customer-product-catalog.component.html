@@ -179,6 +179,11 @@
                       (click)="processErrorResolve()">
                 <mat-icon>error_outline</mat-icon> Clear Errors
               </button>
+              <button mat-flat-button class="btn-delete-products" *ngIf="canDelete"
+                      matTooltip="Delete products by Item ID (CSV)"
+                      (click)="openDeleteProductsDialog()">
+                <mat-icon>delete_forever</mat-icon> Delete Products
+              </button>
             </div>
           </div>
         </div>
@@ -249,8 +254,13 @@
 
         <ng-container matColumnDef="Status">
           <th mat-header-cell *matHeaderCellDef>{{ 'status' | translate }}</th>
-          <td mat-cell *matCellDef="let element" [matTooltip]="getTooltipWithTranslation(element)" matTooltipPosition="right">
-            <span [ngClass]="getStatusClass(element.syncStatus)">{{element.syncStatus}}</span>
+          <td mat-cell *matCellDef="let element" [matTooltip]="getTooltipWithTranslation(element)"
+              [matTooltipClass]="hasCatalogError(element) ? 'status-tooltip error-tooltip' : 'status-tooltip'"
+              [matTooltipPosition]="hasCatalogError(element) ? 'above' : 'right'">
+            <span [ngClass]="getStatusClass(element.syncStatus)">
+              {{element.syncStatus}}
+              <mat-icon *ngIf="hasCatalogError(element)" class="status-error-icon">info_outline</mat-icon>
+            </span>
           </td>
         </ng-container>
 

@@ -525,8 +525,25 @@
   &:hover { background: #c2410c !important; }
 }
 
+.btn-delete-products {
+  background: #dc2626 !important; color: white !important;
+  &:hover { background: #b91c1c !important; }
+}
+
+/* Marker on a status that has an error payload behind it */
+.status-error-icon {
+  font-size: 14px;
+  width: 14px;
+  height: 14px;
+  vertical-align: -2px;
+  margin-left: 4px;
+  opacity: 0.85;
+  cursor: help;
+}
+
 .btn-rejected { @extend %btn-base; }
 .btn-clear-errors { @extend %btn-base; }
+.btn-delete-products { @extend %btn-base; }
 
 // ===== DOWNLOAD MODE =====
 .download-controls {

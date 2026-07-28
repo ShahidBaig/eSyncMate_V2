@@ -261,7 +261,9 @@ namespace eSyncMate.Processor.Controllers
                         CanView = Convert.ToBoolean(l_Row["CanView"]),
                         CanAdd = Convert.ToBoolean(l_Row["CanAdd"]),
                         CanEdit = Convert.ToBoolean(l_Row["CanEdit"]),
-                        CanDelete = Convert.ToBoolean(l_Row["CanDelete"])
+                        CanDelete = Convert.ToBoolean(l_Row["CanDelete"]),
+                        CanResubmit = l_Row.Table.Columns.Contains("CanResubmit") && Convert.ToBoolean(l_Row["CanResubmit"]),
+                        CanReTransmit = l_Row.Table.Columns.Contains("CanReTransmit") && Convert.ToBoolean(l_Row["CanReTransmit"])
                     });
                 }
 

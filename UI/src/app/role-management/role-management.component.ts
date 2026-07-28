@@ -32,10 +32,13 @@ interface MenuAssignment {
   menuId: number;
   menuName: string;
   moduleName: string;
+  route: string;
   canView: boolean;
   canAdd: boolean;
   canEdit: boolean;
   canDelete: boolean;
+  canResubmit: boolean;
+  canReTransmit: boolean;
 }
 
 @Component({
@@ -74,11 +77,27 @@ export class RoleManagementComponent implements OnInit {
   editingRole: RoleItem = { id: 0, name: '', description: '', isActive: true, createdDate: '', createdBy: 0 };
   showRoleForm = false;
 
+  // Config-driven (live) visibility of the Resubmit / Re-Transmit permission columns.
+  // Toggled via ApplicationSettings (script) — no redeploy needed.
+  showResubmitCol = false;
+  showReTransmitCol = false;
+
   constructor(private api: ApiService, private toast: NgToastService, private dialog: MatDialog) {}
 
   ngOnInit(): void {
     this.loadRoles();
     this.loadModulesAndMenus();
+    this.loadActionColumnVisibility();
+  }
+
+  loadActionColumnVisibility(): void {
+    this.api.getActionColumnVisibility().subscribe({
+      next: (res: any) => {
+        this.showResubmitCol = !!res?.showResubmit;
+        this.showReTransmitCol = !!res?.showReTransmit;
+      },
+      error: () => { /* default hidden */ }
+    });
   }
 
   loadRoles(): void {
@@ -168,10 +187,13 @@ export class RoleManagementComponent implements OnInit {
               menuId: menu.id,
               menuName: menu.name,
               moduleName: mod?.name || '',
+              route: menu.route || '',
               canView: existing ? existing.canView : false,
               canAdd: existing ? existing.canAdd : false,
               canEdit: existing ? existing.canEdit : false,
-              canDelete: existing ? existing.canDelete : false
+              canDelete: existing ? existing.canDelete : false,
+              canResubmit: existing ? existing.canResubmit : false,
+              canReTransmit: existing ? existing.canReTransmit : false
             };
           });
         }
@@ -181,6 +203,16 @@ export class RoleManagementComponent implements OnInit {
 
   getMenusByModule(moduleName: string): MenuAssignment[] {
     return this.menuAssignments.filter(m => m.moduleName === moduleName);
+  }
+
+  // Resubmit / Re-Transmit permissions apply only to the Orders menu.
+  isOrdersMenu(menu: MenuAssignment): boolean {
+    return (menu.route || '').replace(/^\//, '') === 'edi/all-orders';
+  }
+
+  // Show the Resubmit / Re-Transmit columns only for the module that contains the Orders menu.
+  moduleHasOrders(moduleName: string): boolean {
+    return this.getMenusByModule(moduleName).some(m => this.isOrdersMenu(m));
   }
 
   getUniqueModules(): string[] {
@@ -195,6 +227,8 @@ export class RoleManagementComponent implements OnInit {
         m.canAdd = checked;
         m.canEdit = checked;
         m.canDelete = checked;
+        m.canResubmit = checked;
+        m.canReTransmit = checked;
       });
   }
 
@@ -206,13 +240,15 @@ export class RoleManagementComponent implements OnInit {
     if (!this.selectedRole) return;
 
     const menusToSave = this.menuAssignments
-      .filter(m => m.canView || m.canAdd || m.canEdit || m.canDelete)
+      .filter(m => m.canView || m.canAdd || m.canEdit || m.canDelete || m.canResubmit || m.canReTransmit)
       .map(m => ({
         menuId: m.menuId,
         canView: m.canView,
         canAdd: m.canAdd,
         canEdit: m.canEdit,
-        canDelete: m.canDelete
+        canDelete: m.canDelete,
+        canResubmit: m.canResubmit,
+        canReTransmit: m.canReTransmit
       }));
 
     this.api.saveRoleMenus({ roleId: this.selectedRole.id, menus: menusToSave }).subscribe({
