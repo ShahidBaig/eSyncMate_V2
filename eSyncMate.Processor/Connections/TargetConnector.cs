@@ -82,21 +82,52 @@ namespace eSyncMate.Processor.Connections
 
             RestResponse response = await client.ExecuteAsync(request);
 
-            var l_TokenDefinition = new { access_token = "", refresh_token = "", token_type = "", expires_in = 0 };
-            var l_TokenInfo = JsonConvert.DeserializeAnonymousType(response.Content ?? string.Empty, l_TokenDefinition);
+            // expires_in / refresh_token_expires_in are nullable so a missing OR null value in the
+            // response cannot break deserialization (a non-nullable int throws on null).
+            var l_TokenDefinition = new { access_token = "", refresh_token = "", token_type = "", expires_in = (int?)null, refresh_token_expires_in = (int?)null };
+            var l_TokenInfo = l_TokenDefinition;
+
+            try
+            {
+                l_TokenInfo = JsonConvert.DeserializeAnonymousType(response.Content ?? string.Empty, l_TokenDefinition);
+            }
+            catch (Exception l_Ex)
+            {
+                throw new Exception($"Target OAuth token refresh returned an unreadable response for '{erpCustomerID}'. Status: {response.StatusCode}, Error: {l_Ex.Message}, Response: {response.Content}");
+            }
 
             if (l_TokenInfo == null || string.IsNullOrEmpty(l_TokenInfo.access_token))
             {
                 throw new Exception($"Target OAuth token refresh failed for '{erpCustomerID}'. Status: {response.StatusCode}, Response: {response.Content}");
             }
 
-            int l_ExpiresIn = l_TokenInfo.expires_in > 0 ? l_TokenInfo.expires_in : 3600;
+            int l_ExpiresIn = l_TokenInfo.expires_in.GetValueOrDefault();
+
+            if (l_ExpiresIn <= 0)
+            {
+                l_ExpiresIn = 3600;
+            }
+
             DateTime l_AccessExpiry = DateTime.UtcNow.AddSeconds(l_ExpiresIn - 120); // 2-min safety buffer
 
-            // 4) Save back to the Customers row (plain), rotated refresh token too if returned.
-            if (!string.IsNullOrEmpty(l_TokenInfo.refresh_token) && l_TokenInfo.refresh_token != l_RefreshToken)
+            // Refresh window: only Target can extend it. When the response carries
+            // refresh_token_expires_in, that is the new window; when it is missing/null/zero, keep
+            // the stored expiry — never blank it out.
+            int l_RefreshExpiresIn = l_TokenInfo.refresh_token_expires_in.GetValueOrDefault();
+
+            DateTime? l_RefreshExpiry = l_RefreshExpiresIn > 0
+                ? DateTime.UtcNow.AddSeconds(l_RefreshExpiresIn)
+                : l_Customer.OAuthRefreshTokenExpiry;
+
+            bool l_RefreshRotated = !string.IsNullOrEmpty(l_TokenInfo.refresh_token)
+                                    && l_TokenInfo.refresh_token != l_RefreshToken;
+
+            // 4) Save back to the Customers row (plain), rotated refresh token + new window if returned.
+            if (l_RefreshRotated || l_RefreshExpiresIn > 0)
             {
-                l_Customer.SaveOAuthTokens(l_Customer.Id, l_TokenInfo.refresh_token, l_Customer.OAuthRefreshTokenExpiry, l_TokenInfo.access_token, l_AccessExpiry);
+                l_Customer.SaveOAuthTokens(l_Customer.Id,
+                    l_RefreshRotated ? l_TokenInfo.refresh_token : l_RefreshToken,
+                    l_RefreshExpiry, l_TokenInfo.access_token, l_AccessExpiry);
             }
             else
             {

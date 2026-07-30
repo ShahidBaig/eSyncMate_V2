@@ -419,10 +419,10 @@
   background: #fff;
   border-radius: 12px;
   border: 1px solid #e0e0e0;
-  padding: 14px 16px;
+  padding: 14px 16px 12px;
   display: flex;
-  align-items: center;
-  gap: 12px;
+  flex-direction: column;
+  align-items: stretch;
   transition: all 0.2s ease;
   cursor: default;
   position: relative;
@@ -444,6 +444,13 @@
   right: -10px;
   opacity: 0.05;
   mat-icon { font-size: 72px; width: 72px; height: 72px; }
+}
+
+// Metric row — icon + value/label (the tile's primary content)
+.kpi-tile-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .kpi-tile-icon {
@@ -485,25 +492,43 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-// Last order created date/time under each tile
-.kpi-tile-date {
-  display: inline-flex;
+// Last order created date/time — quiet footer strip, divided off from the metric
+// and pinned to the tile bottom so tiles with and without it still line up.
+.kpi-tile-foot {
+  display: flex;
   align-items: center;
-  gap: 3px;
-  margin-top: 5px;
-  font-size: 10px;
-  font-weight: 600;
-  color: #9aa1ac;
+  gap: 5px;
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px solid #eceef1;
+  font-size: 11px;
+  font-weight: 800;
+  // Picks up each tile's own status colour so the date reads as part of that status
+  color: var(--tile-color, #3f51b5);
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
+  letter-spacing: -0.1px;
+  position: relative;
+  z-index: 1;
 
   mat-icon {
-    font-size: 12px;
-    width: 12px;
-    height: 12px;
-    color: #b6bcc6;
+    font-size: 13px;
+    width: 13px;
+    height: 13px;
+    color: var(--tile-color, #3f51b5);
+    opacity: 0.65;
+    flex-shrink: 0;
+  }
+
+  span {
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 }
+
+// The metric row must not stretch — it keeps its natural height so the
+// footer's margin-top:auto can push itself to the bottom.
+.kpi-tile-main { flex: 0 0 auto; }
 
 // Color-coded bottom accent line — uses --tile-color CSS variable
 .kpi-tile::after {
@@ -776,13 +801,15 @@
 }
 
 .partner-kpi {
-  min-width: 140px;
+  min-width: 158px;
   flex-shrink: 0;
-  padding: 10px 14px !important;
+  padding: 10px 12px 9px !important;
 
+  .kpi-tile-main { gap: 10px; }
   .kpi-tile-icon { width: 36px; height: 36px; border-radius: 10px; }
   .kpi-tile-value { font-size: 18px !important; }
   .kpi-tile-label { font-size: 10px !important; }
+  .kpi-tile-foot { font-size: 10px; gap: 4px; padding-top: 6px; }
 }
 
 .psc-icon-wrap {

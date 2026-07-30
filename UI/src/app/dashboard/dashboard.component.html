@@ -112,26 +112,38 @@
 
     <!-- KPI Tiles — Total + All Statuses -->
     <div class="kpi-tiles">
-      <div class="kpi-tile kpi-total kpi-clickable" (click)="openTotalDrilldown()">
-        <div class="kpi-tile-icon"><mat-icon>shopping_cart</mat-icon></div>
-        <div class="kpi-tile-data">
-          <span class="kpi-tile-value">{{ totalOrders }}</span>
-          <span class="kpi-tile-label">{{ 'dashboard.totalOrders' | translate }}</span>
-          <span class="kpi-tile-date" *ngIf="totalLastOrderDate">
-            <mat-icon>schedule</mat-icon>{{ totalLastOrderDate | date:'MM/dd/yyyy hh:mm a' }}
-          </span>
+      <div class="kpi-tile kpi-total kpi-clickable"
+           [matTooltip]="getLastOrderTooltip('dashboard.allOrders' | translate, totalLastOrderDate)"
+           [matTooltipClass]="getLastOrderTooltipClass('total')" matTooltipPosition="above"
+           (click)="openTotalDrilldown()">
+        <div class="kpi-tile-main">
+          <div class="kpi-tile-icon"><mat-icon>shopping_cart</mat-icon></div>
+          <div class="kpi-tile-data">
+            <span class="kpi-tile-value">{{ totalOrders }}</span>
+            <span class="kpi-tile-label">{{ 'dashboard.totalOrders' | translate }}</span>
+          </div>
+        </div>
+        <div class="kpi-tile-foot" *ngIf="formatTileDate(totalLastOrderDate)">
+          <mat-icon>schedule</mat-icon>
+          <span>{{ formatTileDate(totalLastOrderDate) }}</span>
         </div>
       </div>
-      <div class="kpi-tile kpi-clickable" *ngFor="let tile of statusTiles" [style.--tile-color]="tile.color" (click)="openStatusDrilldown(tile.key)">
-        <div class="kpi-tile-icon" [style.background]="tile.color">
-          <mat-icon>{{ tile.icon }}</mat-icon>
+      <div class="kpi-tile kpi-clickable" *ngFor="let tile of statusTiles" [style.--tile-color]="tile.color"
+           [matTooltip]="getLastOrderTooltip(tile.label, tile.lastOrderDate)"
+           [matTooltipClass]="getLastOrderTooltipClass(tile.key)" matTooltipPosition="above"
+           (click)="openStatusDrilldown(tile.key)">
+        <div class="kpi-tile-main">
+          <div class="kpi-tile-icon" [style.background]="tile.color">
+            <mat-icon>{{ tile.icon }}</mat-icon>
+          </div>
+          <div class="kpi-tile-data">
+            <span class="kpi-tile-value" [style.color]="tile.color">{{ tile.count }}</span>
+            <span class="kpi-tile-label">{{ tile.label }}</span>
+          </div>
         </div>
-        <div class="kpi-tile-data">
-          <span class="kpi-tile-value" [style.color]="tile.color">{{ tile.count }}</span>
-          <span class="kpi-tile-label">{{ tile.label }}</span>
-          <span class="kpi-tile-date" *ngIf="tile.lastOrderDate">
-            <mat-icon>schedule</mat-icon>{{ tile.lastOrderDate | date:'MM/dd/yyyy hh:mm a' }}
-          </span>
+        <div class="kpi-tile-foot" *ngIf="formatTileDate(tile.lastOrderDate)">
+          <mat-icon>schedule</mat-icon>
+          <span>{{ formatTileDate(tile.lastOrderDate) }}</span>
         </div>
       </div>
     </div>
@@ -180,15 +192,23 @@
                 <span class="pdh-total">{{ row.orderCount }} {{ 'dashboard.orders' | translate }}</span>
               </div>
               <div class="partner-kpi-tiles">
-                <div class="kpi-tile kpi-clickable partner-kpi" *ngFor="let stat of getPartnerAllStatuses(row.erpCustomerID)"
+                <div class="kpi-tile kpi-clickable partner-kpi" *ngFor="let stat of getPartnerAllStatuses(row.erpCustomerID); trackBy: trackByStatus"
                      [style.--tile-color]="getStatusColor(stat.status)"
+                     [matTooltip]="getLastOrderTooltip(getPartnerName(row.erpCustomerID) + '  ·  ' + stat.status, stat.lastOrderDate)"
+                     [matTooltipClass]="getLastOrderTooltipClass(stat.status)" matTooltipPosition="above"
                      (click)="openStatusDrilldown(stat.status, row.erpCustomerID)">
-                  <div class="kpi-tile-icon" [style.background]="getStatusColor(stat.status)">
-                    <mat-icon>{{ getStatusIcon(stat.status) }}</mat-icon>
+                  <div class="kpi-tile-main">
+                    <div class="kpi-tile-icon" [style.background]="getStatusColor(stat.status)">
+                      <mat-icon>{{ getStatusIcon(stat.status) }}</mat-icon>
+                    </div>
+                    <div class="kpi-tile-data">
+                      <span class="kpi-tile-value" [style.color]="getStatusColor(stat.status)">{{ stat.statusCount }}</span>
+                      <span class="kpi-tile-label">{{ stat.status }}</span>
+                    </div>
                   </div>
-                  <div class="kpi-tile-data">
-                    <span class="kpi-tile-value" [style.color]="getStatusColor(stat.status)">{{ stat.statusCount }}</span>
-                    <span class="kpi-tile-label">{{ stat.status }}</span>
+                  <div class="kpi-tile-foot" *ngIf="formatTileDate(stat.lastOrderDate)">
+                    <mat-icon>schedule</mat-icon>
+                    <span>{{ formatTileDate(stat.lastOrderDate) }}</span>
                   </div>
                 </div>
               </div>
