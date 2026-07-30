@@ -275,8 +275,25 @@ export class OrdersComponent implements OnInit {
     'ASN-ERR': 'ASN ERROR'
   };
 
+  // Statuses that actually mean "this order is in error right now".
+  private errorStatuses = ['ERROR', 'ACKERROR', 'ASNERROR'];
+
+  /**
+   * True only while the order itself is in an error state. The error payload is fetched as the
+   * order's LATEST error row (Orders.cs OUTER APPLY, no status filter), so a since-recovered
+   * order keeps carrying it — without this gate it would still show a stale error on hover.
+   */
+  isErrorStatus(element: any): boolean {
+    // Status arrives raw ('ASNERROR') or as a display name ('Asn Error') — compare on letters
+    // only so both spellings match.
+    const s = ((element?.status ?? element?.displayStatus ?? '') + '').toUpperCase().replace(/[^A-Z]/g, '');
+    return this.errorStatuses.includes(s);
+  }
+
   /** Formats the raw error payload (OrderData) into readable tooltip lines. */
   getErpErrorText(element: any): string {
+    if (!this.isErrorStatus(element)) return '';
+
     const raw = element?.errorData;
     if (!raw) return '';
 
