@@ -1,5 +1,5 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, formatDate } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -16,7 +16,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { ApiService } from '../services/api.service';
 import { InventoryService } from '../services/inventory.service';
 import { CustomerProductCatalogService } from '../services/customerProductCatalogDialog.service';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { MatDialog } from '@angular/material/dialog';
 import { OrdersDrilldownDialogComponent } from './orders-drilldown-dialog/orders-drilldown-dialog.component';
 import { DashboardHelpDialogComponent } from './dashboard-help-dialog/dashboard-help-dialog.component';
@@ -77,6 +77,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
   activePreset: string = 'today';
   expandedPartner: string | null = null;
   partnerStatuses: { [key: string]: StatusStat[] } = {};
+  // Stable per-partner tile lists — see getPartnerAllStatuses(). Cleared whenever
+  // partnerStatuses is replaced so the tiles pick up fresh counts/dates.
+  private partnerAllStatuses: { [key: string]: StatusStat[] } = {};
   partnerStatusLoading: { [key: string]: boolean } = {};
   totalOrders = 0;
   totalLastOrderDate: string | null = null;
@@ -145,7 +148,52 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   customerColumns = ['customerName', 'erpCustomerID', 'orderCount'];
 
-  constructor(private api: ApiService, private inventoryApi: InventoryService, private customerApi: CustomerProductCatalogService, private dialog: MatDialog) {}
+  constructor(private api: ApiService, private inventoryApi: InventoryService, private customerApi: CustomerProductCatalogService, private dialog: MatDialog, private translate: TranslateService) {}
+
+  /**
+   * Tooltip for the "last order" date on a KPI tile.
+   * Built as heading / scope / timestamp / note lines — the tooltip class renders
+   * them as a card with the first line styled as the heading.
+   */
+  getLastOrderTooltip(scope: string, date: string | null | undefined): string {
+    // No date on the tile => no tooltip.
+    if (!date) return '';
+
+    // This runs on every change-detection pass. formatDate() throws on an
+    // unparseable value, and a throw here would break the whole tile view
+    // (tooltip AND click), so never let it escape.
+    let when: string;
+    try {
+      when = formatDate(date, 'MM/dd/yyyy hh:mm a', 'en-US');
+    } catch {
+      return '';
+    }
+
+    const heading = this.translate.instant('dashboard.lastOrderReceived');
+    const note = this.translate.instant('dashboard.lastOrderNote');
+
+    return [heading, scope, when, note].filter(l => !!l).join('\n');
+  }
+
+  /**
+   * Date shown on a tile footer. Same reason as getLastOrderTooltip: the `date`
+   * pipe throws on an unparseable value and would take the tile's click handler
+   * down with it, so format defensively and just render nothing on failure.
+   */
+  formatTileDate(date: string | null | undefined): string {
+    if (!date) return '';
+    try {
+      return formatDate(date, 'MM/dd/yyyy hh:mm a', 'en-US');
+    } catch {
+      return '';
+    }
+  }
+
+  /** Colour variant for the tooltip card — matches the tile's status colour. */
+  getLastOrderTooltipClass(status: string): string {
+    const slug = (status || '').toString().trim().toLowerCase().replace(/\s+/g, '-');
+    return `lastorder-tooltip lastorder-tooltip--${slug || 'total'}`;
+  }
 
   ngOnInit(): void {
     this.loadCustomers();
@@ -249,6 +297,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
           // Load partner-wise status breakdown from same response
           this.partnerStatuses = {};
+          this.partnerAllStatuses = {};
           if (res.partnerStatusWise) {
             for (const key of Object.keys(res.partnerStatusWise)) {
               this.partnerStatuses[key] = res.partnerStatusWise[key] || [];
@@ -304,6 +353,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   applyDateFilter(): void {
     this.expandedPartner = null;
     this.partnerStatuses = {};
+    this.partnerAllStatuses = {};
     this.loadStats();
     this.loadInventoryStats();
   }
@@ -476,14 +526,35 @@ export class DashboardComponent implements OnInit, OnDestroy {
     });
   }
 
+  /**
+   * Called straight from *ngFor, so it MUST return the same array instance for a
+   * given partner until the data actually changes. Returning a freshly built array
+   * makes ngFor (which tracks by object identity) tear down and rebuild every tile
+   * on each change-detection pass — and since mouse events trigger change detection,
+   * the tiles get replaced mid-interaction: hover never settles so the tooltip never
+   * shows, and mousedown/mouseup land on different elements so no click ever fires.
+   */
   getPartnerAllStatuses(erpCustomerID: string): StatusStat[] {
+    const cached = this.partnerAllStatuses[erpCustomerID];
+    if (cached) return cached;
+
+    const built = this.buildPartnerStatusList(erpCustomerID);
+    this.partnerAllStatuses[erpCustomerID] = built;
+    return built;
+  }
+
+  trackByStatus(_index: number, stat: StatusStat): string {
+    return stat.status;
+  }
+
+  private buildPartnerStatusList(erpCustomerID: string): StatusStat[] {
     // Always show the same statusConfig statuses per partner, with count or 0
     // Case-insensitive match
     const existing = this.partnerStatuses[erpCustomerID] || [];
     return Object.keys(this.statusConfig).map(key => {
       const keyUpper = key.toUpperCase();
       const found = existing.find(s => (s.status || '').toUpperCase() === keyUpper);
-      return { status: key, statusCount: found ? found.statusCount : 0 };
+      return { status: key, statusCount: found ? found.statusCount : 0, lastOrderDate: found ? found.lastOrderDate ?? null : null };
     });
   }
 

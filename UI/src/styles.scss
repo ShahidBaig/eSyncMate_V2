@@ -612,6 +612,65 @@ router-outlet + * {
   letter-spacing: 1.2px;
 }
 
+// Dashboard "last order received" tooltip — dark card that takes on the colour of
+// the status it belongs to. Lines are: heading / scope / timestamp / note.
+.lastorder-tooltip.mat-mdc-tooltip .mdc-tooltip__surface {
+  max-width: 340px !important;
+  white-space: pre-line !important;
+  text-align: left !important;
+  font-family: 'Poppins', 'Segoe UI', sans-serif !important;
+  font-size: 12.5px !important;
+  font-weight: 500 !important;
+  line-height: 1.8 !important;
+  padding: 13px 17px !important;
+  border-radius: 12px !important;
+  background: #1b2434 !important;
+  border-left: 4px solid #3f51b5 !important;
+  color: #e2e8f0 !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.lastorder-tooltip.mat-mdc-tooltip .mdc-tooltip__surface::first-line {
+  font-weight: 700;
+  letter-spacing: 1.2px;
+}
+
+// Per-status accents: rail, heading colour, ring and a soft colour wash bleeding
+// in from the top-left — so each tooltip reads as the same colour as its tile.
+// Key = status lowercased with spaces turned into dashes (see getLastOrderTooltipClass).
+$lastorder-accents: (
+  'total':                (#3f51b5, #aab4ea),
+  'new':                  (#0d47a1, #93b7f0),
+  'synced':               (#2e7d32, #8adb90),
+  'shipped':              (#3f51b5, #aab4ea),
+  'error':                (#c62828, #f79c9c),
+  'ackerror':             (#bf360c, #f8ab8e),
+  'asnerror':             (#e65100, #ffba7a),
+  'cancelled':            (#4e342e, #d6b6ab),
+  'partially-shipped':    (#0277bd, #90d4f7),
+  'partially-cancelled':  (#d84315, #ffab89)
+);
+
+@each $name, $pair in $lastorder-accents {
+  $accent: nth($pair, 1);
+  $heading: nth($pair, 2);
+
+  .lastorder-tooltip--#{$name}.mat-mdc-tooltip .mdc-tooltip__surface {
+    border-left-color: $accent !important;
+    background:
+      linear-gradient(135deg, rgba($accent, 0.30) 0%, rgba($accent, 0.08) 42%, rgba($accent, 0) 72%),
+      #1b2434 !important;
+    box-shadow:
+      0 0 0 1px rgba($accent, 0.38),
+      0 2px 4px rgba(15, 23, 42, 0.30),
+      0 14px 34px -8px rgba(15, 23, 42, 0.60) !important;
+  }
+
+  .lastorder-tooltip--#{$name}.mat-mdc-tooltip .mdc-tooltip__surface::first-line {
+    color: $heading;
+  }
+}
+
 .diagram-tooltip.mat-mdc-tooltip .mdc-tooltip__surface {
   max-width: 320px !important;
   white-space: pre-line !important;
