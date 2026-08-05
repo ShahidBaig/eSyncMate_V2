@@ -95,12 +95,32 @@ export class OrdersDrilldownDialogComponent implements OnInit {
     'ASN-ERR': 'ASN ERROR'
   };
 
+  // Statuses that mean "this order is in error right now". Kept separate from
+  // errorStatuses, which drives the Re-Process action and also covers SYNCERROR.
+  private errorTooltipStatuses = ['ERROR', 'ACKERROR', 'ASNERROR'];
+
+  /**
+   * True only while the order itself is in an error state. The payload is fetched as the
+   * order's LATEST error row (Orders.cs OUTER APPLY over ERP-ERROR/ERPASN-ERR/ASN-ERR with
+   * no status filter), so an order that has since recovered keeps carrying it — a SYNCED
+   * order was still showing a stale "ERP ASN ERROR" tooltip without this gate.
+   * Mirrors the same gate in orders.component.ts.
+   */
+  isRowErrorStatus(row: any): boolean {
+    // Status arrives raw ('ASNERROR') or as a display name ('Asn Error') — compare on
+    // letters only so both spellings match.
+    const s = ((row?.status ?? row?.displayStatus ?? '') + '').toUpperCase().replace(/[^A-Z]/g, '');
+    return this.errorTooltipStatuses.includes(s);
+  }
+
   hasErpError(row: any): boolean {
     return !!this.getErpErrorText(row);
   }
 
   /** Formats the raw error payload (OrderData) into readable tooltip lines. */
   getErpErrorText(row: any): string {
+    if (!this.isRowErrorStatus(row)) return '';
+
     const raw = row?.errorData;
     if (!raw) return '';
 

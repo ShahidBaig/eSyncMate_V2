@@ -124,26 +124,45 @@ namespace eSyncMate.Processor.Managers
             DataTable l_OrderData = new DataTable();
             MacysGetOrderResponseModel ordersList = new MacysGetOrderResponseModel();
             RestResponse sourceResponse = new RestResponse();
+            List<MacysOrder> l_AllOrders = new List<MacysOrder>();
+            int l_Max = 100;
+            int l_Offset = 0;
+            int l_TotalCount = 0;
 
             try
             {
-                //string url = $"{sourceConnector.BaseUrl}/api/orders?start_date={formattedStartDate}&order_state_codes={statusCode}";
-                string url = $"{sourceConnector.BaseUrl}/api/orders?order_state_codes={statusCode}&max=100";
+                do
+                {
+                    string url = $"{sourceConnector.BaseUrl}/api/orders?order_state_codes={statusCode}&max={l_Max}&offset={l_Offset}";
 
-                sourceConnector.Url = url;
+                    sourceConnector.Url = url;
+                    sourceConnector.Method = "GET";
 
-                sourceResponse = RestConnector.Execute(sourceConnector, string.Empty).GetAwaiter().GetResult();
+                    sourceResponse = RestConnector.Execute(sourceConnector, string.Empty).GetAwaiter().GetResult();
 
-                route.SaveData("JSON-SNT", 0, url, userNo);
-                route.SaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
+                    route.SaveData("JSON-SNT", 0, url, userNo);
+                    route.SaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
 
-                ordersList = JsonConvert.DeserializeObject<MacysGetOrderResponseModel>(sourceResponse.Content);
+                    ordersList = JsonConvert.DeserializeObject<MacysGetOrderResponseModel>(sourceResponse.Content);
 
-                if (ordersList?.orders == null || ordersList.orders.Count == 0)
+                    if (ordersList?.orders == null || ordersList.orders.Count == 0)
+                    {
+                        break;
+                    }
+
+                    l_TotalCount = ordersList.total_count;
+                    l_AllOrders.AddRange(ordersList.orders);
+                    l_Offset += ordersList.orders.Count;
+                }
+                while (l_Offset < l_TotalCount);
+
+                if (l_AllOrders.Count == 0)
                 {
                     route.SaveLog(LogTypeEnum.Info, $"No orders found for status: {statusCode}", string.Empty, userNo);
                     return;
                 }
+
+                route.SaveLog(LogTypeEnum.Info, $"Fetched [{l_AllOrders.Count}] of [{l_TotalCount}] orders for status: {statusCode}", string.Empty, userNo);
 
                 if (destinationConnector.ConnectivityType == ConnectorTypesEnum.SqlServer.ToString())
                 {
@@ -152,7 +171,7 @@ namespace eSyncMate.Processor.Managers
 
                     l_Customer.GetObject("ERPCustomerID", sourceConnector.CustomerID);
 
-                    foreach (var order in ordersList.orders)
+                    foreach (var order in l_AllOrders)
                     {
                         l_OrderData = new DataTable();
 

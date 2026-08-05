@@ -35,6 +35,9 @@ interface StatusStat {
   status: string;
   statusCount: number;
   lastOrderDate?: string | null;
+  // 'EVENT' = the status's own event timestamp, 'CREATED' = the proc fell back to
+  // Orders.CreatedDate. Drives the tooltip wording so a label cannot misdescribe the date.
+  lastOrderDateBasis?: string | null;
 }
 
 interface InventoryCustomerStat {
@@ -86,7 +89,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   customerStats: CustomerStat[] = [];
   private rawCustomerWise: CustomerStat[] = [];
   statusStats: StatusStat[] = [];
-  statusTiles: { key: string; label: string; icon: string; color: string; bg: string; count: number; lastOrderDate?: string | null }[] = [];
+  statusTiles: { key: string; label: string; icon: string; color: string; bg: string; count: number; lastOrderDate?: string | null; lastOrderDateBasis?: string | null }[] = [];
   loading = true;
   refreshing = false;
   private refreshInterval: any;
@@ -150,12 +153,32 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   constructor(private api: ApiService, private inventoryApi: InventoryService, private customerApi: CustomerProductCatalogService, private dialog: MatDialog, private translate: TranslateService) {}
 
+  // Mirrors the status-to-event mapping in Sp_GetDashboardStats. The tile's date is
+  // that event's timestamp, so the tooltip has to name the same event — otherwise the
+  // heading says "order received" over what is actually a shipment time. Statuses not
+  // listed here fall back to Orders.CreatedDate in the proc, so they keep the original
+  // "order received" wording.
+  private lastOrderLabels: { [key: string]: { heading: string; note: string } } = {
+    'SHIPPED':            { heading: 'dashboard.lastShipmentSent',   note: 'dashboard.lastShipmentNote' },
+    'PARTIALLYSHIPPED':   { heading: 'dashboard.lastShipmentSent',   note: 'dashboard.lastShipmentNote' },
+    'SYNCED':             { heading: 'dashboard.lastCreatedInErp',   note: 'dashboard.lastCreatedInErpNote' },
+    'CANCELLED':          { heading: 'dashboard.lastCancellation',   note: 'dashboard.lastCancellationNote' },
+    'PARTIALLYCANCELLED': { heading: 'dashboard.lastCancellation',   note: 'dashboard.lastCancellationNote' },
+    'ACKNOWLEDGED':       { heading: 'dashboard.lastAckSent',        note: 'dashboard.lastAckNote' },
+    'INVOICED':           { heading: 'dashboard.lastInvoiceSent',    note: 'dashboard.lastInvoiceNote' },
+    'INPROGRESS':         { heading: 'dashboard.lastSentToErp',      note: 'dashboard.lastSentToErpNote' },
+    'NEW':                { heading: 'dashboard.lastOrderReceived',  note: 'dashboard.lastOrderNote' },
+    'ERROR':              { heading: 'dashboard.lastOrderError',     note: 'dashboard.lastOrderErrorNote' },
+    'ASNERROR':           { heading: 'dashboard.lastAsnError',       note: 'dashboard.lastAsnErrorNote' },
+    'ACKERROR':           { heading: 'dashboard.lastAckError',       note: 'dashboard.lastAckErrorNote' }
+  };
+
   /**
-   * Tooltip for the "last order" date on a KPI tile.
+   * Tooltip for the "last event" date on a KPI tile.
    * Built as heading / scope / timestamp / note lines — the tooltip class renders
    * them as a card with the first line styled as the heading.
    */
-  getLastOrderTooltip(scope: string, date: string | null | undefined): string {
+  getLastOrderTooltip(scope: string, date: string | null | undefined, status: string = '', basis: string | null = ''): string {
     // No date on the tile => no tooltip.
     if (!date) return '';
 
@@ -169,8 +192,20 @@ export class DashboardComponent implements OnInit, OnDestroy {
       return '';
     }
 
-    const heading = this.translate.instant('dashboard.lastOrderReceived');
-    const note = this.translate.instant('dashboard.lastOrderNote');
+    // Letters only: the status arrives both raw ('ASNERROR') and as a display name
+    // ('Partially Shipped'), the same normalisation the proc does.
+    const key = (status || '').toString().toUpperCase().replace(/[^A-Z]/g, '');
+    const generic = { heading: 'dashboard.lastOrderReceived', note: 'dashboard.lastOrderNote' };
+
+    // Only claim the event wording when the proc confirms it returned an event. When it
+    // fell back to Orders.CreatedDate — archived events, or a partner that never writes
+    // one, e.g. Amazon cancellations — the generic wording is the truthful one. Treat an
+    // absent basis as "not confirmed" so the label can never overstate what the date is.
+    const isEvent = (basis || '').toString().toUpperCase() === 'EVENT';
+    const labels = isEvent ? (this.lastOrderLabels[key] || generic) : generic;
+
+    const heading = this.translate.instant(labels.heading);
+    const note = this.translate.instant(labels.note);
 
     return [heading, scope, when, note].filter(l => !!l).join('\n');
   }
@@ -283,8 +318,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
       this.refreshing = true;
     }
 
-    const from = this.formatDate(this.filterFrom);
-    const to = this.formatDate(this.filterTo);
+    const from = this.rangeFor(this.filterFrom);
+    const to = this.rangeFor(this.filterTo);
     const customerFilter = this.selectedCustomerIDs.length > 0 ? this.selectedCustomerIDs.join(',') : '';
     this.api.getDashboardStats(from, to, customerFilter).subscribe({
       next: (res: any) => {
@@ -321,18 +356,25 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const now = new Date();
     this.filterTo = new Date(now);
 
+    // Day-based presets are sent as yyyy-MM-dd, and the backend widens each end to a whole
+    // day: 'from' rounds back to 00:00 and 'to' rounds forward to the next midnight. So a
+    // preset covers (days subtracted + 1) calendar days — hence each case subtracts one less
+    // than its label. Previously 7D returned 8 days and 30D returned 31.
+    //
+    // 24H is the exception: it is an hour-based promise, so it keeps its time component and
+    // is sent as a full timestamp. See isRollingPreset() / formatDateTime().
     switch (preset) {
       case 'today':
-        this.filterFrom = new Date(now);
+        this.filterFrom = new Date(now);                                     // 1 calendar day
         break;
       case '24h':
-        this.filterFrom = new Date(new Date().setDate(now.getDate() - 1));
+        this.filterFrom = new Date(now.getTime() - 24 * 60 * 60 * 1000);     // exactly 24 hours
         break;
       case '7d':
-        this.filterFrom = new Date(new Date().setDate(now.getDate() - 7));
+        this.filterFrom = new Date(new Date().setDate(now.getDate() - 6));   // 7 calendar days
         break;
       case '30d':
-        this.filterFrom = new Date(new Date().setDate(now.getDate() - 30));
+        this.filterFrom = new Date(new Date().setDate(now.getDate() - 29));  // 30 calendar days
         break;
     }
 
@@ -362,6 +404,27 @@ export class DashboardComponent implements OnInit, OnDestroy {
     if (!date) return '';
     const pad = (n: number) => n.toString().padStart(2, '0');
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+  }
+
+  /**
+   * 24H promises hours, not days, so its range must survive as a timestamp — a date-only
+   * value would be widened to whole days by the backend and return 48 hours.
+   */
+  isRollingPreset(): boolean {
+    return this.activePreset === '24h';
+  }
+
+  /** yyyy-MM-dd HH:mm:ss — the backend uses an explicit time as-is instead of widening it. */
+  formatDateTime(date: Date): string {
+    if (!date) return '';
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+         + ` ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+  }
+
+  /** Range as the backend should receive it for the active preset. */
+  private rangeFor(date: Date): string {
+    return this.isRollingPreset() ? this.formatDateTime(date) : this.formatDate(date);
   }
 
   getStatusConfig(status: string): { icon: string; color: string; bg: string } {
@@ -521,7 +584,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
         color: config.color,
         bg: config.bg,
         count: found ? found.statusCount : 0,
-        lastOrderDate: found ? found.lastOrderDate ?? null : null
+        lastOrderDate: found ? found.lastOrderDate ?? null : null,
+        lastOrderDateBasis: found ? found.lastOrderDateBasis ?? null : null
       };
     });
   }
@@ -554,7 +618,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return Object.keys(this.statusConfig).map(key => {
       const keyUpper = key.toUpperCase();
       const found = existing.find(s => (s.status || '').toUpperCase() === keyUpper);
-      return { status: key, statusCount: found ? found.statusCount : 0, lastOrderDate: found ? found.lastOrderDate ?? null : null };
+      return { status: key, statusCount: found ? found.statusCount : 0, lastOrderDate: found ? found.lastOrderDate ?? null : null, lastOrderDateBasis: found ? found.lastOrderDateBasis ?? null : null };
     });
   }
 
@@ -573,8 +637,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
       data: {
         status: status,
         customerID: customerID,
-        fromDate: this.formatDate(this.filterFrom),
-        toDate: this.formatDate(this.filterTo),
+        fromDate: this.rangeFor(this.filterFrom),
+        toDate: this.rangeFor(this.filterTo),
         title: `${label} Orders${partnerLabel}`,
         color: config.color,
         icon: config.icon
@@ -594,8 +658,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
       data: {
         status: '',
         customerID: customerID,
-        fromDate: this.formatDate(this.filterFrom),
-        toDate: this.formatDate(this.filterTo),
+        fromDate: this.rangeFor(this.filterFrom),
+        toDate: this.rangeFor(this.filterTo),
         title: `All Orders${partnerLabel}`,
         color: '#3f51b5',
         icon: 'shopping_cart'
