@@ -583,75 +583,86 @@ namespace eSyncMate.Processor.Controllers
 
                 DBConnector l_Conn = new DBConnector(CommonUtils.ConnectionString);
 
-                string l_CustomerFilter = "";
+                // All three breakdowns come from Sp_GetDashboardStats in a single round trip.
+                // The SQL lives in the proc so the status-to-event mapping can be tuned on the
+                // server without a Processor redeploy — see
+                // scripts/eSyncmateScripts/2026-07-30/81_Create_Sp_GetDashboardStats.sql.
+                //
+                // Each status now reports the date of the event it actually means (ASN sent /
+                // created in ERP / cancelled) instead of the ingestion date, which was the same
+                // value on every tile. Counts are still scoped to Orders.CreatedDate so they keep
+                // matching the drilldown; only the date comes from the event window.
+                // Analysis: TaskManagement/Dashboard-StatusWise-Dates-Analysis.html
+                string l_AllowedCustomers = "";
                 if (!userData.IsSuperAdmin && !string.IsNullOrEmpty(userData.Customers))
-                    l_CustomerFilter = $" AND ERPCustomerID IN ({userData.Customers})";
+                    l_AllowedCustomers = userData.Customers.Replace("'", "");   // the claim arrives pre-quoted
 
-                // Filter by specific customer(s) if provided
-                if (!string.IsNullOrEmpty(erpCustomerID))
-                {
-                    var customerIds = erpCustomerID.Split(',').Select(c => $"'{c.Trim()}'");
-                    l_CustomerFilter += $" AND ERPCustomerID IN ({string.Join(",", customerIds)})";
-                }
+                string l_Param = string.Empty;
+                string l_Query = "EXEC [dbo].[Sp_GetDashboardStats] ";
 
-                // Date filter — defaults to last 24 hours if not provided
-                string l_DateFilter;
-                if (!string.IsNullOrEmpty(fromDate) && !string.IsNullOrEmpty(toDate))
-                    l_DateFilter = $" CreatedDate >= '{fromDate}' AND CreatedDate < DATEADD(DAY, 1, CAST('{toDate}' AS DATE))";
-                else
-                    l_DateFilter = " CreatedDate >= DATEADD(HOUR, -24, GETDATE())";
+                PublicFunctions.FieldToParam(fromDate ?? string.Empty, ref l_Param, Declarations.FieldTypes.String);
+                l_Query += " @p_FromDate = " + l_Param;
 
-                // Customer-wise order counts
-                string l_CustomerQuery = $@"SELECT ISNULL(CustomerName,'') as CustomerName, ISNULL(ERPCustomerID,'') as ERPCustomerID, COUNT(*) as OrderCount, MAX(CreatedDate) as LastOrderDate
-                    FROM VW_Orders
-                    WHERE {l_DateFilter} AND Status <> 'DELETED'{l_CustomerFilter}
-                    GROUP BY CustomerName, ERPCustomerID ORDER BY OrderCount DESC";
+                PublicFunctions.FieldToParam(toDate ?? string.Empty, ref l_Param, Declarations.FieldTypes.String);
+                l_Query += ", @p_ToDate = " + l_Param;
 
-                DataTable l_CustomerDT = new DataTable();
-                l_Conn.GetData(l_CustomerQuery, ref l_CustomerDT);
+                PublicFunctions.FieldToParam(l_AllowedCustomers, ref l_Param, Declarations.FieldTypes.String);
+                l_Query += ", @p_AllowedCustomers = " + l_Param;
+
+                PublicFunctions.FieldToParam(erpCustomerID ?? string.Empty, ref l_Param, Declarations.FieldTypes.String);
+                l_Query += ", @p_ERPCustomerIDs = " + l_Param;
+
+                DataSet l_DS = new DataSet();
+                l_Conn.GetDataSP(l_Query, ref l_DS);
+
+                // 'EVENT' when the date is the status's own event timestamp, 'CREATED' when the
+                // proc fell back to Orders.CreatedDate. The UI needs this so a tile label cannot
+                // claim "last shipment" over what is really an ingestion date. Guarded by column
+                // presence so an older proc version does not break the endpoint.
+                Func<DataRow, string> l_Basis = row =>
+                    row.Table.Columns.Contains("LastOrderDateBasis") ? row["LastOrderDateBasis"]?.ToString() : "";
+
+                // Result set 1 — customer-wise counts
                 var customerWise = new List<object>();
                 int totalOrders = 0;
                 DateTime? totalLastOrderDate = null;
-                foreach (DataRow row in l_CustomerDT.Rows)
+                if (l_DS.Tables.Count > 0)
                 {
-                    int count = Convert.ToInt32(row["OrderCount"]);
-                    totalOrders += count;
-                    DateTime? l_Lod = row["LastOrderDate"] == DBNull.Value ? (DateTime?)null : Convert.ToDateTime(row["LastOrderDate"]);
-                    if (l_Lod.HasValue && (!totalLastOrderDate.HasValue || l_Lod > totalLastOrderDate)) totalLastOrderDate = l_Lod;
-                    customerWise.Add(new { customerName = row["CustomerName"]?.ToString(), erpCustomerID = row["ERPCustomerID"]?.ToString(), orderCount = count, lastOrderDate = l_Lod });
+                    foreach (DataRow row in l_DS.Tables[0].Rows)
+                    {
+                        int count = Convert.ToInt32(row["OrderCount"]);
+                        totalOrders += count;
+                        DateTime? l_Lod = row["LastOrderDate"] == DBNull.Value ? (DateTime?)null : Convert.ToDateTime(row["LastOrderDate"]);
+                        if (l_Lod.HasValue && (!totalLastOrderDate.HasValue || l_Lod > totalLastOrderDate)) totalLastOrderDate = l_Lod;
+                        customerWise.Add(new { customerName = row["CustomerName"]?.ToString(), erpCustomerID = row["ERPCustomerID"]?.ToString(), orderCount = count, lastOrderDate = l_Lod, lastOrderDateBasis = l_Basis(row) });
+                    }
                 }
 
-                // Status-wise order counts — group by the effective (display) status so
-                // 'Partially Shipped'/'Partially Cancelled' etc. count correctly and match the drilldown.
-                string l_StatusQuery = $@"SELECT ISNULL(NULLIF(DisplayStatus,''), ISNULL(Status,'')) as Status, COUNT(*) as StatusCount, MAX(CreatedDate) as LastOrderDate
-                    FROM VW_Orders
-                    WHERE {l_DateFilter} AND Status <> 'DELETED'{l_CustomerFilter}
-                    GROUP BY ISNULL(NULLIF(DisplayStatus,''), ISNULL(Status,'')) ORDER BY StatusCount DESC";
-
-                DataTable l_StatusDT = new DataTable();
-                l_Conn.GetData(l_StatusQuery, ref l_StatusDT);
+                // Result set 2 — status-wise counts, grouped by the effective (display) status so
+                // 'Partially Shipped'/'Partially Cancelled' count correctly and match the drilldown
                 var statusWise = new List<object>();
-                foreach (DataRow row in l_StatusDT.Rows)
+                if (l_DS.Tables.Count > 1)
                 {
-                    statusWise.Add(new { status = row["Status"]?.ToString(), statusCount = Convert.ToInt32(row["StatusCount"]), lastOrderDate = row["LastOrderDate"] == DBNull.Value ? (DateTime?)null : Convert.ToDateTime(row["LastOrderDate"]) });
+                    foreach (DataRow row in l_DS.Tables[1].Rows)
+                    {
+                        statusWise.Add(new { status = row["Status"]?.ToString(), statusCount = Convert.ToInt32(row["StatusCount"]), lastOrderDate = row["LastOrderDate"] == DBNull.Value ? (DateTime?)null : Convert.ToDateTime(row["LastOrderDate"]), lastOrderDateBasis = l_Basis(row) });
+                    }
                 }
 
-                // Partner + Status breakdown (for expandable detail)
-                string l_PartnerStatusQuery = $@"SELECT ISNULL(ERPCustomerID,'') as ERPCustomerID, ISNULL(NULLIF(DisplayStatus,''), ISNULL(Status,'')) as Status, COUNT(*) as StatusCount, MAX(CreatedDate) as LastOrderDate
-                    FROM VW_Orders
-                    WHERE {l_DateFilter} AND Status <> 'DELETED'{l_CustomerFilter}
-                    GROUP BY ERPCustomerID, ISNULL(NULLIF(DisplayStatus,''), ISNULL(Status,'')) ORDER BY ERPCustomerID, StatusCount DESC";
-
-                DataTable l_PartnerStatusDT = new DataTable();
-                l_Conn.GetData(l_PartnerStatusQuery, ref l_PartnerStatusDT);
+                // Result set 3 — partner + status breakdown (for expandable detail)
                 var partnerStatusWise = new Dictionary<string, List<object>>();
-                foreach (DataRow row in l_PartnerStatusDT.Rows)
+                if (l_DS.Tables.Count > 2)
                 {
-                    string custId = row["ERPCustomerID"]?.ToString() ?? "";
-                    if (!partnerStatusWise.ContainsKey(custId))
-                        partnerStatusWise[custId] = new List<object>();
-                    partnerStatusWise[custId].Add(new { status = row["Status"]?.ToString(), statusCount = Convert.ToInt32(row["StatusCount"]), lastOrderDate = row["LastOrderDate"] == DBNull.Value ? (DateTime?)null : Convert.ToDateTime(row["LastOrderDate"]) });
+                    foreach (DataRow row in l_DS.Tables[2].Rows)
+                    {
+                        string custId = row["ERPCustomerID"]?.ToString() ?? "";
+                        if (!partnerStatusWise.ContainsKey(custId))
+                            partnerStatusWise[custId] = new List<object>();
+                        partnerStatusWise[custId].Add(new { status = row["Status"]?.ToString(), statusCount = Convert.ToInt32(row["StatusCount"]), lastOrderDate = row["LastOrderDate"] == DBNull.Value ? (DateTime?)null : Convert.ToDateTime(row["LastOrderDate"]), lastOrderDateBasis = l_Basis(row) });
+                    }
                 }
+
+                l_DS.Dispose();
 
                 return Task.FromResult<object>(new { code = 200, message = "Success", customerWise, statusWise, totalOrders, totalLastOrderDate, partnerStatusWise });
             }
@@ -734,9 +745,15 @@ namespace eSyncMate.Processor.Controllers
 
                 l_Criteria += l_CustomerFilter;
 
-                // Date filter on CreatedDate (matches dashboard stats)
+                // Date filter on CreatedDate (matches dashboard stats).
+                // A date-only bound means "the whole of that day", so it moves to the next
+                // midnight. A bound carrying a time is an exact instant and is used as-is —
+                // that is what makes the 24H preset mean 24 hours here too, so the drilldown
+                // returns the same population as the tile it was opened from.
                 if (!string.IsNullOrEmpty(fromDate) && !string.IsNullOrEmpty(toDate))
-                    l_Criteria += $" AND CreatedDate >= '{fromDate}' AND CreatedDate < DATEADD(DAY, 1, CAST('{toDate}' AS DATE))";
+                    l_Criteria += $" AND CreatedDate >= CAST('{fromDate}' AS DATETIME)"
+                                + $" AND CreatedDate < CASE WHEN CAST('{toDate}' AS DATETIME) = CAST(CAST('{toDate}' AS DATETIME) AS DATE)"
+                                + $" THEN DATEADD(DAY, 1, CAST('{toDate}' AS DATETIME)) ELSE CAST('{toDate}' AS DATETIME) END";
 
                 // Status filter — match the effective (display) status, consistent with the dashboard tiles/breakdown
                 if (!string.IsNullOrEmpty(status))
@@ -821,14 +838,20 @@ namespace eSyncMate.Processor.Controllers
                     l_Criteria += $" AND (Status = '{Status}' OR DisplayStatus = '{Status}')";
                 }
 
+                // Filter on CreatedDate — the date the order reached eSyncMate — so this screen
+                // agrees with the dashboard tiles and the drilldown, which both use CreatedDate.
+                // It used to filter on OrderDate (the partner's PO date), so the same range could
+                // return a different set of orders here than on the dashboard.
+                // Written as a half-open range rather than CONVERT(DATE, ...) >= / <= so the
+                // predicate stays SARGable: a function on the column blocks any index use.
                 if (!string.IsNullOrEmpty(FromDate))
                 {
-                    l_Criteria += $" AND CONVERT(DATE, OrderDate) >= '{FromDate}'";
+                    l_Criteria += $" AND CreatedDate >= CAST('{FromDate}' AS DATE)";
                 }
 
                 if (!string.IsNullOrEmpty(ToDate))
                 {
-                    l_Criteria += $" AND CONVERT(DATE, OrderDate) <= '{ToDate}'";
+                    l_Criteria += $" AND CreatedDate < DATEADD(DAY, 1, CAST('{ToDate}' AS DATE))";
                 }
 
                 if (!string.IsNullOrEmpty(ExternalId))

@@ -129,7 +129,7 @@
         </div>
       </div>
       <div class="kpi-tile kpi-clickable" *ngFor="let tile of statusTiles" [style.--tile-color]="tile.color"
-           [matTooltip]="getLastOrderTooltip(tile.label, tile.lastOrderDate)"
+           [matTooltip]="getLastOrderTooltip(tile.label, tile.lastOrderDate, tile.key, tile.lastOrderDateBasis)"
            [matTooltipClass]="getLastOrderTooltipClass(tile.key)" matTooltipPosition="above"
            (click)="openStatusDrilldown(tile.key)">
         <div class="kpi-tile-main">
@@ -194,7 +194,7 @@
               <div class="partner-kpi-tiles">
                 <div class="kpi-tile kpi-clickable partner-kpi" *ngFor="let stat of getPartnerAllStatuses(row.erpCustomerID); trackBy: trackByStatus"
                      [style.--tile-color]="getStatusColor(stat.status)"
-                     [matTooltip]="getLastOrderTooltip(getPartnerName(row.erpCustomerID) + '  ·  ' + stat.status, stat.lastOrderDate)"
+                     [matTooltip]="getLastOrderTooltip(getPartnerName(row.erpCustomerID) + '  ·  ' + stat.status, stat.lastOrderDate, stat.status, stat.lastOrderDateBasis)"
                      [matTooltipClass]="getLastOrderTooltipClass(stat.status)" matTooltipPosition="above"
                      (click)="openStatusDrilldown(stat.status, row.erpCustomerID)">
                   <div class="kpi-tile-main">

@@ -241,7 +241,7 @@ export class OrdersComponent implements OnInit {
       case 'ASNERROR':
         return { key: 'OrderStatusASNERROR' };
       case 'DUPLICATE':
-        return { key: 'OrderStatusASNERROR' };
+        return { key: 'OrderStatusDuplicate' };
       case 'ACKERROR':
         return { key: 'OrderStatusACKERROR' };
       case 'ACKNOWLEDGED':
