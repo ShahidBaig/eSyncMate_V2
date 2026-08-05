@@ -92,31 +92,51 @@ namespace eSyncMate.Processor.Managers
             KnotGetOrderResponseModel ordersList = new KnotGetOrderResponseModel();
             RestResponse sourceResponse = new RestResponse();
             DataTable p_SCSInventoryFeedDt = new DataTable();
+            List<KnotOrder> l_AllOrders = new List<KnotOrder>();
+            int l_Max = 100;
+            int l_Offset = 0;
+            int l_TotalCount = 0;
 
             try
             {
-                string url = $"{sourceConnector.BaseUrl}/api/orders?order_state_codes={statusCode}&max=100";
-                sourceConnector.Url = url;
-
-                sourceResponse = RestConnector.Execute(sourceConnector, string.Empty).GetAwaiter().GetResult();
-
-                route.SaveData("JSON-SNT", 0, url, userNo);
-
-                if (string.IsNullOrEmpty(sourceResponse.Content))
+                do
                 {
-                    route.SaveLog(LogTypeEnum.Error, $"Empty response from Knot API for status: {statusCode}. HTTP {(int)sourceResponse.StatusCode}", sourceResponse.ErrorMessage ?? "", userNo);
-                    return;
+                    string url = $"{sourceConnector.BaseUrl}/api/orders?order_state_codes={statusCode}&max={l_Max}&offset={l_Offset}";
+                    sourceConnector.Url = url;
+                    sourceConnector.Method = "GET";
+
+                    sourceResponse = RestConnector.Execute(sourceConnector, string.Empty).GetAwaiter().GetResult();
+
+                    route.SaveData("JSON-SNT", 0, url, userNo);
+
+                    if (string.IsNullOrEmpty(sourceResponse.Content))
+                    {
+                        route.SaveLog(LogTypeEnum.Error, $"Empty response from Knot API for status: {statusCode}. HTTP {(int)sourceResponse.StatusCode}", sourceResponse.ErrorMessage ?? "", userNo);
+                        break;
+                    }
+
+                    route.SaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
+
+                    ordersList = JsonConvert.DeserializeObject<KnotGetOrderResponseModel>(sourceResponse.Content);
+
+                    if (ordersList?.orders == null || ordersList.orders.Count == 0)
+                    {
+                        break;
+                    }
+
+                    l_TotalCount = ordersList.total_count;
+                    l_AllOrders.AddRange(ordersList.orders);
+                    l_Offset += ordersList.orders.Count;
                 }
+                while (l_Offset < l_TotalCount);
 
-                route.SaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
-
-                ordersList = JsonConvert.DeserializeObject<KnotGetOrderResponseModel>(sourceResponse.Content);
-
-                if (ordersList?.orders == null || ordersList.orders.Count == 0)
+                if (l_AllOrders.Count == 0)
                 {
                     route.SaveLog(LogTypeEnum.Info, $"No orders found for status: {statusCode}", string.Empty, userNo);
                     return;
                 }
+
+                route.SaveLog(LogTypeEnum.Info, $"Fetched [{l_AllOrders.Count}] of [{l_TotalCount}] orders for status: {statusCode}", string.Empty, userNo);
 
                 if (destinationConnector.ConnectivityType == ConnectorTypesEnum.SqlServer.ToString())
                 {
@@ -137,7 +157,7 @@ namespace eSyncMate.Processor.Managers
 
                     }
 
-                    foreach (var order in ordersList.orders)
+                    foreach (var order in l_AllOrders)
                     {
                         l_OrderData = new DataTable();
 
