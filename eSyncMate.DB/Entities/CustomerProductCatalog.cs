@@ -794,15 +794,52 @@ namespace eSyncMate.DB.Entities
 
             l_Query += $" ORDER BY {l_OrderBy} OFFSET {offset} ROWS FETCH NEXT {pageSize} ROWS ONLY)";
 
-            // A rejection carries no *-ERR row: the reasons sit inside the RSP-JSON response,
-            // so that is used as a fallback for REJECTED rows only (it is a large payload).
+            // A rejection carries no *-ERR row: the reasons sit inside the RSP-JSON response, so that
+            // payload is used for REJECTED and ERROR rows, and elsewhere only when it really carries
+            // errors. PENDING is left out on purpose -- a pending item is still being validated, so its
+            // previous attempt's errors are not reported. Empty payloads are skipped so a blank RSP-ERR
+            // row cannot shadow a usable one.
+            // The status compared here is the view's, which folds SYNCED/DELETED into 'Published'
+            // and APPROVED/APPROVED_PR into 'Approved'.
+            // A transport failure (timeout, gateway, rate limit) says nothing about the product, so it
+            // must not become the item's reported error -- the marketplace's real rejection reason, or
+            // a validation finding of ours, has to win. IsTransientResponse makes the same call in the
+            // route but the verdict is never stored: both kinds are written as REQ-ERR/RSP-ERR carrying
+            // only the response body, so matching the text is all that is available here.
+            // Data is NVARCHAR(MAX); the 300-char head keeps this to the first LOB page.
+            const string l_TransientNoise = " AND NOT (D.Type IN ('REQ-ERR', 'RSP-ERR')"
+                                          + " AND (H.DataHead LIKE '%upstream%'"
+                                          + "      OR H.DataHead LIKE '%timeout%'"
+                                          + "      OR H.DataHead LIKE '%timed out%'"
+                                          + "      OR H.DataHead LIKE '%gateway%'"
+                                          + "      OR H.DataHead LIKE '%service unavailable%'"
+                                          + "      OR H.DataHead LIKE '%temporarily unavailable%'"
+                                          + "      OR H.DataHead LIKE '%internal server error%'"
+                                          + "      OR H.DataHead LIKE '%connection%refused%'"
+                                          + "      OR H.DataHead LIKE '%too many requests%'"
+                                          + "      OR H.DataHead LIKE '%rate limit%'))";
+
             l_Query += " SELECT P.*, ERR.ErrorData, ERR.ErrorType, ERR.ErrorDate FROM PagedCatalog P"
                     + " OUTER APPLY (SELECT TOP 1 LEFT(D.Data, 8000) AS ErrorData, D.Type AS ErrorType, D.CreatedDate AS ErrorDate"
                     + " FROM [SCS_CustomerProductCatalogData] D"
+                    + " CROSS APPLY (SELECT DataHead = LOWER(SUBSTRING(D.Data, 1, 300))) H"
                     + " WHERE D.ProductId = P.ProductId"
-                    + " AND (D.Type IN ('RSP-ERR', 'REQ-ERR', 'Internal')"
-                    + "      OR (D.Type = 'RSP-JSON' AND P.SyncStatus = 'REJECTED'))"
-                    + " ORDER BY CASE WHEN D.Type = 'RSP-JSON' THEN 1 ELSE 0 END, D.CreatedDate DESC, D.Id DESC) ERR"
+                    + " AND DATALENGTH(D.Data) > 0"
+                    + l_TransientNoise
+                    // PRD/UNL/STA/LOG-ERR are the per-operation types; REQ-ERR and RSP-ERR are their
+                    // predecessors and stay listed so rows written before the split still show.
+                    + " AND (D.Type IN ('PRD-ERR', 'UNL-ERR', 'STA-ERR', 'LOG-ERR', 'RSP-ERR', 'REQ-ERR', 'Internal')"
+                    + "      OR (D.Type IN ('STA-RSP', 'RSP-JSON')"
+                    + "          AND (P.SyncStatus IN ('REJECTED','Error')"
+                    // A successful status response still carries the key as an empty array
+                    // ("errors":[]), so matching the key alone reports every approval as an error.
+                    // Only a populated array ("errors":[{...) is a real finding. Whitespace is stripped
+                    // first so the test holds whether or not the marketplace pretty-prints its JSON --
+                    // missing a genuine rejection would be worse than the false positive this replaces.
+                    + "               OR (CHARINDEX('\"errors\":[{',"
+                    + "                      REPLACE(REPLACE(REPLACE(REPLACE(LEFT(D.Data, 8000), ' ', ''), CHAR(13), ''), CHAR(10), ''), CHAR(9), '')) > 0"
+                    + "                   AND P.SyncStatus NOT IN ('Published', 'Approved', 'Pending')))))"
+                    + " ORDER BY CASE WHEN D.Type IN ('STA-RSP', 'RSP-JSON') THEN 1 ELSE 0 END, D.CreatedDate DESC, D.Id DESC) ERR"
                     + $" ORDER BY {l_OrderBy}";
 
             return Connection.GetData(l_Query, ref p_Data);

@@ -96,12 +96,12 @@ namespace eSyncMate.Processor.Managers
 
                     GetAlItems(l_DestinationConnector, "", route.Id, ref dataTable, ref l_CustomerProductCatalogPricesDT, l_SourceConnector.CustomerID);
 
-                    if (dataTable.Rows.Count > 0)
-                    {
-                        //route.SaveLog(LogTypeEnum.Debug, $"Total items fetched from API: {dataTable.Rows.Count}. Inserting into SCS_TargetItemsData...", string.Empty, userNo);
-                        BulkInsertTargetItems(dataTable, l_SourceConnector.ConnectionString, l_SourceConnector.CustomerID);
-                        //route.SaveLog(LogTypeEnum.Debug, $"Bulk insert completed for customer [{l_SourceConnector.CustomerID}].", string.Empty, userNo);
-                    }
+                    //if (dataTable.Rows.Count > 0)
+                    //{
+                    //    //route.SaveLog(LogTypeEnum.Debug, $"Total items fetched from API: {dataTable.Rows.Count}. Inserting into SCS_TargetItemsData...", string.Empty, userNo);
+                    //    BulkInsertTargetItems(dataTable, l_SourceConnector.ConnectionString, l_SourceConnector.CustomerID);
+                    //    //route.SaveLog(LogTypeEnum.Debug, $"Bulk insert completed for customer [{l_SourceConnector.CustomerID}].", string.Empty, userNo);
+                    //}
 
                     foreach (DataRow row in l_data.Rows)
                     {
@@ -479,10 +479,14 @@ namespace eSyncMate.Processor.Managers
             {
                 connection.Open();
 
-                using (SqlCommand cmd = new SqlCommand("DELETE FROM SCS_TargetItemsData WHERE CustomerID = @CustomerID", connection))
+                using (SqlCommand cmd = new SqlCommand("DELETE TOP (20000) FROM SCS_TargetItemsData WHERE CustomerID = @CustomerID", connection))
                 {
+                    cmd.CommandTimeout = 600;
                     cmd.Parameters.AddWithValue("@CustomerID", customerID);
-                    cmd.ExecuteNonQuery();
+
+                    while (cmd.ExecuteNonQuery() > 0)
+                    {
+                    }
                 }
 
                 DataTable bulkTable = dataTable.Copy();

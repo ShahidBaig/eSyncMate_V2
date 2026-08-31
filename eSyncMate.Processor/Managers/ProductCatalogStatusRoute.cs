@@ -85,9 +85,12 @@ namespace eSyncMate.Processor.Managers
 
                     foreach (DataRow row in l_data.Rows)
                     {
+                        // Declared outside the try so the catch records the failure on the same connection
+                        // the rest of this item's product data rows are written on.
+                        CustomerProductCatalog l_Product = new CustomerProductCatalog();
+
                         try
                         {
-                        CustomerProductCatalog l_Product = new CustomerProductCatalog();
                         List<SCS_ProductCatalogStatusResponseModel> productList = new List<SCS_ProductCatalogStatusResponseModel>();
 
                         l_Product.UseConnection(l_SourceConnector.ConnectionString);
@@ -97,18 +100,68 @@ namespace eSyncMate.Processor.Managers
                         l_DestinationConnector.Method = "GET";
 
                         sourceResponse = RestConnector.Execute(l_DestinationConnector, Body).GetAwaiter().GetResult();
-                        if (sourceResponse.IsSuccessStatusCode)
+
+                        // A 2xx can still carry an error payload, in which case the item must not stay PENDING.
+                        string l_StatusPayloadError = sourceResponse.IsSuccessStatusCode
+                            ? ProductCatalog.GetResponsePayloadError(sourceResponse.Content, Convert.ToString(row["ItemID"]))
+                            : string.Empty;
+
+                        if (sourceResponse.IsSuccessStatusCode && !string.IsNullOrEmpty(l_StatusPayloadError))
+                        {
+                            l_Product.DeleteWithType(l_Product.ProductId, "STA-ERR");
+                            l_Product.SaveData("STA-ERR", sourceResponse.Content, userNo);
+
+                            l_CustomerProductCatalog.UpdateStatus(Convert.ToString(row["ItemID"]), Convert.ToString(row["VariationType"]), "ERROR", "", l_SourceConnector.CustomerID, 0);
+
+                            route.SaveLog(LogTypeEnum.Error, $"Error in the response payload getting ProductCatalogStatus for [{row["ItemID"]}] ({l_StatusPayloadError}). Marked as ERROR.", sourceResponse.Content, userNo);
+                        }
+                        else if (sourceResponse.IsSuccessStatusCode)
                         {
                             route.SaveLog(LogTypeEnum.Debug, $"ProductCatalogStatus processed for [{row["ItemID"]}].", string.Empty, userNo);
-                            
-                            l_Product.DeleteWithType(l_Product.ProductId, "RSP-JSON");
-                            l_Product.SaveData("RSP-JSON", sourceResponse.Content, userNo);
+
+                            l_Product.DeleteWithType(l_Product.ProductId, "STA-RSP");
+                            l_Product.SaveData("STA-RSP", sourceResponse.Content, userNo);
 
                             productList = JsonConvert.DeserializeObject<List<SCS_ProductCatalogStatusResponseModel>>(sourceResponse.Content);
 
-                            if (productList != null && productList.Any())
+                            if (productList == null || !productList.Any())
+                            {
+                                // Target answers 2xx with no product at all, so the item was never created there.
+                                // Without this the item stays PENDING and is polled on every run for ever.
+                                if (ProductCatalog.IsRetryExhausted(row))
+                                {
+                                    string l_NotFoundError = JsonConvert.SerializeObject(new ProductCatalogErrorModel
+                                    {
+                                        message = $"Target does not return item {row["ItemID"]} so it was never created there.",
+                                        errors = new[]
+                                        {
+                                            "The item status was requested several times and Target answered every time without a product. Upload this item again so it is created."
+                                        }
+                                    });
+
+                                    l_Product.DeleteWithType(l_Product.ProductId, "STA-ERR");
+                                    l_Product.SaveData("STA-ERR", l_NotFoundError, userNo);
+
+                                    l_CustomerProductCatalog.UpdateStatus(Convert.ToString(row["ItemID"]), Convert.ToString(row["VariationType"]), "ERROR", "", l_SourceConnector.CustomerID, 0);
+
+                                    route.SaveLog(LogTypeEnum.Error, $"Target returned no product for [{row["ItemID"]}] and the retry limit of {CommonUtils.ProductCatalogMaxRetryCount} was reached. Marked as ERROR.", sourceResponse.Content, userNo);
+                                }
+                                else
+                                {
+                                    l_CustomerProductCatalog.UpdateStatus(Convert.ToString(row["ItemID"]), Convert.ToString(row["VariationType"]), "PENDING", "", l_SourceConnector.CustomerID,
+                                        row.Table.Columns.Contains("RetryCount") && row["RetryCount"] != DBNull.Value ? Convert.ToInt32(row["RetryCount"]) + 1 : 0);
+
+                                    route.SaveLog(LogTypeEnum.Warning, $"Target returned no product for [{row["ItemID"]}]. The item stays PENDING and is checked again on the next run.", sourceResponse.Content, userNo);
+                                }
+                            }
+                            else
                             {
                                 SCS_ProductCatalogStatusResponseModel productStatus = productList[0];
+
+                                // Carries the outcome of the product logistics call so that a Target error is not
+                                // overwritten by the listing status further down.
+                                string l_LogisticsError = string.Empty;
+                                bool l_LogisticsRetry = false;
 
                                 if (productStatus.product_statuses != null && productStatus.product_statuses.Any() && productStatus.product_statuses[0].listing_status == "APPROVED" && !string.IsNullOrWhiteSpace(productStatus.id) && !string.Equals(Convert.ToString(productStatus.relationship_type.ToUpper()), "VAP", StringComparison.OrdinalIgnoreCase))
                                 {
@@ -157,28 +210,51 @@ namespace eSyncMate.Processor.Managers
                                     
                                     Body = JsonConvert.SerializeObject(requestBody);
 
-                                    l_Product.DeleteWithType(l_Product.ProductId, "REQ-JSON");
-                                    l_Product.SaveData("REQ-JSON", JsonConvert.SerializeObject(new { url = l_DestinationConnector.Url, method = l_DestinationConnector.Method, body = requestBody }), userNo);
+                                    l_Product.DeleteWithType(l_Product.ProductId, "LOG-REQ");
+                                    l_Product.SaveData("LOG-REQ", CommonUtils.DescribeRequest(l_DestinationConnector, requestBody), userNo);
 
-                                    route.SaveData("JSON-SNT", 0, JsonConvert.SerializeObject(new { url = l_DestinationConnector.Url, method = l_DestinationConnector.Method, body = requestBody }), userNo);
+                                    route.SaveData("JSON-SNT", 0, CommonUtils.DescribeRequest(l_DestinationConnector, requestBody), userNo);
 
                                     sourceResponse = RestConnector.Execute(l_DestinationConnector, Body).GetAwaiter().GetResult();
 
-                                    if (sourceResponse.IsSuccessStatusCode)
+                                    // A 2xx logistics response can still carry an error payload.
+                                    string l_LogisticsPayloadError = sourceResponse.IsSuccessStatusCode
+                                        ? ProductCatalog.GetResponsePayloadError(sourceResponse.Content, Convert.ToString(row["ItemID"]))
+                                        : string.Empty;
+
+                                    if (sourceResponse.IsSuccessStatusCode && string.IsNullOrEmpty(l_LogisticsPayloadError))
                                     {
-                                        l_Product.DeleteWithType(l_Product.ProductId, "RSP-JSON");
-                                        l_Product.SaveData("RSP-JSON", sourceResponse.Content, userNo);
+                                        l_Product.DeleteWithType(l_Product.ProductId, "LOG-RSP");
+                                        l_Product.SaveData("LOG-RSP", sourceResponse.Content, userNo);
                                     }
                                     else
                                     {
-                                        l_Product.DeleteWithType(l_Product.ProductId, "RSP-ERR");
-                                        l_Product.SaveData("RSP-ERR", sourceResponse.Content, userNo);
+                                        l_Product.DeleteWithType(l_Product.ProductId, "LOG-ERR");
+                                        l_Product.SaveData("LOG-ERR", sourceResponse.Content, userNo);
 
-                                        route.SaveLog(LogTypeEnum.Error, $"Error ({(sourceResponse.ResponseStatus == ResponseStatus.TimedOut ? "Timeout" : (int)sourceResponse.StatusCode + " " + sourceResponse.StatusCode)}) updating product logistics for [{row["ItemID"]}].", sourceResponse.Content, userNo);
+                                        if (!sourceResponse.IsSuccessStatusCode && CommonUtils.IsTransientResponse(sourceResponse))
+                                        {
+                                            l_LogisticsRetry = true;
+
+                                            route.SaveLog(LogTypeEnum.Warning, $"Transient error ({(sourceResponse.ResponseStatus == ResponseStatus.TimedOut ? "Timeout" : (int)sourceResponse.StatusCode + " " + sourceResponse.StatusCode)}) updating product logistics for [{row["ItemID"]}]. Item will be retried.", sourceResponse.Content, userNo);
+                                        }
+                                        else
+                                        {
+                                            l_LogisticsError = sourceResponse.IsSuccessStatusCode
+                                                ? l_LogisticsPayloadError
+                                                : (int)sourceResponse.StatusCode + " " + sourceResponse.StatusCode;
+
+                                            route.SaveLog(LogTypeEnum.Error, $"Error ({l_LogisticsError}) updating product logistics for [{row["ItemID"]}]. Marked as ERROR.", sourceResponse.Content, userNo);
+                                        }
                                     }
                                 }
 
-                                if (productStatus.product_statuses != null && productStatus.product_statuses.Any())
+                                if (!string.IsNullOrEmpty(l_LogisticsError))
+                                {
+                                    // Target rejected the logistics update, so the listing status must not mask it.
+                                    l_CustomerProductCatalog.UpdateStatus(Convert.ToString(row["ItemID"]), Convert.ToString(row["VariationType"]), "ERROR", productStatus.id, l_SourceConnector.CustomerID, 0);
+                                }
+                                else if (!l_LogisticsRetry && productStatus.product_statuses != null && productStatus.product_statuses.Any())
                                 {
                                     l_CustomerProductCatalog.UpdateStatus(Convert.ToString(row["ItemID"]), Convert.ToString(row["VariationType"]), productStatus.product_statuses[0].listing_status, productStatus.id, l_SourceConnector.CustomerID, 0);
                                 }
@@ -186,12 +262,12 @@ namespace eSyncMate.Processor.Managers
                         }
                         else
                         {
-                            l_Product.DeleteWithType(l_Product.ProductId, "RSP-ERR");
-                            l_Product.SaveData("RSP-ERR", sourceResponse.Content, userNo);
-                            
+                            l_Product.DeleteWithType(l_Product.ProductId, "STA-ERR");
+                            l_Product.SaveData("STA-ERR", sourceResponse.Content, userNo);
+
                             if (CommonUtils.IsTransientResponse(sourceResponse))
                             {
-                                route.SaveLog(LogTypeEnum.Error, $"Transient error ({(sourceResponse.ResponseStatus == ResponseStatus.TimedOut ? "Timeout" : (int)sourceResponse.StatusCode + " " + sourceResponse.StatusCode)}) getting ProductCatalogStatus for [{row["ItemID"]}]. Item will be retried.", sourceResponse.Content, userNo);
+                                route.SaveLog(LogTypeEnum.Warning, $"Transient error ({(sourceResponse.ResponseStatus == ResponseStatus.TimedOut ? "Timeout" : (int)sourceResponse.StatusCode + " " + sourceResponse.StatusCode)}) getting ProductCatalogStatus for [{row["ItemID"]}]. Item will be retried.", sourceResponse.Content, userNo);
                             }
                             else
                             {
@@ -206,6 +282,8 @@ namespace eSyncMate.Processor.Managers
                         catch (Exception itemEx)
                         {
                             route.SaveLog(LogTypeEnum.Exception, $"Error processing ProductCatalogStatus item [{row["ItemID"]}].", itemEx.ToString(), userNo);
+
+                            ProductCatalog.MarkItemFailed(route, l_Product, l_SourceConnector.CustomerID, row, itemEx, userNo);
                         }
 
                         // Delay between API calls to avoid Target rate limiting

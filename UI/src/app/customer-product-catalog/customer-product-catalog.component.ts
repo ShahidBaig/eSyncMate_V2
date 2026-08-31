@@ -398,6 +398,14 @@ export class CustomerProductCatalogComponent {
       this.searchValue = stringFromDate + '/' + stringToDate;
     }
 
+    // A filter chosen without a value is not a search, so ask for the value instead of calling the API
+    if (this.selectedOption !== 'Select Customer Product Catalog' && !this.searchValue?.trim()) {
+      this.toast.info({ detail: "INFO", summary: this.languageService.getTranslation('enterSearchValueMessage'), duration: 4000, position: 'topRight' });
+      this.showSpinnerforSearchData = false;
+      this.isLoading = false;
+      return;
+    }
+
     this.isLoading = true;
     this.api.getCustomerProductCatalog(this.selectedOption, this.searchValue, this.pageNumber, this.pageSize).subscribe({
       next: (res: any) => {
@@ -894,13 +902,35 @@ export class CustomerProductCatalogComponent {
     return this.translate.instant(tooltipData.key, tooltipData.params);
   }
 
-  // SCS_CustomerProductCatalogData.Type -> tooltip heading
+  // SCS_CustomerProductCatalogData.Type -> tooltip heading.
+  // PRD/UNL/STA/LOG-* are the per-operation types; REQ-ERR/RSP-ERR/RSP-JSON are their predecessors
+  // and stay mapped so items logged before the split still read correctly.
   private catalogErrorHeadings: { [key: string]: string } = {
+    'PRD-ERR': 'PRODUCT SYNC ERROR',
+    'UNL-ERR': 'UNLIST ERROR',
+    'STA-ERR': 'LISTING STATUS ERROR',
+    'LOG-ERR': 'LOGISTICS UPDATE ERROR',
     'RSP-ERR': 'MARKETPLACE ERROR',
     'REQ-ERR': 'REQUEST ERROR',
     'Internal': 'VALIDATION ERROR',
+    'STA-RSP': 'REJECTED BY MARKETPLACE',
     'RSP-JSON': 'REJECTED BY MARKETPLACE'
   };
+
+  /**
+   * RSP-JSON is the status payload, not an error row. On a REJECTED item it is the rejection itself,
+   * but a PENDING (or other non-final) item can carry errors from its previous listing attempt.
+   */
+  private getCatalogErrorHeading(element: any): string {
+    if ((element?.errorType === 'STA-RSP' || element?.errorType === 'RSP-JSON') && !this.isRejected(element)) {
+      return 'MARKETPLACE VALIDATION ERROR';
+    }
+    return this.catalogErrorHeadings[element?.errorType] || 'ERROR';
+  }
+
+  private isRejected(element: any): boolean {
+    return String(element?.syncStatus || '').toUpperCase() === 'REJECTED';
+  }
 
   /**
    * A rejection response is an array of products, each carrying product_statuses[] with the
@@ -948,7 +978,7 @@ export class CustomerProductCatalogComponent {
     const raw = element?.errorData;
     if (!raw) return '';
 
-    const label = this.catalogErrorHeadings[element?.errorType] || 'ERROR';
+    const label = this.getCatalogErrorHeading(element);
     const when = element?.errorDate ? formatDate(element.errorDate, 'MM/dd/yyyy hh:mm a', 'en-US') : '';
     const heading = when ? `${label}  ·  ${when}` : label;
 
@@ -965,7 +995,15 @@ export class CustomerProductCatalogComponent {
     if (element?.errorType === 'RSP-JSON' || Array.isArray(parsed)) {
       // Rejection response — reasons live inside product_statuses[].errors[]
       const reasons = this.readRejectionReasons(String(raw), parsed);
-      message = reasons.length === 1 ? '' : 'The marketplace rejected this listing:';
+
+      // A successful status response has the same shape but an empty errors[]. With nothing to
+      // report there is no error, so say nothing rather than print a heading over no reasons.
+      // A REJECTED item still reports, since its status alone means the listing failed.
+      if (reasons.length === 0 && !this.isRejected(element)) return '';
+
+      message = reasons.length === 1
+        ? ''
+        : (this.isRejected(element) ? 'The marketplace rejected this listing:' : 'The marketplace reported these errors on this listing:');
       reasons.forEach(r => detailItems.push(r));
     } else if (parsed) {
       // Error payloads use either "message" or "Message"

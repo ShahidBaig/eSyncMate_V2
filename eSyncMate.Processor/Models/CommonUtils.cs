@@ -235,6 +235,10 @@ namespace eSyncMate.Processor.Models
         public static Int32 AmazonFeedMaxMessages = 20000;
         public static Int32 TargetPlusWHSWiseThreads = 50;
 
+        // Number of attempts after which a product catalog item that keeps failing with a transient
+        // error stops being retried and is marked ERROR. 0 disables the cap (retry for ever).
+        public static Int32 ProductCatalogMaxRetryCount = 5;
+
         // When true, the DEFAULT Amazon ShipNode quantity is sent as 0;
         // when false, it uses Total_ATS (previous behaviour).
         public static bool AmazonDefaultShipNodeSendZero = true;
@@ -284,6 +288,7 @@ namespace eSyncMate.Processor.Models
                 AmazonFeedMaxMessages = int.TryParse(Get("AmazonFeedMaxMessages", AmazonFeedMaxMessages.ToString()), out var af) ? af : AmazonFeedMaxMessages;
                 TargetPlusWHSWiseThreads = int.TryParse(Get("TargetPlusWHSWiseThreads", TargetPlusWHSWiseThreads.ToString()), out var tpt) ? tpt : TargetPlusWHSWiseThreads;
                 AmazonDefaultShipNodeSendZero = bool.TryParse(Get("AmazonDefaultShipNodeSendZero", AmazonDefaultShipNodeSendZero.ToString()), out var adsz) ? adsz : AmazonDefaultShipNodeSendZero;
+                ProductCatalogMaxRetryCount = int.TryParse(Get("ProductCatalogMaxRetryCount", ProductCatalogMaxRetryCount.ToString()), out var pcmr) ? pcmr : ProductCatalogMaxRetryCount;
             }
             catch (Exception ex)
             {
@@ -345,6 +350,21 @@ namespace eSyncMate.Processor.Models
 
             // BadRequest with a body, 401, 403, 404, etc. -> definite error
             return false;
+        }
+
+        /// <summary>
+        /// One shape for every outbound call recorded against a product, so the Product Data popup can
+        /// show which endpoint was hit and with what, not just a bare URL or a bare body.
+        /// Pass null for p_Body on a GET.
+        /// </summary>
+        public static string DescribeRequest(ConnectorDataModel p_Connector, object p_Body)
+        {
+            return Newtonsoft.Json.JsonConvert.SerializeObject(new
+            {
+                url = p_Connector?.Url,
+                method = p_Connector?.Method,
+                body = p_Body
+            });
         }
 
         public static DataTable ConvertCSVToDataTable(string fileData, string[] columnNames)
