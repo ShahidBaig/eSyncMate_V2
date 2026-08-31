@@ -69,8 +69,10 @@ namespace eSyncMate.Processor.Models
 
     public class CustomerProductCatalogSearchModel
     {
-        public string SearchOption { get; set; }
-        public string SearchValue { get; set; }
+        // Nullable on purpose: the project has <Nullable>enable</Nullable>, so a non-nullable string is
+        // treated as required by model binding and an empty searchValue is rejected with a raw 400
+        public string? SearchOption { get; set; }
+        public string? SearchValue { get; set; }
         public int PageNumber { get; set; } = 1;
         public int PageSize { get; set; } = 10;
     }

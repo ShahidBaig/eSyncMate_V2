@@ -339,6 +339,7 @@
   "maxPassword": "Se requieren un máximo de 15 caracteres!",
   "activeMsg": "No estas activo",
   "noFilterDataMessage": "No se encontraron datos con estos filtros de búsqueda.",
+  "enterSearchValueMessage": "Por favor ingrese un valor para buscar.",
   "provideFieldMessage": "Ingrese al menos un campo para continuar.",
   "choosefileWarning": "Elija el archivo para el proceso.",
   "eRPCustID": "Proporcione el ID de cliente de ERP.",

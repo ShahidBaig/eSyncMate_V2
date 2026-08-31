@@ -61,12 +61,20 @@ namespace eSyncMate.Processor.Controllers
             string startDate = string.Empty;
             string endDate = string.Empty;
 
-            if (searchModel.SearchOption == "Created Date")
+            // A date range only filters once both ends arrived as "from/to"; anything else is not a filter
+            bool l_HasDateRange = false;
+
+            if (searchModel.SearchOption == "Created Date" && !string.IsNullOrWhiteSpace(searchModel.SearchValue))
             {
                 dateRange = searchModel.SearchValue;
                 dateValues = dateRange.Split('/');
-                startDate = dateValues[0].Trim() + " 00:00:00.000";
-                endDate = dateValues[1].Trim() + " 23:59:59.999";
+
+                if (dateValues.Length == 2 && !string.IsNullOrWhiteSpace(dateValues[0]) && !string.IsNullOrWhiteSpace(dateValues[1]))
+                {
+                    startDate = dateValues[0].Trim() + " 00:00:00.000";
+                    endDate = dateValues[1].Trim() + " 23:59:59.999";
+                    l_HasDateRange = true;
+                }
             }
 
             UsersClaimData userData = new UsersClaimData();
@@ -94,40 +102,48 @@ namespace eSyncMate.Processor.Controllers
 
                 l_CustomerProductCatalog.UseConnection(CommonUtils.ConnectionString);
 
-                if (searchModel.SearchOption == "Created Date")
-                {
-                    l_Criteria += $" CONVERT(DATE,CreatedDate) >= '{startDate}'";
-                }
+                // An option picked with no value is simply not a filter, so the unfiltered page is returned
+                string l_SearchValue = (searchModel.SearchValue ?? string.Empty).Trim();
 
-                if (searchModel.SearchOption == "Created Date")
+                if (l_HasDateRange)
                 {
-                    l_Criteria += $" AND CONVERT(DATE,CreatedDate) <= '{endDate}'";
+                    l_Criteria = $" CONVERT(DATE,CreatedDate) >= '{startDate}' AND CONVERT(DATE,CreatedDate) <= '{endDate}'";
                 }
+                else if (!string.IsNullOrEmpty(l_SearchValue))
+                {
+                    if (searchModel.SearchOption == "ProductId")
+                    {
+                        if (!long.TryParse(l_SearchValue, out long l_ProductId))
+                        {
+                            l_Response.Code = (int)ResponseCodes.Error;
+                            l_Response.Message = "ProductId must be a number.";
 
-                if (searchModel.SearchOption == "ProductId")
-                {
-                    l_Criteria = $" ProductId = {searchModel.SearchValue}";
-                }
-                else if (searchModel.SearchOption == "ERP CustomerID")
-                {
-                    l_Criteria = $" CustomerID = '{SqlSearchHelper.EscapeLiteral(searchModel.SearchValue)}'";
-                }
-                else if (searchModel.SearchOption == "ItemID")
-                {
-                    // Item ids such as 512N-60(3A)[7PC]BKS contain LIKE wildcards
-                    l_Criteria = SqlSearchHelper.Contains("ItemID", searchModel.SearchValue);
-                }
-                else if (searchModel.SearchOption == "Item Type Name")
-                {
-                    l_Criteria = SqlSearchHelper.Contains("ItemTypeName", searchModel.SearchValue);
-                }
-                else if (searchModel.SearchOption == "Parent ID")
-                {
-                    l_Criteria = SqlSearchHelper.Contains("ParentID", searchModel.SearchValue);
-                }
-                else if (searchModel.SearchOption == "Status")
-                {
-                    l_Criteria = SqlSearchHelper.Contains("SyncStatus", searchModel.SearchValue);
+                            return l_Response;
+                        }
+
+                        l_Criteria = $" ProductId = {l_ProductId}";
+                    }
+                    else if (searchModel.SearchOption == "ERP CustomerID")
+                    {
+                        l_Criteria = $" CustomerID = '{SqlSearchHelper.EscapeLiteral(l_SearchValue)}'";
+                    }
+                    else if (searchModel.SearchOption == "ItemID")
+                    {
+                        // Item ids such as 512N-60(3A)[7PC]BKS contain LIKE wildcards
+                        l_Criteria = SqlSearchHelper.Contains("ItemID", l_SearchValue);
+                    }
+                    else if (searchModel.SearchOption == "Item Type Name")
+                    {
+                        l_Criteria = SqlSearchHelper.Contains("ItemTypeName", l_SearchValue);
+                    }
+                    else if (searchModel.SearchOption == "Parent ID")
+                    {
+                        l_Criteria = SqlSearchHelper.Contains("ParentID", l_SearchValue);
+                    }
+                    else if (searchModel.SearchOption == "Status")
+                    {
+                        l_Criteria = SqlSearchHelper.Contains("SyncStatus", l_SearchValue);
+                    }
                 }
 
                 if (string.IsNullOrEmpty(l_Criteria) && !userData.IsSuperAdmin)
@@ -193,12 +209,20 @@ namespace eSyncMate.Processor.Controllers
 
             userData = eSyncMate.Processor.Managers.CustomersManager.GetCustomerNames(claimsIdentity);
 
-            if (searchModel.SearchOption == "Created Date")
+            // A date range only filters once both ends arrived as "from/to"; anything else is not a filter
+            bool l_HasDateRange = false;
+
+            if (searchModel.SearchOption == "Created Date" && !string.IsNullOrWhiteSpace(searchModel.SearchValue))
             {
                 dateRange = searchModel.SearchValue;
                 dateValues = dateRange.Split('/');
-                startDate = dateValues[0].Trim() + " 00:00:00.000";
-                endDate = dateValues[1].Trim() + " 23:59:59.999";
+
+                if (dateValues.Length == 2 && !string.IsNullOrWhiteSpace(dateValues[0]) && !string.IsNullOrWhiteSpace(dateValues[1]))
+                {
+                    startDate = dateValues[0].Trim() + " 00:00:00.000";
+                    endDate = dateValues[1].Trim() + " 23:59:59.999";
+                    l_HasDateRange = true;
+                }
             }
 
             try
@@ -212,32 +236,39 @@ namespace eSyncMate.Processor.Controllers
 
                 l_CustomerProductCatalog.UseConnection(CommonUtils.ConnectionString);
 
-                if (searchModel.SearchOption == "Created Date")
-                {
-                    l_Criteria += $" CONVERT(DATE,CreatedDate) >= '{startDate}'";
-                }
+                // An option picked with no value is simply not a filter, so the unfiltered page is returned
+                string l_SearchValue = (searchModel.SearchValue ?? string.Empty).Trim();
 
-                if (searchModel.SearchOption == "Created Date")
+                if (l_HasDateRange)
                 {
-                    l_Criteria += $" AND CONVERT(DATE,CreatedDate) <= '{endDate}'";
+                    l_Criteria = $" CONVERT(DATE,CreatedDate) >= '{startDate}' AND CONVERT(DATE,CreatedDate) <= '{endDate}'";
                 }
+                else if (!string.IsNullOrEmpty(l_SearchValue))
+                {
+                    if (searchModel.SearchOption == "ProductId")
+                    {
+                        if (!long.TryParse(l_SearchValue, out long l_ProductId))
+                        {
+                            l_Response.Code = (int)ResponseCodes.Error;
+                            l_Response.Message = "ProductId must be a number.";
 
-                if (searchModel.SearchOption == "ProductId")
-                {
-                    l_Criteria = $" ProductId = {searchModel.SearchValue}";
-                }
-                else if (searchModel.SearchOption == "ERP CustomerID")
-                {
-                    l_Criteria = $" CustomerID = '{SqlSearchHelper.EscapeLiteral(searchModel.SearchValue)}'";
-                }
-                else if (searchModel.SearchOption == "ItemID")
-                {
-                    l_Criteria = SqlSearchHelper.Contains("ItemID", searchModel.SearchValue);
-                }
+                            return l_Response;
+                        }
 
-                else if (searchModel.SearchOption == "Status")
-                {
-                    l_Criteria = SqlSearchHelper.Contains("SyncStatus", searchModel.SearchValue);
+                        l_Criteria = $" ProductId = {l_ProductId}";
+                    }
+                    else if (searchModel.SearchOption == "ERP CustomerID")
+                    {
+                        l_Criteria = $" CustomerID = '{SqlSearchHelper.EscapeLiteral(l_SearchValue)}'";
+                    }
+                    else if (searchModel.SearchOption == "ItemID")
+                    {
+                        l_Criteria = SqlSearchHelper.Contains("ItemID", l_SearchValue);
+                    }
+                    else if (searchModel.SearchOption == "Status")
+                    {
+                        l_Criteria = SqlSearchHelper.Contains("SyncStatus", l_SearchValue);
+                    }
                 }
 
                 if (string.IsNullOrEmpty(l_Criteria) && !userData.IsSuperAdmin)
@@ -847,8 +878,26 @@ namespace eSyncMate.Processor.Controllers
                         }
                         else
                         {
-                            var productStatus = JsonConvert.DeserializeObject<ProductCreateResponse>(jsonData);
-                            string errorsString = string.Join(";", productStatus.errors);
+                            // The stored payload is whatever the partner answered, so it does not always carry
+                            // an errors array. Without these guards one such row fails the whole export.
+                            ProductCreateResponse productStatus = null;
+
+                            try
+                            {
+                                productStatus = JsonConvert.DeserializeObject<ProductCreateResponse>(jsonData);
+                            }
+                            catch
+                            {
+                                productStatus = null;
+                            }
+
+                            string errorsString = productStatus == null
+                                ? jsonData
+                                : productStatus.errors != null && productStatus.errors.Length > 0
+                                    ? string.Join(";", productStatus.errors)
+                                    : (productStatus.message ?? jsonData);
+
+                            errorsString = (errorsString ?? string.Empty).Replace(',', ' ').Replace("\r", " ").Replace("\n", " ");
 
                             csvContent.AppendLine($"{l_Row["ItemID"]},{l_Row["CustomerID"]}," +
                                                   $"{""},{errorsString},{""},{""},{l_Row["ItemTypeName"]},{l_Row["ErrorSource"]}");

@@ -24,7 +24,7 @@ BEGIN
 		BEGIN
 			SELECT ProductId,Brand,ItemID,UPC,ItemTypeName,ProductRelation,ParentID,REPLACE(REPLACE(CONVERT(VARCHAR,ListPrice), ',', ''), '$', '') ListPrice,REPLACE(REPLACE(CONVERT(VARCHAR,MapPrice), ',', ''), '$', '') MapPrice,
 				REPLACE(REPLACE(CONVERT(VARCHAR,OffPrice), ',', ''), '$', '') OffPrice,Type,VariationType,JsonData,CustomerID,SyncStatus,id,UnListed,
-				is_add_on,two_day_shipping_eligible,shipping_exclusion,seller_return_policy
+				is_add_on,two_day_shipping_eligible,shipping_exclusion,seller_return_policy,RetryCount
 			FROM SCS_CustomerProductCatalog  WITH (NOLOCK)
 			WHERE CustomerID  = @l_CustomerID AND SyncStatus IN ('PENDING')
 		END

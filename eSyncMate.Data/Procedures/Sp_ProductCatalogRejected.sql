@@ -17,7 +17,9 @@ BEGIN
 		SELECT PR.Data,CAT.CustomerID,CAT.ItemID,PR.Type ,CAT.ItemTypeName,CAT.CustomerID AS ErrorSource 
 		FROM SCS_CustomerProductCatalogData PR WITH (NOLOCK)
 			INNER JOIN SCS_CustomerProductCatalog CAT WITH (NOLOCK) ON PR.ProductId = CAT.ProductId
-		WHERE CAT.CustomerID = @l_CustomerID AND  ((CAT.SyncStatus = 'REJECTED' AND PR.Type = 'RSP-JSON' AND PR.[Data] LIKE '%"REJECTED"%') OR (CAT.SyncStatus = 'ERROR' AND PR.Type = 'REQ-ERR')) AND
+		-- PRD/UNL/STA/LOG-* are the per-operation types; REQ-* and RSP-* are their predecessors and
+		-- stay listed so rows written before the split are still exported.
+		WHERE CAT.CustomerID = @l_CustomerID AND  ((CAT.SyncStatus = 'REJECTED' AND PR.Type IN ('STA-RSP','RSP-JSON') AND PR.[Data] LIKE '%"REJECTED"%') OR (CAT.SyncStatus = 'ERROR' AND PR.Type IN ('PRD-ERR','UNL-ERR','STA-ERR','LOG-ERR','REQ-ERR','RSP-ERR'))) AND
 				PR.CreatedDate >= CASE WHEN @l_TagValue <> '' THEN CAST(@l_TagValue AS DATETIME) ELSE  PR.CreatedDate END 
 		UNION ALL
 		SELECT  [Data],PR.CustomerID,PR.ItemID,'' Type,'' ItemTypeName,'eSyncmate' AS ErrorSource

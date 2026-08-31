@@ -357,6 +357,7 @@
   "maxPassword": "Maximum 15 characters are required!",
   "activeMsg": "You are not Active!",
   "noFilterDataMessage": "No data found against this search filters.",
+  "enterSearchValueMessage": "Please enter a value to search.",
   "provideFieldMessage": "Please enter at least one field to proceed.",
   "choosefileWarning": "Please Choose file for process.",
   "eRPCustID": "Please provide ERP Customer ID.",
