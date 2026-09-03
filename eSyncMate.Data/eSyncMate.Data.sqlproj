@@ -131,6 +131,7 @@
     <Build Include="Procedures\Sp_SaveItemTypeAttributes.sql" />
     <Build Include="Procedures\Sp_SaveProductUploadPrices.sql" />
     <Build Include="Procedures\Sp_SCS_GetProductCatalog.sql" />
+    <Build Include="Procedures\Sp_GetCustomerProductCatalogPagedWithError.sql" />
     <Build Include="Procedures\SP_SCSInvoice.sql" />
     <Build Include="Procedures\SP_UpdateOrderStatus.sql" />
     <None Include="Data\Safavieh\MapsData.sql" />

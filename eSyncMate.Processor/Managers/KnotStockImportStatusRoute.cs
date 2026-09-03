@@ -62,6 +62,10 @@ namespace eSyncMate.Processor.Managers
                     feed.UseConnection(l_SourceConnector.ConnectionString);
                     l_CustomerProductCatalog.UseConnection(l_SourceConnector.ConnectionString);
 
+                    // A status call that never answers would park this Hangfire worker for ever, so the
+                    // connector used here is given a bounded timeout instead of RestSharp's default wait.
+                    l_DestinationConnector.TimeoutSeconds = CommonUtils.MiraklStatusTimeoutSeconds;
+
                     foreach (DataRow item in l_data.Rows)
                     {
                         string batchId = Convert.ToString(item["BatchID"]);
@@ -77,11 +81,20 @@ namespace eSyncMate.Processor.Managers
                             string url = $"{l_DestinationConnector.BaseUrl}/api/offers/stock/imports/{importId}/status";
                             l_DestinationConnector.Url = url;
                             l_DestinationConnector.Method = "GET";
-                            sourceResponse = RestConnector.Execute(l_DestinationConnector, string.Empty).GetAwaiter().GetResult();
+                            sourceResponse = RestConnector.ExecuteWithRetry(l_DestinationConnector, string.Empty, CommonUtils.MiraklStatusMaxAttempts,
+                                (p_Attempt, p_Wait, p_Response) => route.SaveLog(LogTypeEnum.Warning, $"Knot STO02 for import_id [{importId}] answered HTTP {(int)p_Response.StatusCode} {p_Response.StatusCode}. Attempt {p_Attempt} of {CommonUtils.MiraklStatusMaxAttempts}, retrying in {p_Wait.TotalSeconds:0} seconds.", p_Response.Content ?? p_Response.ErrorMessage, userNo))
+                                .GetAwaiter().GetResult();
 
                             if (sourceResponse.StatusCode != System.Net.HttpStatusCode.OK)
                             {
-                                route.SaveLog(LogTypeEnum.Error, $"Knot STO02 failed for import_id [{importId}]. HTTP {(int)sourceResponse.StatusCode} {sourceResponse.StatusCode}.", sourceResponse.Content ?? sourceResponse.ErrorMessage, userNo);
+                                // A 429 or a 5xx says nothing about the import itself. The batch keeps its
+                                // current status, so the next run picks it up again -- that is a warning, not
+                                // a failure. Only a definite error (401/403/404) is logged as one.
+                                if (CommonUtils.IsTransientResponse(sourceResponse))
+                                    route.SaveLog(LogTypeEnum.Warning, $"Knot STO02 could not be reached for import_id [{importId}] after {CommonUtils.MiraklStatusMaxAttempts} attempts. HTTP {(int)sourceResponse.StatusCode} {sourceResponse.StatusCode}. It will be retried on the next run.", sourceResponse.Content ?? sourceResponse.ErrorMessage, userNo);
+                                else
+                                    route.SaveLog(LogTypeEnum.Error, $"Knot STO02 failed for import_id [{importId}]. HTTP {(int)sourceResponse.StatusCode} {sourceResponse.StatusCode}.", sourceResponse.Content ?? sourceResponse.ErrorMessage, userNo);
+
                                 continue;
                             }
 
@@ -97,16 +110,26 @@ namespace eSyncMate.Processor.Managers
 
                             if (hasErrorReport)
                             {
-                                Thread.Sleep(TimeSpan.FromSeconds(30));
+                                Thread.Sleep(TimeSpan.FromSeconds(CommonUtils.MiraklStatusCallDelaySeconds));
                                 // STO03: GET /api/offers/stock/imports/{import_id}/error_report
                                 url = $"{l_DestinationConnector.BaseUrl}/api/offers/stock/imports/{importId}/error_report";
                                 l_DestinationConnector.Url = url;
                                 l_DestinationConnector.Method = "GET";
-                                sourceResponse = RestConnector.Execute(l_DestinationConnector, string.Empty).GetAwaiter().GetResult();
+                                sourceResponse = RestConnector.ExecuteWithRetry(l_DestinationConnector, string.Empty, CommonUtils.MiraklStatusMaxAttempts,
+                                    (p_Attempt, p_Wait, p_Response) => route.SaveLog(LogTypeEnum.Warning, $"Knot STO03 for import_id [{importId}] answered HTTP {(int)p_Response.StatusCode} {p_Response.StatusCode}. Attempt {p_Attempt} of {CommonUtils.MiraklStatusMaxAttempts}, retrying in {p_Wait.TotalSeconds:0} seconds.", p_Response.Content ?? p_Response.ErrorMessage, userNo))
+                                    .GetAwaiter().GetResult();
 
                                 if (sourceResponse.StatusCode == System.Net.HttpStatusCode.OK)
                                 {
                                     l_CustomerProductCatalog.UpdateInventoryBatchWiseStatus(batchId, importId, "Error", customerId, sourceResponse.Content ?? "");
+                                }
+                                else if (CommonUtils.IsTransientResponse(sourceResponse))
+                                {
+                                    // This import DOES have an error report. Closing the batch on a rate limit
+                                    // or a gateway error would throw those item errors away and leave the feed
+                                    // looking clean, so the batch is left open and the report is fetched again
+                                    // on the next run.
+                                    route.SaveLog(LogTypeEnum.Warning, $"Knot STO03 error report could not be reached for import_id [{importId}] after {CommonUtils.MiraklStatusMaxAttempts} attempts. HTTP {(int)sourceResponse.StatusCode} {sourceResponse.StatusCode}. The batch is left open and will be retried on the next run.", sourceResponse.Content ?? sourceResponse.ErrorMessage, userNo);
                                 }
                                 else
                                 {
@@ -129,7 +152,8 @@ namespace eSyncMate.Processor.Managers
                             route.SaveLog(LogTypeEnum.Exception, $"Error processing Knot import_id [{Convert.ToString(item["FeedDocumentID"])}]", exItem.ToString(), userNo);
                         }
 
-                        Thread.Sleep(TimeSpan.FromSeconds(30));
+                        // Pause between batches -- this is what keeps the route inside Mirakl's quota.
+                        Thread.Sleep(TimeSpan.FromSeconds(CommonUtils.MiraklStatusCallDelaySeconds));
                     }
                 }
 

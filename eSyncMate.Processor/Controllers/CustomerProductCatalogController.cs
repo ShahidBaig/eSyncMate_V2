@@ -156,7 +156,7 @@ namespace eSyncMate.Processor.Controllers
                 this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Staring PartnerGroup search.");
 
                 int totalCount = 0;
-                l_CustomerProductCatalog.GetViewListPagedWithError(l_Criteria, string.Empty, ref l_Data, "Id DESC", searchModel.PageNumber, searchModel.PageSize, out totalCount);
+                l_CustomerProductCatalog.GetViewListPagedWithError(l_Criteria, ref l_Data, "Id DESC", searchModel.PageNumber, searchModel.PageSize, out totalCount);
 
                 this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - CustomerProductCatalog searched {{{l_Data.Rows.Count}}} of {totalCount} total.");
                 this._logger.LogDebug($"[{l_Me.ReflectedType.Name}.{l_Me.Name}] - Populating CustomerProductCatalog.");

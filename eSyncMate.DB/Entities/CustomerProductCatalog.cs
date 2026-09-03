@@ -763,86 +763,55 @@ namespace eSyncMate.DB.Entities
         }
 
         /// <summary>
-        /// Same paged list, plus the latest error payload for each row so the grid can show it
-        /// on hover. Errors live in SCS_CustomerProductCatalogData as RSP-ERR (marketplace),
-        /// REQ-ERR (request rejected) or Internal (validation done here).
-        /// The page is taken first, so the lookup only runs for the rows being displayed.
+        /// One page of the catalog plus the error payload the grid shows on hover.
+        /// The query itself lives in Sp_GetCustomerProductCatalogPagedWithError: the rules that decide
+        /// what counts as a reportable error change often, and keeping them in the database means they
+        /// can be corrected without redeploying the Processor.
+        /// The procedure returns two result sets -- the page, then the total row count.
         /// </summary>
-        public bool GetViewListPagedWithError(string p_Criteria, string p_Fields, ref DataTable p_Data, string p_OrderBy, int pageNumber, int pageSize, out int totalCount)
+        public bool GetViewListPagedWithError(string p_Criteria, ref DataTable p_Data, string p_OrderBy, int pageNumber, int pageSize, out int totalCount)
         {
             totalCount = 0;
 
-            string l_CountQuery = "SELECT COUNT(*) FROM [" + CustomerProductCatalog.ViewName + "]";
-            if (!string.IsNullOrEmpty(p_Criteria))
-                l_CountQuery += " WHERE " + p_Criteria;
+            string l_Query = "EXEC [Sp_GetCustomerProductCatalogPagedWithError]"
+                           + " @p_Criteria = N'" + QuoteLiteral(p_Criteria) + "'"
+                           + ", @p_OrderBy = N'" + QuoteLiteral(p_OrderBy) + "'"
+                           + ", @p_PageNumber = " + pageNumber
+                           + ", @p_PageSize = " + pageSize;
 
-            var l_CountData = new DataTable();
-            Connection.GetData(l_CountQuery, ref l_CountData);
-            if (l_CountData.Rows.Count > 0)
-                totalCount = Convert.ToInt32(l_CountData.Rows[0][0]);
-            l_CountData.Dispose();
+            DataSet l_Result = new DataSet();
 
-            string l_OrderBy = !string.IsNullOrEmpty(p_OrderBy) ? p_OrderBy : "ProductId DESC";
-            int offset = (pageNumber - 1) * pageSize;
+            try
+            {
+                if (!Connection.GetDataSP(l_Query, ref l_Result))
+                    return false;
 
-            string l_Query = "WITH PagedCatalog AS (SELECT "
-                           + (string.IsNullOrEmpty(p_Fields) ? "*" : p_Fields)
-                           + " FROM [" + CustomerProductCatalog.ViewName + "]";
+                // Page first, then TotalCount -- the same shape Sp_GetInventoryBatchItems returns.
+                // Copied out so the DataSet can be released.
+                if (l_Result.Tables.Count > 0)
+                {
+                    p_Data = l_Result.Tables[0].Copy();
+                }
 
-            if (!string.IsNullOrEmpty(p_Criteria))
-                l_Query += " WHERE " + p_Criteria;
+                if (l_Result.Tables.Count > 1 && l_Result.Tables[1].Rows.Count > 0)
+                    totalCount = Convert.ToInt32(l_Result.Tables[1].Rows[0]["TotalCount"]);
 
-            l_Query += $" ORDER BY {l_OrderBy} OFFSET {offset} ROWS FETCH NEXT {pageSize} ROWS ONLY)";
+                return true;
+            }
+            finally
+            {
+                l_Result.Dispose();
+            }
+        }
 
-            // A rejection carries no *-ERR row: the reasons sit inside the RSP-JSON response, so that
-            // payload is used for REJECTED and ERROR rows, and elsewhere only when it really carries
-            // errors. PENDING is left out on purpose -- a pending item is still being validated, so its
-            // previous attempt's errors are not reported. Empty payloads are skipped so a blank RSP-ERR
-            // row cannot shadow a usable one.
-            // The status compared here is the view's, which folds SYNCED/DELETED into 'Published'
-            // and APPROVED/APPROVED_PR into 'Approved'.
-            // A transport failure (timeout, gateway, rate limit) says nothing about the product, so it
-            // must not become the item's reported error -- the marketplace's real rejection reason, or
-            // a validation finding of ours, has to win. IsTransientResponse makes the same call in the
-            // route but the verdict is never stored: both kinds are written as REQ-ERR/RSP-ERR carrying
-            // only the response body, so matching the text is all that is available here.
-            // Data is NVARCHAR(MAX); the 300-char head keeps this to the first LOB page.
-            const string l_TransientNoise = " AND NOT (D.Type IN ('REQ-ERR', 'RSP-ERR')"
-                                          + " AND (H.DataHead LIKE '%upstream%'"
-                                          + "      OR H.DataHead LIKE '%timeout%'"
-                                          + "      OR H.DataHead LIKE '%timed out%'"
-                                          + "      OR H.DataHead LIKE '%gateway%'"
-                                          + "      OR H.DataHead LIKE '%service unavailable%'"
-                                          + "      OR H.DataHead LIKE '%temporarily unavailable%'"
-                                          + "      OR H.DataHead LIKE '%internal server error%'"
-                                          + "      OR H.DataHead LIKE '%connection%refused%'"
-                                          + "      OR H.DataHead LIKE '%too many requests%'"
-                                          + "      OR H.DataHead LIKE '%rate limit%'))";
-
-            l_Query += " SELECT P.*, ERR.ErrorData, ERR.ErrorType, ERR.ErrorDate FROM PagedCatalog P"
-                    + " OUTER APPLY (SELECT TOP 1 LEFT(D.Data, 8000) AS ErrorData, D.Type AS ErrorType, D.CreatedDate AS ErrorDate"
-                    + " FROM [SCS_CustomerProductCatalogData] D"
-                    + " CROSS APPLY (SELECT DataHead = LOWER(SUBSTRING(D.Data, 1, 300))) H"
-                    + " WHERE D.ProductId = P.ProductId"
-                    + " AND DATALENGTH(D.Data) > 0"
-                    + l_TransientNoise
-                    // PRD/UNL/STA/LOG-ERR are the per-operation types; REQ-ERR and RSP-ERR are their
-                    // predecessors and stay listed so rows written before the split still show.
-                    + " AND (D.Type IN ('PRD-ERR', 'UNL-ERR', 'STA-ERR', 'LOG-ERR', 'RSP-ERR', 'REQ-ERR', 'Internal')"
-                    + "      OR (D.Type IN ('STA-RSP', 'RSP-JSON')"
-                    + "          AND (P.SyncStatus IN ('REJECTED','Error')"
-                    // A successful status response still carries the key as an empty array
-                    // ("errors":[]), so matching the key alone reports every approval as an error.
-                    // Only a populated array ("errors":[{...) is a real finding. Whitespace is stripped
-                    // first so the test holds whether or not the marketplace pretty-prints its JSON --
-                    // missing a genuine rejection would be worse than the false positive this replaces.
-                    + "               OR (CHARINDEX('\"errors\":[{',"
-                    + "                      REPLACE(REPLACE(REPLACE(REPLACE(LEFT(D.Data, 8000), ' ', ''), CHAR(13), ''), CHAR(10), ''), CHAR(9), '')) > 0"
-                    + "                   AND P.SyncStatus NOT IN ('Published', 'Approved', 'Pending')))))"
-                    + " ORDER BY CASE WHEN D.Type IN ('STA-RSP', 'RSP-JSON') THEN 1 ELSE 0 END, D.CreatedDate DESC, D.Id DESC) ERR"
-                    + $" ORDER BY {l_OrderBy}";
-
-            return Connection.GetData(l_Query, ref p_Data);
+        /// <summary>
+        /// Doubles single quotes so a value can be embedded in a T-SQL string literal.
+        /// The criteria arriving here is already built and escaped by the caller; this only keeps the
+        /// EXEC statement itself well formed.
+        /// </summary>
+        private static string QuoteLiteral(string p_Value)
+        {
+            return string.IsNullOrEmpty(p_Value) ? string.Empty : p_Value.Replace("'", "''");
         }
 
         /// <summary>
