@@ -7,6 +7,8 @@ using RestSharp;
 using RestSharp.Authenticators;
 using RestSharp.Authenticators.OAuth;
 using System;
+using System.Globalization;
+using System.Linq;
 using System.Net.Http.Headers;
 using System.Text;
 
@@ -152,6 +154,71 @@ retry:
             {
                 throw;
             }
+        }
+
+        // Waits used when the partner does not say when to come back.
+        private static readonly int[] BackoffSeconds = { 5, 15, 45 };
+
+        /// <summary>
+        /// Execute that retries a transient failure (429 / 5xx / timeout) instead of handing it straight
+        /// back. The partner's Retry-After header wins when it sends one, otherwise the wait backs off
+        /// 5s, 15s, 45s. A definite error (401/403/404, 400 with a body) returns on the first attempt --
+        /// retrying it would only burn quota. Either way the last response is returned, so the caller
+        /// still decides what a failure means.
+        /// </summary>
+        public static async Task<RestResponse> ExecuteWithRetry(ConnectorDataModel connector, string body, int p_MaxAttempts = 3, Action<int, TimeSpan, RestResponse> p_OnRetry = null)
+        {
+            RestResponse response = null;
+            int l_Attempts = p_MaxAttempts < 1 ? 1 : p_MaxAttempts;
+
+            for (int l_Attempt = 1; l_Attempt <= l_Attempts; l_Attempt++)
+            {
+                response = await Execute(connector, body);
+
+                if (!CommonUtils.IsTransientResponse(response))
+                    return response;
+
+                if (l_Attempt == l_Attempts)
+                    break;
+
+                TimeSpan l_Wait = GetRetryDelay(response, l_Attempt);
+
+                p_OnRetry?.Invoke(l_Attempt, l_Wait, response);
+
+                await Task.Delay(l_Wait);
+            }
+
+            return response;
+        }
+
+        /// <summary>
+        /// How long to wait before the next attempt. Mirakl and most rate-limited APIs answer a 429 with
+        /// Retry-After, either as seconds or as an HTTP date; that is respected but capped at 5 minutes
+        /// so a route cannot park a worker on a partner's say-so.
+        /// </summary>
+        private static TimeSpan GetRetryDelay(RestResponse p_Response, int p_Attempt)
+        {
+            string l_RetryAfter = p_Response?.Headers?
+                .FirstOrDefault(h => string.Equals(h.Name, "Retry-After", StringComparison.OrdinalIgnoreCase))?
+                .Value?.ToString();
+
+            if (!string.IsNullOrWhiteSpace(l_RetryAfter))
+            {
+                TimeSpan l_Cap = TimeSpan.FromMinutes(5);
+
+                if (int.TryParse(l_RetryAfter, out int l_Seconds) && l_Seconds > 0)
+                    return TimeSpan.FromSeconds(l_Seconds) > l_Cap ? l_Cap : TimeSpan.FromSeconds(l_Seconds);
+
+                if (DateTime.TryParse(l_RetryAfter, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal, out DateTime l_When))
+                {
+                    TimeSpan l_Delay = l_When - DateTime.UtcNow;
+
+                    if (l_Delay > TimeSpan.Zero)
+                        return l_Delay > l_Cap ? l_Cap : l_Delay;
+                }
+            }
+
+            return TimeSpan.FromSeconds(BackoffSeconds[Math.Min(p_Attempt - 1, BackoffSeconds.Length - 1)]);
         }
     }
 }

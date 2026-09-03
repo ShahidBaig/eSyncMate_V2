@@ -37,6 +37,11 @@ namespace eSyncMate.Processor.Models
         public List<ConnectorHeader> Headers { get; set; }
         public List<Parameter> Parmeters { get; set; }
 
+        // Request timeout in seconds. 0 (the default, and what every stored connector deserializes to)
+        // keeps RestSharp's previous MaxTimeout = -1, so no existing route changes behaviour; a route
+        // that wants a bounded call sets this on its own connector copy before calling RestConnector.
+        public int TimeoutSeconds { get; set; }
+
         public string Username { get; set; }
         public string Password { get; set; }
     }

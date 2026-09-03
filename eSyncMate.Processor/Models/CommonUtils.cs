@@ -243,6 +243,15 @@ namespace eSyncMate.Processor.Models
         // when false, it uses Total_ATS (previous behaviour).
         public static bool AmazonDefaultShipNodeSendZero = true;
 
+        // Mirakl import-status polling (Lowes / Knot stock and price imports).
+        // Timeout   : how long a single status call may take before it is abandoned. 0 = wait for ever.
+        // MaxAttempts: attempts per call when Mirakl answers 429 or 5xx; the wait between them comes
+        //              from the Retry-After header, or 5s/15s/45s when it sends none.
+        // CallDelay : pause between batches, which is what keeps the route inside Mirakl's quota.
+        public static Int32 MiraklStatusTimeoutSeconds = 120;
+        public static Int32 MiraklStatusMaxAttempts = 3;
+        public static Int32 MiraklStatusCallDelaySeconds = 30;
+
         /// <summary>
         /// Loads all configuration (except ConnectionStrings) from the ApplicationSettings
         /// table into the static fields above. Call ONCE at process startup, after
@@ -289,6 +298,9 @@ namespace eSyncMate.Processor.Models
                 TargetPlusWHSWiseThreads = int.TryParse(Get("TargetPlusWHSWiseThreads", TargetPlusWHSWiseThreads.ToString()), out var tpt) ? tpt : TargetPlusWHSWiseThreads;
                 AmazonDefaultShipNodeSendZero = bool.TryParse(Get("AmazonDefaultShipNodeSendZero", AmazonDefaultShipNodeSendZero.ToString()), out var adsz) ? adsz : AmazonDefaultShipNodeSendZero;
                 ProductCatalogMaxRetryCount = int.TryParse(Get("ProductCatalogMaxRetryCount", ProductCatalogMaxRetryCount.ToString()), out var pcmr) ? pcmr : ProductCatalogMaxRetryCount;
+                MiraklStatusTimeoutSeconds = int.TryParse(Get("MiraklStatusTimeoutSeconds", MiraklStatusTimeoutSeconds.ToString()), out var mst) ? mst : MiraklStatusTimeoutSeconds;
+                MiraklStatusMaxAttempts = int.TryParse(Get("MiraklStatusMaxAttempts", MiraklStatusMaxAttempts.ToString()), out var msa) ? msa : MiraklStatusMaxAttempts;
+                MiraklStatusCallDelaySeconds = int.TryParse(Get("MiraklStatusCallDelaySeconds", MiraklStatusCallDelaySeconds.ToString()), out var mscd) ? mscd : MiraklStatusCallDelaySeconds;
             }
             catch (Exception ex)
             {
