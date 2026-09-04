@@ -273,6 +273,52 @@ namespace eSyncMate.Processor.Connections
             CancellationToken cancellationToken,
             string? urlPathWithQuery = null)
         {
+            string? l_Payload = body is null ? null : JsonSerializer.Serialize(body, _json);
+
+            string l_Content = await SendRawAsync(
+                method, publicPath, l_Payload, scope, correlationId, urlPathWithQuery, cancellationToken)
+                .ConfigureAwait(false);
+
+            if (typeof(TResponse) == typeof(string))
+            {
+                return (TResponse)(object)l_Content;
+            }
+
+            // 204, or an empty 200 on a confirmation endpoint.
+            if (string.IsNullOrWhiteSpace(l_Content))
+            {
+                return Activator.CreateInstance<TResponse>();
+            }
+
+            try
+            {
+                TResponse? l_Result = JsonSerializer.Deserialize<TResponse>(l_Content, _json);
+
+                return l_Result ?? Activator.CreateInstance<TResponse>();
+            }
+            catch (JsonException ex)
+            {
+                throw new BizMateTransportException(
+                    $"BizMate returned a body that did not parse: {method.Method} {publicPath}", null, ex);
+            }
+        }
+
+        /// <summary>
+        /// Sends a call whose body is already serialised, and returns the raw response.
+        ///
+        /// This is what the store-and-forward queue replays with (W1-14): a queued call holds the
+        /// body it was built with, and replaying it must reproduce that call byte for byte rather
+        /// than round-trip it through a model that might serialise differently on a later version.
+        /// </summary>
+        public async Task<string> SendRawAsync(
+            HttpMethod method,
+            string publicPath,
+            string? payloadJson,
+            string scope,
+            string correlationId,
+            string? urlPathWithQuery = null,
+            CancellationToken cancellationToken = default)
+        {
             if (string.IsNullOrWhiteSpace(correlationId))
             {
                 throw new ArgumentException(
@@ -280,9 +326,11 @@ namespace eSyncMate.Processor.Connections
                     nameof(correlationId));
             }
 
-            byte[] l_Body = body is null
-                ? Array.Empty<byte>()
-                : Encoding.UTF8.GetBytes(JsonSerializer.Serialize(body, _json));
+            bool l_HasBody = payloadJson is not null;
+
+            byte[] l_Body = l_HasBody
+                ? Encoding.UTF8.GetBytes(payloadJson!)
+                : Array.Empty<byte>();
 
             string l_Token = await _tokens.GetTokenAsync(scope, cancellationToken).ConfigureAwait(false);
 
@@ -299,7 +347,7 @@ namespace eSyncMate.Processor.Connections
             l_Request.Headers.TryAddWithoutValidation(CorrelationHeader, correlationId);
             l_Request.Headers.TryAddWithoutValidation("Accept", "application/json");
 
-            if (body is not null)
+            if (l_HasBody)
             {
                 l_Request.Content = new ByteArrayContent(l_Body);
                 l_Request.Content.Headers.TryAddWithoutValidation("Content-Type", "application/json");
@@ -328,29 +376,7 @@ namespace eSyncMate.Processor.Connections
 
                 if (l_Response.IsSuccessStatusCode)
                 {
-                    if (typeof(TResponse) == typeof(string))
-                    {
-                        return (TResponse)(object)l_Content;
-                    }
-
-                    // 204, or an empty 200 on a confirmation endpoint.
-                    if (string.IsNullOrWhiteSpace(l_Content))
-                    {
-                        return Activator.CreateInstance<TResponse>();
-                    }
-
-                    try
-                    {
-                        TResponse? l_Result = JsonSerializer.Deserialize<TResponse>(l_Content, _json);
-
-                        return l_Result ?? Activator.CreateInstance<TResponse>();
-                    }
-                    catch (JsonException ex)
-                    {
-                        throw new BizMateTransportException(
-                            $"BizMate returned {(int)l_Response.StatusCode} with a body that did not parse: " +
-                            $"{method.Method} {publicPath}", l_Response.StatusCode, ex);
-                    }
+                    return l_Content;
                 }
 
                 throw Classify(l_Response, l_Content, method, publicPath);

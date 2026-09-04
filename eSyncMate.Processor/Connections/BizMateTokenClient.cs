@@ -102,7 +102,12 @@ namespace eSyncMate.Processor.Connections
             _clientSecret = clientSecret;
         }
 
-        internal static string CacheKey(string gateway, string clientId, string scope)
+        /// <summary>
+        /// The cache key for one grant. Public because the normalisation it does is behaviour worth
+        /// verifying: scope order and stray whitespace must not produce a second entry, or a burst
+        /// of routes asking for the same grant fetches a token each.
+        /// </summary>
+        public static string CacheKey(string gateway, string clientId, string scope)
         {
             // Scope order must not create a second cache entry for the same grant.
             string l_Normalised = string.Join(' ',
