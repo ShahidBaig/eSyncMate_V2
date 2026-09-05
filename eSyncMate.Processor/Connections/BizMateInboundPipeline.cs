@@ -136,6 +136,21 @@ namespace eSyncMate.Processor.Connections
                 return Fail(l_Ledger, "Failed", "Translation failed: " + ex.Message);
             }
 
+            // ---- 4b. Check the canonical conventions before BizMate ever sees it (X-02, X-03). ----
+            // The maps are text in a database row with no schema and no compiled type behind them
+            // (F-1), so nothing else would notice a map regressing to MM/dd/yyyy or to money as a
+            // string. Catching it here makes it a visible failure instead of a document BizMate
+            // accepts and misreads.
+            List<CanonicalViolation> l_Violations = CanonicalGuard.Inspect(l_Payload);
+
+            if (l_Violations.Count > 0)
+            {
+                return Fail(l_Ledger, "Failed",
+                    "The translated document breaks the canonical conventions: " +
+                    string.Join("; ", l_Violations.Take(10).Select(v => v.ToString())) +
+                    (l_Violations.Count > 10 ? $" (+{l_Violations.Count - 10} more)" : string.Empty));
+            }
+
             // ---- 5. Deliver the canonical document. ----
             try
             {
