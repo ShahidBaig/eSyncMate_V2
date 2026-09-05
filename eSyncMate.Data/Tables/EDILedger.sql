@@ -89,7 +89,10 @@ CREATE TABLE [dbo].[EDILedger] (
     CONSTRAINT CK_EDILedger_Outcome    CHECK ([Outcome]   IN ('Pending','Translated','Failed','Rejected')),
     CONSTRAINT CK_EDILedger_Family     CHECK ([Family]    IS NULL OR [Family] IN ('Order','Consignment')),
     CONSTRAINT CK_EDILedger_Format     CHECK ([Format]    IN ('X12','EDIFACT','JSON','CSV','FixedWidth','XML','DBMap')),
-    CONSTRAINT CK_EDILedger_Mechanism  CHECK ([Mechanism] IN ('RawEDI','FlatFile','DBMap')),
+    -- Four values, not the three openapi.yaml 1.0 enumerates: BizMate added PartnerAPI in task
+    -- script 40 (D-31) after the contract was frozen, so their published contract and their shipped
+    -- database disagree. Follow the database.
+    CONSTRAINT CK_EDILedger_Mechanism  CHECK ([Mechanism] IN ('RawEDI','FlatFile','DBMap','PartnerAPI')),
     CONSTRAINT CK_EDILedger_Channel    CHECK ([Channel]   IN ('EDI','API')),
     CONSTRAINT CK_EDILedger_Provenance CHECK ([Provenance] IN ('Wire','PreProcessor','ExternalWriter','Outbox','Marketplace','Doorway')),
 
@@ -101,14 +104,15 @@ CREATE TABLE [dbo].[EDILedger] (
     -- With this constraint the relabel is not a policy anybody has to remember - the row simply
     -- will not insert.
     --
-    -- JSON has no mechanism mapping in the contract and is only reachable on the API channel; see
-    -- EQ-15, which also asks where marketplace traffic sits now that PartnerAPI turns out not to
-    -- exist in the M1 vocabulary. Tighten this branch once that is answered.
+    -- PartnerAPI is the one exception, and deliberately so: it is NOT derivable from an artifact
+    -- format, because a marketplace document arrives as JSON like any other API push. eSyncMate
+    -- declares it on the inbound call (D-31, BizMate task script 40). It is therefore allowed
+    -- against any format, while every other mechanism must still follow from the format.
     CONSTRAINT CK_EDILedger_MechanismDerivation CHECK (
-           ([Format] IN ('X12','EDIFACT')          AND [Mechanism] = 'RawEDI')
+           [Mechanism] = 'PartnerAPI'
+        OR ([Format] IN ('X12','EDIFACT')          AND [Mechanism] = 'RawEDI')
         OR ([Format] IN ('CSV','FixedWidth','XML') AND [Mechanism] = 'FlatFile')
         OR ([Format] = 'DBMap'                     AND [Mechanism] = 'DBMap')
-        OR ([Format] = 'JSON'                      AND [Channel]   = 'API')
     ),
 
     -- A document that did not translate must say why (W2-08). "It arrived and broke, here is why"

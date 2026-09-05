@@ -17,8 +17,17 @@ namespace eSyncMate.Processor.Connections
         /// <summary>850, 856, ... Document Catalog codes.</summary>
         public string DocumentType { get; set; } = string.Empty;
 
-        /// <summary>What the artifact actually is. Mechanism is derived from it, never chosen.</summary>
+        /// <summary>What the artifact actually is. The mechanism derives from it unless declared.</summary>
         public string Format { get; set; } = BizMateFormats.X12;
+
+        /// <summary>
+        /// Only set this for marketplace traffic, as <c>PartnerAPI</c>. BizMate cannot infer that
+        /// mechanism - the artifact is JSON, indistinguishable from any other API push - so it has
+        /// to be declared (D-31). Leave it null everywhere else and let the format decide, which is
+        /// what stops a document being labelled by how it travelled internally rather than by how
+        /// the partner actually sent it.
+        /// </summary>
+        public string? DeclaredMechanism { get; set; }
 
         /// <summary>Order or Consignment. Required for 856 and 810 (E8), never inferred.</summary>
         public string? Family { get; set; }
@@ -198,7 +207,7 @@ namespace eSyncMate.Processor.Connections
             l_Ledger.DocumentType = context.DocumentType;
             l_Ledger.Family = context.Family;
             l_Ledger.Format = context.Format;
-            l_Ledger.Mechanism = BizMateFormats.ToMechanism(context.Format);
+            l_Ledger.Mechanism = BizMateFormats.ResolveMechanism(context.Format, context.DeclaredMechanism);
             l_Ledger.Channel = context.Channel;
             l_Ledger.Provenance = context.Provenance;
 

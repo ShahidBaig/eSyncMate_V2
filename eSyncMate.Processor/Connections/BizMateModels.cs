@@ -23,10 +23,15 @@ namespace eSyncMate.Processor.Connections
         public const string DbMap = "DBMap";
 
         /// <summary>
-        /// The Format -> Mechanism derivation the contract states (openapi.yaml, Format schema).
-        /// Mechanism is never chosen independently of Format; deriving it here is what stops a
-        /// flat file that AD-01 staged through the DB-map tables from being relabelled DBMap and
-        /// misreporting the partner relationship on BizMate's boards (ER-07).
+        /// The Format -> Mechanism derivation, for the three formats it is defined for.
+        ///
+        /// Deriving rather than accepting is what stops a flat file that AD-01 staged through the
+        /// DB-map tables from being relabelled DBMap and misreporting the partner relationship on
+        /// BizMate's boards (ER-07).
+        ///
+        /// JSON is deliberately not derivable. A marketplace document arrives as JSON like any
+        /// other API push, so PartnerAPI cannot be inferred from the artifact - eSyncMate declares
+        /// it on the inbound call. Use ResolveMechanism for that path.
         /// </summary>
         public static string ToMechanism(string format) => format switch
         {
@@ -36,9 +41,47 @@ namespace eSyncMate.Processor.Connections
             _ => throw new ArgumentOutOfRangeException(
                 nameof(format),
                 format,
-                "No mechanism is defined for this format. JSON reaches BizMate on the API channel and " +
-                "has no mechanism mapping in contract 1.0 - see EQ-15.")
+                "This format has no mechanism derivation. PartnerAPI is not derivable from an artifact " +
+                "format - a marketplace document arrives as JSON like any other API push - so it must " +
+                "be declared explicitly. Use ResolveMechanism.")
         };
+
+        /// <summary>
+        /// The mechanism for a document, preferring one the caller declared.
+        ///
+        /// Marketplace traffic must declare <c>PartnerAPI</c> because BizMate cannot infer it: the
+        /// artifact is JSON, indistinguishable from any other API push. Everything else derives
+        /// from the format and may not be overridden, or the mislabelling ER-07 warns about is back.
+        /// </summary>
+        public static string ResolveMechanism(string format, string? declaredMechanism)
+        {
+            if (string.IsNullOrWhiteSpace(declaredMechanism))
+            {
+                return ToMechanism(format);
+            }
+
+            if (!BizMateMechanisms.IsValid(declaredMechanism))
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(declaredMechanism), declaredMechanism,
+                    "Not a mechanism BizMate accepts. Valid values are RawEDI, FlatFile, DBMap and PartnerAPI.");
+            }
+
+            if (declaredMechanism != BizMateMechanisms.PartnerApi)
+            {
+                string l_Derived = ToMechanism(format);
+
+                if (declaredMechanism != l_Derived)
+                {
+                    throw new ArgumentException(
+                        $"Format '{format}' derives mechanism '{l_Derived}', but '{declaredMechanism}' was declared. " +
+                        "Only PartnerAPI may be declared; every other mechanism follows from the format.",
+                        nameof(declaredMechanism));
+                }
+            }
+
+            return declaredMechanism;
+        }
     }
 
     public static class BizMateMechanisms
@@ -46,6 +89,18 @@ namespace eSyncMate.Processor.Connections
         public const string RawEdi = "RawEDI";
         public const string FlatFile = "FlatFile";
         public const string DbMap = "DBMap";
+
+        /// <summary>
+        /// Marketplace and third-party API traffic (D-31, BizMate task script 40).
+        ///
+        /// Added by BizMate AFTER the M1 contract was frozen, so openapi.yaml 1.0 still enumerates
+        /// only the first three while their shipped database allows four. Declared by eSyncMate on
+        /// the inbound call, never derived from the artifact.
+        /// </summary>
+        public const string PartnerApi = "PartnerAPI";
+
+        public static bool IsValid(string? mechanism) =>
+            mechanism is RawEdi or FlatFile or DbMap or PartnerApi;
     }
 
     public static class BizMateChannels

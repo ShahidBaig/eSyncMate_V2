@@ -45,8 +45,8 @@ CREATE TABLE [dbo].[EDILedgerArtifact] (
 
     CONSTRAINT CK_EDILedgerArtifact_Stage CHECK ([Stage] IN ('AsReceived','AsSent','Canonical','Rendered')),
 
-    -- The contract's Format vocabulary exactly (openapi.yaml). Note there is no PartnerAPI value
-    -- anywhere in M1, despite the work plan assuming one - see EQ-15.
+    -- The contract's Format vocabulary exactly (openapi.yaml). PartnerAPI is a MECHANISM, not a
+    -- format: a marketplace artifact is JSON. It has no place in this list.
     CONSTRAINT CK_EDILedgerArtifact_Format CHECK
         ([FormatLabel] IN ('X12','EDIFACT','JSON','CSV','FixedWidth','XML','DBMap')),
 

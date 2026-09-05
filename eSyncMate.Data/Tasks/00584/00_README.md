@@ -1,0 +1,84 @@
+# Task 00584 — EDI & API Integration with BizMate EU (eSyncMate side)
+
+Branch `SB-00584`. Counterpart: BizMate task **00535** (`BizMate.Database/Tasks/00535`).
+
+Plan and tracker: `Improvements/EDIIntegration/eSyncMate-EDI-Dev-Tracker.md` (source of truth) →
+`eSyncMate-EDI-Dev-Tracker.html` (generated, never edited by hand). Scope: `BizMate-EDI-eSyncMate-Workplan.html`.
+Contracts held: M1 v1.0, M2 layouts v1.0.0, M3 grants v1.0, all under `Improvements/EDIIntegration/M1-Contracts/`.
+
+This folder is the **deployable script set**; numbering continues across phases.
+
+---
+
+## Phase 1 — Bridge and ledger (2026-09-04/05)
+
+### What was built
+
+- **The BizMate bridge** (`eSyncMate.Processor/Connections/BizMate*.cs`) — one connector every route hands to.
+  `BizMateRequestSigner` (HMAC over the public path, reproduces the contract's published test vector byte for
+  byte), `BizMateTokenClient` (client-credentials, cached per gateway + client + scope, single-flight),
+  `BizMateConnector` (one pipeline: scoped token → sign → send → classify, with all nine endpoints over it).
+- **The error taxonomy** — four exception types carrying `IsRetryable` and `IsDocumentFailure`, so `429`
+  (back off, *not* a document failure) and `403` (stop, never retry) cannot be confused by a caller reading
+  status codes.
+- **The document ledger** — `EDILedger`, `EDILedgerArtifact`, `EDILedgerLink`, plus their entities on the
+  existing `DBEntity` pattern, and the two pipelines that enforce ledger-first ordering in both directions.
+- **The trace read API** — `TraceController` over `VW_EDITrace`, both contract lookups, 4-second budget,
+  static bearer key compared in constant time.
+- **The store-and-forward queue** — `EDIOutboundQueue` and its service. FIFO within a partner, fair across
+  partners, never sheds.
+
+### Scripts — RUN ORDER (per environment)
+
+| # | Script | Database | Notes |
+|---|---|---|---|
+| 1 | `01_EDI_Ledger_Tables.sql` | **ESYNCMATE_EU** | `EDILedger`, `EDILedgerArtifact`, `EDILedgerLink` + indexes and check constraints. **Convergent**: also adds `InterchangeControlNo`, widens the mechanism vocabulary to `PartnerAPI` and makes `BizMateDuplicate` NOT NULL if an earlier revision is already deployed. |
+| 2 | `02_EDIOutboundQueue_Table.sql` | **ESYNCMATE_EU** | The durable queue. References `EDILedger`, so run after 01. |
+| 3 | `03_VW_EDITrace_View.sql` | **ESYNCMATE_EU** | The `ESyncMateTraceRecord` projection. `CREATE OR ALTER`. |
+| 4 | `04_Verify_Deployment.sql` | **ESYNCMATE_EU** | Read-only. Reports every expected object, column, index and constraint as OK / MISSING / STALE. Run this rather than trusting the others' `PRINT` output — an interrupted script still prints most of its progress. |
+
+All four guard on `DB_NAME() LIKE 'ESYNCMATE%'` and are safe to re-run.
+
+> **If you already ran the raw `Tables/*.sql` and `Views/*.sql`** — script 01 converges you forward. It will
+> report which of the three later corrections it applied. Script 04 then tells you whether anything is still stale.
+
+Then:
+
+5. Set the trace API key for the environment: configuration key `BizMate:TraceApiKey`. Until it is set the
+   endpoint is **closed**, and BizMate's timeline shows *"eSyncMate record not connected"* — the documented,
+   harmless state. Give BizMate that key and `{base}` = this service's root + `/api`; a BizMate administrator
+   sets `ESyncMateTraceUrl` and their ops team sets `ESYNCMATE_TRACE_API_KEY`.
+6. Set the BizMate credential trio and gateway URL. **Still blocked** — see EQ-06 below.
+
+### Deviations from the work plan, deliberate
+
+| Plan said | Built | Why |
+|---|---|---|
+| Mechanism is one label: `X12`, `EDIFACT`, `CSV`, `FixedWidth`, `XML`, `DBMap`, `PartnerAPI` (W2-04) | Two columns: `Format` (7 values) and `Mechanism` (4), with Mechanism **derived** from Format | The contract has two fields, not one (finding **F-10**). `Format` is the truth about the artifact; `Mechanism` is what BizMate keys artifact rendering, ack expectations, the duplicate key and board filtering off |
+| — | `CK_EDILedger_MechanismDerivation` enforces the derivation | Under AD-01 a CSV is staged through the DB-map tables, so there is a standing temptation to relabel it `DBMap`. With this constraint the relabel is not a rule anybody has to remember — the row will not insert (**ER-07**) |
+| `PartnerAPI` is a mechanism (W2-04, W8-03) | It is — but it is **not derivable** and must be declared | BizMate added it in their script 40 *after* M1 was frozen. Their `openapi.yaml` 1.0 still lists three values while their shipped database allows four. We follow the database |
+| Artifact retention extends what exists | The ledger owns the artifact, order-independently | `OrderData.OrderId` is `NOT NULL` with an inner join to `Orders`, so a document that never becomes an order — a malformed 850, an 824, a 997, a 846 feed — has nowhere to be retained at all (**F-3**). Those are exactly the documents E10 and E12 exist to make visible |
+| One control number per outbound message | `PartnerControlNo` **and** `InterchangeControlNo` | They are two different facts. BizMate's number is echoed on the trace record; ours is what actually crosses the wire and what an inbound 997 quotes, so it is what W2-10 correlates on (**EQ-01**) |
+| `Content` as text | `VARBINARY(MAX)` + `ContentEncoding` | The hash is over the raw bytes. A BOM, a CRLF that should have been an LF, or a re-encoding each change it, so storing text and re-encoding on the way out makes the hash unreproducible — which defeats holding the artifact |
+
+### Still blocked, and on whom
+
+| Ref | What | Owner | Blocks |
+|---|---|---|---|
+| **EQ-06** | Whether the non-production credential trio issued 2026-09-02 is current or superseded. The evidence disagrees with itself: a credentials file exists on our side while the M1 hand-over checklist shows it unticked | BizMate | Any live call at all — the bridge is built but has never spoken to a real BizMate |
+| **EQ-13** | The 850 map already emits `lineNo` (the ordinal) **and** `ediLineId` (the partner's PO1-01). The planned rename would overwrite the ordinal — which is exactly what BizMate's 855 echo depends on | Both | `W3-01`, the first and most-used map |
+| **EQ-14** | The trace contract's `outcome` enumerates only `Translated`, `Failed`, `Rejected`, but `translatedAt` is documented as null while pending. What should `outcome` say for a document received and not yet translated? Our ledger carries `Pending` | Both | `W2-13` semantics |
+| **BM-08** | Kong IP allowlist, waiting on our egress addresses | Both | `W7-06` |
+
+### Verified without a live system
+
+Nothing here has spoken to a real BizMate yet, so everything is verified as far as it can be statically:
+
+- Both projects build with **0 errors** and no diagnostics in the new files.
+- **31/31** signer checks against the shipped file, including the contract's published test vector byte for byte,
+  and the Kong-stripped-path trap refused at runtime rather than documented.
+- **31/31** queue and derivation checks against the built assembly, three consecutive runs — backoff bounds and
+  cap, the Format → Mechanism derivation, token cache keying, identifier uniqueness and column fit.
+- All DDL parses clean against the SQL Server 2022 grammar.
+- Entities match their tables **column-for-column**, names and order (33 / 13 / 9 / 22).
+- The contract, `VW_EDITrace` and `TraceController` agree on all **14** trace field names, in order.
