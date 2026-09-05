@@ -197,5 +197,12 @@ app.UseHangfireDashboard("/dashboard", new DashboardOptions
 // -------------------- ROUTES --------------------
 app.MapControllers();
 
+// -------------------- BIZMATE INTEGRATION (Task 00584) --------------------
+// Schedules the store-and-forward drain (W1-14). Registered here rather than on first use so the
+// schedule exists from start-up, and registered even when the credential trio is still missing so
+// it begins working the moment ApplicationSettings is filled in - no redeploy, and no job somebody
+// has to remember to create. The job itself is inert and quiet until then.
+eSyncMate.Processor.Managers.BizMateQueueDrainJob.Register();
+
 // -------------------- RUN --------------------
 app.Run();

@@ -252,6 +252,25 @@ namespace eSyncMate.Processor.Models
         public static Int32 MiraklStatusMaxAttempts = 3;
         public static Int32 MiraklStatusCallDelaySeconds = 30;
 
+        // BizMate EU integration (Task 00584). One credential trio per environment; BizMate issues
+        // them and shows the secrets once, so they are stored here rather than being recoverable.
+        // Until the trio is set the drain job is inert by design - it logs once and returns rather
+        // than failing every minute, which is the right behaviour while EQ-06 is unanswered.
+        public static string BizMate_GatewayUrl { get; set; } = "";
+        public static string BizMate_ClientId { get; set; } = "";
+        public static string BizMate_ClientSecret { get; set; } = "";
+        public static string BizMate_SigningSecret { get; set; } = "";
+
+        // Static bearer key eSyncMate ISSUES to BizMate for the trace read API (E17). Unset means
+        // the endpoint is closed and BizMate shows "eSyncMate record not connected".
+        public static string BizMate_TraceApiKey { get; set; } = "";
+
+        // Store-and-forward drain (W1-14). Cron is standard 5-field; the default is every minute.
+        public static bool BizMate_QueueDrainEnabled { get; set; } = true;
+        public static string BizMate_QueueDrainCron { get; set; } = "* * * * *";
+        public static Int32 BizMate_QueueDrainMaxCalls = 500;
+        public static Int32 BizMate_QueueDrainMaxPartners = 100;
+
         /// <summary>
         /// Loads all configuration (except ConnectionStrings) from the ApplicationSettings
         /// table into the static fields above. Call ONCE at process startup, after
@@ -301,6 +320,16 @@ namespace eSyncMate.Processor.Models
                 MiraklStatusTimeoutSeconds = int.TryParse(Get("MiraklStatusTimeoutSeconds", MiraklStatusTimeoutSeconds.ToString()), out var mst) ? mst : MiraklStatusTimeoutSeconds;
                 MiraklStatusMaxAttempts = int.TryParse(Get("MiraklStatusMaxAttempts", MiraklStatusMaxAttempts.ToString()), out var msa) ? msa : MiraklStatusMaxAttempts;
                 MiraklStatusCallDelaySeconds = int.TryParse(Get("MiraklStatusCallDelaySeconds", MiraklStatusCallDelaySeconds.ToString()), out var mscd) ? mscd : MiraklStatusCallDelaySeconds;
+
+                BizMate_GatewayUrl    = Get("BizMate_GatewayUrl", BizMate_GatewayUrl);
+                BizMate_ClientId      = Get("BizMate_ClientId", BizMate_ClientId);
+                BizMate_ClientSecret  = Get("BizMate_ClientSecret", BizMate_ClientSecret);
+                BizMate_SigningSecret = Get("BizMate_SigningSecret", BizMate_SigningSecret);
+                BizMate_TraceApiKey   = Get("BizMate_TraceApiKey", BizMate_TraceApiKey);
+                BizMate_QueueDrainEnabled = bool.TryParse(Get("BizMate_QueueDrainEnabled", BizMate_QueueDrainEnabled.ToString()), out var bqde) ? bqde : BizMate_QueueDrainEnabled;
+                BizMate_QueueDrainCron = Get("BizMate_QueueDrainCron", BizMate_QueueDrainCron);
+                BizMate_QueueDrainMaxCalls = int.TryParse(Get("BizMate_QueueDrainMaxCalls", BizMate_QueueDrainMaxCalls.ToString()), out var bqmc) ? bqmc : BizMate_QueueDrainMaxCalls;
+                BizMate_QueueDrainMaxPartners = int.TryParse(Get("BizMate_QueueDrainMaxPartners", BizMate_QueueDrainMaxPartners.ToString()), out var bqmp) ? bqmp : BizMate_QueueDrainMaxPartners;
             }
             catch (Exception ex)
             {
