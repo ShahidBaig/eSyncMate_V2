@@ -13,8 +13,9 @@ namespace eSyncMate.Processor.Managers
     /// <summary>
     /// Route type 600 - partner X12 in, BizMate canonical out (W1-01, W2-02, W7-11; direction AD-03).
     ///
-    /// Reads the partner's inbound SFTP folder, and for each file runs eSyncMate's existing 850
-    /// intake WRAPPED in the BizMate ledger-first pipeline:
+    /// Reads the partner's inbound folder - an ordinary Windows folder that BizLink writes into,
+    /// or SFTP where a partner needs it - and for each file runs eSyncMate's existing 850 intake
+    /// WRAPPED in the BizMate ledger-first pipeline:
     ///
     ///   1. ledger row                                  (BizMateInboundPipeline)
     ///   2. InboundEDI + InboundEDIInfo, linked         (BizMateInboundPipeline, AD-02)
@@ -48,15 +49,32 @@ namespace eSyncMate.Processor.Managers
 
                 ConnectorDataModel? l_Source = ConnectorDataModel.Deserialize(route.SourceConnectorObject.Data);
 
-                if (l_Source == null || string.IsNullOrWhiteSpace(l_Source.Host) || l_Source.Host.StartsWith("<<"))
+                if (l_Source == null)
                 {
-                    route.SaveLog(LogTypeEnum.Error, "[BizMateInboundEDI] The source connector (partner SFTP) has no host. Set it on the Connectors screen.", string.Empty, userNo);
+                    route.SaveLog(LogTypeEnum.Error, "[BizMateInboundEDI] The source connector is not set up properly.", string.Empty, userNo);
                     return;
                 }
 
-                if (l_Source.AuthType != ConnectorTypesEnum.SFTP.ToString())
+                // File is the default: BizLink hands eSyncMate its EDI as files in an ordinary
+                // Windows folder. SFTP is supported for the partners that need it.
+                bool l_IsFolder = l_Source.AuthType == ConnectorTypesEnum.File.ToString();
+                bool l_IsSftp = l_Source.AuthType == ConnectorTypesEnum.SFTP.ToString();
+
+                if (!l_IsFolder && !l_IsSftp)
                 {
-                    route.SaveLog(LogTypeEnum.Error, $"[BizMateInboundEDI] The source connector is [{l_Source.AuthType}]; this route reads SFTP only (W7-08 covers the rest).", string.Empty, userNo);
+                    route.SaveLog(LogTypeEnum.Error, $"[BizMateInboundEDI] The source connector is [{l_Source.AuthType}]; this route reads File or SFTP.", string.Empty, userNo);
+                    return;
+                }
+
+                string l_Location = (l_IsFolder ? l_Source.BaseUrl : l_Source.Host) ?? string.Empty;
+
+                if (string.IsNullOrWhiteSpace(l_Location) || l_Location.TrimStart().StartsWith("<<"))
+                {
+                    route.SaveLog(LogTypeEnum.Error,
+                        l_IsFolder
+                            ? "[BizMateInboundEDI] The source connector has no inbound folder. Set BaseUrl on the connector to the folder BizLink writes into."
+                            : "[BizMateInboundEDI] The source connector (partner SFTP) has no host.",
+                        string.Empty, userNo);
                     return;
                 }
 
@@ -96,11 +114,25 @@ namespace eSyncMate.Processor.Managers
                     return;
                 }
 
-                Dictionary<string, string> l_Files = SftpConnector.Execute(l_Source).GetAwaiter().GetResult();
+                Dictionary<string, string> l_Files;
+
+                try
+                {
+                    l_Files = l_IsFolder
+                        ? FileConnector.Execute(l_Source).GetAwaiter().GetResult()
+                        : SftpConnector.Execute(l_Source).GetAwaiter().GetResult();
+                }
+                catch (DirectoryNotFoundException ex)
+                {
+                    route.SaveLog(LogTypeEnum.Error, $"[BizMateInboundEDI] {ex.Message}", string.Empty, userNo);
+                    return;
+                }
 
                 if (l_Files.Count == 0)
                 {
-                    // Silence is the normal state of a polling route; nothing to record.
+                    // Silence is the normal state of a polling route; nothing to record. A file
+                    // BizLink is still writing is not counted here either - FileConnector leaves it
+                    // for the next pass rather than reading a fragment.
                     return;
                 }
 
@@ -138,9 +170,26 @@ namespace eSyncMate.Processor.Managers
                             input => Translate(input, l_Customer, l_TransformationMap, l_DbFieldsMap, l_Source, l_File.Key, route, userNo))
                             .GetAwaiter().GetResult();
 
-                        // The interchange is retained in InboundEDI and described on the ledger, so the
-                        // partner's copy can go regardless of outcome - that is what ledger-first buys.
-                        SftpConnector.DeleteFileFromSFTP(l_File.Key, l_Source).GetAwaiter().GetResult();
+                        bool l_Handled = l_Ledger.Outcome == "Translated";
+
+                        // The interchange is retained in InboundEDI and described on the ledger before
+                        // this point, so the transfer's copy can go regardless of outcome - that is what
+                        // ledger-first buys. A folder keeps it, filed under archive or error; SFTP has
+                        // nowhere to file it, so it is deleted as the existing routes do.
+                        if (l_IsFolder)
+                        {
+                            if (!FileConnector.ArchiveFile(l_File.Key, l_Source, l_Handled).GetAwaiter().GetResult())
+                            {
+                                route.SaveLog(LogTypeEnum.Error,
+                                    $"[BizMateInboundEDI] Could not file [{l_File.Key}] into {(l_Handled ? FileConnector.ArchiveFolderName : FileConnector.ErrorFolderName)}. " +
+                                    "If it is still in the inbound folder it will be read again next pass; BizMate answers a repeat with duplicate=true, so nothing is duplicated, but the folder needs attention.",
+                                    string.Empty, userNo);
+                            }
+                        }
+                        else
+                        {
+                            SftpConnector.DeleteFileFromSFTP(l_File.Key, l_Source).GetAwaiter().GetResult();
+                        }
 
                         switch (l_Ledger.Outcome)
                         {
@@ -272,10 +321,20 @@ namespace eSyncMate.Processor.Managers
 
                     if (!string.IsNullOrEmpty(l_997))
                     {
-                        ConnectorDataModel l_Outbound = JsonConvert.DeserializeObject<ConnectorDataModel>(JsonConvert.SerializeObject(source))!;
-                        l_Outbound.BaseUrl = source.Url;
+                        if (source.AuthType == ConnectorTypesEnum.File.ToString())
+                        {
+                            // FileConnector writes into Url and renames into place, so BizLink never
+                            // sees a partial acknowledgement.
+                            FileConnector.Execute(source, false, $"{Path.GetFileNameWithoutExtension(fileName)}-997.edi", l_997)
+                                .GetAwaiter().GetResult();
+                        }
+                        else
+                        {
+                            ConnectorDataModel l_Outbound = JsonConvert.DeserializeObject<ConnectorDataModel>(JsonConvert.SerializeObject(source))!;
+                            l_Outbound.BaseUrl = source.Url;
 
-                        SftpConnector.Execute(l_Outbound, false, $"{Path.GetFileNameWithoutExtension(fileName)}-997", l_997).GetAwaiter().GetResult();
+                            SftpConnector.Execute(l_Outbound, false, $"{Path.GetFileNameWithoutExtension(fileName)}-997", l_997).GetAwaiter().GetResult();
+                        }
                     }
                 }
                 catch (Exception ex997)

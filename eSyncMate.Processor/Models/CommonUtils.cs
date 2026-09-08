@@ -209,7 +209,11 @@ namespace eSyncMate.Processor.Models
         SqlServer = 1,
         Rest = 2,
         SFTP = 3,
-        FTP = 4
+        FTP = 4,
+
+        // A local or UNC folder as a transfer (task 00003). BizLink hands eSyncMate its EDI as
+        // files in an ordinary Windows folder rather than over SFTP. See FileConnector.
+        File = 5
     }
 
     public class CommonUtils

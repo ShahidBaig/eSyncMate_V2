@@ -29,12 +29,28 @@
 --   CustomerMaps    BELL-D12 -> both maps.
 --   PartnerGroups   BELL-D12 - BizMate.
 --   ConnectorTypes  'BizMate' and 'EDI Partner'.
---   Connectors      the partner's inbound SFTP folder and the BizMate bridge.
---                   Stored as PLAIN JSON with <<placeholders>> and no secret in
---                   them: EncryptionHelper.Decrypt passes a value through when
---                   it does not start with ENC:, and the Connectors screen
---                   encrypts on the first save. Fill the host and credentials
---                   there, not here.
+--   Connectors      the partner's inbound FOLDER and the BizMate bridge.
+--                   BizLink hands eSyncMate its EDI as files in an ordinary
+--                   Windows folder, not over SFTP, so the source connector is
+--                   ConnectivityType/AuthType 'File' (ConnectorTypesEnum.File,
+--                   served by FileConnector). BaseUrl is the folder BizLink
+--                   writes into; Url is the folder eSyncMate writes
+--                   acknowledgements and outbound documents into.
+--
+--                   Stored as PLAIN JSON: EncryptionHelper.Decrypt passes a
+--                   value through when it does not start with ENC:, and a
+--                   folder carries no credential to protect. Note the Connectors
+--                   SCREEN only offers SqlServer and Rest, so File, SFTP and FTP
+--                   connectors are seeded here and edited with an UPDATE:
+--
+--                     UPDATE dbo.Connectors
+--                        SET Data = REPLACE(REPLACE(Data,
+--                              '<<SET_INBOUND_FOLDER>>',  'D:\eSyncMate\EDI\BELL-D12\in'),
+--                              '<<SET_OUTBOUND_FOLDER>>', 'D:\eSyncMate\EDI\BELL-D12\out')
+--                      WHERE Name = 'BELL-D12 - Inbound Folder';
+--
+--                   The route refuses to run while the placeholders are in
+--                   place, so it cannot read from the wrong folder by accident.
 --   RouteTypes      600 'BizMate - Receive EDI' (dispatched by RouteEngine).
 --   Routes          'BELL-D12 - Receive 850s for BizMate', Active, Minutely /
 --                   5, with no Hangfire job: add it to a Flow to schedule it,
@@ -334,19 +350,36 @@ BEGIN
 END
 GO
 
--- The partner's SFTP. BaseUrl is the folder the route reads 850s from; Url is
--- where it drops the 997 back; Realm is the ISA sender id it insists on, which
--- is how the route finds the Customers row (ISACustomerID). Host and credentials
--- are placeholders - set them on the Connectors screen, which encrypts them.
-IF NOT EXISTS (SELECT 1 FROM dbo.Connectors WHERE Name = 'BELL-D12 - Inbound SFTP')
+-- The partner transfer. BaseUrl is the folder BizLink writes 850s into; Url is
+-- where eSyncMate writes the 997 back; Method is the file pattern; Realm is the
+-- ISA sender id the route insists on, which is how it finds the Customers row
+-- (ISACustomerID) and which the M1 contract also uses as partnerId.
+--
+-- Convergence: the first revision of this script seeded an SFTP connector,
+-- before it was settled that BizLink delivers to a Windows folder. Rename and
+-- rewrite it in place rather than adding a second row, so route 141 keeps
+-- pointing at the same connector id.
+IF EXISTS (SELECT 1 FROM dbo.Connectors WHERE Name = 'BELL-D12 - Inbound SFTP')
+BEGIN
+    UPDATE dbo.Connectors
+       SET Name = 'BELL-D12 - Inbound Folder',
+           Data = '{"ConnectivityType":"File","AuthType":"File","BaseUrl":"<<SET_INBOUND_FOLDER>>","Url":"<<SET_OUTBOUND_FOLDER>>","Method":"*","Realm":"BELL-D12","CustomerID":"BELL-D12"}',
+           ModifiedDate = SYSUTCDATETIME(),
+           ModifiedBy = 1
+     WHERE Name = 'BELL-D12 - Inbound SFTP';
+
+    PRINT 'Connectors: converged BELL-D12 - Inbound SFTP -> BELL-D12 - Inbound Folder (File transfer)';
+END
+
+IF NOT EXISTS (SELECT 1 FROM dbo.Connectors WHERE Name = 'BELL-D12 - Inbound Folder')
 BEGIN
     INSERT INTO dbo.Connectors (Id, TypeId, Name, Data, CreatedDate, CreatedBy)
     VALUES ((SELECT ISNULL(MAX(Id), 0) + 1 FROM dbo.Connectors),
             (SELECT Id FROM dbo.ConnectorTypes WHERE Name = 'EDI Partner'),
-            'BELL-D12 - Inbound SFTP',
-            '{"ConnectivityType":"SFTP","AuthType":"SFTP","Host":"<<SET_SFTP_HOST>>","ConsumerKey":"<<SET_SFTP_USER>>","ConsumerSecret":"<<SET_SFTP_PASSWORD>>","BaseUrl":"/BELL-D12/inbound/850","Url":"/BELL-D12/outbound/997","Realm":"BELL-D12","CustomerID":"BELL-D12"}',
+            'BELL-D12 - Inbound Folder',
+            '{"ConnectivityType":"File","AuthType":"File","BaseUrl":"<<SET_INBOUND_FOLDER>>","Url":"<<SET_OUTBOUND_FOLDER>>","Method":"*","Realm":"BELL-D12","CustomerID":"BELL-D12"}',
             GETDATE(), 1);
-    PRINT 'Connectors: added BELL-D12 - Inbound SFTP (placeholders - set host and credentials on the Connectors screen)';
+    PRINT 'Connectors: added BELL-D12 - Inbound Folder (placeholders - set the two folders with the UPDATE in this header)';
 END
 
 -- The BizMate bridge. Credentials come from ApplicationSettings (BizMate_*),
@@ -386,7 +419,7 @@ BEGIN
             600, 'Active',
             (SELECT Id FROM dbo.Customers WHERE ERPCustomerID = 'BELL-D12'),
             (SELECT Id FROM dbo.Customers WHERE ERPCustomerID = 'BIZMATE'),
-            (SELECT Id FROM dbo.Connectors WHERE Name = 'BELL-D12 - Inbound SFTP'),
+            (SELECT Id FROM dbo.Connectors WHERE Name = 'BELL-D12 - Inbound Folder'),
             (SELECT Id FROM dbo.Connectors WHERE Name = 'BizMate - EDI Bridge'),
             (SELECT Id FROM dbo.Maps WHERE Name = '850'),
             (SELECT Id FROM dbo.PartnerGroups WHERE Description = 'BELL-D12 - BizMate'),
@@ -404,7 +437,7 @@ UNION ALL SELECT 'Maps', Name + ' (' + CAST(LEN(Map) AS varchar(10)) + ' chars)'
 UNION ALL SELECT 'Customers', Name + ' / ISA ' + ISNULL(ISACustomerID, '-') FROM dbo.Customers WHERE ERPCustomerID IN ('BIZMATE','BELL-D12')
 UNION ALL SELECT 'CustomerMaps', c.ERPCustomerID + ' -> ' + m.Name FROM dbo.CustomerMaps cm JOIN dbo.Customers c ON c.Id = cm.CustomerId JOIN dbo.Maps m ON m.Id = cm.MapId WHERE c.ERPCustomerID = 'BELL-D12'
 UNION ALL SELECT 'PartnerGroups', Description FROM dbo.PartnerGroups WHERE Description = 'BELL-D12 - BizMate'
-UNION ALL SELECT 'Connectors', Name FROM dbo.Connectors WHERE Name IN ('BELL-D12 - Inbound SFTP','BizMate - EDI Bridge')
+UNION ALL SELECT 'Connectors', Name + CASE WHEN Data LIKE '%<<SET_%' THEN '  <-- folders still placeholders; the route will refuse until set' ELSE '  (configured)' END FROM dbo.Connectors WHERE Name IN ('BELL-D12 - Inbound Folder','BizMate - EDI Bridge')
 UNION ALL SELECT 'RouteTypes', CAST(Id AS varchar(10)) + ' ' + Name FROM dbo.RouteTypes WHERE Id = 600
 UNION ALL SELECT 'Routes', CAST(Id AS varchar(10)) + ' ' + Name + ' [' + Status + ']' FROM dbo.Routes WHERE Name = 'BELL-D12 - Receive 850s for BizMate'
 UNION ALL SELECT 'VW_Routes', CASE WHEN EXISTS (SELECT 1 FROM dbo.VW_Routes WHERE Name = 'BELL-D12 - Receive 850s for BizMate') THEN 'route visible (all INNER JOINs satisfied)' ELSE 'ROUTE NOT VISIBLE - a foreign key is missing' END;
