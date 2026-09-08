@@ -1,4 +1,6 @@
+using System.Buffers;
 using System.Globalization;
+using System.Text.Json;
 
 namespace eSyncMate.Processor.Connections
 {
@@ -29,6 +31,88 @@ namespace eSyncMate.Processor.Connections
     /// </summary>
     public static class CanonicalValues
     {
+        /// <summary>
+        /// Fields where an empty string is meaningful rather than a stand-in for "not provided",
+        /// and so must survive <see cref="PruneEmpty"/> and pass the guard.
+        ///
+        /// The 860's changeInstructions is the documented case: an empty string there genuinely
+        /// blanks the field, which is exactly why W4-08 insists empty and absent stay distinct.
+        /// Shared with CanonicalGuard so the normaliser and the check can never disagree.
+        /// </summary>
+        public static readonly IReadOnlySet<string> EmptyIsMeaningful =
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "changeInstructions" };
+
+        /// <summary>
+        /// Drops object properties whose value is an empty string, which the canonical contract
+        /// forbids: an unknown value is null or the field is omitted, never "".
+        ///
+        /// This is done at the boundary rather than in each map on purpose. The maps are text in a
+        /// database row with no schema and no compiled type behind them (F-1), and an X12 element
+        /// that is absent and one that is present but empty are the same thing on the wire - so
+        /// "" is what a map naturally produces for anything the partner did not send. Requiring
+        /// every map, for fifteen document types and every partner, to remember the distinction is
+        /// the fragile arrangement; normalising once here is not. The guard still runs afterwards
+        /// and still fails anything genuinely wrong, a legacy date or money-as-a-string included.
+        ///
+        /// Empty strings inside an ARRAY are left alone: dropping one would shift the indices of
+        /// everything after it, which changes meaning rather than tidying it.
+        /// </summary>
+        public static JsonElement PruneEmpty(JsonElement payload)
+        {
+            var l_Buffer = new ArrayBufferWriter<byte>();
+
+            using (var l_Writer = new Utf8JsonWriter(l_Buffer))
+            {
+                WritePruned(payload, l_Writer);
+            }
+
+            var l_Reader = new Utf8JsonReader(l_Buffer.WrittenSpan);
+
+            using JsonDocument l_Document = JsonDocument.ParseValue(ref l_Reader);
+
+            return l_Document.RootElement.Clone();
+        }
+
+        private static void WritePruned(JsonElement element, Utf8JsonWriter writer)
+        {
+            switch (element.ValueKind)
+            {
+                case JsonValueKind.Object:
+                    writer.WriteStartObject();
+
+                    foreach (JsonProperty l_Property in element.EnumerateObject())
+                    {
+                        if (l_Property.Value.ValueKind == JsonValueKind.String
+                            && l_Property.Value.GetString()?.Length == 0
+                            && !EmptyIsMeaningful.Contains(l_Property.Name))
+                        {
+                            continue;
+                        }
+
+                        writer.WritePropertyName(l_Property.Name);
+                        WritePruned(l_Property.Value, writer);
+                    }
+
+                    writer.WriteEndObject();
+                    break;
+
+                case JsonValueKind.Array:
+                    writer.WriteStartArray();
+
+                    foreach (JsonElement l_Item in element.EnumerateArray())
+                    {
+                        WritePruned(l_Item, writer);
+                    }
+
+                    writer.WriteEndArray();
+                    break;
+
+                default:
+                    element.WriteTo(writer);
+                    break;
+            }
+        }
+
         /// <summary>ISO-8601 UTC with Z, to the second, as the contract's example shows.</summary>
         public const string InstantFormat = "yyyy-MM-dd'T'HH:mm:ss'Z'";
 

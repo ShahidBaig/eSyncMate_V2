@@ -213,6 +213,14 @@ namespace eSyncMate.Processor.Connections
                 return Fail(l_Ledger, "Failed", "Translation failed: " + ex.Message);
             }
 
+            // ---- 4a. Normalise what is representation rather than meaning (W3-01). ----
+            // An X12 element that is absent and one that is present but empty are the same thing on
+            // the wire, so "" is what a map naturally produces for anything the partner did not
+            // send - and the canonical contract forbids it. Dropping those properties here, once,
+            // is what stops every map for every document type having to remember. Nothing that
+            // carries meaning is touched: see CanonicalValues.EmptyIsMeaningful.
+            l_Payload = CanonicalValues.PruneEmpty(l_Payload);
+
             // ---- 4b. Check the canonical conventions before BizMate ever sees it (X-02, X-03). ----
             // The maps are text in a database row with no schema and no compiled type behind them
             // (F-1), so nothing else would notice a map regressing to MM/dd/yyyy or to money as a

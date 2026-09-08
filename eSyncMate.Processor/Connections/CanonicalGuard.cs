@@ -36,10 +36,8 @@ namespace eSyncMate.Processor.Connections
         /// The 860's changeInstructions is the documented case: an empty string there genuinely
         /// blanks the field, which is exactly why W4-08 insists empty and absent stay distinct.
         /// </summary>
-        private static readonly HashSet<string> _emptyIsMeaningful = new(StringComparer.OrdinalIgnoreCase)
-        {
-            "changeInstructions"
-        };
+        /// Shared with the normaliser so the two can never disagree about which empties survive.
+        private static readonly IReadOnlySet<string> _emptyIsMeaningful = CanonicalValues.EmptyIsMeaningful;
 
         private static readonly string[] _instantSuffixes = { "At" };
 
