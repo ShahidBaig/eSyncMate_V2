@@ -196,7 +196,13 @@ namespace eSyncMate.Processor.Models
         ErrorOrderRetry = 74,
 
         // BizMate EU integration (task 00003). 600-series, like Repaint's 500-series.
-        BizMateInboundEDI = 600
+        //
+        // A new value here must ALSO be added to the dispatch chain in RouteEngine.Execute AND to
+        // the duplicate chain in eSyncMate.RouteWorker/Program.cs (F-26). Because
+        // RouteEngine:UseExternalProcess is true, every route actually runs in the worker, so one
+        // added only to RouteEngine reaches it and falls through to "Unknown route type".
+        BizMateInboundEDI = 600,
+        BizMateOutboundEDI = 601
 
     }
 

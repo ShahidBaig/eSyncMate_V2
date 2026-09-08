@@ -71,7 +71,7 @@ namespace eSyncMate.Processor.Connections
         /// documents sit unseen: BizMate's poll defaults to EDI. Callers that serve such a customer
         /// must ask for both.
         /// </summary>
-        public Task<List<OutboundDocument>> CollectAsync(
+        public Task<OutboundPage> CollectAsync(
             string correlationId,
             string? partnerId = null,
             string? docType = null,
@@ -88,7 +88,7 @@ namespace eSyncMate.Processor.Connections
         /// Recovers the crash-after-fetch case (W1-11): a row BizMate marked Fetched that we never
         /// confirmed as Delivered. BizMate serves it untouched and records a Redelivered event.
         /// </summary>
-        public Task<List<OutboundDocument>> CollectRedeliveriesAsync(
+        public Task<OutboundPage> CollectRedeliveriesAsync(
             string correlationId, string? partnerId = null, CancellationToken cancellationToken = default)
         {
             return _connector.GetOutboundPendingAsync(

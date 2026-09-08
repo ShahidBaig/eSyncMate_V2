@@ -172,7 +172,7 @@ namespace eSyncMate.Processor.Connections
         /// channel defaults to EDI on BizMate's side. A customer configured on BOTH channels must
         /// also be polled with channel=API or through the doorway, or its documents sit unseen.
         /// </summary>
-        public Task<List<OutboundDocument>> GetOutboundPendingAsync(
+        public Task<OutboundPage> GetOutboundPendingAsync(
             string correlationId,
             string? partnerId = null,
             string? docType = null,
@@ -196,7 +196,11 @@ namespace eSyncMate.Processor.Connections
 
             // The query string is not signed (auth-and-signing.md section 3), so the signed path
             // stays the bare one while the request goes to the full URL.
-            return SendAsync<object, List<OutboundDocument>>(
+            //
+            // The response is an object - { items, total } - not a bare array. Deserialising it as
+            // a List threw "The JSON value could not be converted" on the first live call, which is
+            // the sort of thing only a real endpoint tells you.
+            return SendAsync<object, OutboundPage>(
                 HttpMethod.Get, l_Path, null, BizMateScopes.OutboundRead, correlationId, cancellationToken, l_Url);
         }
 

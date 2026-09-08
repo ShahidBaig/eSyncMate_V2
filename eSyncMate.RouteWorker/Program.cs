@@ -493,6 +493,10 @@ namespace eSyncMate.RouteWorker
                 {
                     BizMateInboundEDIRoute.Execute(config, route);
                 }
+                else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.BizMateOutboundEDI))
+                {
+                    BizMateOutboundEDIRoute.Execute(config, route);
+                }
                 else
                 {
                     string errorMsg = $"Unknown route type: {route.TypeId}";

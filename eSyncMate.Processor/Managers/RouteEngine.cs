@@ -811,10 +811,15 @@ namespace eSyncMate.Processor.Managers
                 {
                     ErrorOrderRetryRoute.Execute(_config, route);
                 }
-                // BizMate EU integration (task 00003)
+                // BizMate EU integration (task 00003). Mirrored in eSyncMate.RouteWorker/Program.cs,
+                // which carries its own copy of this chain and is where routes actually run (F-26).
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.BizMateInboundEDI))
                 {
                     BizMateInboundEDIRoute.Execute(_config, route);
+                }
+                else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.BizMateOutboundEDI))
+                {
+                    BizMateOutboundEDIRoute.Execute(_config, route);
                 }
 
                 //DB.Entities.RouteExecutionLogger.LogEnd(

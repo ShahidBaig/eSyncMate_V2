@@ -249,6 +249,22 @@ namespace eSyncMate.Processor.Connections
         [JsonPropertyName("no")] public long? No { get; set; }
     }
 
+    /// <summary>
+    /// One page of the outbox. The endpoint answers an OBJECT carrying items and a total, not a
+    /// bare array - openapi.yaml, GET /v1/integration/outbound/pending, the 200 response.
+    ///
+    /// total is every row the call would serve regardless of limit, which makes it the partner's
+    /// real backlog depth and therefore what X-07 reports to BizMate as QueueBacklog. Keeping it
+    /// rather than returning only the items is the difference between "we collected five" and
+    /// "we collected five of seventy-one".
+    /// </summary>
+    public sealed class OutboundPage
+    {
+        [JsonPropertyName("items")] public List<OutboundDocument> Items { get; set; } = new();
+
+        [JsonPropertyName("total")] public int Total { get; set; }
+    }
+
     public sealed class OutboundDocument
     {
         [JsonPropertyName("messageId")] public long MessageId { get; set; }
