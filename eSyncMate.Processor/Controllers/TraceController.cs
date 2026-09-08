@@ -1,4 +1,4 @@
-using System.Data;
+﻿using System.Data;
 using System.Data.SqlClient;
 using System.Security.Cryptography;
 using System.Text;
@@ -51,18 +51,19 @@ namespace eSyncMate.Processor.Controllers
     [AllowAnonymous]
     public class TraceController : ControllerBase
     {
-        /// <summary>Configuration key holding the key we issue to BizMate. One per environment.</summary>
-        public const string ApiKeySetting = "BizMate:TraceApiKey";
+        /// <summary>
+        /// ApplicationSettings tag holding the key we issue to BizMate. One per environment.
+        /// Read through CommonUtils like every other BizMate setting, not from appsettings.json.
+        /// </summary>
+        public const string ApiKeySetting = "BizMate_TraceApiKey";
 
         /// <summary>BizMate waits 5 s and then renders the hop as unknown, so never exceed it.</summary>
         private const int QueryTimeoutSeconds = 4;
 
-        private readonly IConfiguration _config;
         private readonly ILogger<TraceController> _logger;
 
-        public TraceController(IConfiguration config, ILogger<TraceController> logger)
+        public TraceController(ILogger<TraceController> logger)
         {
-            _config = config;
             _logger = logger;
         }
 
@@ -126,7 +127,7 @@ namespace eSyncMate.Processor.Controllers
         /// </summary>
         private bool IsAuthorised()
         {
-            string? l_Expected = _config[ApiKeySetting];
+            string? l_Expected = CommonUtils.BizMate_TraceApiKey;
 
             if (string.IsNullOrWhiteSpace(l_Expected))
             {
