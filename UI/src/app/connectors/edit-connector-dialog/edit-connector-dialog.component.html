@@ -129,6 +129,94 @@
           </div>
         </mat-tab>
 
+        <mat-tab *ngIf="showFileTab">
+          <ng-template mat-tab-label><mat-icon class="tab-icon">folder</mat-icon> File</ng-template>
+          <div class="tab-body">
+            <div class="form-row">
+              <mat-form-field appearance="outline" class="full-width"><mat-label>{{ 'inboundFolder' | translate }}</mat-label>
+                <input matInput formControlName="baseUrl" placeholder="D:\eSyncMate\EDI\PARTNER\in">
+                <mat-icon matPrefix>folder_open</mat-icon>
+                <mat-hint>{{ 'inboundFolderHint' | translate }}</mat-hint>
+              </mat-form-field>
+            </div>
+            <div class="form-row">
+              <mat-form-field appearance="outline" class="full-width"><mat-label>{{ 'outboundFolder' | translate }}</mat-label>
+                <input matInput formControlName="url" placeholder="D:\eSyncMate\EDI\PARTNER\out">
+                <mat-icon matPrefix>drive_file_move</mat-icon>
+                <mat-hint>{{ 'outboundFolderHint' | translate }}</mat-hint>
+              </mat-form-field>
+            </div>
+            <div class="form-row">
+              <mat-form-field appearance="outline"><mat-label>{{ 'filePattern' | translate }}</mat-label>
+                <input matInput formControlName="method" placeholder="*">
+                <mat-hint>{{ 'filePatternHint' | translate }}</mat-hint>
+              </mat-form-field>
+              <mat-form-field appearance="outline"><mat-label>{{ 'expectedSenderId' | translate }}</mat-label>
+                <input matInput formControlName="realm">
+                <mat-hint>{{ 'expectedSenderIdHint' | translate }}</mat-hint>
+              </mat-form-field>
+              <mat-form-field appearance="outline"><mat-label>{{ 'customerID' | translate }}</mat-label><input matInput formControlName="customerID"></mat-form-field>
+            </div>
+          </div>
+        </mat-tab>
+
+        <mat-tab *ngIf="showSftpTab">
+          <ng-template mat-tab-label><mat-icon class="tab-icon">lock</mat-icon> SFTP</ng-template>
+          <div class="tab-body">
+            <div class="form-row">
+              <mat-form-field appearance="outline"><mat-label>{{ 'host' | translate }}</mat-label><input matInput formControlName="host"><mat-icon matPrefix>dns</mat-icon></mat-form-field>
+              <mat-form-field appearance="outline"><mat-label>{{ 'username' | translate }}</mat-label><input matInput formControlName="consumerKey"></mat-form-field>
+              <mat-form-field appearance="outline"><mat-label>{{ 'password' | translate }}</mat-label>
+                <input [type]="hide ? 'password' : 'text'" matInput formControlName="consumerSecret">
+                <button mat-icon-button matSuffix type="button" (click)="hide = !hide"><mat-icon>{{hide ? 'visibility_off' : 'visibility'}}</mat-icon></button>
+              </mat-form-field>
+            </div>
+            <div class="form-row">
+              <mat-form-field appearance="outline"><mat-label>{{ 'inboundFolder' | translate }}</mat-label>
+                <input matInput formControlName="baseUrl" placeholder="/partner/inbound">
+                <mat-hint>{{ 'inboundFolderHint' | translate }}</mat-hint>
+              </mat-form-field>
+              <mat-form-field appearance="outline"><mat-label>{{ 'outboundFolder' | translate }}</mat-label>
+                <input matInput formControlName="url" placeholder="/partner/outbound">
+                <mat-hint>{{ 'outboundFolderHint' | translate }}</mat-hint>
+              </mat-form-field>
+            </div>
+            <div class="form-row">
+              <mat-form-field appearance="outline"><mat-label>{{ 'expectedSenderId' | translate }}</mat-label>
+                <input matInput formControlName="realm">
+                <mat-hint>{{ 'expectedSenderIdHint' | translate }}</mat-hint>
+              </mat-form-field>
+              <mat-form-field appearance="outline"><mat-label>{{ 'customerID' | translate }}</mat-label><input matInput formControlName="customerID"></mat-form-field>
+            </div>
+          </div>
+        </mat-tab>
+
+        <mat-tab *ngIf="showFtpTab">
+          <ng-template mat-tab-label><mat-icon class="tab-icon">cloud_upload</mat-icon> FTP</ng-template>
+          <div class="tab-body">
+            <div class="form-row">
+              <mat-form-field appearance="outline"><mat-label>{{ 'host' | translate }}</mat-label><input matInput formControlName="host"><mat-icon matPrefix>dns</mat-icon></mat-form-field>
+              <mat-form-field appearance="outline"><mat-label>{{ 'username' | translate }}</mat-label><input matInput formControlName="consumerKey"></mat-form-field>
+              <mat-form-field appearance="outline"><mat-label>{{ 'password' | translate }}</mat-label>
+                <input [type]="hide ? 'password' : 'text'" matInput formControlName="consumerSecret">
+                <button mat-icon-button matSuffix type="button" (click)="hide = !hide"><mat-icon>{{hide ? 'visibility_off' : 'visibility'}}</mat-icon></button>
+              </mat-form-field>
+            </div>
+            <div class="form-row">
+              <mat-form-field appearance="outline"><mat-label>{{ 'remotePath' | translate }}</mat-label>
+                <input matInput formControlName="method" placeholder="/inbound/850">
+                <mat-icon matPrefix>folder_open</mat-icon>
+                <mat-hint>{{ 'remotePathHint' | translate }}</mat-hint>
+              </mat-form-field>
+              <mat-form-field appearance="outline"><mat-label>{{ 'expectedSenderId' | translate }}</mat-label>
+                <input matInput formControlName="realm">
+                <mat-hint>{{ 'expectedSenderIdHint' | translate }}</mat-hint>
+              </mat-form-field>
+              <mat-form-field appearance="outline"><mat-label>{{ 'customerID' | translate }}</mat-label><input matInput formControlName="customerID"></mat-form-field>
+            </div>
+          </div>
+        </mat-tab>
+
       </mat-tab-group>
     </form>
   </div>

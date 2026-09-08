@@ -43,11 +43,21 @@
 --                   SCREEN only offers SqlServer and Rest, so File, SFTP and FTP
 --                   connectors are seeded here and edited with an UPDATE:
 --
+--                     DECLARE @BS NVARCHAR(4) = REPLICATE(CHAR(92), 2);
 --                     UPDATE dbo.Connectors
 --                        SET Data = REPLACE(REPLACE(Data,
---                              '<<SET_INBOUND_FOLDER>>',  'D:\eSyncMate\EDI\BELL-D12\in'),
---                              '<<SET_OUTBOUND_FOLDER>>', 'D:\eSyncMate\EDI\BELL-D12\out')
+--                              '<<SET_INBOUND_FOLDER>>',
+--                              'D:' + @BS + 'eSyncMate' + @BS + 'EDI' + @BS + 'BELL-D12' + @BS + 'in'),
+--                              '<<SET_OUTBOUND_FOLDER>>',
+--                              'D:' + @BS + 'eSyncMate' + @BS + 'EDI' + @BS + 'BELL-D12' + @BS + 'out')
 --                      WHERE Name = 'BELL-D12 - Inbound Folder';
+--
+--                   Backslashes must be DOUBLED in the stored value: the Data
+--                   column is JSON, and "C:\eSyncMate" is an invalid escape
+--                   sequence that the deserialiser refuses. The UI never has
+--                   this problem because JSON.stringify escapes for you - it is
+--                   only hand-written SQL that has to remember. Forward slashes
+--                   work just as well on Windows and avoid the question.
 --
 --                   The route refuses to run while the placeholders are in
 --                   place, so it cannot read from the wrong folder by accident.

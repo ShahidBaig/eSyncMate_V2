@@ -71,7 +71,9 @@ interface ParamList {
 export class AddConnectorDialogComponent implements OnInit {
   newConnectorForm: FormGroup;
   connectorTypesOptions: ConnectorType[] | undefined;
-  connectivityTypeOptions = ['SqlServer', 'Rest'];
+  // File, SFTP and FTP connectors have always existed in the database and been used by routes,
+  // but until now could only be created in SQL because this list stopped at Rest.
+  connectivityTypeOptions = ['SqlServer', 'Rest', 'File', 'SFTP', 'FTP'];
   headerChipsValues: HeaderList[] = [];
   paramValues: ParamList[] = [];
   hide = true;
@@ -141,6 +143,18 @@ export class AddConnectorDialogComponent implements OnInit {
     return this.newConnectorForm.get('connectivityType')?.value === 'Rest';
   }
 
+  get showFileTab(): boolean {
+    return this.newConnectorForm.get('connectivityType')?.value === 'File';
+  }
+
+  get showSftpTab(): boolean {
+    return this.newConnectorForm.get('connectivityType')?.value === 'SFTP';
+  }
+
+  get showFtpTab(): boolean {
+    return this.newConnectorForm.get('connectivityType')?.value === 'FTP';
+  }
+
   addChips()
   {
     const headerNameControl = this.newConnectorForm.get('headerName');
@@ -195,6 +209,56 @@ export class AddConnectorDialogComponent implements OnInit {
     this.newConnectorForm.get('paramName')?.setValue(param.name);
     this.newConnectorForm.get('paramValue')?.setValue(param.value);
     this.paramValues.splice(index, 1);
+  }
+
+  get isTransferType(): boolean {
+    return ['File', 'SFTP', 'FTP'].includes(this.newConnectorForm.get('connectivityType')?.value);
+  }
+
+  /**
+   * Builds the connector JSON for a File, SFTP or FTP transfer.
+   *
+   * Two things here are not obvious from the form and must not be "tidied":
+   *
+   *   AuthType is set to the connectivity type rather than typed by the user. Every transfer
+   *   route branches on AuthType (`l_Source.AuthType == ConnectorTypesEnum.SFTP.ToString()`), so a
+   *   connector whose AuthType does not match its ConnectivityType is simply never read, silently.
+   *
+   *   The field a value lands in is decided by what the connector class reads, not by what the
+   *   label says. FtpConnector takes the remote path as Method, while SftpConnector and
+   *   FileConnector take it as BaseUrl. The labels describe the meaning; this maps them.
+   */
+  buildTransferData(form: FormGroup): any {
+    const type = form.get('connectivityType')?.value;
+    const data: any = {};
+
+    data.ConnectivityType = type;
+    data.AuthType = type;
+    data.CustomerID = form.get('customerID')?.value;
+    data.Realm = form.get('realm')?.value;
+
+    if (type === 'File') {
+      data.BaseUrl = form.get('baseUrl')?.value;              // folder to read from
+      data.Url = form.get('url')?.value;                      // folder to write into
+      data.Method = form.get('method')?.value || '*';         // file pattern
+    }
+
+    if (type === 'SFTP') {
+      data.Host = form.get('host')?.value;
+      data.ConsumerKey = form.get('consumerKey')?.value;      // username
+      data.ConsumerSecret = form.get('consumerSecret')?.value; // password
+      data.BaseUrl = form.get('baseUrl')?.value;              // remote folder to read from
+      data.Url = form.get('url')?.value;                      // remote folder to write into
+    }
+
+    if (type === 'FTP') {
+      data.Host = form.get('host')?.value;
+      data.ConsumerKey = form.get('consumerKey')?.value;
+      data.ConsumerSecret = form.get('consumerSecret')?.value;
+      data.Method = form.get('method')?.value;                 // FtpConnector reads the path here
+    }
+
+    return data;
   }
 
   onSave(): void
@@ -265,6 +329,12 @@ export class AddConnectorDialogComponent implements OnInit {
       data.CustomerID = this.newConnectorForm.get('customerID')?.value;
 
       jsonString = JSON.stringify(data);
+    }
+
+    // File, SFTP and FTP - the transfers a route reads documents from and writes them back to.
+    if (this.isTransferType)
+    {
+      jsonString = JSON.stringify(this.buildTransferData(this.newConnectorForm));
     }
 
     const connectorModel =

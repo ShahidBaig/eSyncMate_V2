@@ -119,7 +119,7 @@
   "ERPSoNum": "ERP SO No",
   "upc": "UPC",
   "totalQty": "Total Qty",
-  "unitPrice": "unitPrice",
+  "unitPrice": "Unit Price",
   "manufacturerName": "Manufacturer Name",
   "uom": "UOM",
   "NDCItemID": "NDC Item ID",
@@ -296,7 +296,6 @@
   "qty": "Qty",
   "etaDate": "ETA Date",
   "etaQty": "ETA Qty",
-  "alertName": "Alert Name",
   "alertID": "Alert ID",
   "nav": {
     "dashboard": "Dashboard",
@@ -397,7 +396,6 @@
   "orderQty": "Order Qty",
   "shippedQty": "Shipped Qty",
   "cancelQty": "Cancel Qty",
-  "unitPrice": "Unit Price",
   "totalAmount": "Total Amount",
   "addressLine1": "Address Line 1",
   "addressLine2": "Address Line 2",
@@ -414,10 +412,6 @@
   "flowTitle": "Title",
   "addNewFlow": "Add Flow",
   "editFlow": "Edit Flow",
-  "frequencyType": "Frequency Type",
-  "repeatCount": "Repeat Count",
-  "executionTime": "Execution Time",
-  "onDay": "On Day",
   "feature": {
     "title": "API Integration Platform",
     "subtitle": "Seamless marketplace connectivity",
@@ -496,5 +490,16 @@
   "termsOfUse": "Terms of Use",
   "privacyPolicy": "Privacy Policy",
   "loginFooter": "2026 eSyncMate by eSoftage. All rights reserved.",
-  "clear": "Clear"
+  "clear": "Clear",
+  "username": "Username",
+  "inboundFolder": "Inbound Folder",
+  "inboundFolderHint": "Where the partner drops files for eSyncMate to read",
+  "outboundFolder": "Outbound Folder",
+  "outboundFolderHint": "Where eSyncMate writes acknowledgements and outbound documents",
+  "filePattern": "File Pattern",
+  "filePatternHint": "Default * - all files. Use *.edi or *.txt to narrow it",
+  "remotePath": "Remote Path",
+  "remotePathHint": "Folder on the FTP server to read from",
+  "expectedSenderId": "Expected Sender ID",
+  "expectedSenderIdHint": "The ISA sender id to accept, matched to the customer"
 }

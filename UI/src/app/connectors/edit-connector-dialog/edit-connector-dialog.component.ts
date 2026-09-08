@@ -70,7 +70,9 @@ interface ParamList {
 export class EditConnectorDialogComponent implements OnInit {
   updateConnectorForm: FormGroup | any;
   connectorTypesOptions: ConnectorType[] | undefined;
-  connectivityTypeOptions = ['SqlServer', 'Rest'];
+  // File, SFTP and FTP connectors have always existed in the database and been used by routes,
+  // but until now could only be created and edited in SQL because this list stopped at Rest.
+  connectivityTypeOptions = ['SqlServer', 'Rest', 'File', 'SFTP', 'FTP'];
   headerChipsValues: HeaderList[] = [];
   paramValues: ParamList[] = [];
   hide = true;
@@ -129,6 +131,44 @@ export class EditConnectorDialogComponent implements OnInit {
         token: [''],
         tokenSecret: [''],
         realm: [''],
+        headerValue: [''],
+        headerName: [''],
+        paramName: [''],
+        paramValue: [''],
+      });
+    }
+
+    // File, SFTP and FTP. Before this branch existed a connector of one of these types matched
+    // neither of the two below, so updateConnectorForm was never assigned and the dialog threw on
+    // open - the reason they could only ever be edited in SQL.
+    if (connectivityType === 'File' || connectivityType === 'SFTP' || connectivityType === 'FTP')
+    {
+      this.updateConnectorForm = this.formBuilder.group({
+        id: [this.data.id, Validators.required],
+        name: [this.data.name, Validators.required],
+        connectivityType: [connectivityType, Validators.required],
+        typeId: [this.data.typeId, Validators.required],
+
+        host: [jsonObject.Host || ''],
+        baseUrl: [jsonObject.BaseUrl || ''],
+        url: [jsonObject.Url || ''],
+        method: [jsonObject.Method || ''],
+        consumerKey: [jsonObject.ConsumerKey || ''],
+        consumerSecret: [jsonObject.ConsumerSecret || ''],
+        realm: [jsonObject.Realm || ''],
+        customerID: [jsonObject.CustomerID || ''],
+
+        // Not used by a transfer, but the shared template binds them.
+        authType: [jsonObject.AuthType || ''],
+        bodyFormat: [''],
+        token: [''],
+        tokenSecret: [''],
+        commandType: [''],
+        command: [''],
+        keyFieldName: [''],
+        dataFieldName: [''],
+        jsonDataCollectionName: [''],
+        connectionString: [''],
         headerValue: [''],
         headerName: [''],
         paramName: [''],
@@ -209,6 +249,67 @@ export class EditConnectorDialogComponent implements OnInit {
 
   get showSqlServerTab(): boolean {
     return this.updateConnectorForm.get('connectivityType')?.value === 'SqlServer';
+  }
+
+  get showFileTab(): boolean {
+    return this.updateConnectorForm.get('connectivityType')?.value === 'File';
+  }
+
+  get showSftpTab(): boolean {
+    return this.updateConnectorForm.get('connectivityType')?.value === 'SFTP';
+  }
+
+  get showFtpTab(): boolean {
+    return this.updateConnectorForm.get('connectivityType')?.value === 'FTP';
+  }
+
+  get isTransferType(): boolean {
+    return ['File', 'SFTP', 'FTP'].includes(this.updateConnectorForm.get('connectivityType')?.value);
+  }
+
+  /**
+   * Builds the connector JSON for a File, SFTP or FTP transfer.
+   *
+   * AuthType is set to the connectivity type rather than typed by the user: every transfer route
+   * branches on AuthType, so a connector whose AuthType does not match its ConnectivityType is
+   * simply never read, silently.
+   *
+   * The field a value lands in is decided by what the connector class reads, not by the label.
+   * FtpConnector takes the remote path as Method; SftpConnector and FileConnector take it as
+   * BaseUrl. The labels describe the meaning; this maps them.
+   */
+  buildTransferData(): any {
+    const form = this.updateConnectorForm;
+    const type = form.get('connectivityType')?.value;
+    const data: any = {};
+
+    data.ConnectivityType = type;
+    data.AuthType = type;
+    data.CustomerID = form.get('customerID')?.value;
+    data.Realm = form.get('realm')?.value;
+
+    if (type === 'File') {
+      data.BaseUrl = form.get('baseUrl')?.value;
+      data.Url = form.get('url')?.value;
+      data.Method = form.get('method')?.value || '*';
+    }
+
+    if (type === 'SFTP') {
+      data.Host = form.get('host')?.value;
+      data.ConsumerKey = form.get('consumerKey')?.value;
+      data.ConsumerSecret = form.get('consumerSecret')?.value;
+      data.BaseUrl = form.get('baseUrl')?.value;
+      data.Url = form.get('url')?.value;
+    }
+
+    if (type === 'FTP') {
+      data.Host = form.get('host')?.value;
+      data.ConsumerKey = form.get('consumerKey')?.value;
+      data.ConsumerSecret = form.get('consumerSecret')?.value;
+      data.Method = form.get('method')?.value;
+    }
+
+    return data;
   }
 
   get showRestTab(): boolean {
@@ -330,6 +431,12 @@ export class EditConnectorDialogComponent implements OnInit {
       data.CustomerID = this.updateConnectorForm.get('customerID')?.value;
 
       jsonString = JSON.stringify(data);
+    }
+
+    // File, SFTP and FTP - the transfers a route reads documents from and writes them back to.
+    if (this.isTransferType)
+    {
+      jsonString = JSON.stringify(this.buildTransferData());
     }
 
     const customerModel = {
