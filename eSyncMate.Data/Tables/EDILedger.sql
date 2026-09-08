@@ -5,11 +5,15 @@
 --
 -- Two things about this table are deliberate and must not be "tidied" later:
 --
---   OrderId is NULLABLE. Today's artifact store hangs off OrderData, whose OrderId is NOT NULL
---   with an inner join to Orders, so a document that never becomes an order - a malformed 850,
---   an unmappable partner code, an 824, a 997, a 846 feed, an 860 for a PO we do not hold - has
---   nowhere to be retained at all. Those are precisely the documents E10 and E12 exist to make
---   visible. The ledger is order-independent by construction.
+--   OrderId is NULLABLE. The ledger covers every carrier and every document, and a document need
+--   not have become an order - a malformed 850, an 824, a 997, an 846 feed - to be recorded.
+--
+--   The raw X12 artifact is NOT copied here (AD-02, 2026-09-08). eSyncMate already retains every
+--   interchange it receives in InboundEDI, with the ISA and GS identity per interchange in
+--   InboundEDIInfo, and what it sends in OutboundEDI; Orders.InboundEDIId points TO that record.
+--   The ledger links to those rows (InboundEDIId / OutboundEDIId below). EDILedgerArtifact is kept
+--   for the flat-file and DB-map carriers, and for the as-sent and canonical stages, which no
+--   existing table holds.
 --
 --   Direction is from BIZMATE's point of view, not eSyncMate's, because that is the vocabulary
 --   the trace contract fixes: 'In' is partner -> BizMate, 'Out' is BizMate -> partner.
@@ -70,7 +74,9 @@ CREATE TABLE [dbo].[EDILedger] (
     [DeliveredToPartnerAt]  DATETIME2(3)         NULL,       -- outbound: left eSyncMate for the partner
     [AcknowledgedAt]        DATETIME2(3)         NULL,       -- 997/CONTRL closed, or API confirmation
 
-    -- Artifact pointer (W2-03). The artifact rows themselves live in EDILedgerArtifact.
+    -- Artifact pointer (W2-03): eSyncMate's OWN reference, which is what the trace contract means
+    -- by rawArtifactRef ("BizMate does not dereference it") - 'inbound-edi:{id}',
+    -- 'outbound-edi:{id}' or 'artifact:{id}'. BizMate's reference is BizMateRawFileRef below.
     [RawArtifactRef]        NVARCHAR(400)        NULL,
 
     -- Optional links into the operational tables. All nullable on purpose - see the note above.
@@ -78,12 +84,32 @@ CREATE TABLE [dbo].[EDILedger] (
     [RouteId]               INT                  NULL,
     [CustomerId]            INT                  NULL,
 
+    -- AD-02: the raw X12 rows eSyncMate already keeps. Inbound links InboundEDI, outbound links
+    -- OutboundEDI; a row has at most one of the two (CK_EDILedger_RawLinkDirection). Flat-file and
+    -- DB-map documents have neither and use EDILedgerArtifact.
+    [InboundEDIId]          INT                  NULL,
+    [OutboundEDIId]         INT                  NULL,
+
+    -- The rawFileRef BizMate returned from POST /raw. A different fact from RawArtifactRef; the
+    -- first revision stored BizMate's reference in ours (F-21).
+    [BizMateRawFileRef]     BIGINT               NULL,
+
     [CreatedDate]           DATETIME2(3)         NOT NULL CONSTRAINT DF_EDILedger_CreatedDate DEFAULT SYSUTCDATETIME(),
     [CreatedBy]             INT                  NOT NULL,
     [ModifiedDate]          DATETIME2(3)         NULL,
     [ModifiedBy]            INT                  NULL,
 
     CONSTRAINT PK_EDILedger PRIMARY KEY CLUSTERED ([Id] ASC),
+
+    CONSTRAINT FK_EDILedger_InboundEDI  FOREIGN KEY ([InboundEDIId])  REFERENCES [dbo].[InboundEDI]  ([Id]),
+    CONSTRAINT FK_EDILedger_OutboundEDI FOREIGN KEY ([OutboundEDIId]) REFERENCES [dbo].[OutboundEDI] ([Id]),
+
+    -- An inbound record cannot point at something we sent, nor an outbound one at something we
+    -- received.
+    CONSTRAINT CK_EDILedger_RawLinkDirection CHECK (
+           ([Direction] = 'In'  AND [OutboundEDIId] IS NULL)
+        OR ([Direction] = 'Out' AND [InboundEDIId]  IS NULL)
+    ),
 
     CONSTRAINT CK_EDILedger_Direction  CHECK ([Direction] IN ('In','Out')),
     CONSTRAINT CK_EDILedger_Outcome    CHECK ([Outcome]   IN ('Pending','Translated','Failed','Rejected')),
@@ -171,4 +197,18 @@ CREATE NONCLUSTERED INDEX IX_EDILedger_AwaitingAck
     ON [dbo].[EDILedger] ([Mechanism] ASC, [DeliveredToPartnerAt] ASC)
     INCLUDE ([PartnerId], [PartnerControlNo], [DocumentType])
     WHERE [AcknowledgedAt] IS NULL AND [Direction] = 'Out';
+GO
+
+-- AD-02: from a raw row back to its ledger record - the question the test loop's verifier (X-13)
+-- and the order screens ask when they hold an InboundEDI or OutboundEDI id.
+CREATE NONCLUSTERED INDEX IX_EDILedger_InboundEDI
+    ON [dbo].[EDILedger] ([InboundEDIId] ASC)
+    INCLUDE ([TransmissionReference], [DocumentType], [Outcome])
+    WHERE [InboundEDIId] IS NOT NULL;
+GO
+
+CREATE NONCLUSTERED INDEX IX_EDILedger_OutboundEDI
+    ON [dbo].[EDILedger] ([OutboundEDIId] ASC)
+    INCLUDE ([TransmissionReference], [DocumentType], [Outcome])
+    WHERE [OutboundEDIId] IS NOT NULL;
 GO

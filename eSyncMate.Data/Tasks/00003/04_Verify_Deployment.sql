@@ -26,6 +26,9 @@ INSERT INTO @Expected (Kind, ObjectName, ItemName) VALUES
     ('Column', 'EDILedger',          'Mechanism'),
     ('Column', 'EDILedger',          'Channel'),
     ('Column', 'EDILedger',          'Provenance'),
+    ('Column', 'EDILedger',          'InboundEDIId'),
+    ('Column', 'EDILedger',          'OutboundEDIId'),
+    ('Column', 'EDILedger',          'BizMateRawFileRef'),
 
     ('Index',  'EDILedger',          'UX_EDILedger_TransmissionReference'),
     ('Index',  'EDILedger',          'IX_EDILedger_PartnerControl'),
@@ -34,6 +37,8 @@ INSERT INTO @Expected (Kind, ObjectName, ItemName) VALUES
     ('Index',  'EDILedger',          'IX_EDILedger_CorrelationId'),
     ('Index',  'EDILedger',          'IX_EDILedger_Open'),
     ('Index',  'EDILedger',          'IX_EDILedger_AwaitingAck'),
+    ('Index',  'EDILedger',          'IX_EDILedger_InboundEDI'),
+    ('Index',  'EDILedger',          'IX_EDILedger_OutboundEDI'),
     ('Index',  'EDILedgerArtifact',  'IX_EDILedgerArtifact_Ledger'),
     ('Index',  'EDILedgerArtifact',  'IX_EDILedgerArtifact_ContentHash'),
     ('Index',  'EDILedgerArtifact',  'IX_EDILedgerArtifact_DueForArchive'),
@@ -52,6 +57,7 @@ INSERT INTO @Expected (Kind, ObjectName, ItemName) VALUES
     ('Check',  'EDILedger',          'CK_EDILedger_Provenance'),
     ('Check',  'EDILedger',          'CK_EDILedger_ErrorDetail'),
     ('Check',  'EDILedger',          'CK_EDILedger_MechanismDerivation'),
+    ('Check',  'EDILedger',          'CK_EDILedger_RawLinkDirection'),
     ('Check',  'EDILedgerArtifact',  'CK_EDILedgerArtifact_Stage'),
     ('Check',  'EDILedgerArtifact',  'CK_EDILedgerArtifact_Format'),
     ('Check',  'EDILedgerArtifact',  'CK_EDILedgerArtifact_Content'),
@@ -60,7 +66,11 @@ INSERT INTO @Expected (Kind, ObjectName, ItemName) VALUES
     ('Check',  'EDILedgerLink',      'CK_EDILedgerLink_NotSelf'),
     ('Check',  'EDIOutboundQueue',   'CK_EDIOutboundQueue_Status'),
     ('Check',  'EDIOutboundQueue',   'CK_EDIOutboundQueue_Operation'),
-    ('Check',  'EDIOutboundQueue',   'CK_EDIOutboundQueue_FailedReason');
+    ('Check',  'EDIOutboundQueue',   'CK_EDIOutboundQueue_FailedReason'),
+
+    -- AD-02 links. Foreign keys, so a ledger row cannot point at a raw row that does not exist.
+    ('FK',     'EDILedger',          'FK_EDILedger_InboundEDI'),
+    ('FK',     'EDILedger',          'FK_EDILedger_OutboundEDI');
 
 SELECT
     e.Kind,
@@ -74,10 +84,12 @@ SELECT
                                        WHERE name = e.ItemName AND object_id = OBJECT_ID(N'dbo.' + e.ObjectName)))
      OR (e.Kind = 'Check'  AND EXISTS (SELECT 1 FROM sys.check_constraints
                                        WHERE name = e.ItemName AND parent_object_id = OBJECT_ID(N'dbo.' + e.ObjectName)))
+     OR (e.Kind = 'FK'     AND EXISTS (SELECT 1 FROM sys.foreign_keys
+                                       WHERE name = e.ItemName AND parent_object_id = OBJECT_ID(N'dbo.' + e.ObjectName)))
     THEN 'OK' ELSE 'MISSING' END AS State
 FROM @Expected e
 ORDER BY
-    CASE e.Kind WHEN 'Table' THEN 1 WHEN 'View' THEN 2 WHEN 'Column' THEN 3 WHEN 'Index' THEN 4 ELSE 5 END,
+    CASE e.Kind WHEN 'Table' THEN 1 WHEN 'View' THEN 2 WHEN 'Column' THEN 3 WHEN 'Index' THEN 4 WHEN 'Check' THEN 5 ELSE 6 END,
     e.ObjectName, e.ItemName;
 
 -- --- The two vocabulary corrections, checked by content not just presence ---

@@ -23,6 +23,15 @@ namespace eSyncMate.Processor.Connections
         /// </summary>
         public string? InterchangeControlNo { get; set; }
 
+        /// <summary>
+        /// The eSyncMate order this document belongs to, when the renderer resolved one (an 855,
+        /// 856 or 810 answers a specific 850). With it, an X12 rendering is also written to
+        /// <c>OutboundEDI</c>, the table the existing 855/856/810 generators write, and the ledger
+        /// links to that row (AD-02). Without it - an 846 inventory feed, an 824 - the rendering is
+        /// kept in EDILedgerArtifact alone, because <c>OutboundEDI.orderId</c> is NOT NULL (F-22).
+        /// </summary>
+        public int? OrderId { get; set; }
+
         public string? MapName { get; set; }
         public string? MapVersion { get; set; }
         public string? FileName { get; set; }
@@ -38,7 +47,9 @@ namespace eSyncMate.Processor.Connections
     ///
     /// The same ledger-first rule as inbound applies here: the row and the artifact exist before
     /// the transmission is attempted, so a document that fails on the way to the partner is a
-    /// visible record rather than an absence.
+    /// visible record rather than an absence. The as-sent artifact is always kept, byte-exact and
+    /// hashed, in EDILedgerArtifact; where the document belongs to an order, the X12 rendering is
+    /// also written to OutboundEDI and linked, so the existing order screens see it (AD-02).
     /// </summary>
     public sealed class BizMateOutboundPipeline
     {
@@ -140,8 +151,7 @@ namespace eSyncMate.Processor.Connections
             // A RawEDI transmission with no control number cannot be acknowledged: the partner's
             // 997 will quote a number we never recorded, and W2-10 will have nothing to match.
             // Better to fail here, visibly, than to send something unacknowledgeable.
-            if (l_Rendered.Format is BizMateFormats.X12 or BizMateFormats.EDIFACT
-                && string.IsNullOrWhiteSpace(l_Rendered.InterchangeControlNo))
+            if (IsRawEdi(l_Rendered.Format) && string.IsNullOrWhiteSpace(l_Rendered.InterchangeControlNo))
             {
                 return Fail(l_Ledger, "Failed",
                     "The rendered interchange carries no control number, so an inbound 997 could never be " +
@@ -153,10 +163,19 @@ namespace eSyncMate.Processor.Connections
             l_Ledger.InterchangeControlNo = l_Rendered.InterchangeControlNo;
             l_Ledger.MapName = l_Rendered.MapName;
             l_Ledger.MapVersion = l_Rendered.MapVersion;
-            l_Ledger.Modify();
 
-            // ---- 4. Capture what we are about to send, before we send it. ----
-            SaveArtifact(l_Ledger.Id, l_Rendered);
+            // ---- 4. Capture what we are about to send, before we send it (AD-02). ----
+            // Always the byte-exact, hashed as-sent artifact; additionally the OutboundEDI row the
+            // existing generators write, when the document belongs to an order we hold.
+            long l_ArtifactId = SaveArtifact(l_Ledger.Id, l_Rendered);
+            l_Ledger.RawArtifactRef = "artifact:" + l_ArtifactId;
+
+            if (IsRawEdi(l_Rendered.Format) && l_Rendered.OrderId.HasValue)
+            {
+                LinkOutboundEDI(l_Ledger, l_Rendered);
+            }
+
+            l_Ledger.Modify();
 
             // ---- 5. Transmit. ----
             try
@@ -194,6 +213,11 @@ namespace eSyncMate.Processor.Connections
             }
 
             return l_Ledger;
+        }
+
+        private static bool IsRawEdi(string format)
+        {
+            return format is BizMateFormats.X12 or BizMateFormats.EDIFACT;
         }
 
         private EDILedger CreateLedgerRow(OutboundDocument document, string correlationId)
@@ -241,7 +265,8 @@ namespace eSyncMate.Processor.Connections
             return l_Ledger;
         }
 
-        private void SaveArtifact(long ledgerId, RenderedDocument rendered)
+        /// <summary>The as-sent artifact, byte-exact and hashed. Returns the artifact id.</summary>
+        private long SaveArtifact(long ledgerId, RenderedDocument rendered)
         {
             var l_Artifact = new EDILedgerArtifact();
 
@@ -258,6 +283,44 @@ namespace eSyncMate.Processor.Connections
             l_Artifact.CreatedBy = _userNo;
 
             l_Artifact.SaveNew();
+
+            return l_Artifact.Id;
+        }
+
+        /// <summary>
+        /// Writes the X12 rendering to <c>OutboundEDI</c> - the row the existing 855, 856 and 810
+        /// generators write, in their vocabulary - and links the ledger to it (AD-02). Only possible
+        /// when the document resolved to an order, because OutboundEDI.orderId is NOT NULL (F-22).
+        /// </summary>
+        private void LinkOutboundEDI(EDILedger ledger, RenderedDocument rendered)
+        {
+            var l_Outbound = new OutboundEDI();
+
+            l_Outbound.UseConnection(_connectionString);
+
+            l_Outbound.OrderId = rendered.OrderId!.Value;
+            l_Outbound.Status = "NEW";
+            l_Outbound.Data = DecodeForStorage(rendered);
+            l_Outbound.CreatedBy = _userNo;
+            l_Outbound.CreatedDate = DateTime.Now;   // the existing generators write local time here; kept identical
+
+            l_Outbound.SaveNew();
+
+            ledger.OutboundEDIId = l_Outbound.Id;
+            ledger.OrderId = rendered.OrderId;
+            ledger.RawArtifactRef = "outbound-edi:" + l_Outbound.Id;
+        }
+
+        private static string DecodeForStorage(RenderedDocument rendered)
+        {
+            try
+            {
+                return Encoding.GetEncoding(rendered.ContentEncoding).GetString(rendered.Content);
+            }
+            catch (ArgumentException)
+            {
+                return Encoding.UTF8.GetString(rendered.Content);
+            }
         }
 
         private static EDILedger Fail(EDILedger ledger, string outcome, string detail)

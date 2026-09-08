@@ -32,7 +32,7 @@ This folder is the **deployable script set**; numbering continues across phases.
 
 | # | Script | Database | Notes |
 |---|---|---|---|
-| 1 | `01_EDI_Ledger_Tables.sql` | **ESYNCMATE_EU** | `EDILedger`, `EDILedgerArtifact`, `EDILedgerLink` + indexes and check constraints. **Convergent**: also adds `InterchangeControlNo`, widens the mechanism vocabulary to `PartnerAPI` and makes `BizMateDuplicate` NOT NULL if an earlier revision is already deployed. |
+| 1 | `01_EDI_Ledger_Tables.sql` | **ESYNCMATE_EU** | `EDILedger`, `EDILedgerArtifact`, `EDILedgerLink` + indexes and check constraints. **Convergent**: also adds `InterchangeControlNo`, widens the mechanism vocabulary to `PartnerAPI` and makes `BizMateDuplicate` NOT NULL if an earlier revision is already deployed. **AD-02 (2026-09-08)**: also adds `InboundEDIId` / `OutboundEDIId` (real foreign keys to the raw X12 rows eSyncMate already keeps, with `CK_EDILedger_RawLinkDirection`) and `BizMateRawFileRef` (BizMate’s `POST /raw` reference, kept apart from our own `RawArtifactRef` — F-21), plus the two reverse-lookup indexes. Convergent: safe over the revision already deployed. |
 | 2 | `02_EDIOutboundQueue_Table.sql` | **ESYNCMATE_EU** | The durable queue. References `EDILedger`, so run after 01. |
 | 3 | `03_VW_EDITrace_View.sql` | **ESYNCMATE_EU** | The `ESyncMateTraceRecord` projection. `CREATE OR ALTER`. |
 | 4 | `04_Verify_Deployment.sql` | **ESYNCMATE_EU** | Read-only. Reports every expected object, column, index and constraint as OK / MISSING / STALE. Run this rather than trusting the others' `PRINT` output — an interrupted script still prints most of its progress. |

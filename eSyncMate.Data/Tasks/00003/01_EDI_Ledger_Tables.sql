@@ -8,11 +8,15 @@
 --
 -- Two things here are deliberate and must not be "tidied" later:
 --
---   OrderId is NULLABLE. Retention today hangs off OrderData, whose OrderId is
---   NOT NULL with an inner join to Orders, so a document that never becomes an
---   order - a malformed 850, an unmappable partner code, an 824, a 997, a 846
---   feed, an 860 for a PO we do not hold - has nowhere to be retained at all.
---   Those are precisely the documents E10 and E12 exist to make visible.
+--   OrderId is NULLABLE. The ledger covers every carrier and every document,
+--   and a document need not have become an order - a malformed 850, an 824, a
+--   997, an 846 feed - to be recorded.
+--
+--   The raw X12 artifact is NOT copied here (AD-02, 2026-09-08). eSyncMate
+--   already retains every interchange in InboundEDI, with the ISA and GS
+--   identity in InboundEDIInfo, and what it sends in OutboundEDI. The ledger
+--   links to those rows; EDILedgerArtifact is kept for the flat-file and
+--   DB-map carriers and for the as-sent and canonical stages.
 --
 --   Direction is from BIZMATE's point of view, not eSyncMate's, because that is
 --   the vocabulary the trace contract fixes: 'In' is partner -> BizMate.
@@ -23,7 +27,8 @@
 --
 -- CONVERGENT, not just idempotent. Safe to re-run, and safe to run over an
 -- earlier revision of these tables: it adds InterchangeControlNo, widens the
--- mechanism vocabulary to PartnerAPI and makes BizMateDuplicate NOT NULL if an
+-- mechanism vocabulary to PartnerAPI, makes BizMateDuplicate NOT NULL, and adds
+-- the AD-02 links to InboundEDI and OutboundEDI plus BizMateRawFileRef if an
 -- earlier version is already deployed.
 -- ============================================================================
 SET NOCOUNT ON;
@@ -220,6 +225,59 @@ ELSE
     PRINT 'CK_EDILedger_MechanismDerivation already current - no change.';
 GO
 
+-- --- AD-02 (2026-09-08): link to the raw X12 rows instead of copying them ---
+-- eSyncMate already retains every X12 interchange in InboundEDI (with the ISA
+-- and GS identity per interchange in InboundEDIInfo) and what it sends in
+-- OutboundEDI; Orders.InboundEDIId points TO that record. F-3 was wrong for
+-- X12 (F-14). The ledger therefore links to those rows, and EDILedgerArtifact
+-- is kept for the flat-file and DB-map carriers and for the as-sent and
+-- canonical stages no existing table holds.
+--
+-- BizMateRawFileRef: the rawFileRef BizMate returns from POST /raw. The trace
+-- contract defines rawArtifactRef as OUR reference ("BizMate does not
+-- dereference it"); the first revision stored BizMate's there (F-21).
+IF COL_LENGTH('dbo.EDILedger', 'InboundEDIId') IS NULL
+BEGIN
+    ALTER TABLE dbo.EDILedger ADD InboundEDIId INT NULL;
+    PRINT 'Added dbo.EDILedger.InboundEDIId (AD-02)';
+END
+
+IF COL_LENGTH('dbo.EDILedger', 'OutboundEDIId') IS NULL
+BEGIN
+    ALTER TABLE dbo.EDILedger ADD OutboundEDIId INT NULL;
+    PRINT 'Added dbo.EDILedger.OutboundEDIId (AD-02)';
+END
+
+IF COL_LENGTH('dbo.EDILedger', 'BizMateRawFileRef') IS NULL
+BEGIN
+    ALTER TABLE dbo.EDILedger ADD BizMateRawFileRef BIGINT NULL;
+    PRINT 'Added dbo.EDILedger.BizMateRawFileRef (F-21)';
+END
+GO
+
+-- Real foreign keys where the target tables exist (they do in ESYNCMATE_EU).
+-- Guarded so the script still runs in a database that never carried the X12
+-- tables.
+IF OBJECT_ID(N'dbo.InboundEDI', N'U') IS NOT NULL
+   AND NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_EDILedger_InboundEDI')
+    ALTER TABLE dbo.EDILedger ADD CONSTRAINT FK_EDILedger_InboundEDI
+        FOREIGN KEY (InboundEDIId) REFERENCES dbo.InboundEDI (Id);
+
+IF OBJECT_ID(N'dbo.OutboundEDI', N'U') IS NOT NULL
+   AND NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_EDILedger_OutboundEDI')
+    ALTER TABLE dbo.EDILedger ADD CONSTRAINT FK_EDILedger_OutboundEDI
+        FOREIGN KEY (OutboundEDIId) REFERENCES dbo.OutboundEDI (Id);
+
+-- An inbound record cannot point at something we sent, nor an outbound one at
+-- something we received.
+IF NOT EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = 'CK_EDILedger_RawLinkDirection')
+    ALTER TABLE dbo.EDILedger ADD CONSTRAINT CK_EDILedger_RawLinkDirection CHECK (
+           (Direction = 'In'  AND OutboundEDIId IS NULL)
+        OR (Direction = 'Out' AND InboundEDIId  IS NULL));
+
+PRINT 'AD-02 raw-row links verified.';
+GO
+
 -- --- Indexes ---------------------------------------------------------------
 -- Both trace lookups carry every column the trace record needs in their INCLUDE
 -- lists, so each is a covering seek and the contract's 5-second budget is met
@@ -271,6 +329,21 @@ IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_EDILedger_AwaitingAck'
         ON dbo.EDILedger (Mechanism ASC, DeliveredToPartnerAt ASC)
         INCLUDE (PartnerId, PartnerControlNo, DocumentType)
         WHERE AcknowledgedAt IS NULL AND Direction = 'Out';
+
+-- AD-02: from a raw row back to its ledger record - what the test loop's
+-- verifier (X-13) and the order screens ask when they hold an InboundEDI or
+-- OutboundEDI id.
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_EDILedger_InboundEDI' AND object_id = OBJECT_ID(N'dbo.EDILedger'))
+    CREATE NONCLUSTERED INDEX IX_EDILedger_InboundEDI
+        ON dbo.EDILedger (InboundEDIId ASC)
+        INCLUDE (TransmissionReference, DocumentType, Outcome)
+        WHERE InboundEDIId IS NOT NULL;
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_EDILedger_OutboundEDI' AND object_id = OBJECT_ID(N'dbo.EDILedger'))
+    CREATE NONCLUSTERED INDEX IX_EDILedger_OutboundEDI
+        ON dbo.EDILedger (OutboundEDIId ASC)
+        INCLUDE (TransmissionReference, DocumentType, Outcome)
+        WHERE OutboundEDIId IS NOT NULL;
 
 PRINT 'dbo.EDILedger indexes verified.';
 GO

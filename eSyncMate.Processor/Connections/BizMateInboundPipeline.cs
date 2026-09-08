@@ -1,5 +1,7 @@
 using System.Text;
 using System.Text.Json;
+using EdiEngine;
+using EdiEngine.Runtime;
 using eSyncMate.DB;
 using eSyncMate.DB.Entities;
 
@@ -11,7 +13,10 @@ namespace eSyncMate.Processor.Connections
         /// <summary>The trading partner as eSyncMate knows it. Stable per partner.</summary>
         public string PartnerId { get; set; } = string.Empty;
 
-        /// <summary>RawEDI: interchange or group control number. FlatFile/DBMap: the batch identifier.</summary>
+        /// <summary>
+        /// RawEDI: interchange or group control number. FlatFile/DBMap: the batch identifier.
+        /// May be left empty for X12 - the pipeline reads ISA13 from the envelope it links to.
+        /// </summary>
         public string PartnerControlNo { get; set; } = string.Empty;
 
         /// <summary>850, 856, ... Document Catalog codes.</summary>
@@ -57,9 +62,13 @@ namespace eSyncMate.Processor.Connections
     /// whole difference between "we never received it" and "it arrived and broke, here is why"
     /// (E10, E12). Every exit from this method leaves a ledger row that says what happened.
     ///
-    /// It also closes the gap F-3 found: retention today hangs off OrderData, whose OrderId is NOT
-    /// NULL, so a document that never becomes an order has nowhere to live. Nothing here needs an
-    /// order to exist.
+    /// Where the artifact lives (AD-02, 2026-09-08). eSyncMate already keeps every X12 interchange
+    /// it receives in <c>InboundEDI</c>, with the ISA and GS identity per interchange in
+    /// <c>InboundEDIInfo</c>, and <c>Orders.InboundEDIId</c> points to that row. So for X12 this
+    /// pipeline writes the same rows the intake routes write today and the ledger LINKS to them;
+    /// <c>EDILedgerArtifact</c> is used only for the flat-file and DB-map carriers, which have no
+    /// such table. F-3 - "a document that never becomes an order cannot be retained" - was true of
+    /// the marketplace JSON side only, and is retracted for X12 (F-14).
     /// </summary>
     public sealed class BizMateInboundPipeline
     {
@@ -75,11 +84,14 @@ namespace eSyncMate.Processor.Connections
         }
 
         /// <summary>
-        /// Runs one document through: record it, register the artifact, translate, deliver.
+        /// Runs one document through: record it, keep the artifact, register it with BizMate,
+        /// translate, deliver.
         ///
         /// <paramref name="translate"/> turns the raw artifact into the canonical payload. It is a
         /// delegate rather than a dependency because every carrier and partner translates
-        /// differently, and the ordering guarantee here must hold whichever one runs.
+        /// differently, and the ordering guarantee here must hold whichever one runs. For X12 the
+        /// intended implementation is <c>OrderManager.ParseOrder</c> with the customer's
+        /// <c>850 Transformation</c> map, with <c>SaveOrder</c> retained for the parallel run (W2-02).
         /// </summary>
         public async Task<EDILedger> ProcessAsync(
             InboundDocumentContext context,
@@ -90,12 +102,25 @@ namespace eSyncMate.Processor.Connections
             if (translate is null) throw new ArgumentNullException(nameof(translate));
 
             string l_CorrelationId = NewCorrelationId();
+            string l_Text = DecodeForTransport(context);
 
             // ---- 1. The record exists first. Nothing below this line can lose the document. ----
             EDILedger l_Ledger = CreateLedgerRow(context, l_CorrelationId);
 
-            // ---- 2. The artifact, exactly as it crossed the wire, with its hash. ----
-            SaveArtifact(l_Ledger.Id, context, BizMateRequestSigner.HashBody(context.RawContent));
+            // ---- 2. The artifact, exactly as it crossed the wire (AD-02). ----
+            // X12 goes where eSyncMate already keeps it and the ledger links to that row. Anything
+            // else has no existing home and is kept, hashed, in EDILedgerArtifact.
+            if (IsRawEdi(context.Format))
+            {
+                LinkInboundEDI(l_Ledger, context, l_Text);
+            }
+            else
+            {
+                long l_ArtifactId = SaveArtifact(l_Ledger.Id, context, BizMateRequestSigner.HashBody(context.RawContent));
+                l_Ledger.RawArtifactRef = "artifact:" + l_ArtifactId;
+            }
+
+            l_Ledger.Modify();
 
             // ---- 3. Register it with BizMate before anything is interpreted. ----
             try
@@ -103,7 +128,7 @@ namespace eSyncMate.Processor.Connections
                 RegisterRawFileResponse l_Raw = await _connector.RegisterRawAsync(
                     new RegisterRawFileRequest
                     {
-                        Content = DecodeForTransport(context),
+                        Content = l_Text,
                         Format = context.Format,
                         Direction = "In",
                         FileName = context.FileName,
@@ -113,7 +138,10 @@ namespace eSyncMate.Processor.Connections
                     l_CorrelationId,
                     cancellationToken).ConfigureAwait(false);
 
-                l_Ledger.RawArtifactRef = l_Raw.RawFileRef.ToString();
+                // BizMate's reference, kept apart from ours. The trace contract's rawArtifactRef is
+                // "your reference to the original artifact ... BizMate does not dereference it", so
+                // storing theirs in it - as the first revision did - answered the wrong question (F-21).
+                l_Ledger.BizMateRawFileRef = l_Raw.RawFileRef;
                 l_Ledger.Modify();
             }
             catch (BizMateException ex)
@@ -158,9 +186,9 @@ namespace eSyncMate.Processor.Connections
                     context.DocumentType,
                     new InboundDocumentRequest
                     {
-                        RawFileRef = ParseRef(l_Ledger.RawArtifactRef),
+                        RawFileRef = l_Ledger.BizMateRawFileRef ?? 0,
                         PartnerId = context.PartnerId,
-                        PartnerControlNo = context.PartnerControlNo,
+                        PartnerControlNo = l_Ledger.PartnerControlNo ?? string.Empty,
                         Format = context.Format,
                         Mechanism = l_Ledger.Mechanism,
                         SourceFamily = context.Family,
@@ -182,6 +210,9 @@ namespace eSyncMate.Processor.Connections
                 l_Ledger.Outcome = "Translated";
                 l_Ledger.Modify();
 
+                // Keep the raw row's own status truthful for the screens that already read it.
+                SetInboundEDIStatus(l_Ledger, "PROCESSED");
+
                 return l_Ledger;
             }
             catch (BizMateRefusedException ex)
@@ -202,6 +233,11 @@ namespace eSyncMate.Processor.Connections
 
                 return l_Ledger;
             }
+        }
+
+        private static bool IsRawEdi(string format)
+        {
+            return format is BizMateFormats.X12 or BizMateFormats.EDIFACT;
         }
 
         private EDILedger CreateLedgerRow(InboundDocumentContext context, string correlationId)
@@ -242,7 +278,98 @@ namespace eSyncMate.Processor.Connections
             return l_Ledger;
         }
 
-        private void SaveArtifact(long ledgerId, InboundDocumentContext context, string contentHash)
+        /// <summary>
+        /// Writes the <c>InboundEDI</c> row and its <c>InboundEDIInfo</c> identity rows exactly as
+        /// <c>RepaintGetOrderRoute</c> and the <c>Download*FromFTP</c> routes do, and links the
+        /// ledger to them (AD-02).
+        ///
+        /// The raw row is written BEFORE the envelope is parsed and is kept even if parsing fails:
+        /// a malformed 850 is precisely the document E12 exists to make visible, and the translation
+        /// step will report the failure on the ledger. The envelope identity also settles two ledger
+        /// facts the caller may not know: the interchange control number that actually crossed the
+        /// wire, and - when the route did not supply one - the partner control number.
+        /// </summary>
+        private void LinkInboundEDI(EDILedger ledger, InboundDocumentContext context, string text)
+        {
+            var l_Edi = new InboundEDI();
+
+            l_Edi.UseConnection(_connectionString);
+
+            l_Edi.Type = context.DocumentType;
+            l_Edi.Status = "NEW";
+            l_Edi.Data = text;
+            l_Edi.CreatedBy = _userNo;
+            l_Edi.CreatedDate = DateTime.Now;   // the intake routes write local time here; kept identical
+
+            l_Edi.SaveNew();
+
+            ledger.InboundEDIId = l_Edi.Id;
+            ledger.RawArtifactRef = "inbound-edi:" + l_Edi.Id;
+
+            // EDIFACT envelope identity arrives with the commercial component in W3. Until then the
+            // raw row is still retained and linked; only the InboundEDIInfo rows are absent.
+            if (context.Format != BizMateFormats.X12)
+            {
+                return;
+            }
+
+            try
+            {
+                EdiBatch l_Batch = new EdiDataReader().FromString(text);
+                bool l_First = true;
+
+                foreach (EdiInterchange i in l_Batch.Interchanges)
+                {
+                    string l_Isa13 = i.ISA.Content[12].ToString().Trim();
+
+                    if (l_First)
+                    {
+                        ledger.InterchangeControlNo = l_Isa13;
+
+                        if (string.IsNullOrWhiteSpace(ledger.PartnerControlNo))
+                        {
+                            ledger.PartnerControlNo = l_Isa13;
+                        }
+
+                        l_First = false;
+                    }
+
+                    foreach (EdiGroup g in i.Groups)
+                    {
+                        var l_Info = new InboundEDIInfo();
+
+                        l_Info.UseConnection(_connectionString);
+
+                        l_Info.InboundEDIId = l_Edi.Id;
+                        l_Info.ISASenderQual = i.ISA.Content[4].Val.ToString().Trim();
+                        l_Info.ISASenderId = i.ISA.Content[5].Val.ToString().Trim();
+                        l_Info.ISAReceiverQual = i.ISA.Content[6].Val.ToString().Trim();
+                        l_Info.ISAReceiverId = i.ISA.Content[7].Val.ToString().Trim();
+                        l_Info.ISAEdiVersion = i.ISA.Content[11].ToString().Trim();
+                        l_Info.ISAUsageIndicator = i.ISA.Content[14].ToString().Trim();
+                        l_Info.ISAControlNumber = l_Isa13;
+                        l_Info.SegmentSeparator = i.SegmentSeparator;
+                        l_Info.ElementSeparator = i.ElementSeparator;
+                        l_Info.GSSenderId = g.GS.Content[1].ToString().Trim();
+                        l_Info.GSReceiverId = g.GS.Content[2].ToString().Trim();
+                        l_Info.GSControlNumber = g.GS.Content[5].ToString().Trim();
+                        l_Info.GSEdiVersion = g.GS.Content[7].ToString().Trim();
+                        l_Info.CreatedBy = _userNo;
+                        l_Info.CreatedDate = DateTime.Now;
+
+                        l_Info.SaveNew();
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                // Unparseable envelope: the raw row stands, the identity rows do not, and the
+                // translation step below fails visibly with the reason. Nothing is lost.
+            }
+        }
+
+        /// <summary>Non-X12 carriers: the file itself, hashed, in EDILedgerArtifact. Returns the artifact id.</summary>
+        private long SaveArtifact(long ledgerId, InboundDocumentContext context, string contentHash)
         {
             var l_Artifact = new EDILedgerArtifact();
 
@@ -259,13 +386,45 @@ namespace eSyncMate.Processor.Connections
             l_Artifact.CreatedBy = _userNo;
 
             l_Artifact.SaveNew();
+
+            return l_Artifact.Id;
+        }
+
+        /// <summary>
+        /// Mirrors the ledger outcome onto the linked InboundEDI row's own Status, using the
+        /// vocabulary the intake routes already use (NEW, PROCESSED, ERROR), so the existing
+        /// screens keep telling the truth. Never allowed to disturb the ledger outcome.
+        /// </summary>
+        private void SetInboundEDIStatus(EDILedger ledger, string status)
+        {
+            if (!ledger.InboundEDIId.HasValue)
+            {
+                return;
+            }
+
+            try
+            {
+                var l_Edi = new InboundEDI();
+
+                l_Edi.UseConnection(_connectionString);
+
+                if (l_Edi.GetObject(ledger.InboundEDIId.Value).IsSuccess)
+                {
+                    l_Edi.Status = status;
+                    l_Edi.Modify();
+                }
+            }
+            catch (Exception)
+            {
+                // The ledger is the record; the mirror is a courtesy to older screens.
+            }
         }
 
         /// <summary>
         /// Records the failure on the ledger and returns. A document that broke is registered with
         /// its reason rather than dropped, which is the whole of E12.
         /// </summary>
-        private static EDILedger Fail(EDILedger ledger, string outcome, string detail)
+        private EDILedger Fail(EDILedger ledger, string outcome, string detail)
         {
             ledger.Outcome = outcome;
 
@@ -275,12 +434,15 @@ namespace eSyncMate.Processor.Connections
 
             ledger.Modify();
 
+            SetInboundEDIStatus(ledger, "ERROR");
+
             return ledger;
         }
 
         /// <summary>
-        /// BizMate's /raw takes the artifact as text. Decoding here rather than at the call site
-        /// keeps the stored artifact as raw bytes, so its hash stays reproducible (W2-03).
+        /// The artifact as text, for BizMate's /raw and for InboundEDI.Data. Decoding here rather
+        /// than at the call site keeps the hash over the raw bytes reproducible where an
+        /// EDILedgerArtifact row is written (W2-03).
         /// </summary>
         private static string DecodeForTransport(InboundDocumentContext context)
         {
@@ -292,11 +454,6 @@ namespace eSyncMate.Processor.Connections
             {
                 return Encoding.UTF8.GetString(context.RawContent);
             }
-        }
-
-        private static long ParseRef(string? rawArtifactRef)
-        {
-            return long.TryParse(rawArtifactRef, out long l_Ref) ? l_Ref : 0;
         }
 
         /// <summary>

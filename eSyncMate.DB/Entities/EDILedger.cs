@@ -60,12 +60,32 @@ namespace eSyncMate.DB.Entities
         public DateTime? DeliveredToPartnerAt { get; set; }
         public DateTime? AcknowledgedAt { get; set; }
 
+        /// <summary>
+        /// eSyncMate's own reference to the artifact, which is what the trace contract means by
+        /// rawArtifactRef ("BizMate does not dereference it"): 'inbound-edi:{id}',
+        /// 'outbound-edi:{id}' or 'artifact:{id}'. BizMate's own reference is BizMateRawFileRef.
+        /// </summary>
         public string RawArtifactRef { get; set; }
 
-        // All nullable on purpose: the ledger is order-independent by construction (F-3).
+        // All nullable on purpose: the ledger covers every carrier, and an inbound document need
+        // not have become an order to be recorded. (F-3 as first stated was retracted by F-14 -
+        // InboundEDI already gave X12 that independence - but the columns stay nullable.)
         public int? OrderId { get; set; }
         public int? RouteId { get; set; }
         public int? CustomerId { get; set; }
+
+        // AD-02 (2026-09-08): for X12 the raw artifact is the row eSyncMate already keeps, not a copy.
+        // Inbound links InboundEDI (with its InboundEDIInfo identity rows); outbound links OutboundEDI.
+        // Both nullable: the flat-file and DB-map carriers have no such row and use EDILedgerArtifact.
+        // CK_EDILedger_RawLinkDirection stops an inbound row pointing at OutboundEDI and vice versa.
+        public int? InboundEDIId { get; set; }
+        public int? OutboundEDIId { get; set; }
+
+        /// <summary>
+        /// The rawFileRef BizMate returned from POST /raw. Kept apart from RawArtifactRef, which
+        /// the contract defines as OUR reference; the first revision stored BizMate's there (F-21).
+        /// </summary>
+        public long? BizMateRawFileRef { get; set; }
 
         public DateTime CreatedDate { get; set; }
         public int CreatedBy { get; set; }
