@@ -49,9 +49,14 @@ namespace eSyncMate.Processor.Managers
                 l_Response.JSON = jsonTransformation;
                 l_Response.DBFields = jsonDBFields;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 l_Response.Code = (int)ResponseCodes.Exception;
+
+                // Record why. Without this the caller can only report "ParseOrder failed" with no
+                // detail, and a map that fails to resolve a custom function - the assembly or
+                // namespace being wrong, say - looks identical to a malformed document.
+                l_Response.Message = ex.Message;
             }
 
             return l_Response;

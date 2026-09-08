@@ -38,10 +38,27 @@ namespace eSyncMate.RouteWorker
                 // Build configuration - use executable directory, not current directory
                 var exeDirectory = AppDomain.CurrentDomain.BaseDirectory;
 
+                // The environment-specific file matters as much here as it does in the Processor.
+                // Without it this worker read appsettings.json only, so it kept using the base
+                // connection string while the Processor that launched it was on the Development
+                // one - and because DBConnector.OpenConnection retries by unbounded recursion, an
+                // unreachable server showed up as a worker that hung forever holding its route
+                // lock, with nothing in RouteLog, rather than as an error.
+                //
+                // Process.Start with UseShellExecute=false passes the parent's environment down,
+                // so this picks up whatever the Processor is running as.
+                var environmentName =
+                    Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT")
+                    ?? Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+
                 var configuration = new ConfigurationBuilder()
                     .SetBasePath(exeDirectory)
                     .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+                    .AddJsonFile($"appsettings.{environmentName}.json", optional: true, reloadOnChange: true)
+                    .AddEnvironmentVariables()
                     .Build();
+
+                Console.WriteLine($"[RouteWorker] Environment: {environmentName ?? "(none)"}");
 
                 CommonUtils.ConnectionString = configuration.GetConnectionString("DefaultConnection");
                 // All other config/secrets come from the ApplicationSettings table (not appsettings.json)
@@ -467,6 +484,14 @@ namespace eSyncMate.RouteWorker
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.ErrorOrderRetry))
                 {
                     ErrorOrderRetryRoute.Execute(config, route);
+                }
+                // BizMate EU integration (task 00003). This chain is a duplicate of the one in
+                // RouteEngine.Execute: with RouteEngine:UseExternalProcess true every route runs
+                // here, so a new route type added only to RouteEngine reaches this worker and
+                // falls through to "Unknown route type". Both must be updated together.
+                else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.BizMateInboundEDI))
+                {
+                    BizMateInboundEDIRoute.Execute(config, route);
                 }
                 else
                 {

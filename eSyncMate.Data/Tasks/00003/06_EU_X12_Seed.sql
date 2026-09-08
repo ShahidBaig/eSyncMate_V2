@@ -16,10 +16,16 @@
 --                   NAME - the ids there (1, 2) are taken in this database by
 --                   the marketplace types, and the code looks maps up by
 --                   MapTypeName, never by id.
---   Maps            the production 850 map and the 850 DB Fields map, verbatim
---                   from InitialSetup/MapsData.sql. Note the 850 map emits BOTH
---                   lineNo (ordinal) and ediLineId (PO1-01) - see EQ-13 before
---                   changing it.
+--   Maps            the production 850 map and the 850 DB Fields map from
+--                   InitialSetup/MapsData.sql, with one correction: that file
+--                   predates the product rename and calls
+--                   #customfunction(EDI.Processor, EDI.Maps.Transformations.X)
+--                   while the assembly is eSyncMate.Processor and the type is
+--                   eSyncMate.Maps.Transformations. JUST.net cannot resolve the
+--                   old names and throws, so the map is rewritten on insert to
+--                   match the eleven marketplace maps already in this database.
+--                   Note the 850 map emits BOTH lineNo (ordinal) and ediLineId
+--                   (PO1-01) - see EQ-13 before changing it.
 --   Customers       'BizMate' as the ERP-side party (the role SPARS plays in
 --                   the US instance), and 'BELL-D12', the BizMate non-production
 --                   test partner. Its ISACustomerID is BELL-D12 because the M1
@@ -282,6 +288,21 @@ BEGIN
 }', GETDATE(), 1);
     PRINT 'Maps: added 850 DB Fields';
 END
+GO
+
+-- Convergence: an earlier run of this script inserted the maps verbatim, with
+-- the pre-rename assembly and namespace. Bring them into line.
+UPDATE dbo.Maps
+   SET Map = REPLACE(REPLACE(Map,
+             'EDI.Maps.Transformations', 'eSyncMate.Maps.Transformations'),
+             '#customfunction(EDI.Processor', '#customfunction(eSyncMate.Processor'),
+       ModifiedDate = SYSUTCDATETIME(),
+       ModifiedBy   = 1
+ WHERE Name IN ('850', '850 DB Fields')
+   AND Map LIKE '%EDI.Maps.Transformations%';
+
+IF @@ROWCOUNT > 0
+    PRINT 'Maps: rewrote the seeded 850 maps onto eSyncMate.Processor / eSyncMate.Maps.Transformations';
 GO
 
 -- ---------------------------------------------------------------------------
