@@ -3,6 +3,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Data;
+using System.Data.SqlClient;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Metadata;
@@ -460,6 +461,20 @@ namespace eSyncMate.DB.Entities
             updateQuery += $"WHERE  OrderNumber = '{OrderNumber}' AND OrderId = 0";
 
             return this.Connection.Execute(updateQuery);
+        }
+
+        // Replace the stored payload of one OrderData row. Parameterised on purpose: the payload
+        // is a whole API-JSON document and can carry apostrophes (item titles) that would break a
+        // concatenated UPDATE.
+        public bool UpdateData(int p_Id, string p_Data)
+        {
+            SqlParameter[] l_Params = new SqlParameter[]
+            {
+                new SqlParameter("@p_Data", SqlDbType.NVarChar, -1) { Value = (object)p_Data ?? DBNull.Value },
+                new SqlParameter("@p_Id", SqlDbType.Int) { Value = p_Id }
+            };
+
+            return this.Connection.Execute("UPDATE OrderData SET Data = @p_Data WHERE Id = @p_Id", -1, l_Params);
         }
     }
 }

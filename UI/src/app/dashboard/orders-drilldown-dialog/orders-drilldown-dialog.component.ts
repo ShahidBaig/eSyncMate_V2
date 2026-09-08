@@ -14,6 +14,7 @@ import { OrderDetailComponent } from '../../orders/order-detail/order-detail.com
 import { PopupComponent } from '../../popup/popup.component';
 import { ResubmitConfirmDialogComponent } from '../../orders/resubmit-confirm-dialog/resubmit-confirm-dialog.component';
 import { ReTransmitConfirmDialogComponent } from '../../orders/retransmit-confirm-dialog/retransmit-confirm-dialog.component';
+import { RemapResultDialogComponent } from '../../orders/remap-result-dialog/remap-result-dialog.component';
 
 @Component({
   selector: 'orders-drilldown-dialog',
@@ -33,8 +34,12 @@ export class OrdersDrilldownDialogComponent implements OnInit {
   canEdit = false;
   canResubmit = false;
   canReTransmit = false;
+  canRemapItemIds = false;
   showResubmitAction = false;
   showReTransmitAction = false;
+  showRemapItemIdsAction = false;
+  // ERPCustomerIDs the Re-Map Item IDs action applies to, from ApplicationSettings.
+  private amazonCustomerIds = new Set<string>();
 
   errorStatuses = ['ERROR', 'ASNERROR', 'ACKERROR', 'SYNCERROR'];
 
@@ -196,16 +201,22 @@ export class OrdersDrilldownDialogComponent implements OnInit {
       // Assigned value when present; fall back to admin if missing (older cached menus).
       this.canResubmit = permissions.canResubmit ?? isAdmin;
       this.canReTransmit = permissions.canReTransmit ?? isAdmin;
+      this.canRemapItemIds = permissions.canRemapItemIds ?? isAdmin;
     } else {
       this.canEdit = isAdmin;
       this.canResubmit = isAdmin;
       this.canReTransmit = isAdmin;
+      this.canRemapItemIds = isAdmin;
     }
     // Global feature toggles (live) — flag 0 hides the action button entirely
     this.api.getActionColumnVisibility().subscribe({
       next: (res: any) => {
         this.showResubmitAction = !!res?.showResubmit;
         this.showReTransmitAction = !!res?.showReTransmit;
+        this.showRemapItemIdsAction = !!res?.showRemapItemIds;
+        this.amazonCustomerIds = new Set<string>(
+          (res?.amazonCustomerIds || []).map((id: string) => (id + '').trim().toLowerCase())
+        );
       },
       error: () => { /* default hidden */ }
     });
@@ -292,6 +303,52 @@ export class OrdersDrilldownDialogComponent implements OnInit {
         },
         error: (err: any) => { this.reprocessingId = null; this.toast.error({ detail: "ERROR", summary: err?.error?.message || err.message, duration: 5000, position: 'topRight' }); }
       });
+    });
+  }
+
+  // Note: the row-level error gate is the existing isRowErrorStatus() above — it already uses
+  // the same ERROR / ACKERROR / ASNERROR set as the Orders grid. The isErrorStatus getter is a
+  // different thing: it reflects the drilldown's own filter, not a row.
+  //
+  // Matched on ERPCustomerID against the list the API serves; the endpoint checks the same list.
+  isAmazonOrder(element: any): boolean {
+    return this.amazonCustomerIds.has(((element?.erpCustomerID ?? '') + '').toLowerCase());
+  }
+
+  // No confirmation step — see the note on RemapItemIds in orders.component.ts.
+  remapItemIds(element: any): void {
+    this.reprocessingId = element.id;
+    this.api.RemapItemIds(element.id, element.erpCustomerID).subscribe({
+      next: (res: any) => {
+        this.reprocessingId = null;
+
+        if (res?.code !== 200) {
+          this.toast.error({ detail: "ERROR", summary: res?.message, duration: 5000, position: 'topRight' });
+          return;
+        }
+
+        // The per-line breakdown says which SKU was not found and that its Item ID was kept
+        // as it was — a toast cannot carry that.
+        if (res?.lines?.length) {
+          this.dialog.open(RemapResultDialogComponent, {
+            width: '800px',
+            maxHeight: '90vh',
+            data: {
+              orderNumber: res.orderNumber ?? element.orderNumber,
+              updated: res.updated ?? 0,
+              unchanged: res.unchanged ?? 0,
+              notFound: res.notFound ?? 0,
+              ambiguous: res.ambiguous ?? 0,
+              lines: res.lines
+            }
+          });
+        } else {
+          this.toast.info({ detail: "INFO", summary: res?.message, duration: 5000, position: 'topRight' });
+        }
+
+        if ((res?.updated ?? 0) > 0) { this.loadOrders(); }
+      },
+      error: (err: any) => { this.reprocessingId = null; this.toast.error({ detail: "ERROR", summary: err?.error?.message || err.message, duration: 5000, position: 'topRight' }); }
     });
   }
 

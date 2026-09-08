@@ -131,11 +131,24 @@ namespace eSyncMate.Processor.Managers
                             DBConnection.GetData($"SELECT * FROM SCSInventoryFeed WHERE CustomerID = '{l_SourceConnector.CustomerID}' ", ref p_SCSInventoryFeedDt);
 
                         }
-                        catch (Exception)
+                        catch (Exception exFeed)
                         {
-
+                            // This used to be swallowed silently. An empty feed table means EVERY
+                            // line in this run falls back to the raw Seller SKU as its ItemID, so
+                            // every order lands in ERROR at the ERP — with nothing in the log to
+                            // say why. It is not fatal (the orders are still worth creating), but
+                            // it must be visible.
+                            route.SaveLog(LogTypeEnum.Error,
+                                $"Could not load SCSInventoryFeed for [{l_SourceConnector.CustomerID}]. Item IDs cannot be resolved, so this run's orders will carry the raw Seller SKU and will be rejected by the ERP.",
+                                exFeed.ToString(), userNo);
                         }
-                        
+
+                        if (p_SCSInventoryFeedDt.Rows.Count == 0)
+                        {
+                            route.SaveLog(LogTypeEnum.Warning,
+                                $"SCSInventoryFeed returned no rows for [{l_SourceConnector.CustomerID}] — every order in this run will keep its raw Seller SKU as the Item ID.",
+                                string.Empty, userNo);
+                        }
 
                         foreach (var order in allOrders)
                         {
@@ -145,7 +158,19 @@ namespace eSyncMate.Processor.Managers
 
                             if (l_OrderData.Rows.Count == 0)
                             {
-                                ProcessOrder(order, route, l_Customer, l_SourceConnector, l_DestinationConnector, userNo, p_SCSInventoryFeedDt);
+                                // One unusable order used to abort the whole fetch — ProcessOrder
+                                // rethrows, and the only catch is around the entire route, so every
+                                // Amazon order after it was never created at all. Isolated now.
+                                try
+                                {
+                                    ProcessOrder(order, route, l_Customer, l_SourceConnector, l_DestinationConnector, userNo, p_SCSInventoryFeedDt);
+                                }
+                                catch (Exception exOrder)
+                                {
+                                    route.SaveLog(LogTypeEnum.Exception,
+                                        $"Error creating Amazon order [{order.AmazonOrderId}] — skipped, the remaining orders continue.",
+                                        exOrder.ToString(), userNo);
+                                }
                             }
                         }
                     }
@@ -287,6 +312,17 @@ namespace eSyncMate.Processor.Managers
             foreach (var orderLine in OrderDetail.payload.OrderItems)
             {
                 orderLine.LineNo = l_OrderLineNo;
+
+                // Amazon titles carry inch marks — "SAFAVIEH Lighting Nadia Floor Lamp, 53 - 64.25" Metal".
+                // A quote that reaches the stored API-JSON unescaped breaks JSON.Parse for the WHOLE
+                // order, and SCSPlaceOrderRoute then cannot place it (JsonReaderException at
+                // OrderItems[n].Title). Title is decorative here — no code and no ERP map reads it —
+                // so the quotes are dropped at source rather than risking the payload.
+                if (!string.IsNullOrEmpty(orderLine.Title))
+                {
+                    orderLine.Title = orderLine.Title.Replace("\\", " ").Replace("\"", " in ").Trim();
+                }
+
                 var sku = orderLine?.SellerSKU?.Trim();
 
                 DataRow row = p_SCSInventoryFeed.Select($"CustomerItemCode = '{sku}'").FirstOrDefault();

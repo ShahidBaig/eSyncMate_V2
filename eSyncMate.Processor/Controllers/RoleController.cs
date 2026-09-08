@@ -32,7 +32,12 @@ namespace eSyncMate.Processor.Controllers
             return Ok(new
             {
                 showResubmit = ReadSettingFlag("ShowResubmitActionInRoles"),
-                showReTransmit = ReadSettingFlag("ShowReTransmitActionInRoles")
+                showReTransmit = ReadSettingFlag("ShowReTransmitActionInRoles"),
+                showRemapItemIds = ReadSettingFlag("ShowRemapItemIdsActionInRoles"),
+                // Which ERPCustomerIDs the Re-Map Item IDs button may appear on. Served here so the
+                // Orders grid and the dashboard drilldown share one list with the endpoint that
+                // enforces it, instead of each guessing from Customers.Marketplace.
+                amazonCustomerIds = OrdersController.GetAmazonCustomerIds().ToList()
             });
         }
 
