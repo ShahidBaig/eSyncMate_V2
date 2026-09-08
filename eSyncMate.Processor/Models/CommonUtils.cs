@@ -193,7 +193,10 @@ namespace eSyncMate.Processor.Models
         StaleLockCleanup = 72,
         WalmartWHSWInventoryUpload = 73,
         // Auto-retries error orders (Period / Timeout / No Response from SPARS) via the single-order reprocess
-        ErrorOrderRetry = 74
+        ErrorOrderRetry = 74,
+
+        // BizMate EU integration (task 00003). 600-series, like Repaint's 500-series.
+        BizMateInboundEDI = 600
 
     }
 

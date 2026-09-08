@@ -54,6 +54,38 @@ namespace eSyncMate.Processor.Connections
         public string? MapVersion { get; set; }
     }
 
+    /// <summary>What the pipeline hands the translation step, after the record and the raw row exist.</summary>
+    public sealed class InboundTranslationInput
+    {
+        /// <summary>The artifact exactly as it crossed the wire.</summary>
+        public byte[] RawContent { get; set; } = Array.Empty<byte>();
+
+        /// <summary>The same bytes decoded as text, which is what the X12 reader and the maps take.</summary>
+        public string Text { get; set; } = string.Empty;
+
+        /// <summary>The InboundEDI row the ledger links to. Null for non-X12 carriers.</summary>
+        public InboundEDI? InboundEDI { get; set; }
+
+        /// <summary>The first interchange's ISA/GS identity, for the 997 and the order. Null if the envelope did not parse.</summary>
+        public InboundEDIInfo? FirstInterchange { get; set; }
+
+        /// <summary>The ledger row, already saved. Read it; the pipeline owns writing it.</summary>
+        public EDILedger Ledger { get; set; } = null!;
+    }
+
+    /// <summary>What the translation step gives back: the canonical payload and what it learned on the way.</summary>
+    public sealed class InboundTranslationResult
+    {
+        /// <summary>The canonical document, as BizMate's schema for the document type expects it.</summary>
+        public JsonElement Payload { get; set; }
+
+        /// <summary>The eSyncMate order the document became, when the translation created one.</summary>
+        public int? OrderId { get; set; }
+
+        public string? MapName { get; set; }
+        public string? MapVersion { get; set; }
+    }
+
     /// <summary>
     /// The inbound path, in the order the requirements demand (W2-02, W1-06, W1-07, W2-08).
     ///
@@ -90,12 +122,14 @@ namespace eSyncMate.Processor.Connections
         /// <paramref name="translate"/> turns the raw artifact into the canonical payload. It is a
         /// delegate rather than a dependency because every carrier and partner translates
         /// differently, and the ordering guarantee here must hold whichever one runs. For X12 the
-        /// intended implementation is <c>OrderManager.ParseOrder</c> with the customer's
-        /// <c>850 Transformation</c> map, with <c>SaveOrder</c> retained for the parallel run (W2-02).
+        /// implementation is <c>OrderManager.ParseOrder</c> with the customer's
+        /// <c>850 Transformation</c> map, with <c>SaveOrder</c> retained for the parallel run (W2-02) -
+        /// see <c>BizMateInboundEDIRoute</c>. It receives the linked InboundEDI row and the envelope
+        /// identity so the order it creates can reference them, and gives back the order it created.
         /// </summary>
         public async Task<EDILedger> ProcessAsync(
             InboundDocumentContext context,
-            Func<byte[], JsonElement> translate,
+            Func<InboundTranslationInput, InboundTranslationResult> translate,
             CancellationToken cancellationToken = default)
         {
             if (context is null) throw new ArgumentNullException(nameof(context));
@@ -103,6 +137,8 @@ namespace eSyncMate.Processor.Connections
 
             string l_CorrelationId = NewCorrelationId();
             string l_Text = DecodeForTransport(context);
+            InboundEDI? l_InboundEDI = null;
+            InboundEDIInfo? l_FirstInterchange = null;
 
             // ---- 1. The record exists first. Nothing below this line can lose the document. ----
             EDILedger l_Ledger = CreateLedgerRow(context, l_CorrelationId);
@@ -112,7 +148,7 @@ namespace eSyncMate.Processor.Connections
             // else has no existing home and is kept, hashed, in EDILedgerArtifact.
             if (IsRawEdi(context.Format))
             {
-                LinkInboundEDI(l_Ledger, context, l_Text);
+                (l_InboundEDI, l_FirstInterchange) = LinkInboundEDI(l_Ledger, context, l_Text);
             }
             else
             {
@@ -156,8 +192,21 @@ namespace eSyncMate.Processor.Connections
 
             try
             {
-                l_Payload = translate(context.RawContent);
+                InboundTranslationResult l_Result = translate(new InboundTranslationInput
+                {
+                    RawContent = context.RawContent,
+                    Text = l_Text,
+                    InboundEDI = l_InboundEDI,
+                    FirstInterchange = l_FirstInterchange,
+                    Ledger = l_Ledger
+                });
+
+                l_Payload = l_Result.Payload;
                 l_Ledger.TranslatedAt = DateTime.UtcNow;
+                l_Ledger.OrderId ??= l_Result.OrderId;
+                l_Ledger.MapName = l_Result.MapName ?? l_Ledger.MapName;
+                l_Ledger.MapVersion = l_Result.MapVersion ?? l_Ledger.MapVersion;
+                l_Ledger.Modify();
             }
             catch (Exception ex)
             {
@@ -289,8 +338,9 @@ namespace eSyncMate.Processor.Connections
         /// facts the caller may not know: the interchange control number that actually crossed the
         /// wire, and - when the route did not supply one - the partner control number.
         /// </summary>
-        private void LinkInboundEDI(EDILedger ledger, InboundDocumentContext context, string text)
+        private (InboundEDI, InboundEDIInfo?) LinkInboundEDI(EDILedger ledger, InboundDocumentContext context, string text)
         {
+            InboundEDIInfo? l_FirstInfo = null;
             var l_Edi = new InboundEDI();
 
             l_Edi.UseConnection(_connectionString);
@@ -310,7 +360,7 @@ namespace eSyncMate.Processor.Connections
             // raw row is still retained and linked; only the InboundEDIInfo rows are absent.
             if (context.Format != BizMateFormats.X12)
             {
-                return;
+                return (l_Edi, null);
             }
 
             try
@@ -358,6 +408,8 @@ namespace eSyncMate.Processor.Connections
                         l_Info.CreatedDate = DateTime.Now;
 
                         l_Info.SaveNew();
+
+                        l_FirstInfo ??= l_Info;
                     }
                 }
             }
@@ -366,6 +418,8 @@ namespace eSyncMate.Processor.Connections
                 // Unparseable envelope: the raw row stands, the identity rows do not, and the
                 // translation step below fails visibly with the reason. Nothing is lost.
             }
+
+            return (l_Edi, l_FirstInfo);
         }
 
         /// <summary>Non-X12 carriers: the file itself, hashed, in EDILedgerArtifact. Returns the artifact id.</summary>

@@ -246,5 +246,6 @@
     <None Include="Tasks\00003\03_VW_EDITrace_View.sql" />
     <None Include="Tasks\00003\04_Verify_Deployment.sql" />
     <None Include="Tasks\00003\05_BizMate_TraceApiKey.sql" />
+    <None Include="Tasks\00003\06_EU_X12_Seed.sql" />
     <None Include="Triggers\trg_OrderDataLogs.sql" />  </ItemGroup>
 </Project>
