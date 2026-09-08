@@ -85,6 +85,12 @@
             <mat-icon *ngIf="reprocessingId !== row.id" style="color:#dc2626;">restart_alt</mat-icon>
             <mat-icon *ngIf="reprocessingId === row.id" class="spinning">sync</mat-icon>
           </button>
+          <button mat-icon-button matTooltip="Re-Map Item IDs"
+                  *ngIf="showRemapItemIdsAction && canRemapItemIds && isRowErrorStatus(row) && isAmazonOrder(row)"
+                  (click)="remapItemIds(row)" [disabled]="reprocessingId === row.id">
+            <mat-icon *ngIf="reprocessingId !== row.id" style="color:#E8834A;">auto_fix_high</mat-icon>
+            <mat-icon *ngIf="reprocessingId === row.id" class="spinning">sync</mat-icon>
+          </button>
           <button mat-icon-button matTooltip="Resubmit to ERP" *ngIf="showResubmitAction && canResubmit && isRowSynced(row)"
                   (click)="resubmitOrder(row)" [disabled]="reprocessingId === row.id">
             <mat-icon *ngIf="reprocessingId !== row.id" style="color:#0891b2;">cloud_sync</mat-icon>

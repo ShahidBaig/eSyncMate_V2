@@ -98,9 +98,27 @@ namespace eSyncMate.Processor.Managers
 
                     foreach (DataRow l_Row in l_dataTable.Rows)
                     {
-
-
-                        ProcessOrder(l_Row, route, l_DestinationConnector, l_SourceConnector, l_TransformationMap, userNo);
+                        // One bad order used to abort the whole run: the only catch was around the
+                        // entire route, so every order queued behind it silently never reached the
+                        // ERP. Each order is isolated now — it is logged and the batch carries on.
+                        try
+                        {
+                            ProcessOrder(l_Row, route, l_DestinationConnector, l_SourceConnector, l_TransformationMap, userNo);
+                        }
+                        catch (JsonReaderException exJson)
+                        {
+                            // The stored API-JSON will not parse. Called out separately because the
+                            // raw exception names no order, which makes it unfindable in the log.
+                            route.SaveLog(LogTypeEnum.Error,
+                                $"Order [{PublicFunctions.ConvertNullAsString(l_Row["OrderNumber"], string.Empty)}] (Id {PublicFunctions.ConvertNullAsString(l_Row["Id"], string.Empty)}) has malformed API-JSON and was skipped. Fix OrderData.Data for this order, then re-process it.",
+                                exJson.ToString(), userNo);
+                        }
+                        catch (Exception exOrder)
+                        {
+                            route.SaveLog(LogTypeEnum.Exception,
+                                $"Error processing order [{PublicFunctions.ConvertNullAsString(l_Row["OrderNumber"], string.Empty)}] (Id {PublicFunctions.ConvertNullAsString(l_Row["Id"], string.Empty)}) — skipped, the remaining orders continue.",
+                                exOrder.ToString(), userNo);
+                        }
                     }
 
                     route.SaveLog(LogTypeEnum.Debug, "Destination connector processed.", string.Empty, userNo);
@@ -256,6 +274,50 @@ namespace eSyncMate.Processor.Managers
             OrderData l_OrderData = new OrderData();
             string Body = PublicFunctions.ConvertNullAsString(l_Row["Data"], string.Empty);
             int l_ID = PublicFunctions.ConvertNullAsInteger(l_Row["Id"], 0);
+
+            // A payload that will not parse can never be placed, so this order is skipped and the
+            // batch carries on. Deliberately NOT repaired here — this route posts orders, it does
+            // not rewrite stored data. Repair it with the Re-Map Item IDs action (or by fixing
+            // OrderData.Data), then re-process the order.
+            if (!OrderPayloadRepair.IsValid(Body))
+            {
+                route.SaveLog(LogTypeEnum.Error,
+                    $"Order [{l_ID}] has an API-JSON payload that is not readable JSON — skipped, the remaining orders continue. Repair the payload, then re-process this order.",
+                    Body != null && Body.Length > 2000 ? Body.Substring(0, 2000) : Body, userNo);
+
+                // Moved to ERROR exactly like any other placement failure. Without this the order
+                // keeps its New/InProgress status, so the route re-reads and re-fails it on every
+                // run, it never shows as an error on the Orders screen, and the Re-Map Item IDs
+                // action — which is what repairs it — never appears, because that action only
+                // offers itself on error rows.
+                DBConnector l_StatusConnection = new DBConnector(sourceConnector.ConnectionString);
+
+                l_StatusConnection.Execute("EXEC SP_UpdateOrderStatus @p_CustomerID ='" + sourceConnector.CustomerID + "',@p_RouteType = '" + RouteTypesEnum.SCSPlaceOrder + "Error',@p_ExternalId = '',@p_OrderId = " + l_ID);
+
+                string l_PayloadErrorContent = JsonConvert.SerializeObject(new
+                {
+                    message = "Order payload is not readable JSON — a product Title contains an unescaped quote. Use the Re-Map Item IDs action to repair it, then re-process the order."
+                });
+
+                l_OrderData.UseConnection(sourceConnector.ConnectionString);
+
+                if (!isResubmit)
+                {
+                    l_OrderData.DeleteWithType(l_ID, "ERP-ERROR");
+                }
+
+                l_OrderData.Type = "ERP-ERROR";
+                l_OrderData.Data = l_PayloadErrorContent;
+                l_OrderData.CreatedBy = userNo;
+                l_OrderData.CreatedDate = DateTime.Now;
+                l_OrderData.OrderId = l_ID;
+                l_OrderData.OrderNumber = PublicFunctions.ConvertNullAsString(l_Row["OrderNumber"], string.Empty);
+                l_OrderData.SaveNew();
+
+                // Informational, not an exception: the single-order paths (Re-Process / Resubmit)
+                // surface this text to the user.
+                return "Order payload is not readable JSON — not posted.";
+            }
 
             string jsonTransformation = new JsonTransformer().Transform(transformationMap, Body);
             jsonTransformation = jsonTransformation.Replace("@CUSTOMERID@", destinationConnector.CustomerID);

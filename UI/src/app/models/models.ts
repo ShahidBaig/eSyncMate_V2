@@ -46,6 +46,7 @@ export interface UserMenuItem {
   canDelete: boolean;
   canResubmit: boolean;
   canReTransmit: boolean;
+  canRemapItemIds: boolean;
 }
 
 export interface UserMenuModule {

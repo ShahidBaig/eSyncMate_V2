@@ -98,13 +98,13 @@ export class ApiService {
     return false;
   }
 
-  getMenuPermissions(route: string): { canView: boolean, canAdd: boolean, canEdit: boolean, canDelete: boolean, canResubmit: boolean, canReTransmit: boolean } | null {
+  getMenuPermissions(route: string): { canView: boolean, canAdd: boolean, canEdit: boolean, canDelete: boolean, canResubmit: boolean, canReTransmit: boolean, canRemapItemIds: boolean } | null {
     const menus = this.getUserMenus();
     if (!menus || !menus.modules) return null;
     for (const mod of menus.modules) {
       for (const item of mod.menuItems) {
         if (item.route === route) {
-          return { canView: item.canView, canAdd: item.canAdd, canEdit: item.canEdit, canDelete: item.canDelete, canResubmit: item.canResubmit, canReTransmit: item.canReTransmit };
+          return { canView: item.canView, canAdd: item.canAdd, canEdit: item.canEdit, canDelete: item.canDelete, canResubmit: item.canResubmit, canReTransmit: item.canReTransmit, canRemapItemIds: item.canRemapItemIds };
         }
       }
     }
@@ -425,6 +425,15 @@ export class ApiService {
   ReTransmitASN(orderId: string, customerName: string) {
     return this.http.post(
       `${this.apiUrl}EDIProcessor/api/v1/orders/reTransmitASN?OrderId=${orderId}&CustomerName=${customerName}`,
+      {}
+    );
+  }
+
+  // Re-Map Item IDs (Amazon only): look each line's Seller SKU up in the inventory feed again
+  // and write the resolved ItemID back into the order's API-JSON.
+  RemapItemIds(orderId: string, customerName: string) {
+    return this.http.post(
+      `${this.apiUrl}EDIProcessor/api/v1/orders/remapItemIds?OrderId=${orderId}&CustomerName=${customerName}`,
       {}
     );
   }
