@@ -1,6 +1,6 @@
-# Task 00584 — EDI & API Integration with BizMate EU (eSyncMate side)
+# Task 00003 — EDI & API Integration with BizMate EU (eSyncMate side)
 
-Branch `SB-00584`. Counterpart: BizMate task **00535** (`BizMate.Database/Tasks/00535`).
+Branch `SB-00003`. Counterpart: BizMate task **00535** (`BizMate.Database/Tasks/00535`).
 
 Plan and tracker: `Improvements/EDIIntegration/eSyncMate-EDI-Dev-Tracker.md` (source of truth) →
 `eSyncMate-EDI-Dev-Tracker.html` (generated, never edited by hand). Scope: `BizMate-EDI-eSyncMate-Workplan.html`.

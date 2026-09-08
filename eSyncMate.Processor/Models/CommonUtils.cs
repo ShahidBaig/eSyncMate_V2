@@ -211,7 +211,7 @@ namespace eSyncMate.Processor.Models
 
     public class CommonUtils
     {
-        public static string ConnectionString { get; set; } = "Server=192.168.0.44,7100;Database=ESYNCMATE;UID=esyncmate;PWD=eSyncMate786$$$;";
+        public static string ConnectionString { get; set; } = "Server=203.99.180.246,14533;Database=ESYNCMATE_EU;UID=esyncmate;PWD=eSyncMate786$$$;";
         public static string MySqlConnectionString { get; set; } = "Server=162.241.63.30;Database=geckote1_edi;User=geckote1_esyncmate;Password=Gecko8079;";
         public static string EncryptionKey { get; set; } = "eSyncMate@Dev#2026!!SecretKey";
         public static string SMTPHost { get; set; } = "";
@@ -252,7 +252,7 @@ namespace eSyncMate.Processor.Models
         public static Int32 MiraklStatusMaxAttempts = 3;
         public static Int32 MiraklStatusCallDelaySeconds = 30;
 
-        // BizMate EU integration (Task 00584). One credential trio per environment; BizMate issues
+        // BizMate EU integration (Task 00003). One credential trio per environment; BizMate issues
         // them and shows the secrets once, so they are stored here rather than being recoverable.
         // Until the trio is set the drain job is inert by design - it logs once and returns rather
         // than failing every minute, which is the right behaviour while EQ-06 is unanswered.

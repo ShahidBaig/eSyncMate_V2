@@ -69,7 +69,7 @@
     <Folder Include="Data\Surgimac" />
     <Folder Include="Data\Surgimac\Views" />
     <Folder Include="Tasks" />
-    <Folder Include="Tasks\00584" />
+    <Folder Include="Tasks\00003" />
   </ItemGroup>
   <ItemGroup>
     <Build Include="Tables\Customers.sql" />
@@ -240,10 +240,10 @@
     <Build Include="Tables\EDILedgerLink.sql" />
     <Build Include="Tables\EDIOutboundQueue.sql" />
     <Build Include="Views\VW_EDITrace.sql" />
-    <None Include="Tasks\00584\00_README.md" />
-    <None Include="Tasks\00584\01_EDI_Ledger_Tables.sql" />
-    <None Include="Tasks\00584\02_EDIOutboundQueue_Table.sql" />
-    <None Include="Tasks\00584\03_VW_EDITrace_View.sql" />
-    <None Include="Tasks\00584\04_Verify_Deployment.sql" />
+    <None Include="Tasks\00003\00_README.md" />
+    <None Include="Tasks\00003\01_EDI_Ledger_Tables.sql" />
+    <None Include="Tasks\00003\02_EDIOutboundQueue_Table.sql" />
+    <None Include="Tasks\00003\03_VW_EDITrace_View.sql" />
+    <None Include="Tasks\00003\04_Verify_Deployment.sql" />
     <None Include="Triggers\trg_OrderDataLogs.sql" />  </ItemGroup>
 </Project>

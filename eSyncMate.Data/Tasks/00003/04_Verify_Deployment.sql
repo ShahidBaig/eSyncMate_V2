@@ -1,5 +1,5 @@
 -- ============================================================================
--- Task 00584 - EDI & API Integration with BizMate EU - deployment verification
+-- Task 00003 - EDI & API Integration with BizMate EU - deployment verification
 -- Run in: ESYNCMATE_EU  (also safe in ESYNCMATE_TEST)
 -- Run AFTER: 01, 02, 03
 --
