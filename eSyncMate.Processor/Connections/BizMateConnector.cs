@@ -9,6 +9,22 @@ namespace eSyncMate.Processor.Connections
     /// Base for every BizMate call failure. The subclasses are the error taxonomy (W1-17, E22):
     /// what a caller does about a failure is decided by its type, never by re-reading a status code.
     /// </summary>
+    /// <summary>
+    /// What was being sent when a call failed - everything the store-and-forward queue needs to send
+    /// it again, and nothing else.
+    ///
+    /// It rides on the exception so a caller can queue a failed call without knowing any paths or
+    /// scopes. That knowledge belongs to the connector, and duplicating it at each call site is how
+    /// a retry ends up going somewhere slightly different from the original.
+    /// </summary>
+    public sealed record BizMateCall(
+        HttpMethod Method,
+        string PublicPath,
+        string? PayloadJson,
+        string Scope,
+        string CorrelationId,
+        string? UrlPathWithQuery);
+
     public abstract class BizMateException : Exception
     {
         protected BizMateException(string message, Exception? inner = null) : base(message, inner) { }
@@ -18,6 +34,9 @@ namespace eSyncMate.Processor.Connections
 
         /// <summary>Does this failure mean the DOCUMENT failed, or only that the attempt did?</summary>
         public abstract bool IsDocumentFailure { get; }
+
+        /// <summary>The call that failed, stamped by the connector. Null if it never got that far.</summary>
+        public BizMateCall? Call { get; internal set; }
     }
 
     /// <summary>Transport fault or 5xx. Retry with backoff; the document is fine.</summary>
@@ -330,20 +349,75 @@ namespace eSyncMate.Processor.Connections
                     nameof(correlationId));
             }
 
+            // Every BizMateException leaving this method carries what was being sent, so a caller
+            // that wants to queue the call for retry does not have to reconstruct it (W1-14).
+            try
+            {
+                return await SendOnceAsync(
+                    method, publicPath, payloadJson, scope, correlationId, urlPathWithQuery, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            catch (BizMateException ex)
+            {
+                ex.Call ??= new BizMateCall(method, publicPath, payloadJson, scope, correlationId, urlPathWithQuery);
+
+                throw;
+            }
+        }
+
+        private async Task<string> SendOnceAsync(
+            HttpMethod method,
+            string publicPath,
+            string? payloadJson,
+            string scope,
+            string correlationId,
+            string? urlPathWithQuery,
+            CancellationToken cancellationToken)
+        {
             bool l_HasBody = payloadJson is not null;
 
             byte[] l_Body = l_HasBody
                 ? Encoding.UTF8.GetBytes(payloadJson!)
                 : Array.Empty<byte>();
 
-            string l_Token = await _tokens.GetTokenAsync(scope, cancellationToken).ConfigureAwait(false);
+            // A token fetch that cannot reach the gateway throws HttpRequestException from inside
+            // the token client, which is outside this connector's taxonomy entirely: it would sail
+            // past every `catch (BizMateException)` in the pipelines, so the document neither failed
+            // visibly nor got queued - it just threw. Brought inside the taxonomy here, where the
+            // rest of the transport story already lives.
+            string l_Token;
+
+            try
+            {
+                l_Token = await _tokens.GetTokenAsync(scope, cancellationToken).ConfigureAwait(false);
+            }
+            catch (BizMateException)
+            {
+                throw;
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                throw new BizMateTransportException(
+                    $"Could not obtain a BizMate token for scope [{scope}]: {ex.Message}", null, ex);
+            }
 
             // Sign the PUBLIC path, never the URL with its query string. BizMateRequestSigner
             // refuses a Kong-stripped path outright, so this cannot silently go wrong.
             (long l_Timestamp, string l_Signature) =
                 BizMateRequestSigner.Sign(method.Method, publicPath, l_Body, _signingSecret);
 
-            using var l_Request = new HttpRequestMessage(method, _gatewayBaseUrl + (urlPathWithQuery ?? publicPath));
+            // Blank counts as absent, not as a request for the empty path. A queued call reads its
+            // urlPathWithQuery back out of the database, and the entity layer turns a NULL column
+            // into an empty string - so `?? publicPath` alone sent every replayed call to the
+            // gateway root, where Kong answered "no Route matched with those values" and the queue
+            // recorded a 404 that had nothing to do with the call it was replaying.
+            string l_RequestPath = string.IsNullOrWhiteSpace(urlPathWithQuery) ? publicPath : urlPathWithQuery!;
+
+            using var l_Request = new HttpRequestMessage(method, _gatewayBaseUrl + l_RequestPath);
 
             l_Request.Headers.TryAddWithoutValidation("Authorization", "Bearer " + l_Token);
             l_Request.Headers.TryAddWithoutValidation(BizMateRequestSigner.TimestampHeader, l_Timestamp.ToString());

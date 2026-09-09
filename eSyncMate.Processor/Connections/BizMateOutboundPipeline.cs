@@ -230,13 +230,77 @@ namespace eSyncMate.Processor.Connections
             {
                 // The partner has the document; only the confirmation failed. Do not mark this
                 // Failed - that would misreport a delivered document as undelivered. The row stays
-                // Pending with the delivery timestamp already set, and redelivery reconciles it.
+                // Pending with the delivery timestamp already set.
+                //
+                // The confirmation itself goes to the store-and-forward queue (W1-14). Until it did,
+                // this was the end of the story: the ledger said "not confirmed", nothing retried,
+                // and BizMate never learned that a document it staged had reached the partner.
                 l_Ledger.ErrorDetail =
-                    "Delivered to the partner, but BizMate was not confirmed: " + ex.Message;
+                    "Delivered to the partner, but BizMate was not confirmed: " + ex.Message
+                    + QueueForRetry(ex, "MarkDelivered", l_Ledger.PartnerId, l_Ledger.Id);
+
                 l_Ledger.Modify();
             }
 
             return l_Ledger;
+        }
+
+
+        /// <summary>
+        /// Hands a failed call to the store-and-forward queue so the drain sends it again (W1-14).
+        ///
+        /// Only calls that TELL BizMate something already true are queued - the delivery
+        /// confirmation and the acknowledgment. Those have no result the caller needs, so replaying
+        /// one later changes nothing except that BizMate finally hears it.
+        ///
+        /// Deliberately NOT queued, and each for its own reason:
+        ///   /raw and /inbound  - the caller needs the rawFileRef and the messageId to finish the
+        ///                        ledger row, so a queued call that succeeded later would leave the
+        ///                        row saying Pending forever while the queue said Succeeded.
+        ///   /outbound/fetched  - W1-11's redelivery already reconciles a document we hold but
+        ///                        BizMate does not know we hold; a second mechanism racing it would
+        ///                        make which one won a matter of timing.
+        ///   /partner-state     - queueing a report that BizMate is unreachable helps nobody, and it
+        ///                        would sit behind the very backlog it describes.
+        ///
+        /// Returns what to record on the ledger, so the row says whether the message is safe or
+        /// merely sent into the dark. Never throws: a queue that cannot accept the call must not
+        /// turn a delivered document into a failed one.
+        /// </summary>
+        private string QueueForRetry(BizMateException failure, string operation, string partnerId, long ledgerId)
+        {
+            if (!failure.IsRetryable || failure.Call is null)
+            {
+                return string.Empty;
+            }
+
+            try
+            {
+                var l_Queue = new BizMateOutboundQueue(_connector, _connectionString, _userNo);
+
+                l_Queue.Enqueue(
+                    partnerId,
+                    operation,
+                    failure.Call.Method,
+                    failure.Call.PublicPath,
+                    failure.Call.PayloadJson,
+                    failure.Call.Scope,
+                    failure.Call.CorrelationId,
+                    ledgerId,
+                    failure.Call.UrlPathWithQuery);
+
+                return " Queued for retry.";
+            }
+            catch (BizMateQueueFullException ex)
+            {
+                // The ceiling exists so a partner that has been down for days cannot fill the table
+                // unboundedly. Said out loud on the row rather than swallowed.
+                return " NOT queued: " + ex.Message;
+            }
+            catch (Exception ex)
+            {
+                return " NOT queued: " + ex.Message;
+            }
         }
 
         private static bool IsRawEdi(string format)
