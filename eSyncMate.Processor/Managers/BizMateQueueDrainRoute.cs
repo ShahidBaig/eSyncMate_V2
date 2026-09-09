@@ -79,7 +79,7 @@ namespace eSyncMate.Processor.Managers
                         string.Empty, userNo);
                 }
 
-                ReportBacklog(l_Connector, l_Summary, route, userNo);
+                ReportPartnerState(l_Connector, l_Summary, route, userNo);
             }
             catch (Exception ex)
             {
@@ -88,44 +88,85 @@ namespace eSyncMate.Processor.Managers
         }
 
         /// <summary>
-        /// Tells BizMate which partners are backed up (W2-17, E18), so queue depth is a fact on their
-        /// boards rather than a number living only in our own monitoring (X-07).
+        /// Tells BizMate what this pass saw of each partner's connection (W2-17, E18), so the state
+        /// is a fact on their boards rather than a number living only in our own monitoring (X-07).
+        ///
+        /// Only what the drain actually observed is reported, and each state means one thing:
+        ///
+        ///   Down          a call to that partner failed on the transport this pass
+        ///   Up            a call to that partner went through - the only honest evidence a
+        ///                 connection is back, which is why it is reported from the drain and not
+        ///                 from a timer
+        ///   QueueBacklog  the queue for that partner is at or above the warning depth
+        ///
+        /// A partner can be both reachable and backed up, and both are sent: they answer different
+        /// questions - "can we talk to them" and "how far behind are we".
+        ///
+        /// MapDisabled is not reported here. It is a statement about a map's configuration rather
+        /// than about a connection, and the drain has no way to know it; sending it from here would
+        /// be inventing a fact.
         ///
         /// Posted directly rather than through the queue: if BizMate is unreachable, queueing a
         /// report that BizMate is unreachable helps nobody, and it would sit behind the very backlog
         /// it describes.
         /// </summary>
-        private static void ReportBacklog(BizMateConnector connector, DrainSummary summary, Routes route, int userNo)
+        private static void ReportPartnerState(BizMateConnector connector, DrainSummary summary, Routes route, int userNo)
         {
+            // Down first: if a partner both failed and succeeded on one pass, the last word should
+            // be the recovery rather than the fault.
+            foreach (string l_PartnerId in summary.PartnersUnreachable)
+            {
+                Report(connector, route, userNo, l_PartnerId, PartnerStates.Down,
+                    "A queued call to this partner failed on the transport.");
+            }
+
+            foreach (string l_PartnerId in summary.PartnersReachable)
+            {
+                Report(connector, route, userNo, l_PartnerId, PartnerStates.Up,
+                    "A queued call to this partner went through.");
+            }
+
             foreach (string l_PartnerId in summary.PartnersBackedUp)
             {
-                if (string.IsNullOrWhiteSpace(l_PartnerId))
-                {
-                    continue;
-                }
+                Report(connector, route, userNo, l_PartnerId, PartnerStates.QueueBacklog,
+                    $"Outbound queue at or above {BizMateOutboundQueue.BacklogWarnDepth} calls.");
+            }
+        }
 
-                try
-                {
-                    connector.PostPartnerStateAsync(
-                        new PartnerStateRequest
-                        {
-                            PartnerId = l_PartnerId,
-                            State = PartnerStates.QueueBacklog,
-                            Detail = $"Outbound queue at or above {BizMateOutboundQueue.BacklogWarnDepth} calls.",
-                            At = DateTimeOffset.UtcNow
-                        },
-                        BizMateInboundPipeline.NewCorrelationId()).GetAwaiter().GetResult();
+        /// <summary>
+        /// One state report. Never throws: a partner state that cannot be delivered must not fail a
+        /// drain that has already done its work.
+        /// </summary>
+        private static void Report(
+            BizMateConnector connector, Routes route, int userNo, string partnerId, string state, string detail)
+        {
+            if (string.IsNullOrWhiteSpace(partnerId))
+            {
+                return;
+            }
 
-                    route.SaveLog(LogTypeEnum.RouteInfo,
-                        $"[BizMateQueueDrain] Reported QueueBacklog for [{l_PartnerId}].", string.Empty, userNo);
-                }
-                catch (BizMateException ex)
-                {
-                    // An unknown partner answers 404, and BizMate being down is the likeliest reason
-                    // for the backlog in the first place. Neither is worth failing the drain over.
-                    route.SaveLog(LogTypeEnum.Error,
-                        $"[BizMateQueueDrain] Could not report the backlog for [{l_PartnerId}]", ex.Message, userNo);
-                }
+            try
+            {
+                connector.PostPartnerStateAsync(
+                    new PartnerStateRequest
+                    {
+                        PartnerId = partnerId,
+                        State = state,
+                        Detail = detail,
+                        At = DateTimeOffset.UtcNow
+                    },
+                    BizMateInboundPipeline.NewCorrelationId()).GetAwaiter().GetResult();
+
+                route.SaveLog(LogTypeEnum.RouteInfo,
+                    $"[BizMateQueueDrain] Reported {state} for [{partnerId}].", string.Empty, userNo);
+            }
+            catch (BizMateException ex)
+            {
+                // A partner with no EDI configuration on BizMate's side answers 404 with a body that
+                // says so, and BizMate being unreachable is the likeliest reason for a Down report in
+                // the first place. Neither is worth failing the drain over.
+                route.SaveLog(LogTypeEnum.Error,
+                    $"[BizMateQueueDrain] Could not report {state} for [{partnerId}]", ex.Message, userNo);
             }
         }
     }

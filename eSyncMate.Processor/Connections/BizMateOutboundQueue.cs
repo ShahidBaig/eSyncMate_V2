@@ -12,6 +12,18 @@ namespace eSyncMate.Processor.Connections
         public int Failed { get; set; }
         public int Reclaimed { get; set; }
         public List<string> PartnersBackedUp { get; } = new();
+
+        /// <summary>
+        /// Partners a call went through to on this pass. Whatever was wrong with the connection to
+        /// them is over, which is the only moment eSyncMate can honestly say Up (W2-17).
+        /// </summary>
+        public HashSet<string> PartnersReachable { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>
+        /// Partners whose call failed on the transport - unreachable, timed out, a 5xx. Not a
+        /// partner whose document BizMate refused, which says nothing about the connection.
+        /// </summary>
+        public HashSet<string> PartnersUnreachable { get; } = new(StringComparer.OrdinalIgnoreCase);
     }
 
     /// <summary>
@@ -228,6 +240,9 @@ namespace eSyncMate.Processor.Connections
                 item.Modify();
 
                 summary.Succeeded++;
+
+                // A call that went through is the only honest evidence the connection is back.
+                summary.PartnersReachable.Add(item.PartnerId ?? string.Empty);
             }
             catch (BizMateRateLimitedException ex)
             {
@@ -241,6 +256,10 @@ namespace eSyncMate.Processor.Connections
             }
             catch (BizMateException ex) when (ex.IsRetryable)
             {
+                // Retryable means the transport or the far side, not the document - so this is the
+                // one failure that says something about the connection (W2-17).
+                summary.PartnersUnreachable.Add(item.PartnerId ?? string.Empty);
+
                 if (item.AttemptCount >= MaxAttempts)
                 {
                     Fail(item, $"Gave up after {item.AttemptCount} attempts: {ex.Message}");
