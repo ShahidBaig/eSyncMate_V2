@@ -315,6 +315,16 @@ namespace eSyncMate.Processor.Models
         public static string BizMate_UsageIndicator { get; set; } = "";
 
         /// <summary>
+        /// The longest eSyncMate will hold BizMate's configuration answer (W1-13), whatever
+        /// `cacheTtlSeconds` they send.
+        ///
+        /// BizMate already caches the resolved configuration for up to 120 seconds on their side.
+        /// Whatever is held here stacks on top of that, so the clamp is what keeps "a change takes
+        /// up to two minutes" from becoming "two minutes plus however long eSyncMate felt like".
+        /// </summary>
+        public static Int32 BizMate_ConfigCacheMaxSeconds = 60;
+
+        /// <summary>
         /// Loads all configuration (except ConnectionStrings) from the ApplicationSettings
         /// table into the static fields above. Call ONCE at process startup, after
         /// ConnectionString is set and BEFORE auth/consumers use these values.
@@ -375,6 +385,7 @@ namespace eSyncMate.Processor.Models
                 BizMate_QueueDrainMaxPartners = int.TryParse(Get("BizMate_QueueDrainMaxPartners", BizMate_QueueDrainMaxPartners.ToString()), out var bqmp) ? bqmp : BizMate_QueueDrainMaxPartners;
                 BizMate_OutboundWaitSeconds = int.TryParse(Get("BizMate_OutboundWaitSeconds", BizMate_OutboundWaitSeconds.ToString()), out var bows) ? bows : BizMate_OutboundWaitSeconds;
                 BizMate_UsageIndicator = Get("BizMate_UsageIndicator", BizMate_UsageIndicator);
+                BizMate_ConfigCacheMaxSeconds = int.TryParse(Get("BizMate_ConfigCacheMaxSeconds", BizMate_ConfigCacheMaxSeconds.ToString()), out var bccm) ? bccm : BizMate_ConfigCacheMaxSeconds;
             }
             catch (Exception ex)
             {

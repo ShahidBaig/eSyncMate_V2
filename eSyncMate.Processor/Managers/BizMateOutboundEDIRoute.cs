@@ -110,6 +110,22 @@ namespace eSyncMate.Processor.Managers
                 var l_Pipeline = new BizMateOutboundPipeline(l_Connector, CommonUtils.ConnectionString, userNo);
                 string l_CorrelationId = BizMateInboundPipeline.NewCorrelationId();
 
+                // BizMate is the authority on whether this partner is enabled (W1-13). eSyncMate
+                // holds no copy of that decision - the answer is cached in memory for seconds, not
+                // written anywhere - because a local copy is one that can quietly disagree with
+                // theirs, and the disagreement only shows up as a partner receiving documents they
+                // were switched off from.
+                (bool l_Enabled, string l_Reason) = BizMateConfigCache
+                    .IsEdiEnabledAsync(l_Connector, l_PartnerId, l_CorrelationId)
+                    .GetAwaiter().GetResult();
+
+                if (!l_Enabled)
+                {
+                    route.SaveLog(LogTypeEnum.RouteInfo, $"[BizMateOutboundEDI] Skipped: {l_Reason}", string.Empty, userNo);
+
+                    return;
+                }
+
                 // ONE call, with redeliver=true.
                 //
                 // redeliver=true is a SUPERSET, not a separate set: the contract says it "ALSO

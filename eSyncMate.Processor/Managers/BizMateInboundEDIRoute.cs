@@ -144,6 +144,23 @@ namespace eSyncMate.Processor.Managers
 
                 var l_Pipeline = new BizMateInboundPipeline(l_Connector, CommonUtils.ConnectionString, userNo);
 
+                // BizMate is the authority on whether this partner is enabled (W1-13), so ask before
+                // reading anything. The files stay in the folder: a partner switched off is one whose
+                // documents should wait, not one whose documents should be refused and need sending
+                // again when somebody switches them back on.
+                (bool l_Enabled, string l_Reason) = BizMateConfigCache
+                    .IsEdiEnabledAsync(l_Connector, l_Customer.ERPCustomerID, BizMateInboundPipeline.NewCorrelationId())
+                    .GetAwaiter().GetResult();
+
+                if (!l_Enabled)
+                {
+                    route.SaveLog(LogTypeEnum.RouteInfo,
+                        $"[BizMateInboundEDI] Skipped, {l_Files.Count} file(s) left in the folder: {l_Reason}",
+                        string.Empty, userNo);
+
+                    return;
+                }
+
                 int l_Ok = 0, l_Pending = 0, l_Failed = 0;
 
                 foreach (KeyValuePair<string, string> l_File in l_Files)

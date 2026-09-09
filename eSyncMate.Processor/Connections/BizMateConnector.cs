@@ -279,6 +279,26 @@ namespace eSyncMate.Processor.Connections
                 BizMateScopes.ConfigRead, correlationId, cancellationToken);
         }
 
+        /// <summary>
+        /// Reads the resolved configuration for one PARTNER (W1-13, E21).
+        ///
+        /// The by-partner form rather than by-customer, because a route knows the partner id it is
+        /// working - it is on the connector's Realm - and would otherwise have to resolve a customer
+        /// number first just to ask a question about the partner.
+        /// </summary>
+        public Task<CustomerIntegrationConfig> GetConfigByPartnerAsync(
+            string partnerId, string correlationId, CancellationToken cancellationToken = default)
+        {
+            if (string.IsNullOrWhiteSpace(partnerId))
+            {
+                throw new ArgumentException("A partner id is required.", nameof(partnerId));
+            }
+
+            return SendAsync<object, CustomerIntegrationConfig>(
+                HttpMethod.Get, $"/v1/integration/config/by-partner/{Uri.EscapeDataString(partnerId.Trim())}", null,
+                BizMateScopes.ConfigRead, correlationId, cancellationToken);
+        }
+
         // -----------------------------------------------------------------------------------
         // The pipeline
         // -----------------------------------------------------------------------------------
