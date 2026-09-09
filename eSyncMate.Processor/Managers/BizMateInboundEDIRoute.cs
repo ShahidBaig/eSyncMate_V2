@@ -154,12 +154,14 @@ namespace eSyncMate.Processor.Managers
                         // folder used to be treated as an 850, which is right until the partner
                         // answers one - a 997 has no canonical form and nothing to post to /inbound,
                         // so it takes the correlation path instead (W2-10).
-                        bool l_IsAck = X12Ack.TransactionSetId(l_File.Value) == X12Ack.DocumentType;
+                        string? l_SetId = X12Ack.TransactionSetId(l_File.Value);
+                        bool l_IsAck = l_SetId == X12Ack.DocumentType;
+                        bool l_IsAdvice = l_SetId == X12Advice.DocumentType;
 
                         var l_Context = new InboundDocumentContext
                         {
                             PartnerId = l_Customer.ERPCustomerID,
-                            DocumentType = l_IsAck ? X12Ack.DocumentType : "850",
+                            DocumentType = l_IsAck ? X12Ack.DocumentType : l_IsAdvice ? X12Advice.DocumentType : "850",
                             Format = BizMateFormats.X12,
                             Channel = BizMateChannels.Edi,
                             Provenance = "Wire",
@@ -168,16 +170,23 @@ namespace eSyncMate.Processor.Managers
                             FileName = l_File.Key,
                             CustomerId = l_Customer.Id,
                             RouteId = route.Id,
-                            MapName = l_IsAck ? "X12_004010.M_997" : TransformationMapType
+                            MapName = l_IsAck ? "X12_004010.M_997"
+                                : l_IsAdvice ? "X12_004010.M_824"
+                                : TransformationMapType
                         };
 
                         var l_Pending997 = new PendingAcknowledgement();
 
+                        // An 824 is a business advice, not an order: it takes the ordinary pipeline -
+                        // ledger row, artifact, /raw, translate, /inbound/824 - but the translation
+                        // resolves it to what it refers to rather than creating anything (W3-18, W2-12).
                         EDILedger l_Ledger = l_IsAck
                             ? l_Pipeline.ProcessAcknowledgementAsync(l_Context).GetAwaiter().GetResult()
                             : l_Pipeline.ProcessAsync(
                                 l_Context,
-                                input => Translate(input, l_Customer, l_TransformationMap, l_DbFieldsMap, l_Source, l_File.Key, route, userNo, l_Pending997))
+                                input => l_IsAdvice
+                                    ? TranslateAdvice(input, l_Customer, route, userNo)
+                                    : Translate(input, l_Customer, l_TransformationMap, l_DbFieldsMap, l_Source, l_File.Key, route, userNo, l_Pending997))
                                 .GetAwaiter().GetResult();
 
                         // The document is BizMate's now, so the partner can be told we have it.
@@ -393,6 +402,222 @@ namespace eSyncMate.Processor.Managers
                 OrderId = l_Saved.OrderId,
                 MapName = TransformationMapType
             };
+        }
+
+        /// <summary>
+        /// Turns an inbound 824 into the canonical advice, and resolves it to the document it is
+        /// about (W3-18, W2-12, E13).
+        ///
+        /// The resolution is the point of the item. A partner saying "we rejected something" is
+        /// worth very little until it says WHICH something, so the OTI control number is looked up
+        /// against the outbound ledger, the two rows are linked, and the rejection is written onto
+        /// the row that was rejected. BizMate then gets the advice with the correlation already
+        /// resolved, because they asked eSyncMate to do the resolving (E13).
+        ///
+        /// Correlation is on OTI08, the group control number, which is the ledger row id eSyncMate
+        /// put in GS06 - falling back to OTI03, because plenty of partners name the document by a
+        /// number a human recognises instead. Matching is numeric where both sides look numeric:
+        /// BizMate confirmed that a partner may quote a control number we zero-padded on the way
+        /// out, and "01" and "1" are the same transmission.
+        /// </summary>
+        private static InboundTranslationResult TranslateAdvice(
+            InboundTranslationInput input, Customers customer, Routes route, int userNo)
+        {
+            AdviceReading l_Advice = X12Advice.Read(input.Text);
+
+            if (l_Advice.Documents.Count == 0)
+            {
+                throw new InvalidOperationException(
+                    "The 824 carries no OTI loop, so nothing in it says which document it is about.");
+            }
+
+            if (l_Advice.Documents.Count > 1)
+            {
+                // One ledger row is one document and BizMate's /inbound takes one document per call,
+                // so an advice naming several is the same shape of problem as a multi-set interchange
+                // (W2-05). The links below are still written for every one of them, so nothing the
+                // partner said is lost locally - but it is refused rather than posted in part.
+                foreach (AdvisedDocument l_Each in l_Advice.Documents)
+                {
+                    Correlate(l_Each, customer, input, route, userNo);
+                }
+
+                throw new InvalidOperationException(
+                    $"The 824 advises {l_Advice.Documents.Count} documents and this route posts one per file (W2-05). "
+                    + "Each one has been correlated and linked here; split the file to post them.");
+            }
+
+            AdvisedDocument l_Document = l_Advice.Documents[0];
+            EDILedger? l_Referenced = Correlate(l_Document, customer, input, route, userNo);
+
+            string l_Result = X12Advice.Result(l_Document.AcknowledgmentCode);
+
+            var l_Payload = new Dictionary<string, object?>
+            {
+                ["schemaVersion"] = "1.0",
+                ["documentType"] = X12Advice.DocumentType,
+                ["advice"] = new Dictionary<string, object?>
+                {
+                    ["adviceNo"] = l_Advice.AdviceNo,
+                    ["adviceDate"] = AdviceInstant(l_Advice),
+                    ["result"] = l_Result,
+                    ["correlation"] = new Dictionary<string, object?>
+                    {
+                        ["documentType"] = l_Document.TransactionSetId ?? l_Referenced?.DocumentType,
+                        ["partnerControlNo"] = l_Referenced?.PartnerControlNo,
+                        ["ourDocumentNo"] = l_Document.ReferenceId,
+                        ["messageId"] = l_Referenced?.BizMateMessageId
+                    },
+                    ["errors"] = l_Document.Errors.Select(e => new Dictionary<string, object?>
+                    {
+                        ["code"] = e.Code,
+                        ["text"] = e.Text,
+                        ["segment"] = e.Segment,
+                        ["elementPosition"] = e.ElementPosition,
+                        ["badValue"] = e.BadValue
+                    }).ToList()
+                }
+            };
+
+            using JsonDocument l_Json = JsonDocument.Parse(
+                System.Text.Json.JsonSerializer.Serialize(l_Payload));
+
+            return new InboundTranslationResult
+            {
+                Payload = l_Json.RootElement.Clone(),
+                OrderId = l_Referenced?.OrderId,
+                MapName = "X12_004010.M_824"
+            };
+        }
+
+        /// <summary>
+        /// Finds the outbound row an advice refers to, links the two and writes the partner's
+        /// verdict onto the row that was advised. Returns null when nothing matched, which is
+        /// recorded rather than treated as an error: an advice about a document we never sent is
+        /// still worth passing to BizMate.
+        /// </summary>
+        private static EDILedger? Correlate(
+            AdvisedDocument document, Customers customer, InboundTranslationInput input, Routes route, int userNo)
+        {
+            string? l_ControlNo = X12Advice.ControlNumber(document);
+
+            if (string.IsNullOrWhiteSpace(l_ControlNo))
+            {
+                route.SaveLog(LogTypeEnum.Error,
+                    "[BizMateInboundEDI] The 824 names neither a group control number nor a reference, so it cannot be resolved.",
+                    string.Empty, userNo);
+
+                return null;
+            }
+
+            var l_Referenced = new EDILedger();
+            l_Referenced.UseConnection(CommonUtils.ConnectionString);
+
+            string l_PartnerId = customer.ERPCustomerID;
+
+            if (!l_Referenced.GetOutboundByInterchangeControlNo(l_PartnerId, l_ControlNo!).IsSuccess)
+            {
+                // The partner may quote a control number we zero-padded on the way out - BizMate
+                // confirmed that is ours to do - so "01" and "1" are the same transmission and the
+                // second look is on the number rather than the string.
+                string l_Trimmed = l_ControlNo!.TrimStart('0');
+
+                if (l_Trimmed.Length == 0
+                    || l_Trimmed == l_ControlNo
+                    || !l_Referenced.GetOutboundByInterchangeControlNo(l_PartnerId, l_Trimmed).IsSuccess)
+                {
+                    route.SaveLog(LogTypeEnum.Error,
+                        $"[BizMateInboundEDI] The 824 refers to control number [{l_ControlNo}], which matches nothing we sent to [{l_PartnerId}].",
+                        string.Empty, userNo);
+
+                    return null;
+                }
+            }
+
+            string l_Result = X12Advice.Result(document.AcknowledgmentCode);
+            string l_Detail = Detail(document, l_Result);
+
+            l_Referenced.ErrorDetail = l_Detail;
+            l_Referenced.ModifiedBy = userNo;
+            l_Referenced.Modify();
+
+            if (input.Ledger is not null)
+            {
+                var l_Link = new EDILedgerLink();
+                l_Link.UseConnection(CommonUtils.ConnectionString);
+
+                l_Link.FromLedgerId = input.Ledger.Id;
+                l_Link.ToLedgerId = l_Referenced.Id;
+
+                // Rejects only when they refused it. Accepted and AcceptedWithErrors are both the
+                // partner responding to a document they acted on, and only a refusal means it has
+                // to go again.
+                l_Link.LinkType = l_Result == "Rejected" ? "Rejects" : "Responds";
+                l_Link.ResolvedBy = "Automatic";
+                l_Link.ResolvedOn = string.IsNullOrWhiteSpace(document.GroupControlNo)
+                    ? "OTI03 reference identification"
+                    : "OTI08 group control number";
+                l_Link.Detail = l_Detail;
+                l_Link.CreatedDate = DateTime.UtcNow;
+                l_Link.CreatedBy = userNo;
+
+                l_Link.SaveNew();
+            }
+
+            route.SaveLog(LogTypeEnum.RouteInfo,
+                $"[BizMateInboundEDI] 824 resolved to ledger {l_Referenced.Id} ({l_Referenced.DocumentType}): {l_Result}.",
+                string.Empty, userNo);
+
+            return l_Referenced;
+        }
+
+        /// <summary>What the partner said, as one line, for the ledger row and the link.</summary>
+        private static string Detail(AdvisedDocument document, string result)
+        {
+            var l_Parts = new List<string> { "The partner's application reported " + result };
+
+            foreach (AdviceError l_Error in document.Errors.Take(5))
+            {
+                var l_Bits = new List<string>();
+
+                if (!string.IsNullOrWhiteSpace(l_Error.Code)) l_Bits.Add(l_Error.Code!);
+                if (!string.IsNullOrWhiteSpace(l_Error.Text)) l_Bits.Add(l_Error.Text!);
+                if (!string.IsNullOrWhiteSpace(l_Error.Segment)) l_Bits.Add("at " + l_Error.Segment);
+                if (!string.IsNullOrWhiteSpace(l_Error.BadValue)) l_Bits.Add("value [" + l_Error.BadValue + "]");
+
+                if (l_Bits.Count > 0)
+                {
+                    l_Parts.Add(string.Join(" ", l_Bits));
+                }
+            }
+
+            if (document.Errors.Count > 5)
+            {
+                l_Parts.Add($"(+{document.Errors.Count - 5} more)");
+            }
+
+            return string.Join("; ", l_Parts);
+        }
+
+        /// <summary>
+        /// BGN03 and BGN04 as an ISO-8601 instant, which is what the canonical contract takes.
+        /// Falls back to now when the partner sent no date, because an advice without a timestamp is
+        /// still an advice and the canonical field is required.
+        /// </summary>
+        private static string AdviceInstant(AdviceReading advice)
+        {
+            if (advice.Date8 is { Length: 8 }
+                && DateTime.TryParseExact(
+                    advice.Date8 + (advice.Time4 is { Length: 4 } ? advice.Time4 : "0000"),
+                    "yyyyMMddHHmm",
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    System.Globalization.DateTimeStyles.AssumeUniversal | System.Globalization.DateTimeStyles.AdjustToUniversal,
+                    out DateTime l_Parsed))
+            {
+                return l_Parsed.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'");
+            }
+
+            return DateTime.UtcNow.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'");
         }
 
         /// <summary>
