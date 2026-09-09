@@ -89,10 +89,11 @@ namespace eSyncMate.Processor.Connections
         /// confirmed as Delivered. BizMate serves it untouched and records a Redelivered event.
         /// </summary>
         public Task<OutboundPage> CollectRedeliveriesAsync(
-            string correlationId, string? partnerId = null, CancellationToken cancellationToken = default)
+            string correlationId, string? partnerId = null, int? waitSeconds = null,
+            CancellationToken cancellationToken = default)
         {
             return _connector.GetOutboundPendingAsync(
-                correlationId, partnerId, null, null, null, null, true, cancellationToken);
+                correlationId, partnerId, null, null, null, waitSeconds, true, cancellationToken);
         }
 
         /// <summary>

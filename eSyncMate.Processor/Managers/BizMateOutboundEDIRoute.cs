@@ -121,8 +121,20 @@ namespace eSyncMate.Processor.Managers
                 // A re-served document records a Redelivered event on BizMate's timeline, which is
                 // the audit trail W1-11 asked for. It stays quiet in practice because a document
                 // with no renderer is never fetched, so it never enters the Fetched set.
+                // Long-poll when configured (W1-09, E23). BizMate holds the request open and answers
+                // the moment a document is staged, so an ASN's latency stops being "up to one poll
+                // interval" - five minutes here - and becomes about as long as it takes them to
+                // stage it. Zero keeps the old ask-and-be-told behaviour.
+                //
+                // The wait costs the route its execution lock for that long, which is why it is a
+                // setting: the trade is latency against a route sitting idle holding a lock, and
+                // that is an operational judgement rather than a code one.
+                int? l_Wait = CommonUtils.BizMate_OutboundWaitSeconds > 0
+                    ? Math.Min(CommonUtils.BizMate_OutboundWaitSeconds, 30)
+                    : null;
+
                 OutboundPage l_Page =
-                    l_Pipeline.CollectRedeliveriesAsync(l_CorrelationId, l_PartnerId).GetAwaiter().GetResult();
+                    l_Pipeline.CollectRedeliveriesAsync(l_CorrelationId, l_PartnerId, l_Wait).GetAwaiter().GetResult();
 
                 if (l_Page.Items.Count == 0)
                 {

@@ -286,6 +286,20 @@ namespace eSyncMate.Processor.Models
         public static Int32 BizMate_QueueDrainMaxPartners = 100;
 
         /// <summary>
+        /// Seconds the outbox poll may wait for a document before answering empty (W1-09, E23).
+        ///
+        /// Zero is the old behaviour: ask, and be told what is staged right now. Anything above it
+        /// is a long poll - BizMate holds the request open and answers the moment something is
+        /// staged, so an ASN's latency stops being "up to one poll interval" and becomes "about as
+        /// long as it takes them to stage it".
+        ///
+        /// The contract allows 1..30. It is a setting rather than a constant because the right
+        /// value trades latency against how long a route sits holding its execution lock, and that
+        /// is an operational judgement, not a code one.
+        /// </summary>
+        public static Int32 BizMate_OutboundWaitSeconds = 0;
+
+        /// <summary>
         /// Loads all configuration (except ConnectionStrings) from the ApplicationSettings
         /// table into the static fields above. Call ONCE at process startup, after
         /// ConnectionString is set and BEFORE auth/consumers use these values.
@@ -344,6 +358,7 @@ namespace eSyncMate.Processor.Models
                 BizMate_QueueDrainCron = Get("BizMate_QueueDrainCron", BizMate_QueueDrainCron);
                 BizMate_QueueDrainMaxCalls = int.TryParse(Get("BizMate_QueueDrainMaxCalls", BizMate_QueueDrainMaxCalls.ToString()), out var bqmc) ? bqmc : BizMate_QueueDrainMaxCalls;
                 BizMate_QueueDrainMaxPartners = int.TryParse(Get("BizMate_QueueDrainMaxPartners", BizMate_QueueDrainMaxPartners.ToString()), out var bqmp) ? bqmp : BizMate_QueueDrainMaxPartners;
+                BizMate_OutboundWaitSeconds = int.TryParse(Get("BizMate_OutboundWaitSeconds", BizMate_OutboundWaitSeconds.ToString()), out var bows) ? bows : BizMate_OutboundWaitSeconds;
             }
             catch (Exception ex)
             {
