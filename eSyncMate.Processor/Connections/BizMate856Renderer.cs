@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using EdiEngine.Common.Definitions;
 using EdiEngine.Runtime;
 using eSyncMate.Processor.Models;
 using Maps_4010 = EdiEngine.Standards.X12_004010.Maps;
@@ -76,6 +77,16 @@ namespace eSyncMate.Processor.Connections
             {
                 throw new X12RenderException("The canonical 856 carries no orders; an ASN with no order level is not a document the partner can post.");
             }
+
+            // BSN02 is AN 2/30 in 004010, and BizMate's shipmentNo is an integer that starts at 1.
+            // A single-digit shipment therefore fails validation on its length alone - which is how
+            // this was found, on their first consignment sample. Padded to the element's own minimum
+            // rather than a hard-coded 2, so the rule stays true if the map ever says otherwise.
+            //
+            // Zero-padding is the least-worst answer for a numeric identifier: it is stable, it
+            // reverses by reading the number, and BSN02 is what the partner correlates a receipt
+            // against, so it cannot simply be left short or replaced with something invented.
+            l_ShipmentNo = PadToMinimum(l_Map, "BSN", 1, l_ShipmentNo!);
 
             // What the document actually contains decides BSN05, not what it claims to contain.
             bool l_HasPallets = l_Orders.Any(o => X12Render.Array(o, "pallets").Count > 0);
@@ -491,6 +502,29 @@ namespace eSyncMate.Processor.Connections
             {
                 X12Render.Add(trans, map, "MAN", qualifier, number);
             }
+        }
+
+        /// <summary>
+        /// Left-pads a value to the minimum length its element declares, when it falls short.
+        ///
+        /// Only ever pads - a value already long enough is returned untouched, and a definition with
+        /// no minimum is left alone. Zeroes rather than spaces because the values this is applied to
+        /// are numeric identifiers, and a leading space in an X12 element is noise a partner has to
+        /// strip.
+        /// </summary>
+        private static string PadToMinimum(MapLoop map, string segment, int elementIndex, string value)
+        {
+            MapSegment l_Definition = X12Render.Def(map, segment);
+
+            if (elementIndex >= l_Definition.Content.Count
+                || l_Definition.Content[elementIndex] is not MapSimpleDataElement l_Element
+                || l_Element.MinLength <= 0
+                || value.Length >= l_Element.MinLength)
+            {
+                return value;
+            }
+
+            return value.PadLeft(l_Element.MinLength, '0');
         }
 
         /// <summary>REF, but only when there is something to put in REF02. R0203 needs 02 or 03.</summary>

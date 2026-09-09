@@ -171,12 +171,20 @@ namespace eSyncMate.Processor.Managers
                             MapName = l_IsAck ? "X12_004010.M_997" : TransformationMapType
                         };
 
+                        var l_Pending997 = new PendingAcknowledgement();
+
                         EDILedger l_Ledger = l_IsAck
                             ? l_Pipeline.ProcessAcknowledgementAsync(l_Context).GetAwaiter().GetResult()
                             : l_Pipeline.ProcessAsync(
                                 l_Context,
-                                input => Translate(input, l_Customer, l_TransformationMap, l_DbFieldsMap, l_Source, l_File.Key, route, userNo))
+                                input => Translate(input, l_Customer, l_TransformationMap, l_DbFieldsMap, l_Source, l_File.Key, route, userNo, l_Pending997))
                                 .GetAwaiter().GetResult();
+
+                        // The document is BizMate's now, so the partner can be told we have it.
+                        if (l_Ledger.Outcome == "Translated")
+                        {
+                            SendAcknowledgement(l_Pending997, l_Source, l_File.Key, route, userNo);
+                        }
 
                         bool l_Handled = l_Ledger.Outcome == "Translated";
 
@@ -251,7 +259,7 @@ namespace eSyncMate.Processor.Managers
         /// </summary>
         private static InboundTranslationResult Translate(
             InboundTranslationInput input, Customers customer, string transformationMap, string dbFieldsMap,
-            ConnectorDataModel source, string fileName, Routes route, int userNo)
+            ConnectorDataModel source, string fileName, Routes route, int userNo, PendingAcknowledgement pending)
         {
             EdiBatch l_Batch = new EdiDataReader().FromString(input.Text);
             EdiTrans? l_Trans = null;
@@ -351,49 +359,30 @@ namespace eSyncMate.Processor.Managers
                 throw new InvalidOperationException("SaveOrder failed: " + (l_Saved.Message ?? "no detail"));
             }
 
-            // The 997 back to the partner, as the existing intake sends it. Its failure is logged,
-            // not fatal: the order exists and BizMate will still get the document.
+            // The 997 is NOT sent here. It is held until the document is known to be good.
             //
-            // Only on the EDI carrier (W2-11). A functional acknowledgment is something the X12
-            // conversation does; a flat file, a DB map or a marketplace push has no interchange to
-            // acknowledge and nobody waiting for one, so producing a 997 there would invent a
-            // conversation that never happened and start a clock on BizMate's side against it.
-            // FirstInterchange is populated only for raw EDI, so this already held by construction -
-            // it is written as its own condition so that it keeps holding when a carrier is added
-            // rather than resting on a side effect of where the envelope gets parsed.
+            // A functional acknowledgment tells the partner we have their interchange and will act
+            // on it. Sending it the moment an order row exists said that too early: the canonical
+            // guard had not run, the intake rules had not run, and BizMate had not been given the
+            // document - so an order eSyncMate went on to refuse, or one BizMate never received,
+            // had already been acknowledged. The route sends it after the ledger says Translated,
+            // which is the point at which the document has actually been handed over.
             //
-            // An inbound 997 never reaches this method at all: the route reads ST01 first and sends
-            // it down the correlation path, so eSyncMate does not acknowledge an acknowledgment.
-            bool l_OnEdiCarrier = input.Ledger?.Mechanism == BizMateMechanisms.RawEdi;
-
-            if (l_OnEdiCarrier && input.FirstInterchange != null && !string.IsNullOrWhiteSpace(source.Url))
+            // Only on the EDI carrier (W2-11). A flat file, a DB map or a marketplace push has no
+            // interchange to acknowledge and nobody waiting for one, so producing a 997 there would
+            // invent a conversation that never happened. FirstInterchange is populated only for raw
+            // EDI, so this already held by construction - it is written as its own condition so it
+            // keeps holding when a carrier is added.
+            //
+            // An inbound 997 never reaches this method: the route reads ST01 first and sends it
+            // down the correlation path, so eSyncMate does not acknowledge an acknowledgment.
+            if (input.Ledger?.Mechanism == BizMateMechanisms.RawEdi
+                && input.FirstInterchange != null
+                && !string.IsNullOrWhiteSpace(source.Url))
             {
-                try
-                {
-                    string l_997 = RepaintGetOrderRoute.Generate997(input.FirstInterchange, l_Saved, l_Trans);
-
-                    if (!string.IsNullOrEmpty(l_997))
-                    {
-                        if (source.AuthType == ConnectorTypesEnum.File.ToString())
-                        {
-                            // FileConnector writes into Url and renames into place, so BizLink never
-                            // sees a partial acknowledgement.
-                            FileConnector.Execute(source, false, $"{Path.GetFileNameWithoutExtension(fileName)}-997.edi", l_997)
-                                .GetAwaiter().GetResult();
-                        }
-                        else
-                        {
-                            ConnectorDataModel l_Outbound = JsonConvert.DeserializeObject<ConnectorDataModel>(JsonConvert.SerializeObject(source))!;
-                            l_Outbound.BaseUrl = source.Url;
-
-                            SftpConnector.Execute(l_Outbound, false, $"{Path.GetFileNameWithoutExtension(fileName)}-997", l_997).GetAwaiter().GetResult();
-                        }
-                    }
-                }
-                catch (Exception ex997)
-                {
-                    route.SaveLog(LogTypeEnum.Error, $"[BizMateInboundEDI] 997 for [{fileName}] was not delivered to the partner", ex997.Message, userNo);
-                }
+                pending.Interchange = input.FirstInterchange;
+                pending.Saved = l_Saved;
+                pending.Transaction = l_Trans;
             }
 
             using JsonDocument l_Doc = JsonDocument.Parse(l_Parsed.JSON);
@@ -404,6 +393,65 @@ namespace eSyncMate.Processor.Managers
                 OrderId = l_Saved.OrderId,
                 MapName = TransformationMapType
             };
+        }
+
+        /// <summary>
+        /// What a 997 needs, held between translating a document and knowing it was accepted.
+        ///
+        /// Empty means no acknowledgment is owed - the document was not raw EDI, the partner has no
+        /// return transfer configured, or translation never got far enough to know.
+        /// </summary>
+        private sealed class PendingAcknowledgement
+        {
+            public InboundEDIInfo? Interchange { get; set; }
+            public OrderSaveResponseModel? Saved { get; set; }
+            public EdiTrans? Transaction { get; set; }
+
+            public bool IsOwed => Interchange != null && Saved != null && Transaction != null;
+        }
+
+        /// <summary>
+        /// The 997 back to the partner, once the document has actually been handed to BizMate.
+        ///
+        /// Its failure is logged, not fatal: the order exists, BizMate has the document, and a
+        /// missing acknowledgment is a smaller problem than pretending the document failed.
+        /// </summary>
+        private static void SendAcknowledgement(
+            PendingAcknowledgement pending, ConnectorDataModel source, string fileName, Routes route, int userNo)
+        {
+            if (!pending.IsOwed)
+            {
+                return;
+            }
+
+            try
+            {
+                string l_997 = RepaintGetOrderRoute.Generate997(pending.Interchange!, pending.Saved!, pending.Transaction!);
+
+                if (string.IsNullOrEmpty(l_997))
+                {
+                    return;
+                }
+
+                if (source.AuthType == ConnectorTypesEnum.File.ToString())
+                {
+                    // FileConnector writes into Url and renames into place, so BizLink never sees a
+                    // partial acknowledgement.
+                    FileConnector.Execute(source, false, $"{Path.GetFileNameWithoutExtension(fileName)}-997.edi", l_997)
+                        .GetAwaiter().GetResult();
+                }
+                else
+                {
+                    ConnectorDataModel l_Outbound = JsonConvert.DeserializeObject<ConnectorDataModel>(JsonConvert.SerializeObject(source))!;
+                    l_Outbound.BaseUrl = source.Url;
+
+                    SftpConnector.Execute(l_Outbound, false, $"{Path.GetFileNameWithoutExtension(fileName)}-997", l_997).GetAwaiter().GetResult();
+                }
+            }
+            catch (Exception ex997)
+            {
+                route.SaveLog(LogTypeEnum.Error, $"[BizMateInboundEDI] 997 for [{fileName}] was not delivered to the partner", ex997.Message, userNo);
+            }
         }
 
         /// <summary>

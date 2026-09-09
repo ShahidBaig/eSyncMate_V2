@@ -105,14 +105,23 @@ namespace eSyncMate.Processor.Connections
         /// </summary>
         private static void ShipTo(JsonElement order, string root, List<IntakeViolation> violations)
         {
-            JsonElement? l_ShipTo = X12Render.Obj(order, "shipTo") ?? X12Render.Obj(order, "shipToCustomer");
+            // Named as the payload names it, not as the contract would: an operator who reads
+            // "$.shipToCustomer.address1" can go and find that property in the file.
+            string l_Field = "shipTo";
+            JsonElement? l_ShipTo = X12Render.Obj(order, "shipTo");
+
+            if (!l_ShipTo.HasValue)
+            {
+                l_Field = "shipToCustomer";
+                l_ShipTo = X12Render.Obj(order, "shipToCustomer");
+            }
 
             if (!l_ShipTo.HasValue)
             {
                 violations.Add(new IntakeViolation
                 {
                     Rule = "ShipToPresent",
-                    Path = root + ".shipTo",
+                    Path = root + "." + l_Field,
                     Detail = "mandatory, and absent"
                 });
 
@@ -123,14 +132,14 @@ namespace eSyncMate.Processor.Connections
 
             if (IsDropship(order))
             {
-                foreach (string l_Field in new[] { "address1", "country" })
+                foreach (string l_Missing in new[] { "address1", "country" })
                 {
-                    if (string.IsNullOrWhiteSpace(X12Render.Str(l_Party, l_Field)))
+                    if (string.IsNullOrWhiteSpace(X12Render.Str(l_Party, l_Missing)))
                     {
                         violations.Add(new IntakeViolation
                         {
                             Rule = "DropshipAddress",
-                            Path = root + ".shipTo." + l_Field,
+                            Path = root + "." + l_Field + "." + l_Missing,
                             Detail = "a dropship ship-to is a consumer address and needs both address1 and country"
                         });
                     }
@@ -144,7 +153,7 @@ namespace eSyncMate.Processor.Connections
                 violations.Add(new IntakeViolation
                 {
                     Rule = "ShipToIdentifier",
-                    Path = root + ".shipTo",
+                    Path = root + "." + l_Field,
                     Detail = "a non-dropship ship-to needs one of " + string.Join(", ", ShipToIdentifiers)
                            + " to resolve against CustomerContacts; it carries none"
                 });
