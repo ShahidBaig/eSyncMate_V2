@@ -208,6 +208,13 @@ namespace eSyncMate.Processor.Connections
                 l_Ledger.MapVersion = l_Result.MapVersion ?? l_Ledger.MapVersion;
                 l_Ledger.Modify();
             }
+            catch (IntakeRefusedException ex)
+            {
+                // The map did its job and the document is readable; it broke a rule about what
+                // BizMate can accept (W3-02). Recorded as the refusal it is rather than dressed up
+                // as a translation that fell over, because the two need different people.
+                return Fail(l_Ledger, ex.Outcome, ex.Message);
+            }
             catch (Exception ex)
             {
                 return Fail(l_Ledger, "Failed", "Translation failed: " + ex.Message);
@@ -290,6 +297,215 @@ namespace eSyncMate.Processor.Connections
 
                 return l_Ledger;
             }
+        }
+
+        /// <summary>
+        /// Runs one inbound 997 through: record it, keep the artifact, register it, resolve what it
+        /// acknowledges, and tell BizMate (W2-10, W1-12, E11).
+        ///
+        /// A 997 is not a business document, so it does not take the ordinary path: there is no
+        /// canonical form to translate it into and nothing to post to /inbound. It is a verdict on
+        /// something we already sent, and the work is entirely correlation.
+        ///
+        /// The same ledger-first ordering applies. The acknowledgment gets its own row - it IS a
+        /// document, and EDILedgerLink joins two ledger rows, so it needs one to link FROM - and the
+        /// row exists before any of it is interpreted.
+        /// </summary>
+        public async Task<EDILedger> ProcessAcknowledgementAsync(
+            InboundDocumentContext context,
+            CancellationToken cancellationToken = default)
+        {
+            if (context is null) throw new ArgumentNullException(nameof(context));
+
+            string l_CorrelationId = NewCorrelationId();
+            string l_Text = DecodeForTransport(context);
+
+            // ---- 1. The record exists first. ----
+            EDILedger l_Ledger = CreateLedgerRow(context, l_CorrelationId);
+
+            // ---- 2. The artifact, where eSyncMate already keeps X12. ----
+            LinkInboundEDI(l_Ledger, context, l_Text);
+
+            l_Ledger.Modify();
+
+            // ---- 3. Register it with BizMate before anything is interpreted. ----
+            try
+            {
+                RegisterRawFileResponse l_Raw = await _connector.RegisterRawAsync(
+                    new RegisterRawFileRequest
+                    {
+                        Content = l_Text,
+                        Format = context.Format,
+                        Direction = "In",
+                        FileName = context.FileName,
+                        PartnerId = context.PartnerId,
+                        ReceivedAt = l_Ledger.ReceivedAt
+                    },
+                    l_CorrelationId,
+                    cancellationToken).ConfigureAwait(false);
+
+                l_Ledger.BizMateRawFileRef = l_Raw.RawFileRef;
+                l_Ledger.Modify();
+            }
+            catch (BizMateException ex)
+            {
+                return Fail(l_Ledger, "Rejected", "Could not register the acknowledgment with BizMate: " + ex.Message);
+            }
+
+            // ---- 4. Read it. ----
+            AcknowledgementReading l_Reading;
+
+            try
+            {
+                l_Reading = X12Ack.Read(l_Text);
+
+                l_Ledger.TranslatedAt = DateTime.UtcNow;
+                l_Ledger.MapName = "X12_004010.M_997";
+                l_Ledger.Modify();
+            }
+            catch (Exception ex)
+            {
+                return Fail(l_Ledger, "Failed", "The acknowledgment could not be read: " + ex.Message);
+            }
+
+            if (l_Reading.Groups.Count == 0)
+            {
+                return Fail(l_Ledger, "Failed",
+                    "The acknowledgment carries no AK1 group, so nothing in it says which transmission it answers.");
+            }
+
+            // ---- 5. Correlate each group, then tell BizMate. ----
+            var l_Unresolved = new List<string>();
+            int l_Resolved = 0;
+
+            foreach (AcknowledgedGroup l_Group in l_Reading.Groups)
+            {
+                if (string.IsNullOrWhiteSpace(l_Group.GroupControlNo))
+                {
+                    l_Unresolved.Add("a group with no AK102 control number");
+
+                    continue;
+                }
+
+                var l_Acknowledged = new EDILedger();
+
+                l_Acknowledged.UseConnection(_connectionString);
+
+                // Resolved on OUR control number, which under EQ-01 is the ledger row id.
+                if (!l_Acknowledged.GetOutboundByInterchangeControlNo(context.PartnerId, l_Group.GroupControlNo!).IsSuccess)
+                {
+                    l_Unresolved.Add($"control number {l_Group.GroupControlNo} matches nothing we sent");
+
+                    continue;
+                }
+
+                string l_Result = X12Ack.Result(l_Group.Status);
+                string l_Detail = Detail(l_Group);
+
+                l_Acknowledged.AcknowledgedAt = DateTime.UtcNow;
+
+                if (l_Result != "Accepted")
+                {
+                    l_Acknowledged.ErrorDetail = $"The partner acknowledged this as {l_Result}: {l_Detail}";
+                }
+
+                l_Acknowledged.ModifiedBy = _userNo;
+                l_Acknowledged.Modify();
+
+                SaveLink(l_Ledger.Id, l_Acknowledged.Id, l_Result, l_Detail);
+
+                l_Resolved++;
+
+                // BizMate identifies its outbound message by ITS control number, not ours: the ack
+                // contract asks for "the control number of BizMate's outbound transmission". Ours
+                // resolved the row; theirs is what the row has echoed since it was collected.
+                try
+                {
+                    AcknowledgementResponse l_Response = await _connector.PostAckAsync(
+                        new AcknowledgementRequest
+                        {
+                            PartnerId = context.PartnerId,
+                            PartnerControlNo = l_Acknowledged.PartnerControlNo ?? string.Empty,
+                            AckResult = l_Result,
+                            ReceivedAt = l_Ledger.ReceivedAt,
+                            Detail = X12Render.Text(l_Detail, 2000),
+                            RawFileRef = l_Ledger.BizMateRawFileRef
+                        },
+                        l_CorrelationId,
+                        cancellationToken).ConfigureAwait(false);
+
+                    l_Ledger.BizMateMessageId ??= l_Response.MessageId;
+                    l_Ledger.HandedToBizMateAt = DateTime.UtcNow;
+                    l_Ledger.Modify();
+                }
+                catch (BizMateException ex)
+                {
+                    // The correlation stands - it is ours and it is written. Only telling BizMate
+                    // failed, and that is retryable, so the row stays Pending rather than Failed.
+                    l_Ledger.ErrorDetail = "Correlated, but BizMate was not told: " + ex.Message;
+                    l_Ledger.Modify();
+
+                    return l_Ledger;
+                }
+            }
+
+            if (l_Resolved == 0)
+            {
+                return Fail(l_Ledger, "Failed",
+                    "Nothing this acknowledgment answers could be found: " + string.Join("; ", l_Unresolved));
+            }
+
+            if (l_Unresolved.Count > 0)
+            {
+                l_Ledger.ErrorDetail = "Partly correlated. Unmatched: " + string.Join("; ", l_Unresolved);
+            }
+
+            l_Ledger.Outcome = "Translated";
+            l_Ledger.Modify();
+
+            SetInboundEDIStatus(l_Ledger, "PROCESSED");
+
+            return l_Ledger;
+        }
+
+        /// <summary>What the partner said, as one line, for the link row and for BizMate.</summary>
+        private static string Detail(AcknowledgedGroup group)
+        {
+            var l_Parts = new List<string>();
+
+            if (!string.IsNullOrWhiteSpace(group.FunctionalCode))
+            {
+                l_Parts.Add("group " + group.FunctionalCode);
+            }
+
+            l_Parts.AddRange(group.Notes);
+
+            return l_Parts.Count == 0 ? "no detail given" : string.Join("; ", l_Parts);
+        }
+
+        /// <summary>
+        /// The link from the acknowledgment to what it acknowledges.
+        ///
+        /// Rejects rather than Acknowledges when the partner refused it: both are acknowledgments in
+        /// the everyday sense, and the ledger keeps the difference because only one of them means the
+        /// document has to be sent again.
+        /// </summary>
+        private void SaveLink(long fromLedgerId, long toLedgerId, string result, string detail)
+        {
+            var l_Link = new EDILedgerLink();
+
+            l_Link.UseConnection(_connectionString);
+
+            l_Link.FromLedgerId = fromLedgerId;
+            l_Link.ToLedgerId = toLedgerId;
+            l_Link.LinkType = result == "Rejected" ? "Rejects" : "Acknowledges";
+            l_Link.ResolvedBy = "Automatic";
+            l_Link.ResolvedOn = "AK102 group control number";
+            l_Link.Detail = detail;
+            l_Link.CreatedDate = DateTime.UtcNow;
+            l_Link.CreatedBy = _userNo;
+
+            l_Link.SaveNew();
         }
 
         private static bool IsRawEdi(string format)

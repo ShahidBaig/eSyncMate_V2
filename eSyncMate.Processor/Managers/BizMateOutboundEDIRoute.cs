@@ -225,8 +225,14 @@ namespace eSyncMate.Processor.Managers
 
                     // Once per run per type, not once per document: a backlog of 71 must not become
                     // 71 log rows saying the same thing.
+                    //
+                    // The message names no tracker items. It used to list four, and every one of
+                    // them was wrong: W3-03 is line ordering, W3-07 the 856 Order-family map,
+                    // W3-09 per-partner SSCC, and 860 is an INBOUND document that will never have
+                    // an outbound renderer at all. Which types are covered is already answered
+                    // truthfully by the registry, so let it answer.
                     route.SaveLog(LogTypeEnum.RouteInfo,
-                        $"[BizMateOutboundEDI] Left staged in BizMate for want of a renderer - {l_Waiting}. Renderers {l_Have} (W3-03 855, W3-07 810, W3-09 860, W3-13 870). Nothing was fetched, so BizMate will serve them again.",
+                        $"[BizMateOutboundEDI] Left staged in BizMate for want of a renderer - {l_Waiting}. Renderers {l_Have}. Nothing was fetched, so BizMate will serve them again.",
                         string.Empty, userNo);
                 }
 

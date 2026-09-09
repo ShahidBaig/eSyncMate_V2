@@ -9,6 +9,10 @@
   <ItemGroup>
     <Compile Remove="NewFolder\**" />
     <Compile Remove="Queries\**" />
+    <!-- Committed sample documents (W3-23). Reference material that ships with the
+         renderers, not content the service serves. -->
+    <Content Remove="Connections\TestData\**" />
+    <None Include="Connections\TestData\**" />
     <Content Remove="NewFolder\**" />
     <Content Remove="Queries\**" />
     <EmbeddedResource Remove="NewFolder\**" />

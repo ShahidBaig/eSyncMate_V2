@@ -150,10 +150,16 @@ namespace eSyncMate.Processor.Managers
                 {
                     try
                     {
+                        // What the file says it is, before assuming. Everything BizLink drops in this
+                        // folder used to be treated as an 850, which is right until the partner
+                        // answers one - a 997 has no canonical form and nothing to post to /inbound,
+                        // so it takes the correlation path instead (W2-10).
+                        bool l_IsAck = X12Ack.TransactionSetId(l_File.Value) == X12Ack.DocumentType;
+
                         var l_Context = new InboundDocumentContext
                         {
                             PartnerId = l_Customer.ERPCustomerID,
-                            DocumentType = "850",
+                            DocumentType = l_IsAck ? X12Ack.DocumentType : "850",
                             Format = BizMateFormats.X12,
                             Channel = BizMateChannels.Edi,
                             Provenance = "Wire",
@@ -162,13 +168,15 @@ namespace eSyncMate.Processor.Managers
                             FileName = l_File.Key,
                             CustomerId = l_Customer.Id,
                             RouteId = route.Id,
-                            MapName = TransformationMapType
+                            MapName = l_IsAck ? "X12_004010.M_997" : TransformationMapType
                         };
 
-                        EDILedger l_Ledger = l_Pipeline.ProcessAsync(
-                            l_Context,
-                            input => Translate(input, l_Customer, l_TransformationMap, l_DbFieldsMap, l_Source, l_File.Key, route, userNo))
-                            .GetAwaiter().GetResult();
+                        EDILedger l_Ledger = l_IsAck
+                            ? l_Pipeline.ProcessAcknowledgementAsync(l_Context).GetAwaiter().GetResult()
+                            : l_Pipeline.ProcessAsync(
+                                l_Context,
+                                input => Translate(input, l_Customer, l_TransformationMap, l_DbFieldsMap, l_Source, l_File.Key, route, userNo))
+                                .GetAwaiter().GetResult();
 
                         bool l_Handled = l_Ledger.Outcome == "Translated";
 
@@ -197,7 +205,7 @@ namespace eSyncMate.Processor.Managers
                                 l_Ok++;
                                 MarkOrderSynced(l_Ledger);
                                 route.SaveLog(LogTypeEnum.RouteInfo,
-                                    $"[BizMateInboundEDI] {l_File.Key} -> {l_Ledger.TransmissionReference}: BizMate messageId {l_Ledger.BizMateMessageId}" +
+                                    $"[BizMateInboundEDI] {l_File.Key}{(l_IsAck ? " (997)" : string.Empty)} -> {l_Ledger.TransmissionReference}: BizMate messageId {l_Ledger.BizMateMessageId}" +
                                     (l_Ledger.BizMateDuplicate ? " (duplicate - already held)" : string.Empty) +
                                     (l_Ledger.OrderId.HasValue ? $", order {l_Ledger.OrderId}" : string.Empty),
                                     string.Empty, userNo);
@@ -303,6 +311,38 @@ namespace eSyncMate.Processor.Managers
                 throw new InvalidOperationException("No InboundEDI row was linked to the ledger; the order cannot reference its interchange.");
             }
 
+            // The intake rules that sit beyond the schema (W3-02), before the order is written, so a
+            // refused document leaves no order, no lines and no half-state for somebody to unpick.
+            // A rule names itself in the ledger's ErrorDetail: "shipTo needs an identifier" is
+            // something an operator can act on, where BizMate refusing the document later is not.
+            using (JsonDocument l_Canonical = JsonDocument.Parse(l_Parsed.JSON))
+            {
+                List<IntakeViolation> l_Broken = Canonical850Rules.Inspect(l_Canonical.RootElement);
+
+                if (l_Broken.Count > 0)
+                {
+                    throw new IntakeRefusedException(
+                        "The order breaks BizMate's 850 intake rules: "
+                        + string.Join("; ", l_Broken.Take(10).Select(v => v.ToString()))
+                        + (l_Broken.Count > 10 ? $" (+{l_Broken.Count - 10} more)" : string.Empty),
+                        "Failed");
+                }
+
+                string? l_Duplicate = Canonical850Rules.FindDuplicateOrder(
+                    CommonUtils.ConnectionString,
+                    customer.Id,
+                    Canonical850Rules.PoNumber(l_Canonical.RootElement),
+                    input.Ledger?.PartnerControlNo,
+                    input.Ledger?.Id ?? 0);
+
+                if (l_Duplicate != null)
+                {
+                    // Rejected, not Failed: nothing is wrong with the document, and sending it again
+                    // will not help. It is a decision not to create a second order for one PO.
+                    throw new IntakeRefusedException(l_Duplicate, "Rejected");
+                }
+            }
+
             // Parallel run: Orders, OrderDetail and OrderData are written exactly as before (AD-02).
             OrderSaveResponseModel l_Saved = OrderManager.SaveOrder(input.InboundEDI, customer, l_Parsed);
 
@@ -313,7 +353,20 @@ namespace eSyncMate.Processor.Managers
 
             // The 997 back to the partner, as the existing intake sends it. Its failure is logged,
             // not fatal: the order exists and BizMate will still get the document.
-            if (input.FirstInterchange != null && !string.IsNullOrWhiteSpace(source.Url))
+            //
+            // Only on the EDI carrier (W2-11). A functional acknowledgment is something the X12
+            // conversation does; a flat file, a DB map or a marketplace push has no interchange to
+            // acknowledge and nobody waiting for one, so producing a 997 there would invent a
+            // conversation that never happened and start a clock on BizMate's side against it.
+            // FirstInterchange is populated only for raw EDI, so this already held by construction -
+            // it is written as its own condition so that it keeps holding when a carrier is added
+            // rather than resting on a side effect of where the envelope gets parsed.
+            //
+            // An inbound 997 never reaches this method at all: the route reads ST01 first and sends
+            // it down the correlation path, so eSyncMate does not acknowledge an acknowledgment.
+            bool l_OnEdiCarrier = input.Ledger?.Mechanism == BizMateMechanisms.RawEdi;
+
+            if (l_OnEdiCarrier && input.FirstInterchange != null && !string.IsNullOrWhiteSpace(source.Url))
             {
                 try
                 {

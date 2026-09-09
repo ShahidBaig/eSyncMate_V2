@@ -27,6 +27,8 @@ namespace eSyncMate.Processor.Connections
                     return;
                 }
 
+                BizMate846Renderer.Register();
+                BizMate855Renderer.Register();
                 BizMate856Renderer.Register();
                 BizMate865Renderer.Register();
 
