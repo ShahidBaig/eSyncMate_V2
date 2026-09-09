@@ -300,6 +300,21 @@ namespace eSyncMate.Processor.Models
         public static Int32 BizMate_OutboundWaitSeconds = 0;
 
         /// <summary>
+        /// What ISA15 an interchange must carry to be accepted on THIS instance's credential
+        /// (W3-04, E2): T for a test instance, P for production.
+        ///
+        /// BizMate enforces nothing here - `testIndicator` is not read by any of their inbound
+        /// handlers - so a test document arriving on a production credential becomes a real order,
+        /// with real stock committed against it. The envelope is the one place the partner states
+        /// intent, and this is the boundary that reads it.
+        ///
+        /// Blank turns the check off. That is a deliberate escape hatch for an instance nobody has
+        /// classified yet, not a default anybody should keep: an unset value means every document is
+        /// accepted whatever it claims to be.
+        /// </summary>
+        public static string BizMate_UsageIndicator { get; set; } = "";
+
+        /// <summary>
         /// Loads all configuration (except ConnectionStrings) from the ApplicationSettings
         /// table into the static fields above. Call ONCE at process startup, after
         /// ConnectionString is set and BEFORE auth/consumers use these values.
@@ -359,6 +374,7 @@ namespace eSyncMate.Processor.Models
                 BizMate_QueueDrainMaxCalls = int.TryParse(Get("BizMate_QueueDrainMaxCalls", BizMate_QueueDrainMaxCalls.ToString()), out var bqmc) ? bqmc : BizMate_QueueDrainMaxCalls;
                 BizMate_QueueDrainMaxPartners = int.TryParse(Get("BizMate_QueueDrainMaxPartners", BizMate_QueueDrainMaxPartners.ToString()), out var bqmp) ? bqmp : BizMate_QueueDrainMaxPartners;
                 BizMate_OutboundWaitSeconds = int.TryParse(Get("BizMate_OutboundWaitSeconds", BizMate_OutboundWaitSeconds.ToString()), out var bows) ? bows : BizMate_OutboundWaitSeconds;
+                BizMate_UsageIndicator = Get("BizMate_UsageIndicator", BizMate_UsageIndicator);
             }
             catch (Exception ex)
             {

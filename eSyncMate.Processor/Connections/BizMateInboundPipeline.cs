@@ -4,6 +4,7 @@ using EdiEngine;
 using EdiEngine.Runtime;
 using eSyncMate.DB;
 using eSyncMate.DB.Entities;
+using eSyncMate.Processor.Models;
 
 namespace eSyncMate.Processor.Connections
 {
@@ -157,6 +158,23 @@ namespace eSyncMate.Processor.Connections
             }
 
             l_Ledger.Modify();
+
+            // ---- 2a. Test traffic must not reach a production credential (W3-04). ----
+            //
+            // BizMate enforces nothing here: `testIndicator` is read by none of their inbound
+            // handlers, so a document marked T that arrives on a production credential becomes a
+            // real order with real stock committed against it. ISA15 is where the partner states
+            // intent, and this is the boundary that reads it.
+            //
+            // After the ledger row and the artifact, deliberately. A refused document is one we
+            // received and declined, and that is a fact worth keeping - dropping it before it was
+            // recorded would make it look like it never arrived.
+            string? l_Refusal = UsageRefusal(l_FirstInterchange);
+
+            if (l_Refusal is not null)
+            {
+                return Fail(l_Ledger, "Rejected", l_Refusal);
+            }
 
             // ---- 3. Register it with BizMate before anything is interpreted. ----
             try
@@ -567,6 +585,35 @@ namespace eSyncMate.Processor.Connections
             {
                 return " NOT queued: " + ex.Message;
             }
+        }
+
+        /// <summary>
+        /// Refuses an interchange whose ISA15 does not match what this instance's credential is for
+        /// (W3-04), or null when there is nothing to refuse.
+        ///
+        /// Silent when the instance is unclassified or the envelope did not parse - both are cases
+        /// where refusing would be guessing, and a guard that fires on a guess is one somebody turns
+        /// off. An unparseable envelope already fails visibly a few lines further down.
+        /// </summary>
+        private static string? UsageRefusal(InboundEDIInfo? interchange)
+        {
+            string l_Expected = (CommonUtils.BizMate_UsageIndicator ?? string.Empty).Trim();
+
+            if (l_Expected.Length == 0 || interchange is null)
+            {
+                return null;
+            }
+
+            string l_Actual = (interchange.ISAUsageIndicator ?? string.Empty).Trim();
+
+            if (l_Actual.Length == 0 || string.Equals(l_Actual, l_Expected, StringComparison.OrdinalIgnoreCase))
+            {
+                return null;
+            }
+
+            return $"ISA15 says [{l_Actual}] and this instance's BizMate credential is for [{l_Expected}]. "
+                 + "Refused at the boundary: BizMate does not enforce the usage indicator, so a test document "
+                 + "accepted on a production credential becomes a real order (W3-04).";
         }
 
         private static bool IsRawEdi(string format)
