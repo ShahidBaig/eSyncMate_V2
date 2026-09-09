@@ -5,6 +5,16 @@ using Hangfire;
 namespace eSyncMate.Processor.Managers
 {
     /// <summary>
+    /// What is left of the old recurring drain (W1-14, W1-19, requirement E22).
+    ///
+    /// The drain itself is <see cref="BizMateQueueDrainRoute"/>, route type 602, so that it takes
+    /// the execution lock, writes RouteLog, shows up in VW_Routes and the Flow interface and can be
+    /// test-run. This class survives only to remove the recurring job an older build registered, so
+    /// an upgraded instance does not end up draining the same queue on two schedules.
+    ///
+    /// Everything below the removal is the previous implementation, kept for one release so the two
+    /// can be compared, and it is no longer called from anywhere.
+    ///
     /// The recurring drain of the BizMate store-and-forward queue (W1-14, requirement E22).
     ///
     /// "Automatic drain when BizMate returns" is what this provides: the queue itself guarantees
@@ -131,40 +141,24 @@ namespace eSyncMate.Processor.Managers
         }
 
         /// <summary>
-        /// Registers or removes the recurring job to match configuration. Called once at start-up.
+        /// Removes the recurring job this class used to register (W1-19).
         ///
-        /// It registers even when the credentials are missing, so the schedule exists and starts
-        /// working the moment the trio is filled in - no redeploy, and no silently absent job that
-        /// somebody has to remember to create.
+        /// The drain is route type 602 now, scheduled like every other route. This stays, and is
+        /// still called at start-up, because an instance that has run the older build carries the
+        /// recurring job in its Hangfire storage: leaving it there would drain the same queue on a
+        /// second schedule nobody can see from the Flow interface. Removing it is idempotent and
+        /// costs nothing once it is gone.
         /// </summary>
-        public static void Register()
+        public static void Unregister()
         {
             try
             {
-                if (!CommonUtils.BizMate_QueueDrainEnabled)
-                {
-                    RecurringJob.RemoveIfExists(RecurringJobId);
-
-                    return;
-                }
-
-                var l_Job = new BizMateQueueDrainJob();
-
-                // UTC, not TimeZoneInfo.Local as the older route jobs use. The schedule has no
-                // business shifting with a server's zone, and X-02 is the same argument.
-                //
-                // The RecurringJobOptions overload rather than the TimeZoneInfo one: the latter is
-                // obsolete in Hangfire 1.8 and goes away at 2.0.
-                RecurringJob.AddOrUpdate(
-                    RecurringJobId,
-                    () => l_Job.Execute(),
-                    CommonUtils.BizMate_QueueDrainCron,
-                    new RecurringJobOptions { TimeZone = TimeZoneInfo.Utc });
+                RecurringJob.RemoveIfExists(RecurringJobId);
             }
             catch (Exception ex)
             {
-                // A bad cron expression must not stop the service booting.
-                Console.WriteLine($"[BizMateQueueDrainJob.Register] Failed to schedule the drain: {ex.Message}");
+                // Never stop the service booting over a schedule that may not even exist.
+                Console.WriteLine($"[BizMateQueueDrainJob.Unregister] Could not remove the old recurring job: {ex.Message}");
             }
         }
     }

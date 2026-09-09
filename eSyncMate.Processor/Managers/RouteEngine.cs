@@ -821,6 +821,10 @@ namespace eSyncMate.Processor.Managers
                 {
                     BizMateOutboundEDIRoute.Execute(_config, route);
                 }
+                else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.BizMateQueueDrain))
+                {
+                    BizMateQueueDrainRoute.Execute(_config, route);
+                }
 
                 //DB.Entities.RouteExecutionLogger.LogEnd(
                 //    CommonUtils.ConnectionString, execLogId, "Completed");

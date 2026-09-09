@@ -202,7 +202,8 @@ namespace eSyncMate.Processor.Models
         // RouteEngine:UseExternalProcess is true, every route actually runs in the worker, so one
         // added only to RouteEngine reaches it and falls through to "Unknown route type".
         BizMateInboundEDI = 600,
-        BizMateOutboundEDI = 601
+        BizMateOutboundEDI = 601,
+        BizMateQueueDrain = 602
 
     }
 

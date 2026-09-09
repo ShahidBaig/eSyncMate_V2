@@ -202,7 +202,10 @@ app.MapControllers();
 // schedule exists from start-up, and registered even when the credential trio is still missing so
 // it begins working the moment ApplicationSettings is filled in - no redeploy, and no job somebody
 // has to remember to create. The job itself is inert and quiet until then.
-eSyncMate.Processor.Managers.BizMateQueueDrainJob.Register();
+// The queue drain is route type 602 now (W1-19), scheduled like every other route so it takes
+// the execution lock, writes RouteLog and can be test-run. Registering it directly with Hangfire
+// here put it outside all of that, and left two schedules able to disagree.
+eSyncMate.Processor.Managers.BizMateQueueDrainJob.Unregister();
 
 // -------------------- RUN --------------------
 app.Run();
