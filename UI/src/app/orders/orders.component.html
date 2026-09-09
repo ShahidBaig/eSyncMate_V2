@@ -168,6 +168,12 @@
                 (click)="ReProccess(element,0)">
                 <mat-icon style="color:#dc2626;">restart_alt</mat-icon>
               </button>
+              <!-- Re-Map Item IDs: Amazon error orders whose Seller SKU was not in the feed yet -->
+              <button mat-icon-button matTooltip="Re-Map Item IDs"
+                *ngIf="showRemapItemIdsAction && canRemapItemIds && isErrorStatus(element) && isAmazonOrder(element) && isCompany === 'esyncmate'"
+                (click)="RemapItemIds(element)">
+                <mat-icon style="color:#E8834A;">auto_fix_high</mat-icon>
+              </button>
               <!-- Resubmit already-SYNCED order to ERP (force post, no SPARS check) -->
               <button mat-icon-button matTooltip="Resubmit to ERP"
                 *ngIf="showResubmitAction && canResubmit && isSynced(element) && isCompany === 'esyncmate'"

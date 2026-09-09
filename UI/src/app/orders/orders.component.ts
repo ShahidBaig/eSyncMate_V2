@@ -21,6 +21,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { StoresOrderComponent } from '../stores-order/stores-order.component';
 import { ResubmitConfirmDialogComponent } from './resubmit-confirm-dialog/resubmit-confirm-dialog.component';
 import { ReTransmitConfirmDialogComponent } from './retransmit-confirm-dialog/retransmit-confirm-dialog.component';
+import { RemapResultDialogComponent } from './remap-result-dialog/remap-result-dialog.component';
 import { CommonModule } from '@angular/common';
 import { MatSelectChange, MatSelectModule } from '@angular/material/select';
 import { MatPaginatorModule } from '@angular/material/paginator';
@@ -42,6 +43,9 @@ interface Customers {
   erpCustomerID: string;
   name: string;
   id: any;
+  // Free text on the Customers table ('AMAZON SELLER CENTRAL', 'WALMART MARKETPLACE', ...).
+  // Used only to decide which row actions to show.
+  marketplace?: string;
 }
 
 @Component({
@@ -113,9 +117,13 @@ export class OrdersComponent implements OnInit {
   canDelete = false;
   canResubmit = false;
   canReTransmit = false;
+  canRemapItemIds = false;
   // Global feature toggles (live from ApplicationSettings) — turn the whole action on/off without redeploy
   showResubmitAction = false;
   showReTransmitAction = false;
+  showRemapItemIdsAction = false;
+  // ERPCustomerIDs the Re-Map Item IDs action applies to, from ApplicationSettings.
+  private amazonCustomerIds = new Set<string>();
   totalCount: number = 0;
   pageNumber: number = 1;
   pageSize: number = 10;
@@ -181,12 +189,14 @@ export class OrdersComponent implements OnInit {
       // menus that predate these flags), fall back to admin so admins aren't locked out.
       this.canResubmit = permissions.canResubmit ?? isAdmin;
       this.canReTransmit = permissions.canReTransmit ?? isAdmin;
+      this.canRemapItemIds = permissions.canRemapItemIds ?? isAdmin;
     } else {
       this.canAdd = isAdmin;
       this.canEdit = isAdmin;
       this.canDelete = isAdmin;
       this.canResubmit = isAdmin;
       this.canReTransmit = isAdmin;
+      this.canRemapItemIds = isAdmin;
       this.isAdminUser = isAdmin;
     }
 
@@ -195,6 +205,10 @@ export class OrdersComponent implements OnInit {
       next: (res: any) => {
         this.showResubmitAction = !!res?.showResubmit;
         this.showReTransmitAction = !!res?.showReTransmit;
+        this.showRemapItemIdsAction = !!res?.showRemapItemIds;
+        this.amazonCustomerIds = new Set<string>(
+          (res?.amazonCustomerIds || []).map((id: string) => (id + '').trim().toLowerCase())
+        );
       },
       error: () => { /* default hidden */ }
     });
@@ -465,6 +479,59 @@ export class OrdersComponent implements OnInit {
   }
   isSynced(el: any): boolean { return this.rowStatus(el) === 'SYNCED'; }
   isShipped(el: any): boolean { return this.rowStatus(el) === 'SHIPPED'; }
+
+  // Amazon rows only, matched on ERPCustomerID against the list the API serves from
+  // ApplicationSettings (AmazonCustomerIds). This only decides whether the button is shown —
+  // the endpoint checks the same list before doing anything.
+  isAmazonOrder(el: any): boolean {
+    return this.amazonCustomerIds.has(((el?.erpCustomerID ?? '') + '').toLowerCase());
+  }
+
+  // No confirmation step: the re-map only ever replaces an Item ID it resolved from the feed and
+  // leaves every other line untouched, so there is nothing to warn about up front. The result
+  // dialog reports what happened afterwards.
+  RemapItemIds(element: any) {
+    this.isLoading = true;
+    this.api.RemapItemIds(element.id, element.erpCustomerID).subscribe({
+      next: (res: any) => {
+        this.isLoading = false;
+
+        if (res?.code !== 200) {
+          this.toast.error({ detail: "ERROR", summary: res?.message, duration: 5000, position: 'topRight' });
+          return;
+        }
+
+        // The per-line breakdown is the point of this action — a toast cannot show which SKU
+        // was not found, or that its Item ID was left as it was. Fall back to a toast only if
+        // the response carries no lines.
+        if (res?.lines?.length) {
+          this.dialog.open(RemapResultDialogComponent, {
+            width: '800px',
+            maxHeight: '90vh',
+            data: {
+              orderNumber: res.orderNumber ?? element.orderNumber,
+              updated: res.updated ?? 0,
+              unchanged: res.unchanged ?? 0,
+              notFound: res.notFound ?? 0,
+              ambiguous: res.ambiguous ?? 0,
+              lines: res.lines
+            }
+          });
+        } else {
+          this.toast.info({ detail: "INFO", summary: res?.message, duration: 5000, position: 'topRight' });
+        }
+
+        if ((res?.updated ?? 0) > 0) {
+          this.getOrders(false);
+        }
+      },
+      error: (err: any) => {
+        const msg = err?.error?.message || err.message || 'Unexpected error';
+        this.toast.error({ detail: "ERROR", summary: msg, duration: 5000, position: 'topRight' });
+        this.isLoading = false;
+      }
+    });
+  }
 
   ReTransmitASN(element: any) {
     const dialogRef = this.dialog.open(ReTransmitConfirmDialogComponent, {

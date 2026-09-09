@@ -1468,5 +1468,250 @@ namespace eSyncMate.Processor.Controllers
 
             return BadRequest(new { code = 400, message = $"Order {OrderId} ASN re-transmit failed: {sendResult}" });
         }
+
+        // The ERPCustomerIDs the Re-Map Item IDs action applies to. Read live from
+        // ApplicationSettings (not CommonUtils, which is bound once at startup) so a new Amazon
+        // customer can be added without restarting the Processor.
+        internal static HashSet<string> GetAmazonCustomerIds()
+        {
+            HashSet<string> l_Ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            try
+            {
+                DataTable l_Data = new DataTable();
+                new DBConnector(CommonUtils.ConnectionString)
+                    .GetData("SELECT TagValue FROM ApplicationSettings WHERE TagName = 'AmazonCustomerIds'", ref l_Data);
+
+                if (l_Data.Rows.Count > 0)
+                {
+                    foreach (string l_Id in Convert.ToString(l_Data.Rows[0]["TagValue"]).Split(',', StringSplitOptions.RemoveEmptyEntries))
+                    {
+                        if (!string.IsNullOrWhiteSpace(l_Id))
+                            l_Ids.Add(l_Id.Trim());
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                // An unreadable setting leaves the set empty, which closes the action rather than
+                // opening it to every customer.
+            }
+
+            return l_Ids;
+        }
+
+        // Re-Map Item IDs (Amazon only). An Amazon order whose Seller SKU was not yet in
+        // SCSInventoryFeed when it arrived gets the raw SKU written into the API-JSON as its
+        // ItemID (AmazonGetOrdersRoute), and the ERP rejects it. This re-runs that same lookup
+        // now: SellerSKU -> SCSInventoryFeed.CustomerItemCode -> ItemId, and writes the result
+        // back into the ItemID field of every line in the stored API-JSON.
+        //
+        // The API-JSON is what the ERP actually receives: SP_OrdersData hands OD.Data to the
+        // JUST map, whose detail loop reads $.OrderDetail.payload.OrderItems[].ItemID. Nothing
+        // else needs to change for the order to post.
+        //
+        // The order is NOT re-processed here — that stays a separate, visible step.
+        [HttpPost]
+        [Route("remapItemIds")]
+        public IActionResult RemapItemIds(int OrderId, string CustomerName)
+        {
+            if (OrderId <= 0)
+            {
+                return BadRequest(new { code = 400, message = "Invalid orderId" });
+            }
+
+            if (string.IsNullOrWhiteSpace(CustomerName))
+            {
+                return BadRequest(new { code = 400, message = "Customer is required." });
+            }
+
+            try
+            {
+                DBConnector l_Conn = new DBConnector(CommonUtils.ConnectionString);
+
+                // Amazon only, by explicit ERPCustomerID list. Not derived from Customers.Marketplace
+                // (free text) and not from the Amazon GetOrders route either — AMA1000 has no routes
+                // configured yet but is still an Amazon customer. The list lives in
+                // ApplicationSettings so onboarding another Amazon customer is a one-row UPDATE.
+                if (!GetAmazonCustomerIds().Contains(CustomerName.Trim()))
+                {
+                    return BadRequest(new { code = 400, message = $"Re-Map Item IDs is available for Amazon customers only. {CustomerName} is not in AmazonCustomerIds." });
+                }
+
+                // The API-JSON is looked up by OrderNumber, not OrderId: some OrderData rows are
+                // written before the OrderId is known (see UpdateOrderDataOrderID).
+                DataTable l_OrderRow = new DataTable();
+                l_Conn.GetData($"SELECT TOP 1 O.OrderNumber, C.ERPCustomerID FROM Orders O WITH (NOLOCK) INNER JOIN Customers C WITH (NOLOCK) ON C.Id = O.CustomerId WHERE O.Id = {OrderId}", ref l_OrderRow);
+
+                if (l_OrderRow.Rows.Count == 0)
+                {
+                    return BadRequest(new { code = 400, message = $"Order {OrderId} not found." });
+                }
+
+                string l_OrderNumber = Convert.ToString(l_OrderRow.Rows[0]["OrderNumber"]);
+                string l_ErpCustomerId = Convert.ToString(l_OrderRow.Rows[0]["ERPCustomerID"]);
+
+                OrderData l_OrderData = new OrderData();
+                l_OrderData.UseConnection(CommonUtils.ConnectionString);
+
+                Result l_Found = l_OrderData.GetObjectFromQuery($"SELECT TOP 1 * FROM OrderData WITH (NOLOCK) WHERE OrderNumber = '{l_OrderNumber.Replace("'", "''")}' AND Type = 'API-JSON' ORDER BY Id DESC", true);
+
+                if (!l_Found.IsSuccess || string.IsNullOrWhiteSpace(l_OrderData.Data))
+                {
+                    return BadRequest(new { code = 400, message = $"No API-JSON found for order {l_OrderNumber}." });
+                }
+
+                // These are error orders, so the payload may be one of the ones carrying an
+                // unescaped quote in a product Title — JObject.Parse would throw before any
+                // re-mapping happened. Repair it first, exactly as SCSPlaceOrderRoute does.
+                string l_Json = l_OrderData.Data;
+                bool l_PayloadRepaired = OrderPayloadRepair.TryRepair(l_Json, out l_Json);
+
+                if (!OrderPayloadRepair.IsValid(l_Json))
+                {
+                    return BadRequest(new { code = 400, message = $"Order {l_OrderNumber} has an API-JSON payload that cannot be parsed or repaired. Fix OrderData.Data for this order first." });
+                }
+
+                // Edited as a JObject rather than through the typed model: re-serialising the model
+                // would drop any field it does not declare (WarehouseCode, ShippingCode, ShipDate
+                // and anything a later change adds) and silently rewrite the rest of the payload.
+                JObject l_Payload = JObject.Parse(l_Json);
+                JToken l_Items = l_Payload.SelectToken("OrderDetail.payload.OrderItems");
+
+                if (l_Items == null || l_Items.Type != JTokenType.Array || !l_Items.Any())
+                {
+                    return BadRequest(new { code = 400, message = $"Order {l_OrderNumber} has no order lines in its API-JSON." });
+                }
+
+                // Every line is handled the same way, so a single-line and a multi-line order need
+                // no special casing.
+                List<string> l_Skus = l_Items
+                    .Select(i => Convert.ToString(i["SellerSKU"]))
+                    .Where(s => !string.IsNullOrWhiteSpace(s))
+                    .Select(s => s.Trim())
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+                if (!l_Skus.Any())
+                {
+                    return BadRequest(new { code = 400, message = $"Order {l_OrderNumber} has no Seller SKU on any line." });
+                }
+
+                // One lookup for the whole order. The feed holds ~250k rows per Amazon customer, so
+                // this is filtered in SQL rather than pulled into memory the way ingestion does.
+                string l_SkuList = string.Join(",", l_Skus.Select(s => $"'{s.Replace("'", "''")}'"));
+
+                DataTable l_Feed = new DataTable();
+                l_Conn.GetData($"SELECT CustomerItemCode, ItemId FROM SCSInventoryFeed WITH (NOLOCK) WHERE CustomerID = '{l_ErpCustomerId.Replace("'", "''")}' AND CustomerItemCode IN ({l_SkuList})", ref l_Feed);
+
+                // A Seller SKU may legitimately carry several ItemIds (the PK is CustomerID +
+                // ItemId + CustomerItemCode). Those are reported, never guessed at.
+                Dictionary<string, List<string>> l_Map = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+
+                foreach (DataRow l_Row in l_Feed.Rows)
+                {
+                    string l_Code = Convert.ToString(l_Row["CustomerItemCode"]).Trim();
+                    string l_ItemId = Convert.ToString(l_Row["ItemId"]).Trim();
+
+                    if (string.IsNullOrWhiteSpace(l_Code) || string.IsNullOrWhiteSpace(l_ItemId))
+                        continue;
+
+                    if (!l_Map.ContainsKey(l_Code))
+                        l_Map[l_Code] = new List<string>();
+
+                    if (!l_Map[l_Code].Contains(l_ItemId, StringComparer.OrdinalIgnoreCase))
+                        l_Map[l_Code].Add(l_ItemId);
+                }
+
+                List<object> l_Lines = new List<object>();
+                int l_Updated = 0, l_Unchanged = 0, l_NotFound = 0, l_Ambiguous = 0;
+
+                foreach (JToken l_Item in l_Items)
+                {
+                    string l_Sku = Convert.ToString(l_Item["SellerSKU"])?.Trim() ?? string.Empty;
+                    string l_Current = Convert.ToString(l_Item["ItemID"])?.Trim() ?? string.Empty;
+                    string l_LineNo = Convert.ToString(l_Item["LineNo"]);
+
+                    if (string.IsNullOrWhiteSpace(l_Sku))
+                    {
+                        l_NotFound++;
+                        l_Lines.Add(new { lineNo = l_LineNo, sellerSku = l_Sku, currentItemId = l_Current, newItemId = (string)null, result = "NO SELLER SKU ON LINE" });
+                        continue;
+                    }
+
+                    if (!l_Map.ContainsKey(l_Sku))
+                    {
+                        l_NotFound++;
+                        l_Lines.Add(new { lineNo = l_LineNo, sellerSku = l_Sku, currentItemId = l_Current, newItemId = (string)null, result = "NOT IN INVENTORY FEED" });
+                        continue;
+                    }
+
+                    if (l_Map[l_Sku].Count > 1)
+                    {
+                        l_Ambiguous++;
+                        l_Lines.Add(new { lineNo = l_LineNo, sellerSku = l_Sku, currentItemId = l_Current, newItemId = (string)null, result = $"AMBIGUOUS - maps to {string.Join(", ", l_Map[l_Sku])}" });
+                        continue;
+                    }
+
+                    string l_New = l_Map[l_Sku][0];
+
+                    if (string.Equals(l_Current, l_New, StringComparison.OrdinalIgnoreCase))
+                    {
+                        l_Unchanged++;
+                        l_Lines.Add(new { lineNo = l_LineNo, sellerSku = l_Sku, currentItemId = l_Current, newItemId = l_New, result = "ALREADY CORRECT" });
+                        continue;
+                    }
+
+                    l_Item["ItemID"] = l_New;
+                    l_Updated++;
+                    l_Lines.Add(new { lineNo = l_LineNo, sellerSku = l_Sku, currentItemId = l_Current, newItemId = l_New, result = "UPDATED" });
+                }
+
+                // Nothing re-mapped, but a payload that had to be repaired to be read at all is
+                // still worth saving — otherwise the order stays unreadable for the ERP.
+                if (l_Updated == 0 && !l_PayloadRepaired)
+                {
+                    return Ok(new
+                    {
+                        code = 200,
+                        message = $"Order {l_OrderNumber}: nothing to re-map ({l_Unchanged} already correct, {l_NotFound} not in the feed, {l_Ambiguous} ambiguous).",
+                        orderNumber = l_OrderNumber,
+                        updated = 0,
+                        unchanged = l_Unchanged,
+                        notFound = l_NotFound,
+                        ambiguous = l_Ambiguous,
+                        lines = l_Lines
+                    });
+                }
+
+                // Formatting.None matches how the route stored it in the first place.
+                if (!l_OrderData.UpdateData(l_OrderData.Id, l_Payload.ToString(Formatting.None)))
+                {
+                    return BadRequest(new { code = 400, message = $"Order {l_OrderNumber}: failed to save the updated API-JSON." });
+                }
+
+                this._logger.LogInformation($"[RemapItemIds] Order {l_OrderNumber} ({l_ErpCustomerId}) - {l_Updated} line(s) re-mapped, {l_Unchanged} already correct, {l_NotFound} not in feed, {l_Ambiguous} ambiguous.");
+
+                return Ok(new
+                {
+                    code = 200,
+                    message = l_PayloadRepaired
+                        ? $"Order {l_OrderNumber}: unreadable payload repaired, {l_Updated} line(s) re-mapped. Re-Process the order to send it to the ERP."
+                        : $"Order {l_OrderNumber}: {l_Updated} line(s) re-mapped. Re-Process the order to send it to the ERP.",
+                    orderNumber = l_OrderNumber,
+                    updated = l_Updated,
+                    unchanged = l_Unchanged,
+                    notFound = l_NotFound,
+                    ambiguous = l_Ambiguous,
+                    lines = l_Lines
+                });
+            }
+            catch (Exception ex)
+            {
+                this._logger.LogCritical($"[RemapItemIds] Order {OrderId} - {ex}");
+
+                return BadRequest(new { code = 400, message = $"Order {OrderId} re-map failed: {ex.Message}" });
+            }
+        }
     }
 }
