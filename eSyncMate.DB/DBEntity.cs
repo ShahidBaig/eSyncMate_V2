@@ -970,7 +970,7 @@ namespace eSyncMate.DB
 
                 case Declarations.FieldTypes.NullableNumber:
                     {
-                        property.SetValue(instance, Conversions.ToInteger(PublicFunctions.ConvertNull(row[name], 0)), null);
+                        property.SetValue(instance, NullableNumberValue(property, PublicFunctions.ConvertNull(row[name], 0)), null);
                         break;
                     }
 
@@ -1156,6 +1156,27 @@ namespace eSyncMate.DB
         /// <summary>
         /// TODO: Update summary.
         /// </summary>
+
+        /// <summary>
+        /// The value for a nullable integral property, in the property's own width.
+        ///
+        /// Nullable&lt;long&gt; is why this exists. Reflection widens an Int32 into a plain long, but
+        /// refuses it for a Nullable&lt;long&gt;, so reading back a bigint column threw
+        /// ArgumentException the moment anything populated an entity that had one - which the EDI
+        /// ledger entities introduced in task 00003 are the first to have. Every other property
+        /// keeps the Int32 conversion it has always had, and zero still means NULL to
+        /// PublicFunctions.FieldToParam either way, so a null round-trips as it did before.
+        /// </summary>
+        private static object NullableNumberValue(PropertyInfo property, object value)
+        {
+            if (Nullable.GetUnderlyingType(property.PropertyType) == typeof(long))
+            {
+                return Conversions.ToLong(value);
+            }
+
+            return Conversions.ToInteger(value);
+        }
+
         private Declarations.FieldTypes GetFieldType(PropertyInfo property, object instance)
         {
             if (property.PropertyType == Type.GetType("System.String"))
@@ -1484,7 +1505,7 @@ namespace eSyncMate.DB
 
                 case Declarations.FieldTypes.NullableNumber:
                     {
-                        property.SetValue(instance, Conversions.ToInteger(value), null);
+                        property.SetValue(instance, NullableNumberValue(property, value), null);
                         break;
                     }
 
@@ -1676,7 +1697,7 @@ namespace eSyncMate.DB
 
                 case Declarations.FieldTypes.NullableNumber:
                     {
-                        property.SetValue(instance, Conversions.ToInteger(PublicFunctions.ConvertNull(row[name], 0)), null);
+                        property.SetValue(instance, NullableNumberValue(property, PublicFunctions.ConvertNull(row[name], 0)), null);
                         break;
                     }
 

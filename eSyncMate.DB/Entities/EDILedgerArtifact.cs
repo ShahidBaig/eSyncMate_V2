@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Data;
+using System.Data.SqlClient;
 using System.Reflection;
 
 namespace eSyncMate.DB.Entities
@@ -179,6 +180,26 @@ namespace eSyncMate.DB.Entities
             return Result.GetSuccessResult();
         }
 
+        /// <summary>
+        /// The VARBINARY column, as a real parameter.
+        ///
+        /// PrepareInsertQuery and PrepareUpdateQuery emit a byte[] property as the placeholder
+        /// <c>@Content</c> instead of a literal - there is no safe literal form for arbitrary
+        /// bytes - so the parameter has to be supplied or SQL Server answers "Must declare the
+        /// scalar variable". This entity is the only one in the layer with a byte[], which is why
+        /// nothing had ever exercised that path (F-38).
+        /// </summary>
+        private SqlParameter[] ContentParameters()
+        {
+            return new[]
+            {
+                new SqlParameter("@Content", SqlDbType.VarBinary, -1)
+                {
+                    Value = (object)this.Content ?? DBNull.Value
+                }
+            };
+        }
+
         public Result SaveNew()
         {
             Result l_Result = Result.GetFailureResult();
@@ -190,7 +211,7 @@ namespace eSyncMate.DB.Entities
 
                 string l_Query = this.PrepareInsertQuery(this, EDILedgerArtifact.InsertQueryStart, EDILedgerArtifact.EndingPropertyName, EDILedgerArtifact.DBProperties, "Id");
 
-                object l_Id = this.Connection.ExecuteScalar(l_Query + "; SELECT SCOPE_IDENTITY();");
+                object l_Id = this.Connection.ExecuteScalar(l_Query + "; SELECT SCOPE_IDENTITY();", -1, ContentParameters());
 
                 if (l_Id != null && l_Id != DBNull.Value)
                 {
@@ -235,7 +256,7 @@ namespace eSyncMate.DB.Entities
 
                 string l_Query = this.PrepareUpdateQuery(this, EDILedgerArtifact.TableName, EDILedgerArtifact.PrimaryKeyName, EDILedgerArtifact.EndingPropertyName, EDILedgerArtifact.DBProperties);
 
-                if (this.Connection.Execute(l_Query))
+                if (this.Connection.Execute(l_Query, -1, ContentParameters()))
                 {
                     l_Result = Result.GetSuccessResult();
 

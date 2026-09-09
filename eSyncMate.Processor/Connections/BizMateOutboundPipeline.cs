@@ -98,14 +98,17 @@ namespace eSyncMate.Processor.Connections
         /// <summary>
         /// Runs one staged document through: record it, mark it fetched, render, transmit, confirm.
         ///
-        /// <paramref name="render"/> turns the canonical payload into what the partner receives.
+        /// <paramref name="render"/> turns the canonical payload into what the partner receives. It
+        /// is handed the ledger row rather than the payload, because a renderer needs both: the
+        /// payload is on the document it already has, and the row carries the id that becomes the
+        /// interchange control number (EQ-01, W2-10).
         /// <paramref name="transmit"/> puts it on the wire and returns when the partner has it;
         /// throwing means it did not arrive. Both are delegates because they vary per partner and
         /// per carrier, while the ordering and the recording around them must not.
         /// </summary>
         public async Task<EDILedger> ProcessAsync(
             OutboundDocument document,
-            Func<JsonElement, RenderedDocument> render,
+            Func<EDILedger, RenderedDocument> render,
             Func<RenderedDocument, CancellationToken, Task> transmit,
             CancellationToken cancellationToken = default)
         {
@@ -118,6 +121,27 @@ namespace eSyncMate.Processor.Connections
             // ---- 1. Record it. ReceivedAt is the collection time on an outbound document, which
             // is what the trace contract means by receivedAt in this direction. ----
             EDILedger l_Ledger = CreateLedgerRow(document, l_CorrelationId);
+
+            // ---- 1a. Check the canonical document before touching it or BizMate's state. ----
+            //
+            // The same guard the inbound path runs, pointed the other way. A payload that breaks
+            // the conventions is not something to render optimistically and hope the partner
+            // tolerates: an ASN carrying ciphertext where the consignee name belongs is worse
+            // delivered than not delivered, because the partner cannot tell it is wrong.
+            //
+            // Before the fetch, for the same reason the route checks the renderer registry before
+            // the fetch: a document we are not going to send should stay Staged, so it is re-served
+            // plainly rather than pushed onto the redelivery path. The ledger row is the record
+            // that we saw it and refused it.
+            List<CanonicalViolation> l_Violations = CanonicalGuard.Inspect(document.Payload);
+
+            if (l_Violations.Count > 0)
+            {
+                return Fail(l_Ledger, "Failed",
+                    "The canonical document BizMate staged breaks the conventions and was not rendered: "
+                    + string.Join("; ", l_Violations.Take(5).Select(v => v.ToString()))
+                    + (l_Violations.Count > 5 ? $" (+{l_Violations.Count - 5} more)" : string.Empty));
+            }
 
             // ---- 2. Tell BizMate we have it. Distinct from delivered, on purpose. ----
             try
@@ -140,7 +164,7 @@ namespace eSyncMate.Processor.Connections
 
             try
             {
-                l_Rendered = render(document.Payload);
+                l_Rendered = render(l_Ledger);
                 l_Ledger.TranslatedAt = DateTime.UtcNow;
             }
             catch (Exception ex)
@@ -220,8 +244,26 @@ namespace eSyncMate.Processor.Connections
             return format is BizMateFormats.X12 or BizMateFormats.EDIFACT;
         }
 
+        /// <summary>
+        /// The ledger row for this document - the one it already has if BizMate is re-serving it,
+        /// a new one otherwise (F-39).
+        ///
+        /// BizMate serves a document again whenever it is not yet Delivered: refused by the guard,
+        /// fetched but never confirmed, transmission failed. Every one of those is another attempt
+        /// at the SAME document, so it belongs on the row the document already has. Inserting per
+        /// attempt grew the ledger without bound - 18 refused ASNs minted 18 fresh Failed rows on
+        /// every pass - and moved the interchange control number, which IS the row id (EQ-01), out
+        /// from under any 997 the partner had already been told to quote.
+        /// </summary>
         private EDILedger CreateLedgerRow(OutboundDocument document, string correlationId)
         {
+            EDILedger l_Open = FindOpenRow(document, correlationId);
+
+            if (l_Open != null)
+            {
+                return l_Open;
+            }
+
             var l_Ledger = new EDILedger();
 
             l_Ledger.UseConnection(_connectionString);
@@ -261,6 +303,48 @@ namespace eSyncMate.Processor.Connections
             l_Ledger.CreatedBy = _userNo;
 
             l_Ledger.SaveNew();
+
+            return l_Ledger;
+        }
+
+        /// <summary>
+        /// The row this document already occupies, reset for a fresh attempt, or null if it has
+        /// none open. Open means not yet delivered; a delivered row is finished, and a genuinely
+        /// new transmission of the same document earns its own row.
+        ///
+        /// Reset, not rewritten: the id, the transmission reference and the original collection
+        /// time survive, because they are what identify the document and how long it has been
+        /// waiting. What the previous attempt concluded does not survive - the outcome goes back
+        /// to Pending and the reason it failed is cleared, so a stale error can never be read as
+        /// this attempt's.
+        /// </summary>
+        private EDILedger FindOpenRow(OutboundDocument document, string correlationId)
+        {
+            var l_Ledger = new EDILedger();
+
+            l_Ledger.UseConnection(_connectionString);
+
+            if (!l_Ledger.GetOpenOutboundByBizMateMessageId(document.PartnerId, document.MessageId).IsSuccess)
+            {
+                return null;
+            }
+
+            l_Ledger.CorrelationId = correlationId;
+
+            l_Ledger.Outcome = "Pending";
+            l_Ledger.ErrorDetail = null;
+            l_Ledger.TranslatedAt = null;
+
+            // BizMate may have restaged it since we last looked; the document in hand is the
+            // truth about what it is now.
+            l_Ledger.DocumentType = document.DocType;
+            l_Ledger.Family = document.SourceFamily;
+            l_Ledger.PartnerControlNo = document.PartnerControlNo;
+            l_Ledger.Channel = string.IsNullOrEmpty(document.Channel) ? BizMateChannels.Edi : document.Channel;
+
+            l_Ledger.ModifiedBy = _userNo;
+
+            l_Ledger.Modify();
 
             return l_Ledger;
         }

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Data;
@@ -284,6 +284,34 @@ namespace eSyncMate.DB.Entities
                 "AND InterchangeControlNo = '" + PublicFunctions.DoQuotes(p_InterchangeControlNo) + "' " +
                 "AND Direction = 'Out' " +
                 "ORDER BY DeliveredToPartnerAt DESC, Id DESC";
+
+            return GetObjectByQuery(l_Query);
+        }
+
+        /// <summary>
+        /// The open outbound row for a document BizMate is still serving (F-39).
+        ///
+        /// A document that was refused, or fetched but never delivered, is served again on the
+        /// next pass. It must land back on the row it already has: the row IS the document's
+        /// record, and its id is the interchange control number the partner's 997 will quote
+        /// (EQ-01), so minting a new row per attempt both duplicates the ledger and moves the
+        /// control number out from under the acknowledgement.
+        ///
+        /// Open means not yet delivered. A delivered row is finished - a genuinely new
+        /// transmission of the same document earns its own row and its own control number.
+        /// Oldest first, so the control number stays put across attempts.
+        ///
+        /// Served by IX_EDILedger_BizMateMessageId.
+        /// </summary>
+        public Result GetOpenOutboundByBizMateMessageId(string p_PartnerId, long p_BizMateMessageId)
+        {
+            string l_Query =
+                "SELECT TOP 1 * FROM [" + EDILedger.TableName + "] WITH (NOLOCK) " +
+                "WHERE BizMateMessageId = " + p_BizMateMessageId.ToString() + " " +
+                "AND PartnerId = '" + PublicFunctions.DoQuotes(p_PartnerId) + "' " +
+                "AND Direction = 'Out' " +
+                "AND DeliveredToPartnerAt IS NULL " +
+                "ORDER BY Id";
 
             return GetObjectByQuery(l_Query);
         }

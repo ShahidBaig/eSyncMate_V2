@@ -39,6 +39,21 @@ namespace eSyncMate.Processor.Connections
         /// Shared with the normaliser so the two can never disagree about which empties survive.
         private static readonly IReadOnlySet<string> _emptyIsMeaningful = CanonicalValues.EmptyIsMeaningful;
 
+        /// <summary>
+        /// The prefix BizMate puts in front of a value it has encrypted.
+        ///
+        /// Nothing in the M1 contract mentions encrypted or masked payload fields - not the
+        /// OpenAPI document, not the schemas, not the handover note - and yet 18 of the 30 856s
+        /// staged for BELL-D12 carry one at exactly $.shipment.shipTo.name, and nowhere else. That
+        /// is the consignee name, destined for N1*ST of an ASN. Rendered as-is it would put
+        /// "ENC:x8BS..." on a real delivery; and at 66 characters it does not even fit X12 element
+        /// 93, so the interchange would be invalid as well as wrong.
+        ///
+        /// Raised with BizMate as an open question. Until it is answered, a document carrying one
+        /// is a visible Failed ledger row rather than something a partner receives and acts on.
+        /// </summary>
+        private const string CiphertextPrefix = "ENC:";
+
         private static readonly string[] _instantSuffixes = { "At" };
 
         private static readonly string[] _dateSuffixes = { "Date" };
@@ -131,6 +146,21 @@ namespace eSyncMate.Processor.Connections
 
             if (string.IsNullOrWhiteSpace(value))
             {
+                return;
+            }
+
+            // --- A canonical value is plaintext, never ciphertext ------------------------
+            if (value!.StartsWith(CiphertextPrefix, StringComparison.Ordinal))
+            {
+                violations.Add(new CanonicalViolation
+                {
+                    Path = path,
+                    Rule = "ciphertext",
+                    Detail = $"Starts with \"{CiphertextPrefix}\", so this is ciphertext, not a value. " +
+                             "The contract documents no encrypted or masked fields; rendering it would put " +
+                             "the ciphertext itself in front of the partner."
+                });
+
                 return;
             }
 

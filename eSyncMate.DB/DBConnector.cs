@@ -505,7 +505,7 @@ namespace eSyncMate.DB
         /// <summary>
         /// TODO: Update summary.
         /// </summary>
-        public object ExecuteScalar(string l_Query, int p_Timeout = -1)
+        public object ExecuteScalar(string l_Query, int p_Timeout = -1, SqlParameter[] p_SQLParams = null)
         {
             object ExecuteScalarRet = default;
             try
@@ -520,6 +520,19 @@ namespace eSyncMate.DB
                 Command.Connection = Connection;
                 Command.Transaction = Transaction;
                 Command.CommandTimeout = CommandTimeout;
+
+                // Only touched when parameters are actually supplied, so every existing caller
+                // behaves exactly as before. PrepareInsertQuery emits a VARBINARY column as the
+                // placeholder @<Field> rather than a literal, so a byte[] can only be written
+                // through here - which is why EDILedgerArtifact could never save a row.
+                if (!Information.IsNothing(p_SQLParams))
+                {
+                    Command.Parameters.Clear();
+
+                    foreach (var index in p_SQLParams)
+                        Command.Parameters.Add(index);
+                }
+
                 if (p_Timeout > 0)
                 {
                     Command.CommandTimeout = p_Timeout;
@@ -549,6 +562,12 @@ namespace eSyncMate.DB
                 }
 
                 Command.CommandTimeout = CommandTimeout;
+
+                // The command is shared, so parameters must not outlive the call that added them.
+                if (!Information.IsNothing(p_SQLParams))
+                {
+                    Command.Parameters.Clear();
+                }
             }
 
             return ExecuteScalarRet;

@@ -26,9 +26,9 @@ namespace eSyncMate.Processor.Managers
     /// **A document type with no renderer is skipped, not fetched.** BizMate re-serves a Staged
     /// document on the next poll, so skipping costs nothing; fetching one we cannot render would
     /// mark it Fetched and push it onto the redelivery path for no reason. That is why the
-    /// registry is consulted before ProcessAsync rather than inside the render delegate. Today the
-    /// registry is empty - the renderers are W3-03, W3-05 and W3-07 - so this route reports what is
-    /// waiting and sends nothing, which is the honest state of the outbound half.
+    /// registry is consulted before ProcessAsync rather than inside the render delegate. The 856 and
+    /// 865 renderers are built (W3-05, W3-11); the rest still report what is waiting and send
+    /// nothing, which is the honest state of the outbound half.
     /// </summary>
     public class BizMateOutboundEDIRoute
     {
@@ -42,6 +42,10 @@ namespace eSyncMate.Processor.Managers
             try
             {
                 route.SaveLog(LogTypeEnum.RouteInfo, $"[BizMateOutboundEDI] Started route [{route.Id}]", string.Empty, userNo);
+
+                // Explicit, before anything consults the registry: what can be rendered decides
+                // what gets fetched, so it must not depend on a static initialiser having run.
+                BizMateRenderers.RegisterAll();
 
                 ConnectorDataModel? l_Destination = ConnectorDataModel.Deserialize(route.DestinationConnectorObject.Data);
 
@@ -170,7 +174,14 @@ namespace eSyncMate.Processor.Managers
 
                         EDILedger l_Ledger = l_Pipeline.ProcessAsync(
                             l_Document,
-                            _ => l_Renderer(l_Context),
+                            ledger =>
+                            {
+                                // The row exists by now, so the renderer can take its id as the
+                                // interchange control number (EQ-01).
+                                l_Context.Ledger = ledger;
+
+                                return l_Renderer(l_Context);
+                            },
                             (rendered, token) => TransmitAsync(rendered, l_Destination, l_Document, l_IsFolder))
                             .GetAwaiter().GetResult();
 
@@ -215,7 +226,7 @@ namespace eSyncMate.Processor.Managers
                     // Once per run per type, not once per document: a backlog of 71 must not become
                     // 71 log rows saying the same thing.
                     route.SaveLog(LogTypeEnum.RouteInfo,
-                        $"[BizMateOutboundEDI] Left staged in BizMate for want of a renderer - {l_Waiting}. Renderers {l_Have} (W3-03 855, W3-05 856, W3-07 810). Nothing was fetched, so BizMate will serve them again.",
+                        $"[BizMateOutboundEDI] Left staged in BizMate for want of a renderer - {l_Waiting}. Renderers {l_Have} (W3-03 855, W3-07 810, W3-09 860, W3-13 870). Nothing was fetched, so BizMate will serve them again.",
                         string.Empty, userNo);
                 }
 

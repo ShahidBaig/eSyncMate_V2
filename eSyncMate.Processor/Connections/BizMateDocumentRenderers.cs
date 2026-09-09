@@ -22,6 +22,18 @@ namespace eSyncMate.Processor.Connections
 
         /// <summary>Order or Consignment, when BizMate said which.</summary>
         public string? Family { get; set; }
+
+        /// <summary>
+        /// The ledger row this document is being rendered under, set by the pipeline just before
+        /// the renderer runs.
+        ///
+        /// Renderers need it for the interchange control number: eSyncMate assigns its own (EQ-01),
+        /// and the ledger id is the only number in the system that is already unique, already
+        /// monotonic and already the thing an inbound 997 gets correlated against
+        /// (IX_EDILedger_InterchangeControlNo, W2-10). Taking it from anywhere else would mean
+        /// keeping a second sequence in step with this one.
+        /// </summary>
+        public DB.Entities.EDILedger? Ledger { get; set; }
     }
 
     /// <summary>
@@ -33,10 +45,11 @@ namespace eSyncMate.Processor.Connections
     /// instead of fetching it and then failing, which is not. BizMate re-serves a Staged document
     /// on the next poll; a Fetched one needs the redelivery path.
     ///
-    /// The renderers themselves are W3 work and are deliberately not here yet:
+    /// Built so far - 856 (W3-05) and 865 (W3-11 outbound half), in that order because that is
+    /// what BizMate actually has waiting (F-34), not the order the plan was written in:
     ///
-    ///   855  W3-03      856  W3-05      810  W3-07
-    ///   860  W3-09      865  W3-11      870  W3-13
+    ///   856  built      865  built
+    ///   855  W3-03      810  W3-07      860  W3-09      870  W3-13
     ///
     /// Two rules a renderer must follow, both enforced downstream rather than trusted:
     ///
