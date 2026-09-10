@@ -356,5 +356,47 @@ namespace eSyncMate.Processor.Connections
         [JsonPropertyName("mechanism")] public string? Mechanism { get; set; }
         [JsonPropertyName("orderCancelWindow")] public string? OrderCancelWindow { get; set; }
         [JsonPropertyName("cacheTtlSeconds")] public int? CacheTtlSeconds { get; set; }
+
+        // ---- Everything below was being returned and discarded (F-48). ----
+
+        [JsonPropertyName("ediConfigurationNo")] public int? EdiConfigurationNo { get; set; }
+
+        /// <summary>Active, or whatever BizMate has set the partner to. Coarser than the two enable flags.</summary>
+        [JsonPropertyName("status")] public string? Status { get; set; }
+
+        /// <summary>
+        /// How long BizMate expects to wait for a functional acknowledgment before it ages one out.
+        /// Theirs, not ours - which makes it the number an unacknowledged document should be measured
+        /// against (W2-10), rather than a figure eSyncMate picks for itself.
+        /// </summary>
+        [JsonPropertyName("ackExpectedMinutes")] public int? AckExpectedMinutes { get; set; }
+
+        [JsonPropertyName("asnComplete")] public bool? AsnComplete { get; set; }
+
+        /// <summary>
+        /// What this partner is configured to exchange, per document type and direction. `enabled`
+        /// here is the only statement anyone makes about a map being switched off, which is what
+        /// W2-17's MapDisabled turns on.
+        /// </summary>
+        [JsonPropertyName("documents")] public List<PartnerDocumentConfig> Documents { get; set; } = new();
+    }
+
+    /// <summary>One row of <see cref="CustomerIntegrationConfig.Documents"/>.</summary>
+    public sealed class PartnerDocumentConfig
+    {
+        [JsonPropertyName("docType")] public string DocType { get; set; } = string.Empty;
+        [JsonPropertyName("sourceFamily")] public string? SourceFamily { get; set; }
+
+        /// <summary>In or Out, from BizMate's point of view - the same sense as the ledger's Direction.</summary>
+        [JsonPropertyName("direction")] public string? Direction { get; set; }
+
+        [JsonPropertyName("enabled")] public bool Enabled { get; set; }
+        [JsonPropertyName("deliveryStyle")] public string? DeliveryStyle { get; set; }
+        [JsonPropertyName("schedule")] public string? Schedule { get; set; }
+        [JsonPropertyName("ackExpectedMinutes")] public int? AckExpectedMinutes { get; set; }
+
+        /// <summary>"810 Order Out", for a log line or a partner-state detail.</summary>
+        public string Describe() =>
+            string.Join(" ", new[] { DocType, SourceFamily, Direction }.Where(p => !string.IsNullOrWhiteSpace(p)));
     }
 }

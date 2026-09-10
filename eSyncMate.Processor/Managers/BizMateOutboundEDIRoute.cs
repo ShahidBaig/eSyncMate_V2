@@ -35,6 +35,18 @@ namespace eSyncMate.Processor.Managers
         /// <summary>Never take the whole outbox in one pass; the drain and the lock both have budgets.</summary>
         private const int MaxDocumentsPerRun = 100;
 
+        /// <summary>
+        /// The partner-state detail: why we are not sending, and which maps are off when BizMate has
+        /// said. Naming the document types is what makes the board entry actionable rather than a
+        /// flag somebody then has to go and investigate.
+        /// </summary>
+        private static string Detail(string reason, string? disabledDocuments)
+        {
+            return string.IsNullOrWhiteSpace(disabledDocuments)
+                ? reason
+                : $"{reason} Document types switched off for this partner: {disabledDocuments}.";
+        }
+
         public static void Execute(IConfiguration config, Routes route)
         {
             int userNo = 1;
@@ -118,6 +130,24 @@ namespace eSyncMate.Processor.Managers
                 (bool l_Enabled, string l_Reason) = BizMateConfigCache
                     .IsEdiEnabledAsync(l_Connector, l_PartnerId, l_CorrelationId)
                     .GetAwaiter().GetResult();
+
+                // MapDisabled belongs here rather than in the drain (W2-17, F-48). The drain reports
+                // what a pass observed about a CONNECTION; this is a statement about configuration,
+                // and this is the only place that reads it. Reported on the transition, not every
+                // pass, and it names which document types are off when BizMate has told us - which
+                // it does, in the documents[] array we used to discard.
+                BizMateMapState.Sync(
+                    l_Connector,
+                    CommonUtils.ConnectionString,
+                    userNo,
+                    l_PartnerId,
+                    !l_Enabled,
+                    l_Enabled
+                        ? string.Empty
+                        : Detail(l_Reason, BizMateMapState.DisabledDocuments(
+                            BizMateConfigCache.GetAsync(l_Connector, l_PartnerId, l_CorrelationId)
+                                .GetAwaiter().GetResult())),
+                    (message, data) => route.SaveLog(LogTypeEnum.RouteInfo, $"[BizMateOutboundEDI] {message}", data, userNo));
 
                 if (!l_Enabled)
                 {
