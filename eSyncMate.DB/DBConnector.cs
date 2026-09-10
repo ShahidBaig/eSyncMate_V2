@@ -186,46 +186,96 @@ namespace eSyncMate.DB
         /// <summary>
         /// TODO: Update summary.
         /// </summary>
+        /// <summary>
+        /// Opens the connection, retrying a bounded number of times on a SQL error.
+        ///
+        /// This used to call ITSELF on every SqlException, with the guard that would have stopped it
+        /// commented out - m_ConnectionTries was reset on success and never incremented, and the
+        /// "If m_ConnectionTries > 5 Then Throw" above the recursive call was dead text. So an
+        /// unreachable database did not produce an error: it produced unbounded recursion and a
+        /// STACK OVERFLOW, which .NET cannot catch. The runtime terminates the process with no
+        /// exception, no log line and no shutdown, so the failure looked like the service silently
+        /// vanishing rather than like a database problem. Found on 2026-09-10 when the Processor was
+        /// started without ASPNETCORE_ENVIRONMENT=Development and read appsettings.json, whose
+        /// DefaultConnection points at a server that is not reachable from every environment.
+        ///
+        /// A loop instead, so the attempts are countable and the last failure is rethrown. Callers
+        /// already propagate it - GetData and the rest rethrow - so a route now logs a connection
+        /// error and carries on, which is what should have happened all along.
+        ///
+        /// The delay matters as much as the bound: retrying with no pause is a spin, and a database
+        /// that is briefly busy is the case retrying exists for.
+        /// </summary>
         private bool OpenConnection(bool p_IsSetRole = true, bool p_IsConnectionCheck = true)
+        {
+            const int MaxAttempts = 5;
+
+            for (int l_Attempt = 1; ; l_Attempt++)
+            {
+                try
+                {
+                    if (string.IsNullOrEmpty(ConnectionString))
+                    {
+                        throw new Exception("Invalid Connection String.");
+                    }
+
+                    if (IsConnected)
+                    {
+                        Connection.Close();
+                    }
+
+                    Connection.ConnectionString = this.ConnectionString;
+
+                    Connection.Open();
+                    m_ConnectionTries = 0;
+                    return true;
+                }
+                catch (SqlException ex)
+                {
+                    if (p_IsConnectionCheck == false || l_Attempt >= MaxAttempts)
+                    {
+                        // Say WHICH server could not be reached. The original threw the driver's
+                        // message, which names neither the host nor the database, so the commonest
+                        // cause - pointed at the wrong one - was invisible in the error itself.
+                        // Never the whole connection string: it carries the password.
+                        throw new Exception(
+                            "Could not open a connection to " + DescribeTarget()
+                            + " after " + l_Attempt + " attempt(s): " + ex.Message, ex);
+                    }
+
+                    // Linear backoff. The pauses themselves are small - 200, 400, 600, 800 ms, two
+                    // seconds in all - but they are NOT what the wait costs. The connection timeout
+                    // dominates: five attempts against a host that does not answer take five
+                    // timeouts, so roughly 75 s at the SqlClient default of 15 s, measured at 23 s
+                    // with a 3 s timeout. That is the deliberate trade - a route blocked for up to a
+                    // minute and then failing visibly, instead of a service that dies instantly and
+                    // silently - and it is worth knowing before anyone raises MaxAttempts.
+                    System.Threading.Thread.Sleep(200 * l_Attempt);
+                }
+                catch
+                {
+                    // TODO: Implement Log
+                    return false;
+                }
+            }
+        }
+
+        /// <summary>
+        /// The server and database, for an error message. Deliberately not the connection string,
+        /// which carries credentials.
+        /// </summary>
+        private string DescribeTarget()
         {
             try
             {
-                if (string.IsNullOrEmpty(ConnectionString))
-                {
-                    throw new Exception("Invalid Connection String.");
-                }
+                var l_Builder = new SqlConnectionStringBuilder(this.ConnectionString);
 
-                if (IsConnected)
-                {
-                    Connection.Close();
-                }
-
-                Connection.ConnectionString = this.ConnectionString;
-
-                Connection.Open();
-                m_ConnectionTries = 0;
-                return true;
+                return "[" + l_Builder.DataSource + "].[" + l_Builder.InitialCatalog + "]";
             }
-            catch (SqlException ex)
+            catch (Exception)
             {
-                if (p_IsConnectionCheck == false)
-                {
-                    throw;
-                }
-
-                // If m_ConnectionTries > 5 Then
-                // Throw
-                // End If
-
-                // m_ConnectionTries += 1
-                return OpenConnection(p_IsSetRole);
+                return "the configured server";
             }
-            catch
-            {
-                // TODO: Implement Log
-            }
-
-            return false;
         }
 
         /// <summary>
