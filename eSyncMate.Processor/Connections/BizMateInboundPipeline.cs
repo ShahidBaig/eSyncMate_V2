@@ -430,7 +430,7 @@ namespace eSyncMate.Processor.Connections
                 l_Acknowledged.ModifiedBy = _userNo;
                 l_Acknowledged.Modify();
 
-                SaveLink(l_Ledger.Id, l_Acknowledged.Id, l_Result, l_Detail);
+                SaveLink(l_Ledger.Id, l_Acknowledged.Id, l_Result, l_Detail, "AK102 group control number");
 
                 l_Resolved++;
 
@@ -531,7 +531,143 @@ namespace eSyncMate.Processor.Connections
         /// the everyday sense, and the ledger keeps the difference because only one of them means the
         /// document has to be sent again.
         /// </summary>
-        private void SaveLink(long fromLedgerId, long toLedgerId, string result, string detail)
+        /// <summary>
+        /// Records a functional acknowledgment we are about to send back to the partner (F-42).
+        ///
+        /// The 997s eSyncMate generates used to be rendered and written to the partner with no ledger
+        /// row at all, which made W2-01's promise - one row per document, both directions - false for
+        /// exactly the document type a partner is most likely to dispute having received. It also
+        /// meant the document being acknowledged never learned that it had been, so the ledger could
+        /// not answer "did we acknowledge this?" in the inbound direction at all (W2-07).
+        ///
+        /// Ledger-first, as everywhere else: this is called BEFORE the transfer, so an acknowledgment
+        /// that fails on the way out is still a document we produced and can account for. The caller
+        /// settles it with <see cref="SettleAcknowledgementSent"/> once the partner has it.
+        ///
+        /// A failure here must not stop the 997 being sent - the order exists and BizMate has the
+        /// document, so a missing acknowledgment is the larger harm - but it is thrown rather than
+        /// swallowed, because the caller has the route and can say so in the log. The first version
+        /// caught everything here and returned null, and a CHECK constraint violation on Provenance
+        /// then looked exactly like nothing having happened.
+        /// </summary>
+        public EDILedger RecordAcknowledgementSent(EDILedger acknowledged, string text)
+        {
+            {
+                var l_Ledger = new EDILedger();
+
+                l_Ledger.UseConnection(_connectionString);
+
+                l_Ledger.TransmissionReference = NewTransmissionReference();
+                l_Ledger.PartnerId = acknowledged.PartnerId;
+                l_Ledger.CustomerNo = acknowledged.CustomerNo;
+                l_Ledger.CorrelationId = acknowledged.CorrelationId;
+                l_Ledger.BizMateDuplicate = false;
+
+                // Out, and going to the partner rather than to BizMate: a 997 is something the X12
+                // conversation owes, not a business document, so nothing about it is ever posted to
+                // /inbound and it has no BizMate messageId. That is why HandedToBizMateAt stays null
+                // here while DeliveredToPartnerAt is the hop that matters.
+                l_Ledger.Direction = "Out";
+                l_Ledger.DocumentType = "997";
+                l_Ledger.Format = BizMateFormats.X12;
+                l_Ledger.Mechanism = BizMateMechanisms.RawEdi;
+                l_Ledger.Channel = BizMateChannels.Edi;
+                // Wire, not Outbox: Outbox means BizMate staged it, and this document exists only
+                // because of the X12 conversation on the wire and travels back out on it.
+                l_Ledger.Provenance = "Wire";
+
+                // Read our own envelope back rather than trusting what we meant to write. W2-09 wants
+                // a control number on every RawEDI transmission, and one read off the bytes that are
+                // actually going out is the only kind worth recording.
+                l_Ledger.InterchangeControlNo = X12Ack.Read(text).InterchangeControlNo;
+
+                l_Ledger.Outcome = "Pending";
+                l_Ledger.ErrorDetail = "Rendered, not yet handed to the partner.";
+                l_Ledger.ReceivedAt = DateTime.UtcNow;
+                l_Ledger.TranslatedAt = DateTime.UtcNow;
+                l_Ledger.CustomerId = acknowledged.CustomerId;
+                l_Ledger.RouteId = acknowledged.RouteId;
+                l_Ledger.CreatedDate = DateTime.UtcNow;
+                l_Ledger.CreatedBy = _userNo;
+
+                l_Ledger.SaveNew();
+
+                byte[] l_Bytes = Encoding.UTF8.GetBytes(text);
+
+                var l_Artifact = new EDILedgerArtifact();
+
+                l_Artifact.UseConnection(_connectionString);
+
+                l_Artifact.LedgerId = l_Ledger.Id;
+                l_Artifact.Stage = "AsSent";
+                l_Artifact.FormatLabel = BizMateFormats.X12;
+                l_Artifact.ContentEncoding = "utf-8";
+                l_Artifact.ContentHash = BizMateRequestSigner.HashBody(l_Bytes);
+                l_Artifact.SizeBytes = l_Bytes.LongLength;
+                l_Artifact.Content = l_Bytes;
+                l_Artifact.CreatedDate = DateTime.UtcNow;
+                l_Artifact.CreatedBy = _userNo;
+
+                l_Artifact.SaveNew();
+
+                l_Ledger.RawArtifactRef = "artifact:" + l_Artifact.Id;
+                l_Ledger.Modify();
+
+                // The acknowledgment points at what it answers, the same direction the inbound 997
+                // correlation points, so the link graph reads the same way whoever sent the 997.
+                SaveLink(l_Ledger.Id, acknowledged.Id, "Accepted",
+                    "Functional acknowledgment generated by eSyncMate for the partner document.",
+                    "Generated for this document; no correlation was needed");
+
+                return l_Ledger;
+            }
+        }
+
+        /// <summary>
+        /// Closes the acknowledgment row once the partner has it, and tells the document it answers
+        /// that it has been acknowledged - which is the fact W2-07's inbound half was missing.
+        /// </summary>
+        public void SettleAcknowledgementSent(EDILedger? sent, EDILedger acknowledged, string? failure)
+        {
+            if (sent is null)
+            {
+                return;
+            }
+
+            try
+            {
+                if (failure is null)
+                {
+                    sent.Outcome = "Translated";
+                    sent.ErrorDetail = null;
+                    sent.DeliveredToPartnerAt = DateTime.UtcNow;
+                    sent.Modify();
+
+                    acknowledged.AcknowledgedAt = sent.DeliveredToPartnerAt;
+                    acknowledged.Modify();
+
+                    return;
+                }
+
+                // It was produced and it did not arrive. Both halves are worth keeping: the row says
+                // Failed, and the artifact is still there to show exactly what could not be sent.
+                sent.Outcome = "Failed";
+                sent.ErrorDetail = "The acknowledgment was rendered but not delivered to the partner: " + failure;
+                sent.Modify();
+            }
+            catch (Exception)
+            {
+                // The 997 itself is unaffected either way.
+            }
+        }
+
+        /// <summary>
+        /// <paramref name="resolvedOn"/> is how the two rows were connected, and it has to be true:
+        /// an inbound 997 really is correlated on AK102, but one we generated ourselves was not
+        /// resolved at all - we know what it answers because we just made it. Recording a lookup
+        /// that never happened would make the audit field worthless for the case it exists for.
+        /// </summary>
+        private void SaveLink(long fromLedgerId, long toLedgerId, string result, string detail, string resolvedOn)
         {
             var l_Link = new EDILedgerLink();
 
@@ -541,7 +677,7 @@ namespace eSyncMate.Processor.Connections
             l_Link.ToLedgerId = toLedgerId;
             l_Link.LinkType = result == "Rejected" ? "Rejects" : "Acknowledges";
             l_Link.ResolvedBy = "Automatic";
-            l_Link.ResolvedOn = "AK102 group control number";
+            l_Link.ResolvedOn = resolvedOn;
             l_Link.Detail = detail;
             l_Link.CreatedDate = DateTime.UtcNow;
             l_Link.CreatedBy = _userNo;

@@ -209,7 +209,7 @@ namespace eSyncMate.Processor.Managers
                         // The document is BizMate's now, so the partner can be told we have it.
                         if (l_Ledger.Outcome == "Translated")
                         {
-                            SendAcknowledgement(l_Pending997, l_Source, l_File.Key, route, userNo);
+                            SendAcknowledgement(l_Pending997, l_Pipeline, l_Ledger, l_Source, l_File.Key, route, userNo);
                         }
 
                         bool l_Handled = l_Ledger.Outcome == "Translated";
@@ -659,22 +659,54 @@ namespace eSyncMate.Processor.Managers
         /// missing acknowledgment is a smaller problem than pretending the document failed.
         /// </summary>
         private static void SendAcknowledgement(
-            PendingAcknowledgement pending, ConnectorDataModel source, string fileName, Routes route, int userNo)
+            PendingAcknowledgement pending, BizMateInboundPipeline pipeline, EDILedger acknowledged,
+            ConnectorDataModel source, string fileName, Routes route, int userNo)
         {
             if (!pending.IsOwed)
             {
                 return;
             }
 
+            string l_997;
+
             try
             {
-                string l_997 = RepaintGetOrderRoute.Generate997(pending.Interchange!, pending.Saved!, pending.Transaction!);
+                l_997 = RepaintGetOrderRoute.Generate997(pending.Interchange!, pending.Saved!, pending.Transaction!);
+            }
+            catch (Exception exRender)
+            {
+                route.SaveLog(LogTypeEnum.Error, $"[BizMateInboundEDI] 997 for [{fileName}] could not be generated", exRender.Message, userNo);
 
-                if (string.IsNullOrEmpty(l_997))
-                {
-                    return;
-                }
+                return;
+            }
 
+            if (string.IsNullOrEmpty(l_997))
+            {
+                return;
+            }
+
+            // Record before sending (F-42). A 997 is a document we produce and transmit, so it earns
+            // a ledger row of its own like every other document, and the row exists before the
+            // transfer so an acknowledgment that fails on the way out is still accounted for.
+            //
+            // Not recording it must not stop it being sent - a missing acknowledgment is the larger
+            // harm - but it is said out loud, because a silent failure here is indistinguishable
+            // from the 997 never having been owed.
+            EDILedger? l_Sent = null;
+
+            try
+            {
+                l_Sent = pipeline.RecordAcknowledgementSent(acknowledged, l_997);
+            }
+            catch (Exception exRecord)
+            {
+                route.SaveLog(LogTypeEnum.Error,
+                    $"[BizMateInboundEDI] 997 for [{fileName}] could not be recorded on the ledger; it is still being sent",
+                    exRecord.Message, userNo);
+            }
+
+            try
+            {
                 if (source.AuthType == ConnectorTypesEnum.File.ToString())
                 {
                     // FileConnector writes into Url and renames into place, so BizLink never sees a
@@ -689,9 +721,13 @@ namespace eSyncMate.Processor.Managers
 
                     SftpConnector.Execute(l_Outbound, false, $"{Path.GetFileNameWithoutExtension(fileName)}-997", l_997).GetAwaiter().GetResult();
                 }
+
+                pipeline.SettleAcknowledgementSent(l_Sent, acknowledged, null);
             }
             catch (Exception ex997)
             {
+                pipeline.SettleAcknowledgementSent(l_Sent, acknowledged, ex997.Message);
+
                 route.SaveLog(LogTypeEnum.Error, $"[BizMateInboundEDI] 997 for [{fileName}] was not delivered to the partner", ex997.Message, userNo);
             }
         }
