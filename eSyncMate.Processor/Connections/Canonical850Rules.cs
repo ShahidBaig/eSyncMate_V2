@@ -71,7 +71,7 @@ namespace eSyncMate.Processor.Connections
 
         /// <summary>
         /// The five rules that can be read off the payload alone. The sixth - no duplicate live PO -
-        /// needs the database and is <see cref="FindDuplicateOrder"/>.
+        /// needs the database and is <see cref="DecideOrderIntake"/>.
         /// </summary>
         public static List<IntakeViolation> Inspect(JsonElement payload)
         {
@@ -232,29 +232,63 @@ namespace eSyncMate.Processor.Connections
             }
         }
 
+        /// <summary>What rule 6 decided about writing an order for this document.</summary>
+        public enum OrderIntake
+        {
+            /// <summary>Nothing has this PO. Write the order.</summary>
+            Create,
+
+            /// <summary>We have taken this exact interchange before. Reuse the order it created.</summary>
+            Reuse,
+
+            /// <summary>A different interchange, and the PO already has a live order. Refuse.</summary>
+            Refuse
+        }
+
+        /// <summary>Rule 6's answer, with what the caller needs to act on it.</summary>
+        public sealed class OrderIntakeDecision
+        {
+            public OrderIntake Outcome { get; init; }
+
+            /// <summary>The order to reuse. Set only for <see cref="OrderIntake.Reuse"/>.</summary>
+            public int? ExistingOrderId { get; init; }
+
+            /// <summary>Why, in words an operator can act on. Set for Refuse and Reuse.</summary>
+            public string? Message { get; init; }
+        }
+
         /// <summary>
-        /// Rule 6, which needs the database: is there already a live order for this PO number?
+        /// Rule 6, which needs the database: should this document create an order, reuse one, or be
+        /// refused?
         ///
         /// This is NOT defensive de-duplication, which W1-15 is explicit about leaving to BizMate.
         /// BizMate's idempotency key is partner + document type + control number, so a genuine retry
         /// of the same interchange is its problem and it answers duplicate=true. What that key cannot
         /// see is a DIFFERENT interchange carrying a PO number that already has a live order - two
-        /// orders for one PO, which is the thing this rule exists to stop. The control number check
-        /// below is what keeps the two cases apart.
+        /// orders for one PO, which is the thing this rule exists to stop.
         ///
-        /// Returns null when there is nothing wrong, which is the ordinary answer.
+        /// **Reuse is why this returns three answers rather than two (F-46).** The first version
+        /// answered only "refuse" or "nothing wrong", and stepping aside for a repeat interchange -
+        /// correctly, so BizMate could answer duplicate=true - also meant SaveOrder ran again and
+        /// wrote a SECOND order for the same PO. It was proven on a live retry: PO
+        /// TST-20260909-300002 ended with orders 660888 and 660889, the ledger knowing the second
+        /// was a duplicate and the Orders table not. Deferring the BIZMATE call to BizMate is right;
+        /// deferring our own order writing to it was never possible, because BizMate does not write
+        /// our order rows. So a repeat now names the order it already produced and the caller reuses
+        /// it, while the document still goes to BizMate exactly as before.
         /// </summary>
-        public static string? FindDuplicateOrder(
+        public static OrderIntakeDecision DecideOrderIntake(
             string connectionString, int customerId, string? poNumber, string? partnerControlNo, long currentLedgerId)
         {
             if (string.IsNullOrWhiteSpace(poNumber) || customerId <= 0)
             {
-                return null;
+                return new OrderIntakeDecision { Outcome = OrderIntake.Create };
             }
 
             string l_Po = poNumber!.Trim().Replace("'", "''");
 
-            // A repeat of an interchange we have already taken. BizMate's idempotency owns this case.
+            // A repeat of an interchange we have already taken. BizMate's idempotency owns the
+            // question of whether to accept it again; ours is only whether to write another order.
             if (!string.IsNullOrWhiteSpace(partnerControlNo))
             {
                 var l_Ledger = new EDILedger();
@@ -267,9 +301,28 @@ namespace eSyncMate.Processor.Connections
                     $"Direction = 'In' AND Id <> {currentLedgerId} AND Outcome = 'Translated' " +
                     $"AND PartnerControlNo = '{partnerControlNo!.Trim().Replace("'", "''")}'";
 
-                if (l_Ledger.GetList(l_PriorCriteria, "Id", ref l_Prior) && l_Prior.Rows.Count > 0)
+                if (l_Ledger.GetList(l_PriorCriteria, "Id, OrderId", ref l_Prior, "Id ASC") && l_Prior.Rows.Count > 0)
                 {
-                    return null;
+                    DataRow l_First = l_Prior.Rows[0];
+                    object l_OrderId = l_First["OrderId"];
+
+                    // The earliest row is the one that created the order, so a third copy reuses the
+                    // same order as the second rather than chaining off it.
+                    if (l_OrderId != null && l_OrderId != DBNull.Value)
+                    {
+                        return new OrderIntakeDecision
+                        {
+                            Outcome = OrderIntake.Reuse,
+                            ExistingOrderId = Convert.ToInt32(l_OrderId),
+                            Message = $"A repeat of interchange [{partnerControlNo}], which eSyncMate already took as "
+                                    + $"ledger {l_First["Id"]} and order {l_OrderId}. The document is sent to BizMate "
+                                    + "again - their idempotency answers it - and no second order is written."
+                        };
+                    }
+
+                    // Taken before but it produced no order: an 824, or a translation that made
+                    // nothing. There is nothing to reuse, so treat it as new.
+                    return new OrderIntakeDecision { Outcome = OrderIntake.Create };
                 }
             }
 
@@ -285,12 +338,16 @@ namespace eSyncMate.Processor.Connections
 
             if (!l_Orders.GetList(l_Criteria, "Id, Status", ref l_Rows, "Id DESC") || l_Rows.Rows.Count == 0)
             {
-                return null;
+                return new OrderIntakeDecision { Outcome = OrderIntake.Create };
             }
 
-            return $"DuplicateOrder: purchase order [{poNumber}] already has a live order "
-                 + $"(order {l_Rows.Rows[0]["Id"]}, status {l_Rows.Rows[0]["Status"]}) for this customer, and this "
-                 + "document is not a repeat of the interchange that created it.";
+            return new OrderIntakeDecision
+            {
+                Outcome = OrderIntake.Refuse,
+                Message = $"DuplicateOrder: purchase order [{poNumber}] already has a live order "
+                        + $"(order {l_Rows.Rows[0]["Id"]}, status {l_Rows.Rows[0]["Status"]}) for this customer, and this "
+                        + "document is not a repeat of the interchange that created it."
+            };
         }
 
         /// <summary>

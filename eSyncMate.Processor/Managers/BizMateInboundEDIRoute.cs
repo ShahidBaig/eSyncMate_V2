@@ -349,6 +349,8 @@ namespace eSyncMate.Processor.Managers
             // refused document leaves no order, no lines and no half-state for somebody to unpick.
             // A rule names itself in the ledger's ErrorDetail: "shipTo needs an identifier" is
             // something an operator can act on, where BizMate refusing the document later is not.
+            Canonical850Rules.OrderIntakeDecision l_Intake;
+
             using (JsonDocument l_Canonical = JsonDocument.Parse(l_Parsed.JSON))
             {
                 List<IntakeViolation> l_Broken = Canonical850Rules.Inspect(l_Canonical.RootElement);
@@ -362,27 +364,49 @@ namespace eSyncMate.Processor.Managers
                         "Failed");
                 }
 
-                string? l_Duplicate = Canonical850Rules.FindDuplicateOrder(
+                l_Intake = Canonical850Rules.DecideOrderIntake(
                     CommonUtils.ConnectionString,
                     customer.Id,
                     Canonical850Rules.PoNumber(l_Canonical.RootElement),
                     input.Ledger?.PartnerControlNo,
                     input.Ledger?.Id ?? 0);
 
-                if (l_Duplicate != null)
+                if (l_Intake.Outcome == Canonical850Rules.OrderIntake.Refuse)
                 {
                     // Rejected, not Failed: nothing is wrong with the document, and sending it again
                     // will not help. It is a decision not to create a second order for one PO.
-                    throw new IntakeRefusedException(l_Duplicate, "Rejected");
+                    throw new IntakeRefusedException(l_Intake.Message ?? "DuplicateOrder", "Rejected");
                 }
             }
 
-            // Parallel run: Orders, OrderDetail and OrderData are written exactly as before (AD-02).
-            OrderSaveResponseModel l_Saved = OrderManager.SaveOrder(input.InboundEDI, customer, l_Parsed);
+            OrderSaveResponseModel l_Saved;
 
-            if (l_Saved.Code != (int)ResponseCodes.Success)
+            if (l_Intake.Outcome == Canonical850Rules.OrderIntake.Reuse)
             {
-                throw new InvalidOperationException("SaveOrder failed: " + (l_Saved.Message ?? "no detail"));
+                // A repeat of an interchange we already took (F-46). The document still goes to
+                // BizMate - leaning on their idempotency instead of checking first is the whole of
+                // W1-15 - but writing a second order would be our own duplication, not theirs, and
+                // BizMate does not write our order rows so it could never have deferred that to
+                // them. The row points at the order the first copy created.
+                l_Saved = new OrderSaveResponseModel
+                {
+                    Code = (int)ResponseCodes.Success,
+                    OrderId = l_Intake.ExistingOrderId ?? 0,
+                    Message = l_Intake.Message
+                };
+
+                route.SaveLog(LogTypeEnum.RouteInfo,
+                    $"[BizMateInboundEDI] {fileName}: {l_Intake.Message}", string.Empty, userNo);
+            }
+            else
+            {
+                // Parallel run: Orders, OrderDetail and OrderData are written exactly as before (AD-02).
+                l_Saved = OrderManager.SaveOrder(input.InboundEDI, customer, l_Parsed);
+
+                if (l_Saved.Code != (int)ResponseCodes.Success)
+                {
+                    throw new InvalidOperationException("SaveOrder failed: " + (l_Saved.Message ?? "no detail"));
+                }
             }
 
             // The 997 is NOT sent here. It is held until the document is known to be good.
