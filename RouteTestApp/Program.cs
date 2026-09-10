@@ -40,11 +40,17 @@ using System.Net.Http.Headers;
 // ======== Test Connection ========
 //string testConnectionString = "<<SET_CONNECTION_STRING>>";
 
-// ======== Target Plus OAuth 2.0 Test (refresh_token -> access_token -> Target API) ========
-TargetPlusOAuthTest.Run().GetAwaiter().GetResult();
+// ======== Order payload repair — Amazon Title inch mark (broken orders, see OrderPayloadRepairTests) ========
+OrderPayloadRepairTests.Run();
 Console.WriteLine("Press Enter to exit...");
 Console.ReadLine();
 return;
+
+//// ======== Target Plus OAuth 2.0 Test (refresh_token -> access_token -> Target API) ========
+//TargetPlusOAuthTest.Run().GetAwaiter().GetResult();
+//Console.WriteLine("Press Enter to exit...");
+//Console.ReadLine();
+//return;
 
 //// ======== Walmart Inventory PUT Test ========
 //WalmartInventoryTests.Run();

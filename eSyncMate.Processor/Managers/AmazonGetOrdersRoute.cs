@@ -343,6 +343,27 @@ namespace eSyncMate.Processor.Managers
 
             jsonString = JsonConvert.SerializeObject(order);
 
+            // Title is neutralised above, but any Amazon string field could carry a stray quote, and a
+            // payload that will not parse can never be placed — it only surfaces later, one order at a
+            // time, as "payload is not readable JSON". So nothing is stored unverified: the text is
+            // parsed here, repaired when it can be, and the text as serialised is kept in the log
+            // either way, which is what identifies the field that broke it.
+            if (!OrderPayloadRepair.IsValid(jsonString))
+            {
+                string l_Repaired;
+                bool l_IsRepaired = OrderPayloadRepair.TryRepair(jsonString, out l_Repaired);
+
+                route.SaveLog(l_IsRepaired ? LogTypeEnum.Warning : LogTypeEnum.Error,
+                    $"Order [{order.AmazonOrderId}] serialised to unreadable JSON at ingestion — " +
+                    (l_IsRepaired ? "repaired before saving." : "stored as serialised, it will not place."),
+                    jsonString, userNo);
+
+                if (l_IsRepaired)
+                {
+                    jsonString = l_Repaired;
+                }
+            }
+
             l_Orders.Status = "New";
             l_Orders.CustomerId = customer.Id;
             l_Orders.OrderDate = order.PurchaseDate;

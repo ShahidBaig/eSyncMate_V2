@@ -22,11 +22,11 @@ namespace eSyncMate.Processor.Managers
     /// </summary>
     public static class OrderPayloadRepair
     {
-        private const string TitleKey = "\"Title\":\"";
+        private const string TitleKey = "\"Title\"";
 
         // "IsGift" always follows Title in the Amazon order-items payload, so the end of the value
         // is found without trusting the (broken) title text itself.
-        private const string NextKey = "\",\"IsGift\"";
+        private const string NextKey = "\"IsGift\"";
 
         private const int MaxLines = 100;
 
@@ -63,13 +63,11 @@ namespace eSyncMate.Processor.Managers
 
             for (int l_Line = 0; l_Line < MaxLines; l_Line++)
             {
-                int l_Start = l_Json.IndexOf(TitleKey, l_From, StringComparison.Ordinal);
-                if (l_Start < 0)
+                int l_ValueAt = FindValueStart(l_Json, l_From);
+                if (l_ValueAt < 0)
                     break;
 
-                int l_ValueAt = l_Start + TitleKey.Length;
-
-                int l_End = l_Json.IndexOf(NextKey, l_ValueAt, StringComparison.Ordinal);
+                int l_End = FindValueEnd(l_Json, l_ValueAt);
                 if (l_End < 0)
                     break;
 
@@ -87,6 +85,73 @@ namespace eSyncMate.Processor.Managers
 
             p_Repaired = l_Json;
             return true;
+        }
+
+        /// <summary>
+        /// Index of the first character of the Title value. A payload that has been through a
+        /// JObject round trip is indented — "Title": "…" — so the whitespace either side of the
+        /// colon is stepped over rather than assumed away. -1 when there is no further Title.
+        /// </summary>
+        private static int FindValueStart(string p_Json, int p_From)
+        {
+            int l_At = p_From;
+
+            while (true)
+            {
+                int l_Key = p_Json.IndexOf(TitleKey, l_At, StringComparison.Ordinal);
+                if (l_Key < 0)
+                    return -1;
+
+                int l_Colon = SkipWhitespace(p_Json, l_Key + TitleKey.Length);
+
+                if (l_Colon >= 0 && p_Json[l_Colon] == ':')
+                {
+                    int l_Quote = SkipWhitespace(p_Json, l_Colon + 1);
+
+                    if (l_Quote >= 0 && p_Json[l_Quote] == '"')
+                        return l_Quote + 1;
+                }
+
+                l_At = l_Key + TitleKey.Length;
+            }
+        }
+
+        /// <summary>
+        /// Index of the quote that closes the Title value, located from the "IsGift" key that
+        /// follows it so the broken title text itself is never trusted. -1 unless the shape really
+        /// is value","IsGift", whitespace around the comma allowed.
+        /// </summary>
+        private static int FindValueEnd(string p_Json, int p_ValueAt)
+        {
+            int l_Key = p_Json.IndexOf(NextKey, p_ValueAt, StringComparison.Ordinal);
+            if (l_Key < 0)
+                return -1;
+
+            int l_At = SkipWhitespaceBack(p_Json, l_Key - 1);
+            if (l_At < p_ValueAt || p_Json[l_At] != ',')
+                return -1;
+
+            l_At = SkipWhitespaceBack(p_Json, l_At - 1);
+            if (l_At < p_ValueAt || p_Json[l_At] != '"')
+                return -1;
+
+            return l_At;
+        }
+
+        private static int SkipWhitespace(string p_Json, int p_At)
+        {
+            while (p_At < p_Json.Length && char.IsWhiteSpace(p_Json[p_At]))
+                p_At++;
+
+            return p_At < p_Json.Length ? p_At : -1;
+        }
+
+        private static int SkipWhitespaceBack(string p_Json, int p_At)
+        {
+            while (p_At >= 0 && char.IsWhiteSpace(p_Json[p_At]))
+                p_At--;
+
+            return p_At;
         }
     }
 }
