@@ -144,6 +144,20 @@ namespace eSyncMate.Processor.Connections
                     + (l_Violations.Count > 5 ? $" (+{l_Violations.Count - 5} more)" : string.Empty));
             }
 
+            // ---- 1b. The family, where the document has one (W2-05, E8). ----
+            //
+            // On an 856 and an 810 the Order versus Consignment family decides what the fields
+            // MEAN - `trackingNo` is a carrier tracking number on one and a piece SSCC on the
+            // other - so getting it wrong is not a labelling mistake, it is a document that reads
+            // as something it is not. It is therefore never inferred from the transaction set, and
+            // the two places BizMate states it have to agree before anything is rendered.
+            string? l_FamilyRefusal = FamilyRefusal(document);
+
+            if (l_FamilyRefusal is not null)
+            {
+                return Fail(l_Ledger, "Failed", l_FamilyRefusal);
+            }
+
             // ---- 2. Tell BizMate we have it. Distinct from delivered, on purpose. ----
             try
             {
@@ -304,6 +318,92 @@ namespace eSyncMate.Processor.Connections
             }
         }
 
+        /// <summary>The family this document carries, from the document first and the wrapper second.</summary>
+        private static string? Family(OutboundDocument document)
+        {
+            if (document.DocType is not null && FamilyBearingTypes.TryGetValue(document.DocType, out string? l_Root)
+                && X12Render.Obj(document.Payload, l_Root) is JsonElement l_Node)
+            {
+                string? l_Stated = Normalise(X12Render.Str(l_Node, "family"));
+
+                if (l_Stated is not null)
+                {
+                    return l_Stated;
+                }
+            }
+
+            return Normalise(document.SourceFamily);
+        }
+
+        /// <summary>Document types whose meaning depends on the family, and where the payload states it.</summary>
+        private static readonly Dictionary<string, string> FamilyBearingTypes = new()
+        {
+            ["856"] = "shipment",
+            ["810"] = "invoice"
+        };
+
+        /// <summary>
+        /// Refuses a family-bearing document whose family is missing, unrecognised, or stated
+        /// differently in the two places BizMate states it (W2-05). Null when there is nothing wrong,
+        /// and null for every document type that has no family at all.
+        ///
+        /// BizMate says it twice: once on the outbox wrapper as `sourceFamily`, and once inside the
+        /// canonical document itself. The wrapper is what the ledger records and the document is what
+        /// a renderer reads, so a disagreement means the row and the file would describe different
+        /// documents - and whichever one is wrong, somebody downstream acts on it. Refusing is the
+        /// only answer that does not involve picking a winner.
+        ///
+        /// Absence is refused for the same reason rather than defaulted. "Never inferred, never
+        /// derived from the transaction set" rules out the obvious shortcut of calling an 856 an
+        /// Order because most of them are.
+        /// </summary>
+        private static string? FamilyRefusal(OutboundDocument document)
+        {
+            if (document.DocType is null || !FamilyBearingTypes.TryGetValue(document.DocType, out string? l_Root))
+            {
+                return null;
+            }
+
+            string? l_Wrapper = Normalise(document.SourceFamily);
+            string? l_Payload = Normalise(
+                X12Render.Obj(document.Payload, l_Root) is JsonElement l_Node
+                    ? X12Render.Str(l_Node, "family")
+                    : null);
+
+            if (l_Wrapper is null && l_Payload is null)
+            {
+                return $"A {document.DocType} states no family. The Order and Consignment families give the same "
+                     + "fields different meanings, so it is refused rather than assumed (W2-05).";
+            }
+
+            if (l_Wrapper is not null && l_Payload is not null && l_Wrapper != l_Payload)
+            {
+                return $"A {document.DocType} states family [{l_Wrapper}] on the outbox wrapper and [{l_Payload}] "
+                     + $"inside the document. The ledger would record one and the renderer read the other, so it is "
+                     + "refused rather than resolved by preference (W2-05).";
+            }
+
+            return null;
+        }
+
+        /// <summary>The family as the contract spells it, or null for anything that is not one of the two.</summary>
+        private static string? Normalise(string? family)
+        {
+            if (string.IsNullOrWhiteSpace(family))
+            {
+                return null;
+            }
+
+            string l_Trimmed = family.Trim();
+
+            if (string.Equals(l_Trimmed, "Order", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Order";
+            }
+
+            return string.Equals(l_Trimmed, "Consignment", StringComparison.OrdinalIgnoreCase) ? "Consignment" : null;
+        }
+
         private static bool IsRawEdi(string format)
         {
             return format is BizMateFormats.X12 or BizMateFormats.EDIFACT;
@@ -349,7 +449,10 @@ namespace eSyncMate.Processor.Connections
             // 'Out' is BizMate -> partner, from BizMate's point of view.
             l_Ledger.Direction = "Out";
             l_Ledger.DocumentType = document.DocType;
-            l_Ledger.Family = document.SourceFamily;
+            // Whichever of the two BizMate stated - they have already been checked to agree, so
+            // preferring the document over the wrapper is a tie-break that can never actually fire,
+            // and the document is the thing a renderer reads.
+            l_Ledger.Family = Family(document);
 
             // Provisional until the render says what it actually produced. BizMate's coarse
             // mechanism does not tell us the format, so assume the configured standard and correct
@@ -403,7 +506,10 @@ namespace eSyncMate.Processor.Connections
             // BizMate may have restaged it since we last looked; the document in hand is the
             // truth about what it is now.
             l_Ledger.DocumentType = document.DocType;
-            l_Ledger.Family = document.SourceFamily;
+            // Whichever of the two BizMate stated - they have already been checked to agree, so
+            // preferring the document over the wrapper is a tie-break that can never actually fire,
+            // and the document is the thing a renderer reads.
+            l_Ledger.Family = Family(document);
             l_Ledger.PartnerControlNo = document.PartnerControlNo;
             l_Ledger.Channel = string.IsNullOrEmpty(document.Channel) ? BizMateChannels.Edi : document.Channel;
 
