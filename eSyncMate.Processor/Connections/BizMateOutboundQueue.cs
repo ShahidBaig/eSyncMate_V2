@@ -69,6 +69,9 @@ namespace eSyncMate.Processor.Connections
         /// <summary>Depth at which new work is refused at the boundary rather than accepted and lost.</summary>
         public const int AcceptanceCeiling = 50_000;
 
+        /// <summary>Longest a Retry-After header may park a queued call. The header is remote input.</summary>
+        public static readonly TimeSpan RetryAfterCeiling = TimeSpan.FromMinutes(15);
+
         /// <summary>A claim held longer than this is assumed abandoned by a dead worker.</summary>
         public const int StaleClaimMinutes = 15;
 
@@ -103,7 +106,8 @@ namespace eSyncMate.Processor.Connections
             string scope,
             string correlationId,
             long? ledgerId = null,
-            string? urlPathWithQuery = null)
+            string? urlPathWithQuery = null,
+            TimeSpan? notBefore = null)
         {
             var l_Item = new EDIOutboundQueue();
 
@@ -129,7 +133,15 @@ namespace eSyncMate.Processor.Connections
             l_Item.CorrelationId = correlationId;
             l_Item.Status = "Pending";
             l_Item.AttemptCount = 0;
-            l_Item.NextAttemptAt = DateTime.UtcNow;
+
+            // A 429 that says Retry-After has told us when to come back, and coming back sooner is
+            // how a soft rate limit becomes a hard block. Honour it, clamped: a header is a remote
+            // input, and a negative or absurd value must not park a document for a day.
+            l_Item.NextAttemptAt = DateTime.UtcNow
+                + (notBefore is { } l_Wait && l_Wait > TimeSpan.Zero
+                    ? (l_Wait < RetryAfterCeiling ? l_Wait : RetryAfterCeiling)
+                    : TimeSpan.Zero);
+
             l_Item.CreatedDate = DateTime.UtcNow;
             l_Item.CreatedBy = _userNo;
 

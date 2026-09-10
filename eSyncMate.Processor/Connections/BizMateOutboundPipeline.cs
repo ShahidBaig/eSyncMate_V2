@@ -302,7 +302,8 @@ namespace eSyncMate.Processor.Connections
                     failure.Call.Scope,
                     failure.Call.CorrelationId,
                     ledgerId,
-                    failure.Call.UrlPathWithQuery);
+                    failure.Call.UrlPathWithQuery,
+                    (failure as BizMateRateLimitedException)?.RetryAfter);
 
                 return " Queued for retry.";
             }

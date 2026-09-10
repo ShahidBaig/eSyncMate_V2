@@ -458,11 +458,31 @@ namespace eSyncMate.Processor.Connections
                 }
                 catch (BizMateException ex)
                 {
-                    // The correlation stands - it is ours and it is written. Only telling BizMate
-                    // failed, and that is retryable, so the row stays Pending rather than Failed and
-                    // the call goes to the store-and-forward queue for the drain to send again.
-                    l_Ledger.ErrorDetail = "Correlated, but BizMate was not told: " + ex.Message
+                    // The correlation stands either way - it is ours and it is written. Only telling
+                    // BizMate failed.
+                    //
+                    // A RETRYABLE failure leaves the row Pending: the call goes to the
+                    // store-and-forward queue and the drain will send it, so work really is
+                    // outstanding and Pending is the honest word for it.
+                    //
+                    // A NON-RETRYABLE one must not. A 403 is a governance decision - nothing is
+                    // queued, nothing is scheduled, and no drain will ever touch the row again - so
+                    // leaving it Pending asserts an attempt that will never happen, and the row
+                    // would sit that way for ever claiming to be in flight. That is the same lie the
+                    // drain used to tell about a delivered document (W1-14), one hop earlier.
+                    //
+                    // Nothing was delivered to anyone here, which is what separates this from the
+                    // outbound confirmation case: there, marking Failed would misreport a document
+                    // the partner already holds.
+                    string l_NotTold = "Correlated, but BizMate was not told: " + ex.Message
                         + QueueForRetry(ex, "PostAck", context.PartnerId, l_Ledger.Id);
+
+                    if (!ex.IsRetryable)
+                    {
+                        return Fail(l_Ledger, "Failed", l_NotTold);
+                    }
+
+                    l_Ledger.ErrorDetail = l_NotTold;
 
                     l_Ledger.Modify();
 
@@ -571,7 +591,8 @@ namespace eSyncMate.Processor.Connections
                     failure.Call.Scope,
                     failure.Call.CorrelationId,
                     ledgerId,
-                    failure.Call.UrlPathWithQuery);
+                    failure.Call.UrlPathWithQuery,
+                    (failure as BizMateRateLimitedException)?.RetryAfter);
 
                 return " Queued for retry.";
             }
