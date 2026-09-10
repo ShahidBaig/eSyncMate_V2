@@ -217,6 +217,55 @@ namespace eSyncMate.Processor.Connections
             return l_Summary;
         }
 
+        /// <summary>
+        /// Tells the ledger that the call it was waiting on finally went through.
+        ///
+        /// Without this the queue row reads Succeeded while the document it belongs to still reads
+        /// Pending with "BizMate was not told" - which stops being true the moment the drain sends
+        /// it, and would stay on the record for ever. The ledger is the system of record; a queue
+        /// row is a chore list, and a chore finishing has to be visible where people actually look.
+        ///
+        /// Both queued operations - MarkDelivered and PostAck - mean the same thing to the document:
+        /// BizMate has now been told. Nothing else about the row is touched, in particular no hop
+        /// timestamp, because those mean different things by direction and the drain is in no
+        /// position to know which it is looking at.
+        ///
+        /// Best effort. A ledger that cannot be updated must not turn a delivered call into a failed
+        /// one - the call really did go through, and the queue row already says so.
+        /// </summary>
+        private void Settle(EDIOutboundQueue item)
+        {
+            if (item.LedgerId is not > 0)
+            {
+                return;
+            }
+
+            try
+            {
+                var l_Ledger = new EDILedger();
+
+                l_Ledger.UseConnection(_connectionString);
+                l_Ledger.Id = item.LedgerId!.Value;
+
+                if (!l_Ledger.GetObject().IsSuccess || l_Ledger.Outcome != "Pending")
+                {
+                    return;
+                }
+
+                l_Ledger.Outcome = "Translated";
+                l_Ledger.ErrorDetail =
+                    $"Held for the store-and-forward queue and sent by the drain at "
+                    + $"{DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC, after {item.AttemptCount} attempt(s).";
+
+                l_Ledger.ModifiedBy = _userNo;
+                l_Ledger.Modify();
+            }
+            catch (Exception)
+            {
+                // See the note above: the call went through either way.
+            }
+        }
+
         private async Task AttemptAsync(EDIOutboundQueue item, DrainSummary summary, CancellationToken cancellationToken)
         {
             item.AttemptCount += 1;
@@ -243,6 +292,9 @@ namespace eSyncMate.Processor.Connections
 
                 // A call that went through is the only honest evidence the connection is back.
                 summary.PartnersReachable.Add(item.PartnerId ?? string.Empty);
+
+                // And the document this call was about is no longer waiting on it.
+                Settle(item);
             }
             catch (BizMateRateLimitedException ex)
             {
