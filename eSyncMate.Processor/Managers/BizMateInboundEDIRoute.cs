@@ -174,11 +174,15 @@ namespace eSyncMate.Processor.Managers
                         string? l_SetId = X12Ack.TransactionSetId(l_File.Value);
                         bool l_IsAck = l_SetId == X12Ack.DocumentType;
                         bool l_IsAdvice = l_SetId == X12Advice.DocumentType;
+                        bool l_IsChange = l_SetId == X12ChangeOrder.DocumentType;
 
                         var l_Context = new InboundDocumentContext
                         {
                             PartnerId = l_Customer.ERPCustomerID,
-                            DocumentType = l_IsAck ? X12Ack.DocumentType : l_IsAdvice ? X12Advice.DocumentType : "850",
+                            DocumentType = l_IsAck ? X12Ack.DocumentType
+                                : l_IsAdvice ? X12Advice.DocumentType
+                                : l_IsChange ? X12ChangeOrder.DocumentType
+                                : "850",
                             Format = BizMateFormats.X12,
                             Channel = BizMateChannels.Edi,
                             Provenance = "Wire",
@@ -189,11 +193,17 @@ namespace eSyncMate.Processor.Managers
                             RouteId = route.Id,
                             MapName = l_IsAck ? "X12_004010.M_997"
                                 : l_IsAdvice ? "X12_004010.M_824"
+                                : l_IsChange ? "X12_004010.M_860"
                                 : TransformationMapType
                         };
 
                         var l_Pending997 = new PendingAcknowledgement();
 
+                        // An 824 is a business advice and an 860 is a change to an order we hold.
+                        // Both take the ordinary pipeline - ledger row, artifact, /raw, translate,
+                        // /inbound/{docType} - but neither creates an order here: the 824 resolves
+                        // to what it refers to (W3-18, W2-12) and the 860 is applied by BizMate,
+                        // which owns the order once we have handed it over (W3-14).
                         // An 824 is a business advice, not an order: it takes the ordinary pipeline -
                         // ledger row, artifact, /raw, translate, /inbound/824 - but the translation
                         // resolves it to what it refers to rather than creating anything (W3-18, W2-12).
@@ -203,7 +213,9 @@ namespace eSyncMate.Processor.Managers
                                 l_Context,
                                 input => l_IsAdvice
                                     ? TranslateAdvice(input, l_Customer, route, userNo)
-                                    : Translate(input, l_Customer, l_TransformationMap, l_DbFieldsMap, l_Source, l_File.Key, route, userNo, l_Pending997))
+                                    : l_IsChange
+                                        ? TranslateChange(input, l_Customer, route, userNo)
+                                        : Translate(input, l_Customer, l_TransformationMap, l_DbFieldsMap, l_Source, l_File.Key, route, userNo, l_Pending997))
                                 .GetAwaiter().GetResult();
 
                         // The document is BizMate's now, so the partner can be told we have it.
@@ -461,6 +473,141 @@ namespace eSyncMate.Processor.Managers
         /// BizMate confirmed that a partner may quote a control number we zero-padded on the way
         /// out, and "01" and "1" are the same transmission.
         /// </summary>
+        /// <summary>
+        /// An inbound 860 to the canonical change document (W3-14, E14).
+        ///
+        /// No order is written here, and that is the design rather than an omission. Once eSyncMate
+        /// has handed an order to BizMate, BizMate owns it - applying the change to our own Orders
+        /// rows as well would give two systems a claim on the same order and no rule for whose
+        /// version wins. So this translates, posts, and lets BizMate apply it.
+        ///
+        /// Everything it cannot read, it refuses. An 860 is the one inbound document whose meaning
+        /// lives entirely in codes, and a change applied from a code we guessed at is how the wrong
+        /// quantity gets shipped. Refusals are Failed rather than Rejected: the document is not
+        /// wrong, it is one we cannot act on, and a person needs to look.
+        /// </summary>
+        private static InboundTranslationResult TranslateChange(
+            InboundTranslationInput input, Customers customer, Routes route, int userNo)
+        {
+            ChangeOrderReading l_Change = X12ChangeOrder.Read(input.Text);
+
+            if (string.IsNullOrWhiteSpace(l_Change.PoNumber))
+            {
+                throw new InvalidOperationException(
+                    "The 860 carries no purchase order number in BCH03, so it names no order to change.");
+            }
+
+            string? l_Purpose = X12ChangeOrder.Purpose(l_Change.PurposeCode);
+
+            if (l_Purpose is null)
+            {
+                throw new InvalidOperationException(
+                    $"BCH01 is [{l_Change.PurposeCode}], which is not one of the three purposes the contract "
+                    + "defines (01 CancelOrder, 04 Change, 05 Replace). An 860 whose purpose we cannot read is "
+                    + "not a change we can apply.");
+            }
+
+            // Replace is refused by contract, not by preference (W3-14). A replacement order says
+            // "discard what you hold and take this instead", and the canonical 860 carries only the
+            // CHANGES - so honouring a Replace would mean deleting an order on the strength of a
+            // document that does not contain its replacement.
+            if (l_Purpose == "Replace")
+            {
+                throw new IntakeRefusedException(
+                    $"The 860 for purchase order [{l_Change.PoNumber}] states purpose Replace (BCH01 05), which "
+                    + "eSyncMate refuses: the canonical change document carries only what changed, so there is "
+                    + "nothing in it to replace the order WITH. The partner needs to cancel and re-send an 850.",
+                    "Rejected");
+            }
+
+            var l_Lines = new List<Dictionary<string, object?>>();
+
+            foreach (ChangeOrderLine l_Line in l_Change.Lines)
+            {
+                string? l_Type = X12ChangeOrder.ChangeType(l_Line.ChangeCode);
+
+                if (l_Type is null)
+                {
+                    // The whole document, not just the line. Applying the changes we understood and
+                    // dropping the one we did not would leave the order in a state neither side
+                    // agreed to, which is worse than refusing all of it.
+                    throw new InvalidOperationException(
+                        $"Line [{l_Line.LineNo}] carries POC02 [{l_Line.ChangeCode}], which eSyncMate does not map "
+                        + "to a canonical change type. Five are mapped - QI, QD, DI, AI and PC. The rest are "
+                        + "refused rather than guessed at, including RS and RZ, because which X12 code BizMate "
+                        + "means by Reschedule and DateChange has never been stated (EQ-22). The whole 860 is "
+                        + "refused rather than applied in part, because a partly applied change is an order "
+                        + "neither side agreed to.");
+                }
+
+                l_Lines.Add(new Dictionary<string, object?>
+                {
+                    ["lineNo"] = l_Line.LineNo,
+                    ["changeType"] = l_Type,
+                    ["partnerSku"] = l_Line.PartnerSku,
+                    ["vendorSku"] = l_Line.VendorSku,
+                    ["upc"] = l_Line.Upc,
+                    ["description"] = l_Line.Description,
+                    ["quantityOrdered"] = l_Line.QuantityOrdered,
+                    ["quantityChange"] = l_Line.QuantityChange,
+                    ["uom"] = l_Line.Uom,
+                    ["unitPrice"] = l_Line.UnitPrice,
+                    ["requestedShipDate"] = X12ChangeOrder.Date(l_Line.RequestedShipDate),
+                    ["cancelAfterDate"] = X12ChangeOrder.Date(l_Line.CancelAfterDate)
+                });
+            }
+
+            var l_Header = new Dictionary<string, object?>
+            {
+                ["shipTo"] = l_Change.ShipTo,
+                ["requestedShipDate"] = X12ChangeOrder.Date(l_Change.RequestedShipDate8),
+                ["requestedDeliveryDate"] = X12ChangeOrder.Date(l_Change.RequestedDeliveryDate8),
+                ["cancelAfterDate"] = X12ChangeOrder.Date(l_Change.CancelAfterDate8),
+                ["carrier"] = l_Change.Carrier
+            };
+
+            // An MSG the partner sent empty is an instruction to blank the field, and is not the
+            // same as an 860 that says nothing about instructions (W3-14). So the key is present
+            // with an empty string when they stated it, and absent when they did not.
+            if (l_Change.InstructionsStated)
+            {
+                l_Header["instructions"] = l_Change.Instructions ?? string.Empty;
+            }
+
+            var l_Payload = new Dictionary<string, object?>
+            {
+                ["schemaVersion"] = "1.0",
+                ["documentType"] = X12ChangeOrder.DocumentType,
+                ["standard"] = BizMateFormats.X12,
+                ["change"] = new Dictionary<string, object?>
+                {
+                    ["poNumber"] = l_Change.PoNumber,
+                    ["poDate"] = X12ChangeOrder.Date(l_Change.PoDate8),
+                    ["changeDate"] = X12ChangeOrder.Date(l_Change.ChangeDate8),
+                    ["changeSequence"] = l_Change.ChangeSequence,
+                    ["purpose"] = l_Purpose,
+                    ["headerChanges"] = l_Header,
+                    ["lines"] = l_Lines
+                }
+            };
+
+            using JsonDocument l_Json = JsonDocument.Parse(
+                System.Text.Json.JsonSerializer.Serialize(l_Payload));
+
+            route.SaveLog(LogTypeEnum.RouteInfo,
+                $"[BizMateInboundEDI] 860 for purchase order [{l_Change.PoNumber}]: {l_Purpose}, "
+                + $"{l_Lines.Count} line change(s). BizMate applies it; no order is written here.",
+                string.Empty, userNo);
+
+            return new InboundTranslationResult
+            {
+                Payload = l_Json.RootElement.Clone(),
+                OrderId = null,
+                MapName = "X12_004010.M_860",
+                MapVersion = "1.0"
+            };
+        }
+
         private static InboundTranslationResult TranslateAdvice(
             InboundTranslationInput input, Customers customer, Routes route, int userNo)
         {
