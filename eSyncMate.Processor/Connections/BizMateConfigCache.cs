@@ -116,6 +116,32 @@ namespace eSyncMate.Processor.Connections
                 : (false, $"BizMate reports the EDI channel is not enabled for [{partnerId}].");
         }
 
+        /// <summary>
+        /// Whether this partner is ALSO configured on the API channel (W1-08).
+        ///
+        /// BizMate's outbox poll defaults to EDI, so a customer on both channels has its API-side
+        /// documents sit unseen unless they are asked for separately. That failure is the quiet
+        /// kind - a poll that returns nothing looks exactly like a poll that had nothing to return -
+        /// which is why the answer comes from BizMate's own configuration rather than a local flag
+        /// somebody has to remember to set.
+        ///
+        /// False when BizMate cannot be reached and has never answered. Unlike the enablement check,
+        /// which fails OPEN because refusing to send is the greater harm, this one fails CLOSED: an
+        /// unnecessary second poll costs a round trip on every pass for every partner, and a document
+        /// missed for one poll interval is recovered on the next pass once BizMate answers again.
+        /// </summary>
+        public static async Task<bool> IsApiAlsoEnabledAsync(
+            BizMateConnector connector,
+            string partnerId,
+            string correlationId,
+            CancellationToken cancellationToken = default)
+        {
+            CustomerIntegrationConfig? l_Config =
+                await GetAsync(connector, partnerId, correlationId, cancellationToken).ConfigureAwait(false);
+
+            return l_Config is { ApiEnabled: true };
+        }
+
         /// <summary>Forgets everything held. For tests, and for an operator who has just changed configuration.</summary>
         public static void Clear() => _entries.Clear();
 

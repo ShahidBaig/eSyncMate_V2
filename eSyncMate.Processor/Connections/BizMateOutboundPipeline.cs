@@ -87,13 +87,16 @@ namespace eSyncMate.Processor.Connections
         /// <summary>
         /// Recovers the crash-after-fetch case (W1-11): a row BizMate marked Fetched that we never
         /// confirmed as Delivered. BizMate serves it untouched and records a Redelivered event.
+        ///
+        /// <paramref name="channel"/> selects which channel to ask about; null means BizMate's
+        /// default, which is EDI. A customer on both needs asking twice (W1-08) - see the caller.
         /// </summary>
         public Task<OutboundPage> CollectRedeliveriesAsync(
             string correlationId, string? partnerId = null, int? waitSeconds = null,
-            CancellationToken cancellationToken = default)
+            string? channel = null, CancellationToken cancellationToken = default)
         {
             return _connector.GetOutboundPendingAsync(
-                correlationId, partnerId, null, null, null, waitSeconds, true, cancellationToken);
+                correlationId, partnerId, null, null, channel, waitSeconds, true, cancellationToken);
         }
 
         /// <summary>

@@ -152,6 +152,53 @@ namespace eSyncMate.Processor.Managers
                 OutboundPage l_Page =
                     l_Pipeline.CollectRedeliveriesAsync(l_CorrelationId, l_PartnerId, l_Wait).GetAwaiter().GetResult();
 
+                // The second pass, for a customer configured on BOTH channels (W1-08).
+                //
+                // BizMate's poll defaults to EDI, so without this a both-channel customer's API-side
+                // documents sit in the outbox indefinitely - and the failure is the quiet kind,
+                // because a poll that returns nothing looks exactly like a poll that had nothing to
+                // return. Asked only when BizMate's own configuration says the API channel is on,
+                // so a single-channel partner pays nothing for it.
+                //
+                // Concatenating the two pages is safe here, which is worth saying because F-33 was
+                // exactly this shape and was not: redeliver=true is a SUPERSET of the default poll,
+                // so asking for both and adding them counted every staged document twice. Two
+                // CHANNELS are genuinely disjoint sets - a document is staged on one or the other -
+                // so nothing is double-counted.
+                //
+                // No long poll on this pass, deliberately. The wait costs the route its execution
+                // lock, and waiting twice doubles that for a second empty answer; the API channel's
+                // latency therefore stays at the poll interval rather than dropping to BizMate's
+                // staging time. That is a trade, not an oversight - if it turns out to matter, the
+                // fix is to split the budget across the two passes, not to wait the full time twice.
+                if (BizMateConfigCache.IsApiAlsoEnabledAsync(l_Connector, l_PartnerId, l_CorrelationId)
+                    .GetAwaiter().GetResult())
+                {
+                    OutboundPage l_Api = l_Pipeline
+                        .CollectRedeliveriesAsync(l_CorrelationId, l_PartnerId, null, BizMateChannels.Api)
+                        .GetAwaiter().GetResult();
+
+                    if (l_Api.Items.Count > 0)
+                    {
+                        route.SaveLog(LogTypeEnum.RouteInfo,
+                            $"[BizMateOutboundEDI] {l_Api.Items.Count} document(s) on the API channel for [{l_PartnerId}], "
+                            + $"{l_Api.Total} waiting in total. This customer is configured on both channels.",
+                            string.Empty, userNo);
+                    }
+
+                    // These came back from an explicit ?channel=API ask, so we know what they are.
+                    // Without this a document BizMate served without stating its channel would take
+                    // the ledger's default and be recorded as EDI - a document labelled by which
+                    // poll happened to find it rather than by how it actually travels (W2-04).
+                    foreach (OutboundDocument l_Document in l_Api.Items)
+                    {
+                        l_Document.Channel = BizMateChannels.Api;
+                    }
+
+                    l_Page.Items.AddRange(l_Api.Items);
+                    l_Page.Total += l_Api.Total;
+                }
+
                 if (l_Page.Items.Count == 0)
                 {
                     return;   // silence is the normal state of a polling route
