@@ -151,7 +151,14 @@ namespace eSyncMate.Processor.Controllers
                 Encoding.UTF8.GetBytes(l_Expected));
         }
 
-        /// <summary>Lookup 1. Served by UX_EDILedger_TransmissionReference as a covering seek.</summary>
+        /// <summary>
+        /// Lookup 1. An index seek on UX_EDILedger_TransmissionReference, plus one key lookup on the
+        /// clustered index for ErrorDetail.
+        ///
+        /// Not a covering seek, as this used to claim: ErrorDetail is NVARCHAR(MAX), and including a
+        /// MAX column would bloat every leaf page of the index to save a single lookup per query.
+        /// Measured on the live instance at 4 logical reads for a hit and 2 for a miss.
+        /// </summary>
         private Task<ESyncMateTraceRecord?> ReadByTransmissionReferenceAsync(
             string transmissionReference, CancellationToken cancellationToken)
         {
@@ -162,7 +169,17 @@ namespace eSyncMate.Processor.Controllers
                 new SqlParameter("@ref", SqlDbType.NVarChar, 100) { Value = transmissionReference });
         }
 
-        /// <summary>Lookup 2. Served by IX_EDILedger_PartnerControl as a covering seek.</summary>
+        /// <summary>
+        /// Lookup 2. An index seek on IX_EDILedger_PartnerControl, plus the same key lookup for
+        /// ErrorDetail.
+        ///
+        /// The index keys on (PartnerId, PartnerControlNo, ReceivedAt DESC) so that the ORDER BY
+        /// below is answered by the index order rather than by sorting. It did sort until task
+        /// script 14: ReceivedAt was an INCLUDED column, and included columns are stored rather than
+        /// ordered, so the plan carried a TopN Sort. Free at one matching row, and not free at the
+        /// point this lookup exists for - a partner reusing a control number with years of history
+        /// behind it.
+        /// </summary>
         private Task<ESyncMateTraceRecord?> ReadByPartnerControlAsync(
             string partnerId, string partnerControlNo, CancellationToken cancellationToken)
         {
