@@ -83,6 +83,18 @@ namespace eSyncMate.Processor.Managers
                 {
                     route.SaveLog(LogTypeEnum.Debug, "Destination connector processing Start...", string.Empty, userNo);
 
+                    // Checked once here, with work waiting but before the first item is touched. Placed
+                    // after the row count so an idle run costs nothing at all.
+                    if (!ProductCatalog.IsTargetAuthReady(route, l_DestinationConnector, userNo))
+                    {
+                        return;
+                    }
+
+                    // Set when Target answers 401/403 mid-run — the token was valid when the run started but
+                    // has since been revoked. Every remaining item would get the same answer, so the run
+                    // stops and they all keep their status untouched.
+                    bool l_AuthFailed = false;
+
                     foreach (DataRow row in l_data.Rows)
                     {
                         // Declared outside the try so the catch records the failure on the same connection
@@ -227,6 +239,12 @@ namespace eSyncMate.Processor.Managers
                                         l_Product.DeleteWithType(l_Product.ProductId, "LOG-RSP");
                                         l_Product.SaveData("LOG-RSP", sourceResponse.Content, userNo);
                                     }
+                                    else if (ProductCatalog.IsAuthFailureResponse(sourceResponse))
+                                    {
+                                        l_AuthFailed = true;
+
+                                        break;
+                                    }
                                     else
                                     {
                                         l_Product.DeleteWithType(l_Product.ProductId, "LOG-ERR");
@@ -262,15 +280,23 @@ namespace eSyncMate.Processor.Managers
                         }
                         else
                         {
-                            l_Product.DeleteWithType(l_Product.ProductId, "STA-ERR");
-                            l_Product.SaveData("STA-ERR", sourceResponse.Content, userNo);
+                            if (ProductCatalog.IsAuthFailureResponse(sourceResponse))
+                            {
+                                l_AuthFailed = true;
+
+                                break;
+                            }
 
                             if (CommonUtils.IsTransientResponse(sourceResponse))
                             {
+                                // The item is left exactly as it is, so the next run checks it again.
                                 route.SaveLog(LogTypeEnum.Warning, $"Transient error ({(sourceResponse.ResponseStatus == ResponseStatus.TimedOut ? "Timeout" : (int)sourceResponse.StatusCode + " " + sourceResponse.StatusCode)}) getting ProductCatalogStatus for [{row["ItemID"]}]. Item will be retried.", sourceResponse.Content, userNo);
                             }
                             else
                             {
+                                l_Product.DeleteWithType(l_Product.ProductId, "STA-ERR");
+                                l_Product.SaveData("STA-ERR", sourceResponse.Content, userNo);
+
                                 l_CustomerProductCatalog.UpdateStatus(Convert.ToString(row["ItemID"]), Convert.ToString(row["VariationType"]), "ERROR", "", l_SourceConnector.CustomerID, 0);
 
                                 route.SaveLog(LogTypeEnum.Error, $"Error ({(int)sourceResponse.StatusCode} {sourceResponse.StatusCode}) getting ProductCatalogStatus for [{row["ItemID"]}]. Marked as ERROR.", sourceResponse.Content, userNo);
@@ -288,6 +314,11 @@ namespace eSyncMate.Processor.Managers
 
                         // Delay between API calls to avoid Target rate limiting
                         System.Threading.Thread.Sleep(DelayBetweenCallsMs);
+                    }
+
+                    if (l_AuthFailed)
+                    {
+                        route.SaveLog(LogTypeEnum.Error, "The run was stopped early because Target rejected the credentials. The remaining items were not processed and keep their current status, so they are picked up again once the connection is re-authorized.", string.Empty, userNo);
                     }
 
                     route.SaveLog(LogTypeEnum.Debug, "Destination connector processed.", string.Empty, userNo);

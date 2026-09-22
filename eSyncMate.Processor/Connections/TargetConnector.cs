@@ -36,7 +36,7 @@ namespace eSyncMate.Processor.Connections
         {
             if (string.IsNullOrEmpty(erpCustomerID))
             {
-                throw new Exception("Target OAuth: ERP CustomerID is empty — set CustomerID on the Target REST connector.");
+                throw new TargetAuthException("Target OAuth: ERP CustomerID is empty — set CustomerID on the Target REST connector.");
             }
 
             Customers l_Customer = new Customers();
@@ -44,7 +44,7 @@ namespace eSyncMate.Processor.Connections
 
             if (!l_Customer.LoadOAuthByERP(erpCustomerID))
             {
-                throw new Exception($"Target OAuth: customer '{erpCustomerID}' not found.");
+                throw new TargetAuthException($"Target OAuth: customer '{erpCustomerID}' not found.");
             }
 
             // 1) New authentication not enabled for this customer → caller uses legacy auth.
@@ -68,7 +68,7 @@ namespace eSyncMate.Processor.Connections
 
             if (string.IsNullOrEmpty(l_RefreshToken))
             {
-                throw new Exception($"Target OAuth: no refresh token stored for '{erpCustomerID}'. Run the one-time authorize first.");
+                throw new TargetAuthException($"Target OAuth: no refresh token stored for '{erpCustomerID}'. Run the one-time authorize first.");
             }
 
             RestClient client = new RestClient();
@@ -93,12 +93,12 @@ namespace eSyncMate.Processor.Connections
             }
             catch (Exception l_Ex)
             {
-                throw new Exception($"Target OAuth token refresh returned an unreadable response for '{erpCustomerID}'. Status: {response.StatusCode}, Error: {l_Ex.Message}, Response: {response.Content}");
+                throw new TargetAuthException($"Target OAuth token refresh returned an unreadable response for '{erpCustomerID}'. Status: {response.StatusCode}, Error: {l_Ex.Message}, Response: {response.Content}");
             }
 
             if (l_TokenInfo == null || string.IsNullOrEmpty(l_TokenInfo.access_token))
             {
-                throw new Exception($"Target OAuth token refresh failed for '{erpCustomerID}'. Status: {response.StatusCode}, Response: {response.Content}");
+                throw new TargetAuthException($"Target OAuth token refresh failed for '{erpCustomerID}'. Status: {response.StatusCode}, Response: {response.Content}");
             }
 
             int l_ExpiresIn = l_TokenInfo.expires_in.GetValueOrDefault();
