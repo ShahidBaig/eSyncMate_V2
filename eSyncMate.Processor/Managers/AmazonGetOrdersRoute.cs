@@ -316,12 +316,10 @@ namespace eSyncMate.Processor.Managers
                 // Amazon titles carry inch marks — "SAFAVIEH Lighting Nadia Floor Lamp, 53 - 64.25" Metal".
                 // A quote that reaches the stored API-JSON unescaped breaks JSON.Parse for the WHOLE
                 // order, and SCSPlaceOrderRoute then cannot place it (JsonReaderException at
-                // OrderItems[n].Title). Title is decorative here — no code and no ERP map reads it —
-                // so the quotes are dropped at source rather than risking the payload.
-                if (!string.IsNullOrEmpty(orderLine.Title))
-                {
-                    orderLine.Title = orderLine.Title.Replace("\\", " ").Replace("\"", " in ").Trim();
-                }
+                // OrderItems[n].Title). Title is decorative here — no code and no ERP map reads it
+                // (ERP map 6 uses ItemID, QuantityOrdered, ItemPrice, LineNo only) — so it is not
+                // stored at all rather than risking the payload on any character it may carry.
+                orderLine.Title = string.Empty;
 
                 var sku = orderLine?.SellerSKU?.Trim();
 
@@ -342,6 +340,27 @@ namespace eSyncMate.Processor.Managers
             }
 
             jsonString = JsonConvert.SerializeObject(order);
+
+            // Title is neutralised above, but any Amazon string field could carry a stray quote, and a
+            // payload that will not parse can never be placed — it only surfaces later, one order at a
+            // time, as "payload is not readable JSON". So nothing is stored unverified: the text is
+            // parsed here, repaired when it can be, and the text as serialised is kept in the log
+            // either way, which is what identifies the field that broke it.
+            if (!OrderPayloadRepair.IsValid(jsonString))
+            {
+                string l_Repaired;
+                bool l_IsRepaired = OrderPayloadRepair.TryRepair(jsonString, out l_Repaired);
+
+                route.SaveLog(l_IsRepaired ? LogTypeEnum.Warning : LogTypeEnum.Error,
+                    $"Order [{order.AmazonOrderId}] serialised to unreadable JSON at ingestion — " +
+                    (l_IsRepaired ? "repaired before saving." : "stored as serialised, it will not place."),
+                    jsonString, userNo);
+
+                if (l_IsRepaired)
+                {
+                    jsonString = l_Repaired;
+                }
+            }
 
             l_Orders.Status = "New";
             l_Orders.CustomerId = customer.Id;
