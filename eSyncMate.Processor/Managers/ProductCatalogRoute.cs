@@ -86,6 +86,14 @@ namespace eSyncMate.Processor.Managers
                     {
                         route.SaveLog(LogTypeEnum.Debug, "Destination connector processing Start...", string.Empty, userNo);
 
+                        // Checked once here, with work waiting but before the first item is touched. Without
+                        // a token not one item can go out, so trying them one by one only risks the whole
+                        // catalogue. Placed after the row count so an idle run costs nothing at all.
+                        if (!IsTargetAuthReady(route, l_DestinationConnector, userNo))
+                        {
+                            return;
+                        }
+
                         string[] syncStatus = { "NEW", "UPDATED", "PENDING" };
                         string[] VariationType = { "VAP", "VC" };
 
@@ -96,6 +104,11 @@ namespace eSyncMate.Processor.Managers
                                                             && syncStatus.Contains(row.Field<string>("SyncStatus")));
 
                         var filteredUnlistedItems = l_data.AsEnumerable().Where(row => row.Field<bool>("UnListed") == true);
+
+                        // Set when Target answers 401/403 mid-run — the access token was still valid when the
+                        // run started but has since been revoked. Every remaining item would get the same
+                        // answer, so the run stops here and they all keep their status untouched.
+                        bool l_AuthFailed = false;
 
                         if (filteredSAItems.Any())
                         {
@@ -159,6 +172,11 @@ namespace eSyncMate.Processor.Managers
 
                                     sourceResponse = RestConnector.Execute(l_DestinationConnector, Body).GetAwaiter().GetResult();
 
+                                    // A transient failure leaves the item exactly as it is -- no status, no
+                                    // RetryCount, no error row -- so the next run picks it up again the same
+                                    // way it found it this time.
+                                    bool l_KeepStatus = false;
+
                                     string l_Status = "PENDING";
                                     string l_PayloadError = sourceResponse.IsSuccessStatusCode
                                         ? GetResponsePayloadError(sourceResponse.Content, l_SCS_SAPrductModel.external_id)
@@ -181,30 +199,34 @@ namespace eSyncMate.Processor.Managers
                                     }
                                     else
                                     {
-                                        if (CommonUtils.IsTransientResponse(sourceResponse) && !IsRetryExhausted(itemsSA))
+                                        if (IsAuthFailureResponse(sourceResponse))
                                         {
-                                            l_Status = "PENDING";
+                                            l_AuthFailed = true;
+
+                                            break;
+                                        }
+
+                                        if (CommonUtils.IsTransientResponse(sourceResponse))
+                                        {
+                                            l_KeepStatus = true;
 
                                             route.SaveLog(LogTypeEnum.Warning, $"Transient error ({(sourceResponse.ResponseStatus == ResponseStatus.TimedOut ? "Timeout" : (int)sourceResponse.StatusCode + " " + sourceResponse.StatusCode)}) from SA Item Sync for item {l_SCS_SAPrductModel.external_id}. Item will be retried.", sourceResponse.Content, userNo);
-                                        }
-                                        else if (CommonUtils.IsTransientResponse(sourceResponse))
-                                        {
-                                            l_Status = "ERROR";
-
-                                            route.SaveLog(LogTypeEnum.Error, $"SA Item Sync for item {l_SCS_SAPrductModel.external_id} kept failing with a transient error and reached the retry limit of {CommonUtils.ProductCatalogMaxRetryCount}. Marked as ERROR.", sourceResponse.Content, userNo);
                                         }
                                         else
                                         {
                                             l_Status = "ERROR";
 
                                             route.SaveLog(LogTypeEnum.Error, $"Error ({(int)sourceResponse.StatusCode} {sourceResponse.StatusCode}) from SA Item Sync for item {l_SCS_SAPrductModel.external_id}. Marked as ERROR.", sourceResponse.Content, userNo);
-                                        }
 
-                                        l_CustomerProductCatalog.DeleteWithType(l_CustomerProductCatalog.ProductId, "PRD-ERR");
-                                        l_CustomerProductCatalog.SaveData("PRD-ERR", sourceResponse.Content, userNo);
+                                            l_CustomerProductCatalog.DeleteWithType(l_CustomerProductCatalog.ProductId, "PRD-ERR");
+                                            l_CustomerProductCatalog.SaveData("PRD-ERR", sourceResponse.Content, userNo);
+                                        }
                                     }
 
-                                    l_CustomerProductCatalog.UpdateStatus(l_SCS_SAPrductModel.external_id, l_SCS_SAPrductModel.relationship_type, l_Status, "", l_SourceConnector.CustomerID, Convert.ToInt32(itemsSA["RetryCount"] == DBNull.Value ? 0 : itemsSA["RetryCount"]) + 1);
+                                    if (!l_KeepStatus)
+                                    {
+                                        l_CustomerProductCatalog.UpdateStatus(l_SCS_SAPrductModel.external_id, l_SCS_SAPrductModel.relationship_type, l_Status, "", l_SourceConnector.CustomerID, Convert.ToInt32(itemsSA["RetryCount"] == DBNull.Value ? 0 : itemsSA["RetryCount"]) + 1);
+                                    }
                                     //l_CustomerProductCatalog.DeleteProductCatalogDiscrepencies(l_SCS_VAPProductCatalogModel.parent.external_id);
 
                                     route.SaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
@@ -218,7 +240,7 @@ namespace eSyncMate.Processor.Managers
                             }
                         }
 
-                        if (filteredVAPVCItems.Any())
+                        if (!l_AuthFailed && filteredVAPVCItems.Any())
                         {
                             foreach (var itemVAP in filteredVAPVCItems)
                             {
@@ -230,6 +252,10 @@ namespace eSyncMate.Processor.Managers
                                 {
                                     if (itemVAP.Field<string>("VariationType").Equals("VAP"))
                                     {
+
+                                        // A transient failure leaves the parent AND its variations exactly as
+                                        // they are, so the next run sends the whole group again unchanged.
+                                        bool l_KeepStatus = false;
 
                                         string l_Status = "PENDING";
                                         CustomerProductCatalog l_Product = new CustomerProductCatalog();
@@ -342,34 +368,41 @@ namespace eSyncMate.Processor.Managers
                                         }
                                         else
                                         {
-                                            if (CommonUtils.IsTransientResponse(sourceResponse) && !IsRetryExhausted(itemVAP))
+                                            if (IsAuthFailureResponse(sourceResponse))
                                             {
-                                                l_Status = "PENDING";
+                                                l_AuthFailed = true;
+
+                                                break;
+                                            }
+
+                                            if (CommonUtils.IsTransientResponse(sourceResponse))
+                                            {
+                                                l_KeepStatus = true;
 
                                                 route.SaveLog(LogTypeEnum.Warning, $"Transient error ({(sourceResponse.ResponseStatus == ResponseStatus.TimedOut ? "Timeout" : (int)sourceResponse.StatusCode + " " + sourceResponse.StatusCode)}) from VAP Item Sync for item {l_SCS_VAPProductCatalogModel.parent.external_id}. Item will be retried.", sourceResponse.Content, userNo);
-                                            }
-                                            else if (CommonUtils.IsTransientResponse(sourceResponse))
-                                            {
-                                                l_Status = "ERROR";
-
-                                                route.SaveLog(LogTypeEnum.Error, $"VAP Item Sync for item {l_SCS_VAPProductCatalogModel.parent.external_id} kept failing with a transient error and reached the retry limit of {CommonUtils.ProductCatalogMaxRetryCount}. Marked as ERROR.", sourceResponse.Content, userNo);
                                             }
                                             else
                                             {
                                                 l_Status = "ERROR";
 
                                                 route.SaveLog(LogTypeEnum.Error, $"Error ({(int)sourceResponse.StatusCode} {sourceResponse.StatusCode}) from VAP Item Sync for item {l_SCS_VAPProductCatalogModel.parent.external_id}. Marked as ERROR.", sourceResponse.Content, userNo);
-                                            }
 
-                                            l_Product.DeleteWithType(l_Product.ProductId, "PRD-ERR");
-                                            l_Product.SaveData("PRD-ERR", sourceResponse.Content, userNo);
+                                                l_Product.DeleteWithType(l_Product.ProductId, "PRD-ERR");
+                                                l_Product.SaveData("PRD-ERR", sourceResponse.Content, userNo);
+                                            }
                                         }
 
                                         route.SaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
-                                        l_CustomerProductCatalog.UpdateStatus(l_SCS_VAPProductCatalogModel.parent.external_id, l_SCS_VAPProductCatalogModel.parent.relationship_type, l_Status, "", l_SourceConnector.CustomerID, Convert.ToInt32(itemVAP["RetryCount"] == DBNull.Value ? 0 : itemVAP["RetryCount"]) + 1);
+
+                                        if (!l_KeepStatus)
+                                        {
+                                            l_CustomerProductCatalog.UpdateStatus(l_SCS_VAPProductCatalogModel.parent.external_id, l_SCS_VAPProductCatalogModel.parent.relationship_type, l_Status, "", l_SourceConnector.CustomerID, Convert.ToInt32(itemVAP["RetryCount"] == DBNull.Value ? 0 : itemVAP["RetryCount"]) + 1);
+                                        }
 
                                         //l_CustomerProductCatalog.DeleteProductCatalogDiscrepencies(l_SCS_VAPProductCatalogModel.parent.external_id);
-                                        if (filteredVCItems.Any())
+                                        // A transient failure leaves the whole group alone: the children are only
+                                        // ever sent with their parent, so they must not be touched either.
+                                        if (!l_KeepStatus && filteredVCItems.Any())
                                         {
                                             foreach (var itemVC in filteredVCItems)
                                             {
@@ -447,7 +480,7 @@ namespace eSyncMate.Processor.Managers
                             }
                         }
 
-                        if (filteredUnlistedItems.Any())
+                        if (!l_AuthFailed && filteredUnlistedItems.Any())
                         {
                             foreach (var unlistedItems in filteredUnlistedItems)
                             {
@@ -525,27 +558,28 @@ namespace eSyncMate.Processor.Managers
                                             }
                                             else
                                             {
-                                                if (CommonUtils.IsTransientResponse(sourceResponse) && !IsRetryExhausted(unlistedItems))
+                                                if (IsAuthFailureResponse(sourceResponse))
+                                                {
+                                                    l_AuthFailed = true;
+
+                                                    break;
+                                                }
+
+                                                if (CommonUtils.IsTransientResponse(sourceResponse))
                                                 {
                                                     l_Retryable = true;
 
                                                     route.SaveLog(LogTypeEnum.Warning, $"Transient error ({(sourceResponse.ResponseStatus == ResponseStatus.TimedOut ? "Timeout" : (int)sourceResponse.StatusCode + " " + sourceResponse.StatusCode)}) from Unlist Item Sync for item {response.external_id}. Item will be retried.", sourceResponse.Content, userNo);
-                                                }
-                                                else if (CommonUtils.IsTransientResponse(sourceResponse))
-                                                {
-                                                    l_Status = "ERROR";
-
-                                                    route.SaveLog(LogTypeEnum.Error, $"Unlist Item Sync for item {response.external_id} kept failing with a transient error and reached the retry limit of {CommonUtils.ProductCatalogMaxRetryCount}. Marked as ERROR.", sourceResponse.Content, userNo);
                                                 }
                                                 else
                                                 {
                                                     l_Status = "ERROR";
 
                                                     route.SaveLog(LogTypeEnum.Error, $"Error ({(int)sourceResponse.StatusCode} {sourceResponse.StatusCode}) from Unlist Item Sync for item {response.external_id}. Marked as ERROR.", sourceResponse.Content, userNo);
-                                                }
 
-                                                l_CustomerProductCatalog.DeleteWithType(l_CustomerProductCatalog.ProductId, "UNL-ERR");
-                                                l_CustomerProductCatalog.SaveData("UNL-ERR", sourceResponse.Content, userNo);
+                                                    l_CustomerProductCatalog.DeleteWithType(l_CustomerProductCatalog.ProductId, "UNL-ERR");
+                                                    l_CustomerProductCatalog.SaveData("UNL-ERR", sourceResponse.Content, userNo);
+                                                }
                                             }
 
                                             if (!l_Retryable)
@@ -559,16 +593,24 @@ namespace eSyncMate.Processor.Managers
                                     }
                                     else
                                     {
-                                        l_CustomerProductCatalog.DeleteWithType(l_CustomerProductCatalog.ProductId, "UNL-ERR");
-                                        l_CustomerProductCatalog.SaveData("UNL-ERR", sourceResponse.Content, userNo);
-
-                                        if (CommonUtils.IsTransientResponse(sourceResponse) && !IsRetryExhausted(unlistedItems))
+                                        if (IsAuthFailureResponse(sourceResponse))
                                         {
+                                            l_AuthFailed = true;
+
+                                            break;
+                                        }
+
+                                        if (CommonUtils.IsTransientResponse(sourceResponse))
+                                        {
+                                            // The item is left exactly as it is, so the next run tries it again.
                                             route.SaveLog(LogTypeEnum.Warning, $"Transient error ({(sourceResponse.ResponseStatus == ResponseStatus.TimedOut ? "Timeout" : (int)sourceResponse.StatusCode + " " + sourceResponse.StatusCode)}) getting product for unlist item id [{unlistedItems.Field<string>("id")}]. Item will be retried.", sourceResponse.Content, userNo);
                                         }
                                         else
                                         {
-                                            // A definite error (or the retry limit) must not leave the item unlisting for ever.
+                                            // A definite error must not leave the item unlisting for ever.
+                                            l_CustomerProductCatalog.DeleteWithType(l_CustomerProductCatalog.ProductId, "UNL-ERR");
+                                            l_CustomerProductCatalog.SaveData("UNL-ERR", sourceResponse.Content, userNo);
+
                                             l_CustomerProductCatalog.UpdateStatus(Convert.ToString(unlistedItems["ItemID"]), Convert.ToString(unlistedItems["VariationType"]), "ERROR", "", l_SourceConnector.CustomerID, Convert.ToInt32(unlistedItems["RetryCount"] == DBNull.Value ? 0 : unlistedItems["RetryCount"]) + 1);
 
                                             route.SaveLog(LogTypeEnum.Error, $"Error ({(int)sourceResponse.StatusCode} {sourceResponse.StatusCode}) getting product for unlist item id [{unlistedItems.Field<string>("id")}]. Marked as ERROR.", sourceResponse.Content, userNo);
@@ -582,6 +624,11 @@ namespace eSyncMate.Processor.Managers
                                     MarkItemFailed(route, l_CustomerProductCatalog, l_SourceConnector.CustomerID, unlistedItems, itemEx, userNo);
                                 }
                             }
+                        }
+
+                        if (l_AuthFailed)
+                        {
+                            route.SaveLog(LogTypeEnum.Error, "The run was stopped early because Target rejected the credentials. The remaining items were not processed and keep their current status, so they go out again once the connection is re-authorized.", string.Empty, userNo);
                         }
 
                         route.SaveLog(LogTypeEnum.Debug, "Destination connector processing completed.", string.Empty, userNo);
@@ -685,9 +732,83 @@ namespace eSyncMate.Processor.Managers
         }
 
         /// <summary>
-        /// True when the failure comes from the platform (database or network) rather than from the item's
-        /// own data. Such an item must keep its current status so it is retried once the platform recovers,
-        /// otherwise a short outage would permanently mark every item in the run as ERROR.
+        /// Proves once, before any item is touched, that Target will hand out an access token.
+        /// The token is resolved per item deep inside RestConnector, so an expired OAuth grant fails every
+        /// single item of the run in exactly the same way — and Target's grant has to be re-authorized in a
+        /// browser every 30 days, so this is a date on the calendar, not a freak event. Checking it up front
+        /// turns "the whole catalogue is marked ERROR" into "the route stops and says why".
+        /// True when the route may continue: either the connector does not use Target OAuth at all, or a
+        /// token was obtained.
+        /// </summary>
+        internal static bool IsTargetAuthReady(Routes route, ConnectorDataModel p_Connector, int userNo)
+        {
+            if (p_Connector == null || p_Connector.AuthType != "TargetGetToken")
+            {
+                return true;
+            }
+
+            try
+            {
+                // Flag OFF means legacy header auth, which needs no token. Inside the try because it
+                // reads the Customers row: a database hiccup here must not escape as a bare route
+                // exception, it must report the same readable reason as a refusal.
+                if (!TargetConnector.IsNewAuthEnabled(p_Connector.CustomerID))
+                {
+                    return true;
+                }
+
+                string l_Token = new TargetConnector().GetAccessToken(p_Connector.CustomerID).GetAwaiter().GetResult();
+
+                if (!string.IsNullOrEmpty(l_Token))
+                {
+                    return true;
+                }
+
+                route.SaveLog(LogTypeEnum.Error, $"Target returned no access token for '{p_Connector.CustomerID}'. The catalogue cannot be sent until the Target connection is re-authorized. No item is marked ERROR and nothing is retried away — they all go out again once it is renewed.", string.Empty, userNo);
+
+                return false;
+            }
+            catch (TargetAuthException l_AuthException)
+            {
+                // The refresh grant is dead, revoked, or was never created. Nothing retries this away:
+                // only a person signing in through a browser can fix it, and Target forces that roughly
+                // every 30 days. So this one is deliberately loud — Error (5) is what the Route
+                // Exceptions screen shows.
+                route.SaveLog(LogTypeEnum.Error, $"Target authentication failed for '{p_Connector.CustomerID}', so the catalogue is not being sent. Re-authorize the Target connection — the refresh grant has to be renewed in a browser roughly every 30 days. No item is marked ERROR and no retry is consumed: everything goes out again on the next run once it is renewed.", l_AuthException.ToString(), userNo);
+
+                return false;
+            }
+            catch (Exception l_Exception)
+            {
+                // A database or network hiccup while checking. Nobody has to do anything — the next
+                // scheduled run tries again — so it stays quiet at Warning (2).
+                route.SaveLog(LogTypeEnum.Warning, $"Could not check the Target authentication for '{p_Connector.CustomerID}' because of a database or network failure. The run is skipped and tried again on the next schedule. No item is touched.", l_Exception.ToString(), userNo);
+
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// True when Target refused the call over credentials rather than over the item. A 401/403 is never
+        /// caused by what an item contains, so the item keeps its status, keeps its RetryCount and gets no
+        /// error row — it simply goes out again once the connection is re-authorized.
+        /// </summary>
+        internal static bool IsAuthFailureResponse(RestResponse p_Response)
+        {
+            if (p_Response == null)
+            {
+                return false;
+            }
+
+            return p_Response.StatusCode == System.Net.HttpStatusCode.Unauthorized
+                || p_Response.StatusCode == System.Net.HttpStatusCode.Forbidden;
+        }
+
+        /// <summary>
+        /// True when the failure comes from the platform (database, network, or marketplace authentication)
+        /// rather than from the item's own data. Such an item must keep its current status so it is retried
+        /// once the platform recovers, otherwise a short outage would permanently mark every item in the run
+        /// as ERROR.
         /// </summary>
         private static bool IsInfrastructureException(Exception p_Exception)
         {
@@ -698,7 +819,8 @@ namespace eSyncMate.Processor.Managers
                     || l_Exception is System.Net.Http.HttpRequestException
                     || l_Exception is TaskCanceledException
                     || l_Exception is System.Net.Sockets.SocketException
-                    || l_Exception is OutOfMemoryException)
+                    || l_Exception is OutOfMemoryException
+                    || l_Exception is TargetAuthException)
                 {
                     return true;
                 }
@@ -721,7 +843,7 @@ namespace eSyncMate.Processor.Managers
 
                 if (IsInfrastructureException(p_Exception))
                 {
-                    route.SaveLog(LogTypeEnum.Warning, $"Item {l_ItemID} could not be processed because of a database or network failure. Status left unchanged so the item is retried on the next run.", p_Exception.Message, userNo);
+                    route.SaveLog(LogTypeEnum.Warning, $"Item {l_ItemID} could not be processed because of a database, network or marketplace authentication failure. Status and RetryCount left unchanged so the item is retried on the next run.", p_Exception.Message, userNo);
 
                     return;
                 }
