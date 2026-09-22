@@ -316,12 +316,10 @@ namespace eSyncMate.Processor.Managers
                 // Amazon titles carry inch marks — "SAFAVIEH Lighting Nadia Floor Lamp, 53 - 64.25" Metal".
                 // A quote that reaches the stored API-JSON unescaped breaks JSON.Parse for the WHOLE
                 // order, and SCSPlaceOrderRoute then cannot place it (JsonReaderException at
-                // OrderItems[n].Title). Title is decorative here — no code and no ERP map reads it —
-                // so the quotes are dropped at source rather than risking the payload.
-                if (!string.IsNullOrEmpty(orderLine.Title))
-                {
-                    orderLine.Title = orderLine.Title.Replace("\\", " ").Replace("\"", " in ").Trim();
-                }
+                // OrderItems[n].Title). Title is decorative here — no code and no ERP map reads it
+                // (ERP map 6 uses ItemID, QuantityOrdered, ItemPrice, LineNo only) — so it is not
+                // stored at all rather than risking the payload on any character it may carry.
+                orderLine.Title = string.Empty;
 
                 var sku = orderLine?.SellerSKU?.Trim();
 

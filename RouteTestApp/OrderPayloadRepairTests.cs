@@ -246,17 +246,18 @@ namespace RouteTestApp
 
             const string RawTitle = "SAFAVIEH Lighting Orianna Table Lamp, 25\"CeramicBlue/WhiteTBL4104A";
 
-            string l_Sanitised = RawTitle.Replace("\\", " ").Replace("\"", " in ").Trim();
+            string l_Blanked = string.Empty;
             string l_FromRaw = JsonConvert.SerializeObject(new { Title = RawTitle, ItemID = "TBL4104A" });
-            string l_FromSanitised = JsonConvert.SerializeObject(new { Title = l_Sanitised, ItemID = "TBL4104A" });
+            string l_FromBlanked = JsonConvert.SerializeObject(new { Title = l_Blanked, ItemID = "TBL4104A" });
 
             Console.WriteLine("[4] The ingestion path (AmazonGetOrdersRoute.ProcessOrder)");
             Console.WriteLine($"    Title from Amazon      : {RawTitle}");
-            Console.WriteLine($"    After the sanitise     : {l_Sanitised}");
-            Console.WriteLine($"    Serialised, no sanitise: {l_FromRaw}");
+            Console.WriteLine($"    Title as stored        : (blank - not persisted)");
+            Console.WriteLine($"    Serialised, unchanged  : {l_FromRaw}");
             Console.WriteLine($"      -> valid JSON        : {OrderPayloadRepair.IsValid(l_FromRaw)}");
-            Console.WriteLine($"    Serialised, sanitised  : {l_FromSanitised}");
-            Console.WriteLine($"      -> valid JSON        : {OrderPayloadRepair.IsValid(l_FromSanitised)}");
+            Console.WriteLine($"    Serialised, blanked    : {l_FromBlanked}");
+            Console.WriteLine($"      -> valid JSON        : {OrderPayloadRepair.IsValid(l_FromBlanked)}");
+            Console.WriteLine($"      -> carries no quote  : {!l_FromBlanked.Contains("25\\\"")}");
             Console.WriteLine();
 
             const string Good = "{\"a\":1}";
