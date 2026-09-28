@@ -1319,12 +1319,14 @@ namespace eSyncMate.Processor.Controllers
 
             if (Status == "ACKERROR")
             {
-                if (CustomerName == "WAL4001MP")
+                if (WalmartGetOrdersRoute.IsWalmartCustomer(CustomerName))
                 {
                     result = WalmartGetOrdersRoute.ExecuteSingle(_config, OrderId, CustomerName, OrderNumber);
                 }
-
-                result = SCSGetOrders.ExecuteSingle(_config, OrderId, CustomerName, OrderNumber);
+                else
+                {
+                    result = SCSGetOrders.ExecuteSingle(_config, OrderId, CustomerName, OrderNumber);
+                }
 
                 if (string.IsNullOrEmpty(result))
                 {

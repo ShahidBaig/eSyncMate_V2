@@ -841,6 +841,22 @@ namespace eSyncMate.DB.Entities
             return this.Connection.GetData(l_Query, ref p_dataTable);
         }
 
+        // Per-customer Walmart ship nodes (Walmart US and Walmart Canada live in the same table).
+        // Rows with no CustomerID are legacy/unassigned and stay visible to every Walmart customer,
+        // and a server without the CustomerID column gets the old unfiltered result.
+        public bool APIShipNode(string APIName, string CustomerID, ref DataTable p_dataTable)
+        {
+            string l_CustomerID = (CustomerID ?? string.Empty).Replace("'", "''");
+
+            string l_Query = $@"IF COL_LENGTH('dbo.WalmartShipNodes', 'CustomerID') IS NULL
+                                    SELECT * FROM WalmartShipNodes
+                                ELSE
+                                    SELECT * FROM WalmartShipNodes
+                                     WHERE CustomerID = '{l_CustomerID}' OR ISNULL(CustomerID, '') = ''";
+
+            return this.Connection.GetData(l_Query, ref p_dataTable);
+        }
+
         public bool TargetPlusShipNode(string CustomerID,ref DataTable p_dataTable)
         {
             string l_Query = string.Empty;

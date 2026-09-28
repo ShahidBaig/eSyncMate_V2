@@ -104,6 +104,21 @@ namespace eSyncMate.Processor.Managers
             }
         }
 
+        // A customer is a Walmart customer when it has a WalmartGetOrders route (WAL4001MP, Walmart Canada, ...).
+        public static bool IsWalmartCustomer(string customerName)
+        {
+            if (string.IsNullOrWhiteSpace(customerName))
+                return false;
+
+            if (customerName == "WAL4001MP")
+                return true;
+
+            Routes route = new Routes();
+            route.UseConnection(CommonUtils.ConnectionString);
+
+            return route.GetObject("TypeId", (int)RouteTypesEnum.WalmartGetOrders, "CustomerName", customerName).IsSuccess;
+        }
+
         public static string ExecuteSingle(IConfiguration config, int orderId, string customerName, string orderNumber)
         {
             int userNo = 1;
@@ -112,16 +127,17 @@ namespace eSyncMate.Processor.Managers
 
             route.UseConnection(CommonUtils.ConnectionString);
 
-            if (customerName == "WAL4001MP")
-            {
-                routeName = "Walmart - Get Orders";
-            }
-            else
+            if (!IsWalmartCustomer(customerName))
             {
                 return $"No route configured for customer: {customerName}";
             }
 
-            if (!route.GetObject("Name", routeName, "CustomerName", customerName).IsSuccess)
+            // Walmart US keeps its original lookup by route name; any other Walmart customer
+            // (e.g. Walmart Canada) is found by its Get Orders route type.
+            routeName = "Walmart - Get Orders";
+
+            if (!route.GetObject("Name", routeName, "CustomerName", customerName).IsSuccess
+                && !route.GetObject("TypeId", (int)RouteTypesEnum.WalmartGetOrders, "CustomerName", customerName).IsSuccess)
             {
                 return "Order processing route is not setup.";
             }
