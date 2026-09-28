@@ -198,7 +198,7 @@ namespace eSyncMate.Processor.Managers
             try
             {
                 this.feed.UseConnection(this.sourceConnector.ConnectionString);
-                this.feed.APIShipNode("WalmartAPI", ref ShipNodedataTable);
+                this.feed.APIShipNode("WalmartAPI", this.sourceConnector.CustomerID, ref ShipNodedataTable);
 
                 foreach (DataRow row in this.data.Rows)
                 {

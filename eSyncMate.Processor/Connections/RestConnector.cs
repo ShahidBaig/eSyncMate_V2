@@ -62,8 +62,8 @@ retry:
 
                     WalmartConnector l_WalmartConnector = new WalmartConnector();
 
-                    await l_WalmartConnector.GetApiToken(connector.BaseUrl, connector.ConsumerKey, connector.ConsumerSecret,"","","");
-                    
+                    string l_WalmartToken = await l_WalmartConnector.GetAccessToken(connector.BaseUrl, connector.ConsumerKey, connector.ConsumerSecret, connector.Headers);
+
                     //if (string.IsNullOrEmpty(WalmartConnector.Token))
                     //{
                     //    WalmartConnector l_WalmartConnector = new WalmartConnector();
@@ -71,8 +71,8 @@ retry:
                     //    await l_WalmartConnector.GetApiToken(connector.BaseUrl, connector.ConsumerKey, connector.ConsumerSecret);
                     //}
 
-                    connector.Token = WalmartConnector.Token;
-                   
+                    connector.Token = l_WalmartToken;
+
                     request.AddHeader("WM_SEC.ACCESS_TOKEN", connector.Token);
                     request.AddHeader("WM_QOS.CORRELATION_ID", guid.ToString());
                     request.AddHeader("WM_SVC.NAME", "WalmartAPI");

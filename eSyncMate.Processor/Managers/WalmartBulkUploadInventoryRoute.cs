@@ -77,7 +77,7 @@ namespace eSyncMate.Processor.Managers
                     feed.UseConnection(l_SourceConnector.ConnectionString);
 
                     // Load ship nodes ONCE — same as Amazon pattern (not per-chunk)
-                    feed.APIShipNode("WalmartAPI", ref l_shipNodeDataTable);
+                    feed.APIShipNode("WalmartAPI", l_SourceConnector.CustomerID, ref l_shipNodeDataTable);
                     route.SaveLog(LogTypeEnum.Debug, $"Ship nodes loaded: {l_shipNodeDataTable.Rows.Count}", string.Empty, userNo);
 
                     l_InventoryBatchWise.StartDate  = DateTime.Now;
@@ -344,13 +344,11 @@ namespace eSyncMate.Processor.Managers
             {
                 // Get Walmart access token using the same method as RestConnector
                 WalmartConnector walmartConnector = new WalmartConnector();
-                await walmartConnector.GetApiToken(
+                string accessToken = await walmartConnector.GetAccessToken(
                     this.destinationConnector.BaseUrl,
                     this.destinationConnector.ConsumerKey,
                     this.destinationConnector.ConsumerSecret,
-                    "", "", "");
-
-                string accessToken = WalmartConnector.Token;
+                    this.destinationConnector.Headers);
 
                 // Walmart Feed API requires multipart/form-data with file attachment
                 using var client = new RestClient();
