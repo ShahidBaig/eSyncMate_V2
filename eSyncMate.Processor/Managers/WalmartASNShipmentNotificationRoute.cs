@@ -19,6 +19,15 @@ namespace eSyncMate.Processor.Managers
 {
     public class WalmartASNShipmentNotificationRoute
     {
+        // Global Marketplace (connector has a WM_MARKET header, e.g. Walmart Canada) requires shipFromCountry
+        // on every order line; Walmart US has no WM_MARKET header and keeps its original payload.
+        private static string? GetShipFromCountry(ConnectorDataModel? connector)
+        {
+            string? l_Market = connector?.Headers?.FirstOrDefault(h => string.Equals(h?.Name?.Trim(), "WM_MARKET", StringComparison.OrdinalIgnoreCase))?.Value?.Trim();
+
+            return string.IsNullOrEmpty(l_Market) ? null : l_Market.ToUpperInvariant();
+        }
+
         public static void Execute(IConfiguration config, Routes route)
         {
             int userNo = 1;
@@ -97,6 +106,7 @@ namespace eSyncMate.Processor.Managers
                                     lineNumber = l_Line["LineNo"].ToString(),
                                     intentToCancelOverride = false, // assuming false, change as per your logic
                                     sellerOrderId = l_Line["SellerOrderId"].ToString(),
+                                    shipFromCountry = GetShipFromCountry(l_DestinationConnector),
                                     orderLineStatuses = new WalmartAsnShipmentNotificationInputModel.Orderlinestatuses()
                                 };
 
@@ -321,6 +331,7 @@ namespace eSyncMate.Processor.Managers
                                     lineNumber = l_Line["LineNo"].ToString(),
                                     intentToCancelOverride = false,
                                     sellerOrderId = l_Line["SellerOrderId"].ToString(),
+                                    shipFromCountry = GetShipFromCountry(l_DestinationConnector),
                                     orderLineStatuses = new WalmartAsnShipmentNotificationInputModel.Orderlinestatuses()
                                 };
 

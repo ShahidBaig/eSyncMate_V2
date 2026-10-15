@@ -131,7 +131,7 @@
         public class Promotions
         {
             public object[] applied_promotions { get; set; }
-            public int total_deduced_amount { get; set; }
+            public decimal total_deduced_amount { get; set; }
         }
 
         public class Order_Lines

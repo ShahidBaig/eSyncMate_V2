@@ -169,7 +169,7 @@ namespace eSyncMate.Processor.Managers
                         return;
                     }
 
-                    this.feed.UpdateSCSKnotFeedData(this.batchID, importId, l_Guid);
+                    //this.feed.UpdateSCSKnotFeedData(this.batchID, importId, l_Guid);
                     DataTable bulkInsertTable = CreateBulkInsertDataTable();
 
                     foreach (DataRow row in this.data.Rows)
@@ -205,7 +205,7 @@ namespace eSyncMate.Processor.Managers
             try
             {
                 var sb = new StringBuilder();
-                DataTable bulkSCSKnotFeedData = CreateBulkInsertSCSKnotFeedData();
+                //DataTable bulkSCSKnotFeedData = CreateBulkInsertSCSKnotFeedData();
 
                 string header = feed.GetKnotStockImportHeader();
                 if (header.IsNullOrEmpty())
@@ -256,16 +256,16 @@ namespace eSyncMate.Processor.Managers
                     bulkRow["BatchID"] = batchID;
                     sentTable.Rows.Add(bulkRow);
 
-                    DataRow knotFeedRow = bulkSCSKnotFeedData.NewRow();
-                    knotFeedRow["BatchID"] = batchID;
-                    knotFeedRow["ItemID"] = itemId;
-                    knotFeedRow["CustomerID"] = customerId;
-                    knotFeedRow["ImportId"] = p_Guid;
-                    knotFeedRow["Data"] = perItemJson;
-                    bulkSCSKnotFeedData.Rows.Add(knotFeedRow);
+                    //DataRow knotFeedRow = bulkSCSKnotFeedData.NewRow();
+                    //knotFeedRow["BatchID"] = batchID;
+                    //knotFeedRow["ItemID"] = itemId;
+                    //knotFeedRow["CustomerID"] = customerId;
+                    //knotFeedRow["ImportId"] = p_Guid;
+                    //knotFeedRow["Data"] = perItemJson;
+                    //bulkSCSKnotFeedData.Rows.Add(knotFeedRow);
                 }
 
-                feed.BulkKnotFeedData(connectionString, "SCSKnotFeedData", bulkSCSKnotFeedData);
+                //feed.BulkKnotFeedData(connectionString, "SCSKnotFeedData", bulkSCSKnotFeedData);
 
                 return sb.ToString();
             }

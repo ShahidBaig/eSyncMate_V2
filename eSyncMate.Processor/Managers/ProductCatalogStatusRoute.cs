@@ -131,6 +131,7 @@ namespace eSyncMate.Processor.Managers
                         {
                             route.SaveLog(LogTypeEnum.Debug, $"ProductCatalogStatus processed for [{row["ItemID"]}].", string.Empty, userNo);
 
+                            l_Product.DeleteWithType(l_Product.ProductId, "STA-ERR");
                             l_Product.DeleteWithType(l_Product.ProductId, "STA-RSP");
                             l_Product.SaveData("STA-RSP", sourceResponse.Content, userNo);
 
@@ -236,28 +237,33 @@ namespace eSyncMate.Processor.Managers
 
                                     if (sourceResponse.IsSuccessStatusCode && string.IsNullOrEmpty(l_LogisticsPayloadError))
                                     {
+                                        l_Product.DeleteWithType(l_Product.ProductId, "LOG-ERR");
                                         l_Product.DeleteWithType(l_Product.ProductId, "LOG-RSP");
                                         l_Product.SaveData("LOG-RSP", sourceResponse.Content, userNo);
                                     }
                                     else if (ProductCatalog.IsAuthFailureResponse(sourceResponse))
                                     {
+                                        ProductCatalog.SaveRetryableError(route, l_Product, l_Product.ProductId, "LOG-ERR", sourceResponse, Convert.ToString(row["ItemID"]), userNo);
+
                                         l_AuthFailed = true;
 
                                         break;
                                     }
                                     else
                                     {
-                                        l_Product.DeleteWithType(l_Product.ProductId, "LOG-ERR");
-                                        l_Product.SaveData("LOG-ERR", sourceResponse.Content, userNo);
-
-                                        if (!sourceResponse.IsSuccessStatusCode && CommonUtils.IsTransientResponse(sourceResponse))
+                                        if (!sourceResponse.IsSuccessStatusCode && ProductCatalog.IsRetryableResponse(sourceResponse))
                                         {
                                             l_LogisticsRetry = true;
+
+                                            ProductCatalog.SaveRetryableError(route, l_Product, l_Product.ProductId, "LOG-ERR", sourceResponse, Convert.ToString(row["ItemID"]), userNo);
 
                                             route.SaveLog(LogTypeEnum.Warning, $"Transient error ({(sourceResponse.ResponseStatus == ResponseStatus.TimedOut ? "Timeout" : (int)sourceResponse.StatusCode + " " + sourceResponse.StatusCode)}) updating product logistics for [{row["ItemID"]}]. Item will be retried.", sourceResponse.Content, userNo);
                                         }
                                         else
                                         {
+                                            l_Product.DeleteWithType(l_Product.ProductId, "LOG-ERR");
+                                            l_Product.SaveData("LOG-ERR", sourceResponse.Content, userNo);
+
                                             l_LogisticsError = sourceResponse.IsSuccessStatusCode
                                                 ? l_LogisticsPayloadError
                                                 : (int)sourceResponse.StatusCode + " " + sourceResponse.StatusCode;
@@ -282,14 +288,18 @@ namespace eSyncMate.Processor.Managers
                         {
                             if (ProductCatalog.IsAuthFailureResponse(sourceResponse))
                             {
+                                ProductCatalog.SaveRetryableError(route, l_Product, l_Product.ProductId, "STA-ERR", sourceResponse, Convert.ToString(row["ItemID"]), userNo);
+
                                 l_AuthFailed = true;
 
                                 break;
                             }
 
-                            if (CommonUtils.IsTransientResponse(sourceResponse))
+                            if (ProductCatalog.IsRetryableResponse(sourceResponse))
                             {
-                                // The item is left exactly as it is, so the next run checks it again.
+                                // The status is left as it is, so the next run checks it again.
+                                ProductCatalog.SaveRetryableError(route, l_Product, l_Product.ProductId, "STA-ERR", sourceResponse, Convert.ToString(row["ItemID"]), userNo);
+
                                 route.SaveLog(LogTypeEnum.Warning, $"Transient error ({(sourceResponse.ResponseStatus == ResponseStatus.TimedOut ? "Timeout" : (int)sourceResponse.StatusCode + " " + sourceResponse.StatusCode)}) getting ProductCatalogStatus for [{row["ItemID"]}]. Item will be retried.", sourceResponse.Content, userNo);
                             }
                             else

@@ -193,7 +193,12 @@ namespace eSyncMate.Processor.Models
         StaleLockCleanup = 72,
         WalmartWHSWInventoryUpload = 73,
         // Auto-retries error orders (Period / Timeout / No Response from SPARS) via the single-order reprocess
-        ErrorOrderRetry = 74
+        ErrorOrderRetry = 74,
+        // Walmart bulk inventory: MP_INVENTORY feed upload, and the feed status check that follows it
+        WalmartBulkInventoryUpload = 75,
+        WalmartBulkInventoryStatus = 76,
+        // Inserts the Target products missing in CustomerProductCatalogPrices (ItemID -> ProductID)
+        TargetProductSync = 77
 
     }
 
@@ -252,6 +257,11 @@ namespace eSyncMate.Processor.Models
         public static Int32 MiraklStatusMaxAttempts = 3;
         public static Int32 MiraklStatusCallDelaySeconds = 30;
 
+        // Walmart bulk inventory (MP_INVENTORY) feeds: seconds between two feeds.
+        // Walmart allows 50 feeds/hour in the US and 20/hour in Canada (connector with a WM_MARKET header).
+        public static Int32 WalmartBulkFeedIntervalSeconds = 75;
+        public static Int32 WalmartCABulkFeedIntervalSeconds = 185;
+
         /// <summary>
         /// Loads all configuration (except ConnectionStrings) from the ApplicationSettings
         /// table into the static fields above. Call ONCE at process startup, after
@@ -301,7 +311,8 @@ namespace eSyncMate.Processor.Models
                 MiraklStatusTimeoutSeconds = int.TryParse(Get("MiraklStatusTimeoutSeconds", MiraklStatusTimeoutSeconds.ToString()), out var mst) ? mst : MiraklStatusTimeoutSeconds;
                 MiraklStatusMaxAttempts = int.TryParse(Get("MiraklStatusMaxAttempts", MiraklStatusMaxAttempts.ToString()), out var msa) ? msa : MiraklStatusMaxAttempts;
                 MiraklStatusCallDelaySeconds = int.TryParse(Get("MiraklStatusCallDelaySeconds", MiraklStatusCallDelaySeconds.ToString()), out var mscd) ? mscd : MiraklStatusCallDelaySeconds;
-            }
+                WalmartBulkFeedIntervalSeconds = int.TryParse(Get("WalmartBulkFeedIntervalSeconds", WalmartBulkFeedIntervalSeconds.ToString()), out var wbfi) ? wbfi : WalmartBulkFeedIntervalSeconds;
+                WalmartCABulkFeedIntervalSeconds = int.TryParse(Get("WalmartCABulkFeedIntervalSeconds", WalmartCABulkFeedIntervalSeconds.ToString()), out var wcbfi) ? wcbfi : WalmartCABulkFeedIntervalSeconds;            }
             catch (Exception ex)
             {
                 Console.WriteLine($"[CommonUtils.LoadFromDatabase] Failed to load ApplicationSettings: {ex.Message}");

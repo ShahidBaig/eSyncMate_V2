@@ -35,23 +35,27 @@ namespace eSyncMate.Processor.Managers
             _config = config;
         }
 
-        // Reads ApplicationSettings.TagValue for 'RouteLockTimeoutMinutes' on every call.
-        // Falls back to 60 if the row is missing, value invalid, or DB is unreachable.
-        private static int GetRouteLockTimeoutMinutes()
+        // Reads ApplicationSettings.TagValue on every call: 'RouteLockTimeoutMinutes_<TypeId>' for that
+        // route type (e.g. RouteLockTimeoutMinutes_75 for the long Walmart bulk upload), else the global
+        // 'RouteLockTimeoutMinutes'. Falls back to 60 if the rows are missing, invalid, or DB is unreachable.
+        private static int GetRouteLockTimeoutMinutes(int routeTypeId)
         {
-            try
+            foreach (string l_TagName in new[] { $"RouteLockTimeoutMinutes_{routeTypeId}", "RouteLockTimeoutMinutes" })
             {
-                DataTable dt = PublicFunctions.GetDataFromApplicationSettings(
-                    "RouteLockTimeoutMinutes", CommonUtils.ConnectionString);
-
-                if (dt != null && dt.Rows.Count > 0
-                    && int.TryParse(Convert.ToString(dt.Rows[0]["TagValue"]), out int mins)
-                    && mins > 0)
+                try
                 {
-                    return mins;
+                    DataTable dt = PublicFunctions.GetDataFromApplicationSettings(
+                        l_TagName, CommonUtils.ConnectionString);
+
+                    if (dt != null && dt.Rows.Count > 0
+                        && int.TryParse(Convert.ToString(dt.Rows[0]["TagValue"]), out int mins)
+                        && mins > 0)
+                    {
+                        return mins;
+                    }
                 }
+                catch { /* try the next setting, then the default */ }
             }
-            catch { /* fall through to default */ }
 
             return 60;
         }
@@ -84,7 +88,7 @@ namespace eSyncMate.Processor.Managers
 
                 // DB-based lock: prevents re-dispatch if Processor restarts while RouteWorker is running
                 routeLock.UseConnection(CommonUtils.ConnectionString);
-                dbLockToken = routeLock.AcquireLock(route.CustomerName, route.TypeId, routeId, GetRouteLockTimeoutMinutes());
+                dbLockToken = routeLock.AcquireLock(route.CustomerName, route.TypeId, routeId, GetRouteLockTimeoutMinutes(route.TypeId));
                 if (dbLockToken == null)
                 {
                     route.SaveLog(Declarations.LogTypeEnum.RouteInfo, $"Route [{routeId}] is already running (DB lock held), skipping.", "", 1);
@@ -332,7 +336,7 @@ namespace eSyncMate.Processor.Managers
 
                 // DB-based lock: cross-process self-lock for all routes
                 routeLock.UseConnection(CommonUtils.ConnectionString);
-                dbLockToken = routeLock.AcquireLock(route.CustomerName, route.TypeId, routeId, GetRouteLockTimeoutMinutes());
+                dbLockToken = routeLock.AcquireLock(route.CustomerName, route.TypeId, routeId, GetRouteLockTimeoutMinutes(route.TypeId));
                 if (dbLockToken == null)
                 {
                     route.SaveLog(Declarations.LogTypeEnum.RouteInfo, $"Route [{routeId}] is already running (DB lock held), skipping.", "", 1);
@@ -585,6 +589,14 @@ namespace eSyncMate.Processor.Managers
                 {
                     WalmartUploadInventoryRoute.Execute(_config, route);
                 }
+                else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.WalmartBulkInventoryUpload))
+                {
+                    WalmartBulkUploadInventoryRoute.Execute(_config, route);
+                }
+                else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.WalmartBulkInventoryStatus))
+                {
+                    WalmartInventoryStatusRoute.Execute(_config, route);
+                }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.WalmartGetOrders))
                 {
                     WalmartGetOrdersRoute.Execute(_config, route);
@@ -600,6 +612,10 @@ namespace eSyncMate.Processor.Managers
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.DownloadItemsData))
                 {
                     DownloadTargetItemsRoute.Execute(_config, route);
+                }
+                else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.TargetProductSync))
+                {
+                    TargetProductSyncRoute.Execute(_config, route);
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.SCSBulkItemPrices))
                 {

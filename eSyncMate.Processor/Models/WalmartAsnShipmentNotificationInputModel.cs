@@ -19,6 +19,9 @@
             public string lineNumber { get; set; }
             public bool intentToCancelOverride { get; set; }
             public string sellerOrderId { get; set; }
+            // Required by Walmart Canada (ISO alpha-2, e.g. "CA"); left null for Walmart US so it is not sent.
+            [Newtonsoft.Json.JsonProperty(NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+            public string shipFromCountry { get; set; }
             public Orderlinestatuses orderLineStatuses { get; set; } = new Orderlinestatuses();
         }
 

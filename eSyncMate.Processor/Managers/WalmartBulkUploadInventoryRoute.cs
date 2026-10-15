@@ -80,35 +80,54 @@ namespace eSyncMate.Processor.Managers
                     feed.APIShipNode("WalmartAPI", l_SourceConnector.CustomerID, ref l_shipNodeDataTable);
                     route.SaveLog(LogTypeEnum.Debug, $"Ship nodes loaded: {l_shipNodeDataTable.Rows.Count}", string.Empty, userNo);
 
+                    // MP_INVENTORY rejects the whole feed when a SKU has no ship nodes.
+                    if (l_shipNodeDataTable.Rows.Count == 0)
+                    {
+                        route.SaveLog(LogTypeEnum.Error, $"No Walmart ship nodes found for customer [{l_SourceConnector.CustomerID}]; nothing was sent.", string.Empty, userNo);
+                        return;
+                    }
+
                     l_InventoryBatchWise.StartDate  = DateTime.Now;
                     l_InventoryBatchWise.Status     = "Processing";
                     l_InventoryBatchWise.RouteType  = RouteTypesEnum.WalmartUploadInventory.ToString();
                     l_InventoryBatchWise.CustomerID = l_SourceConnector.CustomerID;
                     l_SCSInventoryFeed.InsertInventoryBatchWise(l_InventoryBatchWise);
 
-                    // 1 MB file size limit — each item ~920 bytes (14 ship nodes) → safe: 1000
-                    int chunkSize = 10000;
-                    int i = 0;
-
-                    List<Task> tasks = new List<Task>();
-
                     string l_LogTable = SCSInventoryFeed.GetLogTableName(l_SourceConnector.ConnectionString, l_SourceConnector.CustomerID);
                     string[] l_LogCols = !string.IsNullOrEmpty(l_LogTable)
                                            ? SCSInventoryFeed.GetLogTableColumns(l_SourceConnector.ConnectionString, l_LogTable)
                                            : null;
 
-                    var tables = l_data.AsEnumerable().ToChunks(chunkSize)
-                        .Select(rows => rows.CopyToDataTable()).ToList();
+                    // Walmart allows MP_INVENTORY files up to 1 MB, so chunks are sized by bytes, not by item count.
+                    List<DataTable> tables = SplitByFeedSize(l_data, l_shipNodeDataTable);
 
-                    foreach (var table in tables)
+                    // MP_INVENTORY limit: 50 feeds/hour in the US, 20/hour for Global Marketplace (connector with WM_MARKET, e.g. Canada).
+                    bool l_IsGlobalMarket = l_DestinationConnector.Headers?.Any(h => string.Equals(h?.Name?.Trim(), "WM_MARKET", StringComparison.OrdinalIgnoreCase)) == true;
+                    int l_FeedIntervalSeconds = Math.Max(0, l_IsGlobalMarket ? CommonUtils.WalmartCABulkFeedIntervalSeconds : CommonUtils.WalmartBulkFeedIntervalSeconds);
+
+                    route.SaveLog(LogTypeEnum.RouteInfo, $"Sending {l_data.Rows.Count} items in {tables.Count} feeds, {l_FeedIntervalSeconds}s apart.", string.Empty, userNo);
+
+                    for (int i = 0; i < tables.Count; i++)
                     {
                         var itemsThread = new ProcessWalmartBulkItemsChunkThread(
-                           table, route, feed, l_DestinationConnector, l_SourceConnector, userNo, l_InventoryBatchWise.BatchID, l_LogTable, l_LogCols, l_shipNodeDataTable
+                           tables[i], route, feed, l_DestinationConnector, l_SourceConnector, userNo, l_InventoryBatchWise.BatchID, l_LogTable, l_LogCols, l_shipNodeDataTable
                        );
 
-                        itemsThread.ProcessItems().GetAwaiter().GetResult();
+                        // On 429 wait as Walmart asks (Retry-After) and send the same feed again.
+                        for (int attempt = 1; attempt <= MaxFeedAttempts; attempt++)
+                        {
+                            itemsThread.ProcessItems().GetAwaiter().GetResult();
 
-                        Thread.Sleep(TimeSpan.FromSeconds(60));
+                            if (!itemsThread.RateLimited || attempt == MaxFeedAttempts)
+                                break;
+
+                            TimeSpan l_Wait = itemsThread.RetryAfter ?? TimeSpan.FromSeconds(l_FeedIntervalSeconds);
+                            route.SaveLog(LogTypeEnum.RouteInfo, $"Feed {i + 1} of {tables.Count} was rate-limited; sending again in {l_Wait.TotalSeconds:0}s (attempt {attempt + 1} of {MaxFeedAttempts}).", string.Empty, userNo);
+                            Thread.Sleep(l_Wait);
+                        }
+
+                        if (i < tables.Count - 1)
+                            Thread.Sleep(TimeSpan.FromSeconds(l_FeedIntervalSeconds));
                     }
 
                     l_InventoryBatchWise.Status     = "Completed";
@@ -133,6 +152,57 @@ namespace eSyncMate.Processor.Managers
                 l_shipNodeDataTable.Dispose();
             }
         }
+
+        // Walmart limit: MP_INVENTORY file <= 1 MB.
+        private const int MaxFeedBytes    = 950 * 1024;
+        private const int MaxFeedAttempts = 3;
+
+        // The feed status reports one entry per SKU per ship node and will not page past offset 10000
+        // (INVALID_REQUEST_PARAM "max offset limit 10000"), so a feed may hold at most 10000 such entries.
+        private const int MaxFeedStatusEntries = 10000;
+
+        // Splits the items so each feed file stays under MaxFeedBytes once serialized,
+        // and under MaxFeedStatusEntries SKU x ship-node entries.
+        private static List<DataTable> SplitByFeedSize(DataTable data, DataTable shipNodes)
+        {
+            List<DataTable> tables = new List<DataTable>();
+            DataTable current = data.Clone();
+            long currentBytes = FeedHeaderBytes();
+            int maxSkusPerFeed = Math.Max(1, MaxFeedStatusEntries / Math.Max(1, shipNodes.Rows.Count));
+
+            foreach (DataRow row in data.Rows)
+            {
+                string itemJson = JsonConvert.SerializeObject(ProcessWalmartBulkItemsChunkThread.BuildInventoryItem(row, data, shipNodes), Formatting.None,
+                    new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
+                long itemBytes = Encoding.UTF8.GetByteCount(itemJson) + 1;
+
+                if (current.Rows.Count > 0 && (currentBytes + itemBytes > MaxFeedBytes || current.Rows.Count >= maxSkusPerFeed))
+                {
+                    tables.Add(current);
+                    current = data.Clone();
+                    currentBytes = FeedHeaderBytes();
+                }
+
+                current.ImportRow(row);
+                currentBytes += itemBytes;
+            }
+
+            if (current.Rows.Count > 0)
+                tables.Add(current);
+
+            return tables;
+        }
+
+        private static long FeedHeaderBytes()
+        {
+            string emptyFeed = JsonConvert.SerializeObject(new WalmartBulkInventoryFeed
+            {
+                inventoryHeader = new WalmartInventoryHeader { version = "1.5" },
+                inventory       = new List<WalmartInventoryItem>()
+            });
+
+            return Encoding.UTF8.GetByteCount(emptyFeed);
+        }
     }
 
     /// <summary>
@@ -151,6 +221,14 @@ namespace eSyncMate.Processor.Managers
         private string     logTable;
         private string[]   logCols;
         private DataTable  shipNodeDataTable;  // passed from Execute() — loaded once
+        private bool       sentDataSaved;      // JSON-SNT rows are written once, not again on a retry
+
+        // Set by ProcessItems when Walmart answered 429; Execute waits RetryAfter and calls again.
+        public bool        RateLimited { get; private set; }
+        public TimeSpan?   RetryAfter  { get; private set; }
+
+        // A feed upload that has not answered by then is abandoned, so the route never hangs.
+        private const int  FeedUploadTimeoutSeconds = 300;
 
         public ProcessWalmartBulkItemsChunkThread(DataTable data, Routes route, SCSInventoryFeed feed,
             ConnectorDataModel destinationConnector, ConnectorDataModel sourceConnector, int userNo, string batchID,
@@ -173,6 +251,9 @@ namespace eSyncMate.Processor.Managers
             RestResponse sourceResponse = new RestResponse();
             DataTable bulkInsertTable = CreateBulkInsertDataTable();
 
+            this.RateLimited = false;
+            this.RetryAfter  = null;
+
             try
             {
                 this.route.UseConnection(this.sourceConnector.ConnectionString);
@@ -194,33 +275,7 @@ namespace eSyncMate.Processor.Managers
                     string customerId = row["CustomerId"].ToString();
                     string itemId     = row["ItemId"].ToString();
 
-                    var shipNodesList = new List<WalmartShipNodeQty>();
-
-                    if (shipNodeDataTable.Rows.Count > 0)
-                    {
-                        foreach (DataRow shipNodeRow in shipNodeDataTable.Rows)
-                        {
-                            string shipNode = shipNodeRow["ShipNode"]?.ToString() ?? "";
-                            string whsId    = shipNodeRow["WHSID"]?.ToString()    ?? "";
-                            int    quantity = 0;
-
-                            if (this.data.Columns.Contains($"ATS_{whsId}") && row[$"ATS_{whsId}"] != DBNull.Value)
-                                quantity = Convert.ToInt32(row[$"ATS_{whsId}"]);
-
-                            shipNodesList.Add(new WalmartShipNodeQty
-                            {
-                                shipNode = shipNode,
-                                quantity = new WalmartInventoryQuantity { unit = "EACH", amount = quantity }
-                            });
-                        }
-                    }
-                  
-
-                    var inventoryItem = new WalmartInventoryItem
-                    {
-                        sku       = itemId,
-                        shipNodes = shipNodesList
-                    };
+                    var inventoryItem = BuildInventoryItem(row, this.data, shipNodeDataTable);
 
                     requestModel.inventory.Add(inventoryItem);
 
@@ -245,7 +300,11 @@ namespace eSyncMate.Processor.Managers
                 }
 
                 // Bulk insert sent data (single DB call instead of N calls)
-                this.feed.BulkNewInsertData(this.sourceConnector.ConnectionString, "SCSInventoryFeedData_" + this.sourceConnector.CustomerID, bulkInsertTable);
+                if (!this.sentDataSaved)
+                {
+                    this.feed.BulkNewInsertData(this.sourceConnector.ConnectionString, "SCSInventoryFeedData_" + this.sourceConnector.CustomerID, bulkInsertTable);
+                    this.sentDataSaved = true;
+                }
 
                 // Make single API call for this chunk using Feed API
                 string body = JsonConvert.SerializeObject(requestModel, Formatting.None, new JsonSerializerSettings
@@ -318,6 +377,13 @@ namespace eSyncMate.Processor.Managers
                             this.logCols);
                     }
                 }
+                else if ((int)sourceResponse.StatusCode == 429)
+                {
+                    // Items keep their status; Execute sends this same feed again after Retry-After.
+                    this.RateLimited = true;
+                    this.RetryAfter  = GetRetryAfter(sourceResponse);
+                    this.route.SaveData("JSON-RVD", 0, sourceResponse.Content ?? "No response", this.userNo);
+                }
                 else
                 {
                     this.route.SaveLog(LogTypeEnum.Error, $"Unable to update WalmartBulkUploadInventory for chunk. Status: {sourceResponse.StatusCode}", sourceResponse.Content, this.userNo);
@@ -351,7 +417,7 @@ namespace eSyncMate.Processor.Managers
                     this.destinationConnector.Headers);
 
                 // Walmart Feed API requires multipart/form-data with file attachment
-                using var client = new RestClient();
+                using var client = new RestClient(new RestClientOptions { MaxTimeout = FeedUploadTimeoutSeconds * 1000 });
                 var request = new RestRequest(feedUrl, Method.Post);
 
                 // Add Walmart authentication headers (same as RestConnector for WALMARTGetToken)
@@ -383,6 +449,46 @@ namespace eSyncMate.Processor.Managers
                 this.route.SaveLog(LogTypeEnum.Exception, $"Error submitting Walmart feed: {ex.Message}", ex.ToString(), this.userNo);
                 throw;
             }
+        }
+
+        // One MP_INVENTORY entry per SKU, with every ship node nested in shipNodes[] (quantity from ATS_<WHSID>).
+        public static WalmartInventoryItem BuildInventoryItem(DataRow row, DataTable data, DataTable shipNodes)
+        {
+            var shipNodesList = new List<WalmartShipNodeQty>();
+
+            foreach (DataRow shipNodeRow in shipNodes.Rows)
+            {
+                string shipNode = shipNodeRow["ShipNode"]?.ToString() ?? "";
+                string whsId    = shipNodeRow["WHSID"]?.ToString()    ?? "";
+                int    quantity = 0;
+
+                if (data.Columns.Contains($"ATS_{whsId}") && row[$"ATS_{whsId}"] != DBNull.Value)
+                    quantity = Convert.ToInt32(row[$"ATS_{whsId}"]);
+
+                shipNodesList.Add(new WalmartShipNodeQty
+                {
+                    shipNode = shipNode,
+                    quantity = new WalmartInventoryQuantity { unit = "EACH", amount = quantity }
+                });
+            }
+
+            return new WalmartInventoryItem
+            {
+                sku       = row["ItemId"].ToString(),
+                shipNodes = shipNodesList
+            };
+        }
+
+        private static TimeSpan? GetRetryAfter(RestResponse response)
+        {
+            string value = response?.Headers?
+                .FirstOrDefault(h => string.Equals(h.Name, "Retry-After", StringComparison.OrdinalIgnoreCase))?
+                .Value?.ToString();
+
+            if (int.TryParse(value, out int seconds) && seconds > 0)
+                return TimeSpan.FromSeconds(Math.Min(seconds, 3600));
+
+            return null;
         }
 
         private static DataTable CreateBulkInsertDataTable()

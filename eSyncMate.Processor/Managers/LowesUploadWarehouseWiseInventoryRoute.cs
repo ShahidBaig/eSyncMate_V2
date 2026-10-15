@@ -177,7 +177,7 @@ namespace eSyncMate.Processor.Managers
                         return;
                     }
 
-                    this.feed.UpdateSCSLowesFeedData(this.batchID, importId, l_Guid);
+                    //this.feed.UpdateSCSLowesFeedData(this.batchID, importId, l_Guid);
                     DataTable bulkInsertTable = CreateBulkInsertDataTable();
 
                     foreach (DataRow row in this.data.Rows)
@@ -238,7 +238,7 @@ namespace eSyncMate.Processor.Managers
             try
             {
                 var sb = new StringBuilder();
-                DataTable bulkSCSLowesFeedData = CreateBulkInsertSCSLowesFeedData();
+                //DataTable bulkSCSLowesFeedData = CreateBulkInsertSCSLowesFeedData();
 
                 string header = feed.GetLowesStockImportHeader();
                 if (header.IsNullOrEmpty())
@@ -290,16 +290,16 @@ namespace eSyncMate.Processor.Managers
                     sentTable.Rows.Add(bulkRow);
 
                     // SCSLowesFeedData: store per-item with temp GUID (will be updated to real importId later)
-                    DataRow lowesFeedRow = bulkSCSLowesFeedData.NewRow();
-                    lowesFeedRow["BatchID"] = batchID;
-                    lowesFeedRow["ItemID"] = itemId;
-                    lowesFeedRow["CustomerID"] = customerId;
-                    lowesFeedRow["ImportId"] = p_Guid;
-                    lowesFeedRow["Data"] = perItemJson;
-                    bulkSCSLowesFeedData.Rows.Add(lowesFeedRow);
+                    //DataRow lowesFeedRow = bulkSCSLowesFeedData.NewRow();
+                    //lowesFeedRow["BatchID"] = batchID;
+                    //lowesFeedRow["ItemID"] = itemId;
+                    //lowesFeedRow["CustomerID"] = customerId;
+                    //lowesFeedRow["ImportId"] = p_Guid;
+                    //lowesFeedRow["Data"] = perItemJson;
+                    //bulkSCSLowesFeedData.Rows.Add(lowesFeedRow);
                 }
 
-                feed.BulkLowesFeedData(connectionString, "SCSLowesFeedData", bulkSCSLowesFeedData);
+                //feed.BulkLowesFeedData(connectionString, "SCSLowesFeedData", bulkSCSLowesFeedData);
 
                 return sb.ToString();
             }

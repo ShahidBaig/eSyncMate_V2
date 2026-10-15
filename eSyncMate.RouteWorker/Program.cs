@@ -189,6 +189,14 @@ namespace eSyncMate.RouteWorker
                 {
                     WalmartUploadInventoryRoute.Execute(config, route);
                 }
+                else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.WalmartBulkInventoryUpload))
+                {
+                    WalmartBulkUploadInventoryRoute.Execute(config, route);
+                }
+                else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.WalmartBulkInventoryStatus))
+                {
+                    WalmartInventoryStatusRoute.Execute(config, route);
+                }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.WalmartGetOrders))
                 {
                     WalmartGetOrdersRoute.Execute(config, route);
@@ -411,6 +419,10 @@ namespace eSyncMate.RouteWorker
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.DownloadItemsData))
                 {
                     DownloadTargetItemsRoute.Execute(config, route);
+                }
+                else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.TargetProductSync))
+                {
+                    TargetProductSyncRoute.Execute(config, route);
                 }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.SCSBulkItemPrices))
                 {

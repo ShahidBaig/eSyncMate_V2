@@ -3,8 +3,10 @@ using eSyncMate.DB.Entities;
 using eSyncMate.Processor.Connections;
 using eSyncMate.Processor.Models;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using RestSharp;
 using System.Data;
+using System.Data.SqlClient;
 using System.Text;
 using static eSyncMate.DB.Declarations;
 
@@ -43,6 +45,9 @@ namespace eSyncMate.Processor.Managers
                     return;
                 }
 
+                // The feed status API is a GET; the destination connector is shared with the upload route (PUT/POST).
+                l_DestinationConnector.Method = "GET";
+
                 // Step 1: Get pending feed records from database
                 if (l_SourceConnector.ConnectivityType == ConnectorTypesEnum.SqlServer.ToString())
                 {
@@ -51,7 +56,7 @@ namespace eSyncMate.Processor.Managers
                     DBConnector connection = new DBConnector(l_SourceConnector.ConnectionString);
 
                     l_SourceConnector.Command = l_SourceConnector.Command.Replace("@CUSTOMERID@", l_SourceConnector.CustomerID);
-                    l_SourceConnector.Command = l_SourceConnector.Command.Replace("@ROUTETYPEID@", Convert.ToString(RouteTypesEnum.WalmartInventoryStatus));
+                    l_SourceConnector.Command = l_SourceConnector.Command.Replace("@ROUTETYPEID@", Convert.ToString(RouteTypesEnum.WalmartBulkInventoryStatus));
                     l_SourceConnector.Command = l_SourceConnector.Command.Replace("@USERNO@", Convert.ToString(userNo));
 
                     if (l_SourceConnector.CommandType == "SP")
@@ -78,17 +83,67 @@ namespace eSyncMate.Processor.Managers
                         try
                         {
                             // Step 3: Call Walmart Feed Status API
-                            // GET /v3/feeds/{feedId}?includeDetails=true
-                            l_DestinationConnector.Url = l_DestinationConnector.BaseUrl.TrimEnd('/') + $"/v3/feeds/{feedId}?includeDetails=true";
+                            // GET /v3/feeds/{feedId}?includeDetails=true&offset=&limit= — item details come 50 per page,
+                            // and feed IDs contain '@', which Walmart wants escaped (%40).
+                            string l_FeedUrl = GetFeedsUrl(l_DestinationConnector.BaseUrl) + Uri.EscapeDataString(feedId);
 
                             route.SaveLog(LogTypeEnum.Debug, $"Checking feed status for FeedId: {feedId}", string.Empty, userNo);
-                            route.SaveData("JSON-SNT", 0, l_DestinationConnector.Url, userNo);
 
-                            sourceResponse = RestConnector.Execute(l_DestinationConnector, Body).GetAwaiter().GetResult();
+                            WalmartFeedStatusResponse feedStatusResponse = null;
+                            List<WalmartItemIngestionStatus> l_AllItems = new List<WalmartItemIngestionStatus>();
+                            List<JToken> l_AllRawItems = new List<JToken>();   // same order as l_AllItems, kept as Walmart sent them
+                            int l_Offset = 0;
+                            bool l_PageFailed = false;
 
-                            if (sourceResponse.StatusCode == System.Net.HttpStatusCode.OK)
+                            while (true)
                             {
-                                WalmartFeedStatusResponse feedStatusResponse = JsonConvert.DeserializeObject<WalmartFeedStatusResponse>(sourceResponse.Content);
+                                l_DestinationConnector.Url = $"{l_FeedUrl}?includeDetails=true&offset={l_Offset}&limit={StatusPageSize}";
+                                route.SaveData("JSON-SNT", 0, l_DestinationConnector.Url, userNo);
+
+                                sourceResponse = RestConnector.Execute(l_DestinationConnector, Body).GetAwaiter().GetResult();
+
+                                WalmartFeedStatusResponse l_Page = sourceResponse.StatusCode == System.Net.HttpStatusCode.OK
+                                    ? JsonConvert.DeserializeObject<WalmartFeedStatusResponse>(sourceResponse.Content)
+                                    : null;
+
+                                if (l_Page == null)
+                                {
+                                    l_PageFailed = true;
+                                    break;
+                                }
+
+                                feedStatusResponse ??= l_Page;
+
+                                if (l_Page.feedStatus != "PROCESSED")
+                                    break;
+
+                                List<WalmartItemIngestionStatus> l_PageItems = l_Page.itemDetails?.itemIngestionStatus ?? new List<WalmartItemIngestionStatus>();
+                                l_AllItems.AddRange(l_PageItems);
+
+                                JArray l_PageRaw = JObject.Parse(sourceResponse.Content)["itemDetails"]?["itemIngestionStatus"] as JArray;
+                                l_AllRawItems.AddRange(l_PageItems.Select((_, i) => l_PageRaw != null && i < l_PageRaw.Count ? l_PageRaw[i] : JToken.FromObject(l_PageItems[i])));
+                                l_Offset += StatusPageSize;
+
+                                if (l_PageItems.Count == 0 || l_Offset >= l_Page.itemsReceived)
+                                    break;
+
+                                // Walmart rejects offset > 10000 (INVALID_REQUEST_PARAM "max offset limit 10000"); the entries
+                                // past it cannot be read, so the feed is closed with what was read instead of failing every run.
+                                if (l_Offset > MaxStatusOffset)
+                                {
+                                    route.SaveLog(LogTypeEnum.Error, $"Feed {feedId}: Walmart reports {l_Page.itemsReceived} entries but returns at most {l_AllItems.Count} (offset limit {MaxStatusOffset}); the rest were not checked and stay SYNCED.", string.Empty, userNo);
+                                    break;
+                                }
+                            }
+
+                            // A page that failed half way would leave items unchecked; leave the feed pending for the next run.
+                            if (l_PageFailed)
+                                feedStatusResponse = null;
+
+                            if (feedStatusResponse != null)
+                            {
+                                if (feedStatusResponse.itemDetails != null)
+                                    feedStatusResponse.itemDetails.itemIngestionStatus = l_AllItems;
 
                                 if (feedStatusResponse != null)
                                 {
@@ -103,49 +158,81 @@ namespace eSyncMate.Processor.Managers
                                     if (feedStatusResponse.feedStatus == "PROCESSED")
                                     {
                                         // Step 4: Process item-level results
-                                        if (feedStatusResponse.itemDetails?.itemIngestionStatus != null &&
-                                            feedStatusResponse.itemDetails.itemIngestionStatus.Count > 0)
+                                        if (l_AllItems.Count > 0)
                                         {
-                                            // Get items with errors
-                                            var errorItems = feedStatusResponse.itemDetails.itemIngestionStatus
-                                                .Where(i => i.ingestionStatus != "SUCCESS")
+                                            // Walmart returns one entry per SKU per ship node; each SKU gets ONE result row
+                                            // (FEED-SUCCESS or FEED-ERROR) holding the entries of all its ship nodes.
+                                            var l_BySku = l_AllItems
+                                                .Select((entry, i) => new { entry, raw = l_AllRawItems[i] })
+                                                .GroupBy(x => x.entry.sku ?? string.Empty)
                                                 .ToList();
 
-                                            if (errorItems.Count > 0)
-                                            {
-                                                route.SaveLog(LogTypeEnum.Info, $"Found {errorItems.Count} items with errors", string.Empty, userNo);
+                                            var successSkus   = new List<string>();
+                                            var dataErrorSkus = new List<string>();
+                                            var retrySkus     = new List<string>();
+                                            DataTable l_ResultRows = CreateResultDataTable();
+                                            string l_ProcessedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
 
-                                                // Update each error item status
-                                                foreach (var errorItem in errorItems)
+                                            foreach (var sku in l_BySku)
+                                            {
+                                                var failed = sku.Where(x => x.entry.ingestionStatus != "SUCCESS").ToList();
+                                                string status;
+
+                                                if (failed.Count == 0)
                                                 {
-                                                    string errorMessage = string.Empty;
-                                                    if (errorItem.ingestionErrors != null && errorItem.ingestionErrors.Count > 0)
-                                                    {
-                                                        errorMessage = string.Join("; ", errorItem.ingestionErrors.Select(e => $"{e.code}: {e.description}"));
-                                                    }
-
-                                                    // Update item status in SCSInventoryFeedData
-                                                    UpdateItemErrorStatus(l_SourceConnector.ConnectionString, customerId, batchId, errorItem.sku, errorItem.ingestionStatus, errorMessage);
-
-                                                    route.SaveLog(LogTypeEnum.Debug,
-                                                        $"Item Error - SKU: {errorItem.sku}, Status: {errorItem.ingestionStatus}, Error: {errorMessage}",
-                                                        string.Empty, userNo);
+                                                    status = "SUCCESS";
+                                                    successSkus.Add(sku.Key);
                                                 }
+                                                else if (failed.Any(x => x.entry.ingestionStatus == "DATA_ERROR"))
+                                                {
+                                                    status = "DATA_ERROR";
+                                                    dataErrorSkus.Add(sku.Key);
+                                                }
+                                                else
+                                                {
+                                                    status = failed[0].entry.ingestionStatus;
+                                                    retrySkus.Add(sku.Key);
+                                                }
+
+                                                string errorMessage = string.Join("; ", failed
+                                                    .SelectMany(x => x.entry.ingestionErrors?.ingestionError ?? new List<WalmartIngestionError>())
+                                                    .Select(e => $"{e.code}: {e.description}")
+                                                    .Distinct());
+
+                                                DataRow l_Row = l_ResultRows.NewRow();
+                                                l_Row["CustomerId"]  = customerId;
+                                                l_Row["ItemId"]      = sku.Key;
+                                                l_Row["Type"]        = failed.Count == 0 ? "FEED-SUCCESS" : "FEED-ERROR";
+                                                l_Row["Data"]        = JsonConvert.SerializeObject(new
+                                                {
+                                                    status,
+                                                    errorMessage,
+                                                    processedAt = l_ProcessedAt,
+                                                    shipNodes   = new JArray(sku.Select(x => x.raw))
+                                                });
+                                                l_Row["CreatedDate"] = DateTime.Now;
+                                                l_Row["CreatedBy"]   = userNo;
+                                                l_Row["BatchID"]     = batchId;
+                                                l_ResultRows.Rows.Add(l_Row);
+
+                                                if (failed.Count > 0)
+                                                    route.SaveLog(LogTypeEnum.Debug, $"Item Error - SKU: {sku.Key}, Status: {status}, Error: {errorMessage}", string.Empty, userNo);
                                             }
 
-                                            // Get successful items
-                                            var successItems = feedStatusResponse.itemDetails.itemIngestionStatus
-                                                .Where(i => i.ingestionStatus == "SUCCESS")
-                                                .ToList();
+                                            new SCSInventoryFeed().BulkNewInsertData(l_SourceConnector.ConnectionString, "SCSInventoryFeedData_" + customerId, l_ResultRows);
 
-                                            if (successItems.Count > 0)
+                                            if (dataErrorSkus.Count > 0 || retrySkus.Count > 0)
                                             {
-                                                route.SaveLog(LogTypeEnum.Info, $"Successfully processed {successItems.Count} items", string.Empty, userNo);
+                                                // The upload marked these SYNCED. A data error is permanent (ERROR); a system or
+                                                // timeout error is temporary, so the item goes back to UPDATED and is sent again.
+                                                UpdateInventoryFeedStatus(l_SourceConnector.ConnectionString, customerId, dataErrorSkus, "ERROR");
+                                                UpdateInventoryFeedStatus(l_SourceConnector.ConnectionString, customerId, retrySkus, "UPDATED");
 
-                                                // Update success status for items
-                                                var successSkus = successItems.Select(i => i.sku).ToList();
-                                                UpdateSuccessItemsStatus(l_SourceConnector.ConnectionString, customerId, batchId, successSkus);
+                                                route.SaveLog(LogTypeEnum.Error, $"Feed {feedId}: {dataErrorSkus.Count} items marked ERROR (data error), {retrySkus.Count} items set back to UPDATED to be sent again.", string.Empty, userNo);
                                             }
+
+                                            if (successSkus.Count > 0)
+                                                route.SaveLog(LogTypeEnum.Info, $"Successfully processed {successSkus.Count} items", string.Empty, userNo);
                                         }
 
                                         // Step 5: Update batch feed detail status to Completed
@@ -164,9 +251,10 @@ namespace eSyncMate.Processor.Managers
                                     }
                                     else if (feedStatusResponse.feedStatus == "ERROR")
                                     {
-                                        // Feed-level error
+                                        // Feed-level error: Walmart processed none of it, so every item of this feed is sent again.
                                         l_CustomerProductCatalog.UpdateInventoryBacthwiseStatus(batchId, feedId, "Error", customerId, sourceResponse.Content);
-                                        route.SaveLog(LogTypeEnum.Error, $"Feed {feedId} has error status", sourceResponse.Content, userNo);
+                                        int l_Reset = ResetFeedItems(l_SourceConnector.ConnectionString, customerId, batchId, feedId);
+                                        route.SaveLog(LogTypeEnum.Error, $"Feed {feedId} has error status; {l_Reset} items set back to UPDATED to be sent again.", sourceResponse.Content, userNo);
                                     }
                                     else
                                     {
@@ -206,84 +294,77 @@ namespace eSyncMate.Processor.Managers
             }
         }
 
-        /// <summary>
-        /// Update item error status in SCSInventoryFeedData table
-        /// Inserts a new record with Type = 'FEED-ERROR' to track the error
-        /// </summary>
-        private static void UpdateItemErrorStatus(string connectionString, string customerId, string batchId, string sku, string status, string errorMessage)
+        // Walmart returns item details 50 per page when includeDetails=true.
+        private const int StatusPageSize = 50;
+
+        // Highest offset Walmart accepts on GET /v3/feeds/{feedId}.
+        private const int MaxStatusOffset = 10000;
+
+        // SQL Server allows 1000 rows per VALUES list; stay well under it.
+        private const int SqlBatchSize = 500;
+
+        // Walmart connectors keep BaseUrl as ".../v3/"; older ones may stop at the host.
+        private static string GetFeedsUrl(string baseUrl)
         {
-            try
-            {
-                DBConnector connection = new DBConnector(connectionString);
+            string l_Base = (baseUrl ?? string.Empty).TrimEnd('/');
 
-                // Sanitize inputs
-                string safeSku = sku?.Replace("'", "''") ?? "";
-                string safeStatus = status?.Replace("'", "''") ?? "";
-                string safeErrorMessage = errorMessage?.Replace("'", "''") ?? "";
-                string safeBatchId = batchId?.Replace("'", "''") ?? "";
-                string safeCustomerId = customerId?.Replace("'", "''") ?? "";
-
-                // Create error data JSON
-                var errorData = new
-                {
-                    status = status,
-                    errorMessage = errorMessage,
-                    processedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
-                };
-                string errorDataJson = JsonConvert.SerializeObject(errorData).Replace("'", "''");
-
-                // Insert error record with Type = 'FEED-ERROR'
-                string insertQuery = $@"INSERT INTO [SCSInventoryFeedData_{safeCustomerId}] (CustomerId, ItemId, Type, Data, BatchID, CreatedDate, CreatedBy)
-                                       VALUES ('{safeCustomerId}', '{safeSku}', 'FEED-ERROR', '{errorDataJson}', '{safeBatchId}', GETDATE(), 1)";
-
-                connection.Execute(insertQuery);
-            }
-            catch (Exception)
-            {
-                // Log error but don't throw - continue processing other items
-            }
+            return l_Base.EndsWith("/v3", StringComparison.OrdinalIgnoreCase) ? l_Base + "/feeds/" : l_Base + "/v3/feeds/";
         }
 
-        /// <summary>
-        /// Bulk update successful items status
-        /// </summary>
-        private static void UpdateSuccessItemsStatus(string connectionString, string customerId, string batchId, List<string> skus)
+        // Sets SCSInventoryFeed.Status for the given SKUs of one customer.
+        private static void UpdateInventoryFeedStatus(string connectionString, string customerId, List<string> skus, string status)
         {
             if (skus == null || skus.Count == 0) return;
 
-            try
+            DBConnector connection = new DBConnector(connectionString);
+            string safeCustomerId = customerId?.Replace("'", "''") ?? "";
+
+            foreach (var batch in skus.Chunk(SqlBatchSize))
             {
-                DBConnector connection = new DBConnector(connectionString);
+                string inList = string.Join(", ", batch.Select(sku => $"'{(sku ?? "").Replace("'", "''")}'"));
 
-                string safeBatchId = batchId?.Replace("'", "''") ?? "";
-                string safeCustomerId = customerId?.Replace("'", "''") ?? "";
-
-                // Create success data JSON
-                var successData = new
-                {
-                    status = "SUCCESS",
-                    processedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
-                };
-                string successDataJson = JsonConvert.SerializeObject(successData).Replace("'", "''");
-
-                // Build bulk insert for successful items
-                StringBuilder insertQuery = new StringBuilder();
-                insertQuery.Append($"INSERT INTO [SCSInventoryFeedData_{safeCustomerId}] (CustomerId, ItemId, Type, Data, BatchID, CreatedDate, CreatedBy) VALUES ");
-
-                var values = skus.Select(sku =>
-                {
-                    string safeSku = sku?.Replace("'", "''") ?? "";
-                    return $"('{safeCustomerId}', '{safeSku}', 'FEED-SUCCESS', '{successDataJson}', '{safeBatchId}', GETDATE(), 1)";
-                });
-
-                insertQuery.Append(string.Join(", ", values));
-
-                connection.Execute(insertQuery.ToString());
+                connection.Execute($"UPDATE SCSInventoryFeed SET Status = '{status}', ModifiedDate = GETDATE() " +
+                                   $"WHERE CustomerID = '{safeCustomerId}' AND ItemID IN ({inList})");
             }
-            catch (Exception)
+        }
+
+        // A feed Walmart rejected as a whole: every item the upload sent in it goes back to UPDATED.
+        // The upload stored Walmart's reply (which holds the feed ID) as a JSON-RVD row per item.
+        private static int ResetFeedItems(string connectionString, string customerId, string batchId, string feedId)
+        {
+            string safeCustomerId = customerId?.Replace("'", "''") ?? "";
+            string query = $@"UPDATE f SET f.Status = 'UPDATED', f.ModifiedDate = GETDATE()
+                              FROM SCSInventoryFeed f
+                              JOIN [SCSInventoryFeedData_{safeCustomerId}] d ON d.ItemId = f.ItemID AND d.CustomerId = f.CustomerID
+                              WHERE f.CustomerID = @CustomerID AND d.BatchID = @BatchID AND d.[Type] = 'JSON-RVD'
+                                AND d.[Data] LIKE '%' + @FeedId + '%';
+                              SELECT @@ROWCOUNT;";
+
+            using (SqlConnection conn = new SqlConnection(connectionString))
+            using (SqlCommand cmd = new SqlCommand(query, conn))
             {
-                // Log error but don't throw
+                cmd.CommandTimeout = 600;
+                cmd.Parameters.AddWithValue("@CustomerID", customerId ?? "");
+                cmd.Parameters.AddWithValue("@BatchID", batchId ?? "");
+                cmd.Parameters.AddWithValue("@FeedId", feedId ?? "");
+                conn.Open();
+
+                return Convert.ToInt32(cmd.ExecuteScalar());
             }
+        }
+
+        // One FEED-SUCCESS / FEED-ERROR row per SKU, written with SqlBulkCopy (BulkNewInsertData).
+        private static DataTable CreateResultDataTable()
+        {
+            DataTable table = new DataTable();
+            table.Columns.Add("CustomerId", typeof(string));
+            table.Columns.Add("ItemId", typeof(string));
+            table.Columns.Add("Type", typeof(string));
+            table.Columns.Add("Data", typeof(string));
+            table.Columns.Add("CreatedDate", typeof(DateTime));
+            table.Columns.Add("CreatedBy", typeof(int));
+            table.Columns.Add("BatchID", typeof(string));
+            return table;
         }
     }
 
@@ -323,7 +404,13 @@ namespace eSyncMate.Processor.Managers
         public string wpid { get; set; }
         public int index { get; set; }
         public string ingestionStatus { get; set; }
-        public List<WalmartIngestionError> ingestionErrors { get; set; }
+        public WalmartIngestionErrors ingestionErrors { get; set; }
+    }
+
+    // Walmart wraps the list: "ingestionErrors": { "ingestionError": [ ... ] }
+    public class WalmartIngestionErrors
+    {
+        public List<WalmartIngestionError> ingestionError { get; set; }
     }
 
     public class WalmartIngestionError
