@@ -41,10 +41,10 @@ using System.Net.Http.Headers;
 //string testConnectionString = "<<SET_CONNECTION_STRING>>";
 
 // ======== Order payload repair — Amazon Title inch mark (broken orders, see OrderPayloadRepairTests) ========
-OrderPayloadRepairTests.Run();
-Console.WriteLine("Press Enter to exit...");
-Console.ReadLine();
-return;
+//OrderPayloadRepairTests.Run();
+//Console.WriteLine("Press Enter to exit...");
+//Console.ReadLine();
+//return;
 
 //// ======== Target Plus OAuth 2.0 Test (refresh_token -> access_token -> Target API) ========
 //TargetPlusOAuthTest.Run().GetAwaiter().GetResult();
@@ -100,7 +100,7 @@ static void Main()
     IConfiguration config = new MyConfigurationImplementation();
     RouteEngine routeEngine = new RouteEngine(config);
     ////1, 4, 10,7 GECKO
-    int routeId = 116;
+    int routeId = 128;
     routeEngine.Execute(routeId);
 
     //string data = ReadFeedIssuesAsync("<<SET_FEED_DOCUMENT_URL>>").GetAwaiter().GetResult();
@@ -207,7 +207,6 @@ static void Main()
 
     //    //ProcessOrderForShipment("102001756024237-7261513244");
 
-    //GetAlItems();
 
     //    //string[] orders = new string[] {
     //    //};
@@ -302,7 +301,6 @@ static void Main()
     //    //    }
     //    //}
 
-    //GetAlItems();
     //    //GetWalmartAlItems();
     //    //SCSCancelOrderResponse response = JsonConvert.DeserializeObject<SCSCancelOrderResponse>("{\r\n    \"OutPut\": {\r\n        \"Order\": {\r\n            \"Header\": {\r\n                \"OrderNo\": 122371654,\r\n                \"CustomerID\": \"TAR6266P\",\r\n                \"OrderDate\": \"2024-07-10T00:00:00\",\r\n                \"CustomerPO\": \"902001820010598-7376181416\",\r\n                \"Status\": \"In Progress\",\r\n                \"BillingFirstName\": \"TARGET PLUS\",\r\n                \"BillingLastName\": \"\",\r\n                \"BillingAddress1\": \"P.O BOX 59251\",\r\n                \"BillingAddress2\": \"\",\r\n                \"BillingCity\": \"MINNEAPOLIS\",\r\n                \"BillingState\": \"MN\",\r\n                \"BillingZipCode\": \"55459-0251\",\r\n                \"BillingCountry\": \"USA\",\r\n                \"BillingPhone1\": \"612-304-6266\",\r\n                \"BillingPhone2\": \"\",\r\n                \"BillingFax\": \"763-440-9316\",\r\n                \"BillingEmail\": \"TCOM.INVOICING@TARGET.COM\",\r\n                \"PaymentTerm\": \"NET 30 DAYS\",\r\n                \"ShippingFirstName\": \"Adina\",\r\n                \"ShippingLastName\": \"Adina\",\r\n                \"ShippingAddress1\": \"512 Highland Ave\",\r\n                \"ShippingAddress2\": \"\",\r\n                \"ShippingState\": \"FL\",\r\n                \"ShippingZipCode\": \"32801-1347\",\r\n                \"ShipViaCode\": \"FEDH\",\r\n                \"SubTotal\": 114.99,\r\n                \"ShippingCost\": 0.0,\r\n                \"TotalAmount\": 114.99,\r\n                \"Instructions\": \"Thank you for your purchase. If you ordered additional items they will arrive separately.\\n\\nThanks fo\",\r\n                \"ShippingDate\": \"2024-07-10T00:00:00\",\r\n                \"OrderTakenBy\": \"API1\",\r\n                \"ExternalID\": \"902001820010598-7376181416\"\r\n            },\r\n            \"Detail\": [\r\n                {\r\n                    \"ItemID\": \"BHS121U-6\",\r\n                    \"Line_No\": 1,\r\n                    \"OrderQty\": 1,\r\n                    \"UnitPrice\": 114.99,\r\n                    \"Discount\": 0.0,\r\n                    \"Remarks\": \"\",\r\n                    \"Status\": \"Ready To Ship\",\r\n                    \"QtyInStock\": 1,\r\n                    \"ETA_Date\": null,\r\n                    \"APIOrderLineNo\": \"1\"\r\n                }\r\n            ]\r\n        },\r\n        \"Success\": true,\r\n        \"Message\": \"SaleOrder Information Provided.\"\r\n    }\r\n}");
 
@@ -1464,70 +1462,6 @@ static void ProcessOrderForShipment(string orderNumber)
         l_OrderData.SaveNew();
     }
 }
-
-static int GetAlItems()
-{
-    string after_id = string.Empty;
-    StringBuilder data = new StringBuilder();
-    int i = 1;
-
-    do
-    {
-        string json = GetItems(after_id);
-
-        if (string.IsNullOrEmpty(json))
-        {
-            File.WriteAllText("Items.csv", data.ToString());
-            Console.WriteLine("Data not received");
-            return 0;
-        }
-
-        after_id = string.Empty;
-        RouteTestApp.Items[] items = JsonConvert.DeserializeObject<RouteTestApp.Items[]>(json);
-
-        foreach (RouteTestApp.Items item in items)
-        {
-            data.AppendLine($"{item.id},{item.external_id}");
-            after_id = item.id;
-        }
-
-        Console.WriteLine($"Page # {i++} completed");
-    }
-    while (!string.IsNullOrEmpty(after_id));
-
-    File.WriteAllText("Items.csv", data.ToString());
-    Console.WriteLine("Job completed");
-
-    return 0;
-}
-
-static string GetItems(string after_id)
-{
-
-    RestClient client;
-    RestRequest request;
-    RestResponse response;
-    RestClientOptions options = new RestClientOptions("https://api.target.com/sellers/v1/")
-    {
-        MaxTimeout = -1,
-    };
-
-    client = new RestClient(options);
-
-    if (string.IsNullOrEmpty(after_id))
-        request = new RestRequest("sellers/6802accd146a9b60e3850f70/products_catalog?per_page=1000&expand=fields", Method.Get);
-    else
-        request = new RestRequest($"sellers/6802accd146a9b60e3850f70/products_catalog?per_page=1000&after_id={after_id}", Method.Get);
-
-    request.AddHeader("x-api-key", "80951e9d352afdd7725961817c62a51baf637658");
-    request.AddHeader("x-seller-token", "d061a03b9bbc48c48c63b93559bd48a8");
-    request.AddHeader("x-seller-id", "6802accd146a9b60e3850f70");
-
-    response = client.Execute(request);
-
-    return response.Content.ToString();
-}
-
 
 static string UpdateProductlogistics(string ProductID, string Body)
 {
