@@ -65,12 +65,32 @@ namespace eSyncMate.Processor.Managers
 
                 if (l_SourceConnector.ConnectivityType == ConnectorTypesEnum.Rest.ToString())
                 {
-                    l_SourceConnector.Url = l_SourceConnector.BaseUrl + $"orders?status=Created&limit=100&createdStartDate={formattedDateFrom10DaysAgo}";
+                    // Global Marketplace (connector has a WM_MARKET header, e.g. Walmart Canada) documents the
+                    // status values in UPPERCASE; Walmart US keeps its original "Created".
+                    bool l_IsGlobalMarket = l_SourceConnector.Headers?.Any(h => string.Equals(h?.Name?.Trim(), "WM_MARKET", StringComparison.OrdinalIgnoreCase)) == true;
+                    string l_Status = l_IsGlobalMarket ? "CREATED" : "Created";
+
+                    l_SourceConnector.Url = l_SourceConnector.BaseUrl + $"orders?status={l_Status}&limit=100&createdStartDate={formattedDateFrom10DaysAgo}";
                     sourceResponse = RestConnector.Execute(l_SourceConnector, string.Empty).GetAwaiter().GetResult();
 
                     route.SaveData("JSON-SNT", 0, l_SourceConnector.Url, userNo);
-                    OrdersList = JsonConvert.DeserializeObject<WalmartGetOrderResponseModel>(sourceResponse.Content);
                     route.SaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
+
+                    try
+                    {
+                        OrdersList = JsonConvert.DeserializeObject<WalmartGetOrderResponseModel>(sourceResponse.Content ?? string.Empty);
+                    }
+                    catch (JsonException)
+                    {
+                        OrdersList = null;
+                    }
+
+                    if (OrdersList?.list?.elements?.order == null)
+                    {
+                        route.SaveLog(LogTypeEnum.Error, $"Walmart did not return an order list [{(int)sourceResponse.StatusCode} {sourceResponse.StatusCode}]",
+                            sourceResponse.Content ?? $"{sourceResponse.StatusDescription} - {sourceResponse.ErrorMessage}", userNo);
+                        return;
+                    }
 
                     if (l_DestinationConnector.ConnectivityType == ConnectorTypesEnum.SqlServer.ToString())
                     {
