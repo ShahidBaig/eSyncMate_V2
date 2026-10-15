@@ -185,6 +185,7 @@ namespace eSyncMate.Processor.Managers
                                     if (sourceResponse.IsSuccessStatusCode && string.IsNullOrEmpty(l_PayloadError))
                                     {
                                         route.SaveLog(LogTypeEnum.Debug, $"Item Sync request is accepted for {l_SCS_SAPrductModel.external_id}", string.Empty, userNo);
+                                        l_CustomerProductCatalog.DeleteWithType(l_CustomerProductCatalog.ProductId, "PRD-ERR");
                                         l_CustomerProductCatalog.DeleteWithType(l_CustomerProductCatalog.ProductId, "PRD-RSP");
                                         l_CustomerProductCatalog.SaveData("PRD-RSP", sourceResponse.Content, userNo);
                                     }
@@ -201,14 +202,18 @@ namespace eSyncMate.Processor.Managers
                                     {
                                         if (IsAuthFailureResponse(sourceResponse))
                                         {
+                                            SaveRetryableError(route, l_CustomerProductCatalog, l_CustomerProductCatalog.ProductId, "PRD-ERR", sourceResponse, l_SCS_SAPrductModel.external_id, userNo);
+
                                             l_AuthFailed = true;
 
                                             break;
                                         }
 
-                                        if (CommonUtils.IsTransientResponse(sourceResponse))
+                                        if (IsRetryableResponse(sourceResponse))
                                         {
                                             l_KeepStatus = true;
+
+                                            SaveRetryableError(route, l_CustomerProductCatalog, l_CustomerProductCatalog.ProductId, "PRD-ERR", sourceResponse, l_SCS_SAPrductModel.external_id, userNo);
 
                                             route.SaveLog(LogTypeEnum.Warning, $"Transient error ({(sourceResponse.ResponseStatus == ResponseStatus.TimedOut ? "Timeout" : (int)sourceResponse.StatusCode + " " + sourceResponse.StatusCode)}) from SA Item Sync for item {l_SCS_SAPrductModel.external_id}. Item will be retried.", sourceResponse.Content, userNo);
                                         }
@@ -352,6 +357,7 @@ namespace eSyncMate.Processor.Managers
 
                                         if (sourceResponse.IsSuccessStatusCode && string.IsNullOrEmpty(l_ParentPayloadError))
                                         {
+                                            l_Product.DeleteWithType(l_Product.ProductId, "PRD-ERR");
                                             l_Product.DeleteWithType(l_Product.ProductId, "PRD-RSP");
                                             l_Product.SaveData("PRD-RSP", sourceResponse.Content, userNo);
 
@@ -368,6 +374,18 @@ namespace eSyncMate.Processor.Managers
                                         }
                                         else
                                         {
+                                            if (IsAuthFailureResponse(sourceResponse) || IsRetryableResponse(sourceResponse))
+                                            {
+                                                // The variations went out in the same request, so each of them
+                                                // records the same reason as the parent.
+                                                SaveRetryableError(route, l_Product, l_Product.ProductId, "PRD-ERR", sourceResponse, l_SCS_VAPProductCatalogModel.parent.external_id, userNo);
+
+                                                foreach (var itemVC in filteredVCItems.Where(row => !l_SkippedVCItems.Contains(Convert.ToString(row["ItemID"]))))
+                                                {
+                                                    SaveRetryableError(route, l_Product, Convert.ToInt32(itemVC["ProductId"].ToString()), "PRD-ERR", sourceResponse, Convert.ToString(itemVC["ItemID"]), userNo);
+                                                }
+                                            }
+
                                             if (IsAuthFailureResponse(sourceResponse))
                                             {
                                                 l_AuthFailed = true;
@@ -375,7 +393,7 @@ namespace eSyncMate.Processor.Managers
                                                 break;
                                             }
 
-                                            if (CommonUtils.IsTransientResponse(sourceResponse))
+                                            if (IsRetryableResponse(sourceResponse))
                                             {
                                                 l_KeepStatus = true;
 
@@ -451,6 +469,7 @@ namespace eSyncMate.Processor.Managers
                                                         l_ChildResponse = JsonConvert.SerializeObject(filteredResults);
                                                     }
 
+                                                    l_Product.DeleteWithType(l_Product.ProductId, "PRD-ERR");
                                                     l_Product.DeleteWithType(l_Product.ProductId, "PRD-RSP");
                                                     l_Product.SaveData("PRD-RSP", l_ChildResponse, userNo);
                                                 }
@@ -544,6 +563,7 @@ namespace eSyncMate.Processor.Managers
                                             if (sourceResponse.IsSuccessStatusCode && string.IsNullOrEmpty(l_UnlistPayloadError))
                                             {
                                                 route.SaveLog(LogTypeEnum.Debug, $"Unlist Item Sync request is accepted for {response.external_id}", string.Empty, userNo);
+                                                l_CustomerProductCatalog.DeleteWithType(l_CustomerProductCatalog.ProductId, "UNL-ERR");
                                                 l_CustomerProductCatalog.DeleteWithType(l_CustomerProductCatalog.ProductId, "UNL-RSP");
                                                 l_CustomerProductCatalog.SaveData("UNL-RSP", sourceResponse.Content, userNo);
                                             }
@@ -560,14 +580,18 @@ namespace eSyncMate.Processor.Managers
                                             {
                                                 if (IsAuthFailureResponse(sourceResponse))
                                                 {
+                                                    SaveRetryableError(route, l_CustomerProductCatalog, l_CustomerProductCatalog.ProductId, "UNL-ERR", sourceResponse, Convert.ToString(unlistedItems["ItemID"]), userNo);
+
                                                     l_AuthFailed = true;
 
                                                     break;
                                                 }
 
-                                                if (CommonUtils.IsTransientResponse(sourceResponse))
+                                                if (IsRetryableResponse(sourceResponse))
                                                 {
                                                     l_Retryable = true;
+
+                                                    SaveRetryableError(route, l_CustomerProductCatalog, l_CustomerProductCatalog.ProductId, "UNL-ERR", sourceResponse, Convert.ToString(unlistedItems["ItemID"]), userNo);
 
                                                     route.SaveLog(LogTypeEnum.Warning, $"Transient error ({(sourceResponse.ResponseStatus == ResponseStatus.TimedOut ? "Timeout" : (int)sourceResponse.StatusCode + " " + sourceResponse.StatusCode)}) from Unlist Item Sync for item {response.external_id}. Item will be retried.", sourceResponse.Content, userNo);
                                                 }
@@ -595,14 +619,18 @@ namespace eSyncMate.Processor.Managers
                                     {
                                         if (IsAuthFailureResponse(sourceResponse))
                                         {
+                                            SaveRetryableError(route, l_CustomerProductCatalog, l_CustomerProductCatalog.ProductId, "UNL-ERR", sourceResponse, Convert.ToString(unlistedItems["ItemID"]), userNo);
+
                                             l_AuthFailed = true;
 
                                             break;
                                         }
 
-                                        if (CommonUtils.IsTransientResponse(sourceResponse))
+                                        if (IsRetryableResponse(sourceResponse))
                                         {
-                                            // The item is left exactly as it is, so the next run tries it again.
+                                            // The status is left as it is, so the next run tries it again.
+                                            SaveRetryableError(route, l_CustomerProductCatalog, l_CustomerProductCatalog.ProductId, "UNL-ERR", sourceResponse, Convert.ToString(unlistedItems["ItemID"]), userNo);
+
                                             route.SaveLog(LogTypeEnum.Warning, $"Transient error ({(sourceResponse.ResponseStatus == ResponseStatus.TimedOut ? "Timeout" : (int)sourceResponse.StatusCode + " " + sourceResponse.StatusCode)}) getting product for unlist item id [{unlistedItems.Field<string>("id")}]. Item will be retried.", sourceResponse.Content, userNo);
                                         }
                                         else
@@ -789,9 +817,86 @@ namespace eSyncMate.Processor.Managers
         }
 
         /// <summary>
+        /// Records why a call failed for a reason that is not the item's fault (401/403, timeout, 429, 5xx)
+        /// so the product data shows it. Only the error row is written: status and RetryCount stay as they
+        /// are and the item goes out again on the next run. The Target answer is shortened and stripped of
+        /// separators because the rejected items export writes it into an unquoted CSV. Never throws, so the
+        /// caller can still stop the run or move on to the next item.
+        /// </summary>
+        internal static void SaveRetryableError(Routes route, CustomerProductCatalog p_Catalog, int p_ProductId, string p_Type, RestResponse p_Response, string p_ItemID, int userNo)
+        {
+            try
+            {
+                string l_Reason = p_Response.ResponseStatus == ResponseStatus.TimedOut
+                    ? "Timeout"
+                    : (int)p_Response.StatusCode + " " + p_Response.StatusCode;
+
+                List<string> l_Errors = new List<string>
+                {
+                    IsAuthFailureResponse(p_Response)
+                        ? "The item status was not changed. It is sent again on the next run once the Target connection is re-authorized."
+                        : "The item status was not changed. It is sent again automatically on the next run."
+                };
+
+                if (!string.IsNullOrWhiteSpace(p_Response.Content))
+                {
+                    l_Errors.Add($"Target answered '{GetShortValue(p_Response.Content, 300)}'.");
+                }
+
+                string l_Error = JsonConvert.SerializeObject(new ProductCatalogErrorModel
+                {
+                    message = IsAuthFailureResponse(p_Response)
+                        ? $"Target refused the credentials for item {p_ItemID} ({l_Reason})."
+                        : $"Target did not answer item {p_ItemID} ({l_Reason}).",
+                    errors = l_Errors.ToArray()
+                });
+
+                p_Catalog.ProductId = p_ProductId;
+                p_Catalog.DeleteWithType(p_ProductId, p_Type);
+                p_Catalog.SaveData(p_Type, l_Error, userNo);
+            }
+            catch (Exception l_SaveException)
+            {
+                route.SaveLog(LogTypeEnum.Exception, $"Failed to record the {p_Type} row for item {p_ItemID}.", l_SaveException.ToString(), userNo);
+            }
+        }
+
+        /// <summary>
+        /// True when Target gave no usable answer and the same request can succeed on the next run:
+        /// no HTTP answer at all (timeout, network), 429, 5xx, or a 400 without a body. Any other status
+        /// (400 with a body, 404, 409 "exists already", ...) is about the item and must be marked ERROR.
+        /// CommonUtils.IsTransientResponse cannot be used here: RestSharp 110 sets ResponseStatus to Error
+        /// for every non-2xx answer, so its "not Completed" check treats every HTTP error as transient.
+        /// </summary>
+        internal static bool IsRetryableResponse(RestResponse p_Response)
+        {
+            if (p_Response == null)
+            {
+                return true;
+            }
+
+            // No status code means Target never answered.
+            if (p_Response.StatusCode == 0 || p_Response.ResponseStatus == ResponseStatus.TimedOut)
+            {
+                return true;
+            }
+
+            int l_StatusCode = (int)p_Response.StatusCode;
+
+            if (l_StatusCode == 429 || l_StatusCode >= 500)
+            {
+                return true;
+            }
+
+            return p_Response.StatusCode == System.Net.HttpStatusCode.BadRequest && string.IsNullOrWhiteSpace(p_Response.Content);
+        }
+
+        /// <summary>
         /// True when Target refused the call over credentials rather than over the item. A 401/403 is never
-        /// caused by what an item contains, so the item keeps its status, keeps its RetryCount and gets no
-        /// error row — it simply goes out again once the connection is re-authorized.
+        /// caused by what an item contains, so the item keeps its status and RetryCount — it only gets an
+        /// error row saying why, and goes out again once the connection is re-authorized.
+        /// Exception: a 403 that lists errors is about the item (e.g. "You are not allowed to create a new
+        /// version of a suspended product.") — that item is marked ERROR and the run carries on.
         /// </summary>
         internal static bool IsAuthFailureResponse(RestResponse p_Response)
         {
@@ -800,8 +905,40 @@ namespace eSyncMate.Processor.Managers
                 return false;
             }
 
-            return p_Response.StatusCode == System.Net.HttpStatusCode.Unauthorized
-                || p_Response.StatusCode == System.Net.HttpStatusCode.Forbidden;
+            if (p_Response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            {
+                return true;
+            }
+
+            if (p_Response.StatusCode != System.Net.HttpStatusCode.Forbidden)
+            {
+                return false;
+            }
+
+            return !HasItemErrors(p_Response.Content);
+        }
+
+        /// <summary>
+        /// True when the body is JSON with a non-empty "errors" array. Anything else (empty, not JSON,
+        /// no errors) returns false, so a bare 403 is still treated as a credentials refusal.
+        /// </summary>
+        private static bool HasItemErrors(string p_Content)
+        {
+            if (string.IsNullOrWhiteSpace(p_Content))
+            {
+                return false;
+            }
+
+            try
+            {
+                Newtonsoft.Json.Linq.JToken l_Errors = Newtonsoft.Json.Linq.JToken.Parse(p_Content)["errors"];
+
+                return l_Errors != null && l_Errors.Type == Newtonsoft.Json.Linq.JTokenType.Array && l_Errors.HasValues;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         /// <summary>
