@@ -196,7 +196,9 @@ namespace eSyncMate.Processor.Models
         ErrorOrderRetry = 74,
         // Walmart bulk inventory: MP_INVENTORY feed upload, and the feed status check that follows it
         WalmartBulkInventoryUpload = 75,
-        WalmartBulkInventoryStatus = 76
+        WalmartBulkInventoryStatus = 76,
+        // Inserts the Target products missing in CustomerProductCatalogPrices (ItemID -> ProductID)
+        TargetProductSync = 77
 
     }
 

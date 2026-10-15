@@ -613,6 +613,10 @@ namespace eSyncMate.Processor.Managers
                 {
                     DownloadTargetItemsRoute.Execute(_config, route);
                 }
+                else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.TargetProductSync))
+                {
+                    TargetProductSyncRoute.Execute(_config, route);
+                }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.SCSBulkItemPrices))
                 {
                     SCSBulkItemPricesRoute.Execute(_config, route);

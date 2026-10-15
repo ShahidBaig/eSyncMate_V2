@@ -1041,6 +1041,34 @@ namespace eSyncMate.DB.Entities
             return Connection.GetData(l_SQL, ref p_Data);
         }
 
+        /// <summary>
+        /// Sp_InsertMissingTargetCatalogPrices: inserts the CustomerID/ItemId/ProductID rows (TargetCatalogPriceType)
+        /// that CustomerProductCatalogPrices does not have yet. Every row must carry CustomerID, otherwise the SP
+        /// throws. Returns the inserted rows (Id, CustomerID, ItemId, ProductID).
+        /// </summary>
+        public bool InsertMissingTargetCatalogPrices(string CustomerID, DataTable p_Items, ref DataTable p_Result)
+        {
+            using (SqlConnection connection = new SqlConnection(this.Connection.ConnectionString))
+            {
+                connection.Open();
+
+                using (SqlCommand command = new SqlCommand("Sp_InsertMissingTargetCatalogPrices", connection))
+                {
+                    command.CommandType = CommandType.StoredProcedure;
+                    command.CommandTimeout = 600;
+
+                    command.Parameters.Add(new SqlParameter("@CustomerID", SqlDbType.VarChar, 500) { Value = CustomerID });
+                    command.Parameters.Add(new SqlParameter("@Items", SqlDbType.Structured) { TypeName = "TargetCatalogPriceType", Value = p_Items });
+                    using (SqlDataAdapter adapter = new SqlDataAdapter(command))
+                    {
+                        adapter.Fill(p_Result);
+                    }
+                }
+            }
+
+            return true;
+        }
+
         //public Result UpdateItemsDataStatus(string ItemTypeID, string CustomerID = "",int UserID  = 0,string FileName = "",string CsvData = "")
         //{
         //    Result l_Result = Result.GetFailureResult();

@@ -420,6 +420,10 @@ namespace eSyncMate.RouteWorker
                 {
                     DownloadTargetItemsRoute.Execute(config, route);
                 }
+                else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.TargetProductSync))
+                {
+                    TargetProductSyncRoute.Execute(config, route);
+                }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.SCSBulkItemPrices))
                 {
                     SCSBulkItemPricesRoute.Execute(config, route);
