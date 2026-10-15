@@ -203,6 +203,8 @@ namespace eSyncMate.Processor.Managers
                 foreach (DataRow row in this.data.Rows)
                 {
                     this.ProcessItem(row, ShipNodedataTable);
+
+                    Thread.Sleep(300);
                 }
 
                 // Log UPLOAD snapshot after all items in this chunk are processed

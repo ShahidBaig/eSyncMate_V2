@@ -24,6 +24,7 @@ namespace eSyncMate.Processor.Models
             (int)RouteTypesEnum.AmazonWHSWInventoryUpload,        // 62
             (int)RouteTypesEnum.LowesWHSWInventoryUpload,         // 64
             (int)RouteTypesEnum.KnotWHSWInventoryUpload,          // 68
+            (int)RouteTypesEnum.WalmartBulkInventoryUpload,       // 75
         };
 
         /// <summary>
@@ -50,6 +51,7 @@ namespace eSyncMate.Processor.Models
             (int)RouteTypesEnum.AmazonWHSWInventoryUpload,        // 62
             (int)RouteTypesEnum.LowesWHSWInventoryUpload,         // 64
             (int)RouteTypesEnum.KnotWHSWInventoryUpload,          // 68
+            (int)RouteTypesEnum.WalmartBulkInventoryUpload,       // 75
         };
 
         public static bool IsInventoryRoute(int routeTypeId) => _inventoryUploadTypes.Contains(routeTypeId);
