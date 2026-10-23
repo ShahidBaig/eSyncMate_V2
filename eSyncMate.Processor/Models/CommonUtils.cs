@@ -198,7 +198,10 @@ namespace eSyncMate.Processor.Models
         WalmartBulkInventoryUpload = 75,
         WalmartBulkInventoryStatus = 76,
         // Inserts the Target products missing in CustomerProductCatalogPrices (ItemID -> ProductID)
-        TargetProductSync = 77
+        TargetProductSync = 77,
+        // Walmart US/CA cancellations: Walmart Cancelled + SYNCED -> PortalCancel, then SPARS Cancel_Order -> CANCELLED / CancelError
+        WalmartGetCancelledOrders = 78,
+        WalmartSendCancellationsToERP = 79
 
     }
 

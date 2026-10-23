@@ -617,6 +617,14 @@ namespace eSyncMate.Processor.Managers
                 {
                     TargetProductSyncRoute.Execute(_config, route);
                 }
+                else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.WalmartGetCancelledOrders))
+                {
+                    WalmartGetCancelledOrdersRoute.Execute(_config, route);
+                }
+                else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.WalmartSendCancellationsToERP))
+                {
+                    WalmartSendCancellationsToERPRoute.Execute(_config, route);
+                }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.SCSBulkItemPrices))
                 {
                     SCSBulkItemPricesRoute.Execute(_config, route);

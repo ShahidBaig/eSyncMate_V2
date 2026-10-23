@@ -89,7 +89,7 @@ export class OrdersComponent implements OnInit {
   showSpinnerforSearch: boolean = false;
   showSpinner: boolean = false;
   listOfStoresOrder: Order[] = [];
-  statusOptions = ['Select Status', 'Acknowledged', 'Asn Gen', 'Asn Mark', 'Complete', 'Finished', 'Inv EDI', 'Invoiced', 'New', 'Processed', 'Sync Error', 'Synced', 'Splited', 'Cancelled', 'Shipped', 'Partially Shipped', 'Partially Cancelled', 'Error', 'Asn Error', 'In Progress'];
+  statusOptions = ['Select Status', 'Acknowledged', 'Asn Gen', 'Asn Mark', 'Complete', 'Finished', 'Inv EDI', 'Invoiced', 'New', 'Processed', 'Sync Error', 'Synced', 'Splited', 'Cancelled', 'Shipped', 'Partially Shipped', 'Partially Cancelled', 'Error', 'Asn Error', 'In Progress', 'Portal Cancel', 'Cancel Error'];
 
   // Map display names back to API values
   statusDisplayToValue: { [key: string]: string } = {
@@ -99,7 +99,7 @@ export class OrdersComponent implements OnInit {
     'Sync Error': 'SYNCERROR', 'Synced': 'SYNCED', 'Splited': 'SPLITED',
     'Cancelled': 'CANCELLED', 'Shipped': 'SHIPPED', 'Partially Shipped': 'Partially Shipped',
     'Partially Cancelled': 'Partially Cancelled', 'Error': 'ERROR', 'Asn Error': 'ASNERROR',
-    'In Progress': 'INPROGRESS'
+    'In Progress': 'INPROGRESS', 'Portal Cancel': 'PortalCancel', 'Cancel Error': 'CancelError'
   };
 
   statusValueToDisplay: { [key: string]: string } = {
@@ -109,7 +109,8 @@ export class OrdersComponent implements OnInit {
     'SYNCERROR': 'Sync Error', 'SYNCED': 'Synced', 'SPLITED': 'Splited',
     'CANCELLED': 'Cancelled', 'SHIPPED': 'Shipped', 'Partially Shipped': 'Partially Shipped',
     'Partially Cancelled': 'Partially Cancelled', 'ERROR': 'Error', 'ASNERROR': 'Asn Error',
-    'INPROGRESS': 'In Progress', 'DUPLICATE': 'Duplicate', 'ACKERROR': 'Ack Error'
+    'INPROGRESS': 'In Progress', 'DUPLICATE': 'Duplicate', 'ACKERROR': 'Ack Error',
+    'PortalCancel': 'Portal Cancel', 'CancelError': 'Cancel Error'
   };
   isAdminUser: boolean = false;
   canAdd = false;
@@ -286,11 +287,20 @@ export class OrdersComponent implements OnInit {
   private errorTypeHeadings: { [key: string]: string } = {
     'ERP-ERROR': 'ERP ERROR',
     'ERPASN-ERR': 'ERP ASN ERROR',
-    'ASN-ERR': 'ASN ERROR'
+    'ASN-ERR': 'ASN ERROR',
+    'WMCANCEL-MSG': 'CUSTOMER CANCELLATION'
   };
 
   // Statuses that actually mean "this order is in error right now".
   private errorStatuses = ['ERROR', 'ACKERROR', 'ASNERROR'];
+
+  // Statuses the Walmart cancellation sync sets; their message (OrderData WMCANCEL-MSG) shows on hover
+  private cancelMessageStatuses = ['CANCELLED', 'PORTALCANCEL', 'CANCELERROR'];
+
+  isCancelMessage(element: any): boolean {
+    const s = ((element?.status ?? element?.displayStatus ?? '') + '').toUpperCase().replace(/[^A-Z]/g, '');
+    return element?.errorType === 'WMCANCEL-MSG' && this.cancelMessageStatuses.includes(s);
+  }
 
   /**
    * True only while the order itself is in an error state. The error payload is fetched as the
@@ -306,7 +316,7 @@ export class OrdersComponent implements OnInit {
 
   /** Formats the raw error payload (OrderData) into readable tooltip lines. */
   getErpErrorText(element: any): string {
-    if (!this.isErrorStatus(element)) return '';
+    if (!this.isErrorStatus(element) && !this.isCancelMessage(element)) return '';
 
     const raw = element?.errorData;
     if (!raw) return '';
@@ -403,6 +413,10 @@ export class OrdersComponent implements OnInit {
     } else if (status.toUpperCase() === 'INPROGRESS') {
       return 'sysced-status';
     } else if (status.toUpperCase() === 'ASNERROR') {
+      return 'syncerror-status';
+    } else if (status.toUpperCase() === 'PORTALCANCEL') {
+      return 'acknowledged-status';
+    } else if (status.toUpperCase() === 'CANCELERROR') {
       return 'syncerror-status';
     } else {
       return '';

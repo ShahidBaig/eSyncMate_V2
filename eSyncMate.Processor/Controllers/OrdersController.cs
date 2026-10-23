@@ -1350,6 +1350,21 @@ namespace eSyncMate.Processor.Controllers
                     return BadRequest(new { code = 400, message = $"Order {OrderId} failed to process: {result}" });
                 }
             }
+            else if (Status == "CancelError")
+            {
+                // Walmart cancellation that ERP has not cancelled yet: send Cancel_Order again.
+                // The status stays CancelError during the call (InProgress would be posted by Place Order).
+                result = WalmartSendCancellationsToERPRoute.ExecuteSingle(_config, OrderId, CustomerName);
+
+                if (string.IsNullOrEmpty(result))
+                {
+                    return Ok(new { code = 200, message = $"Order {OrderNumber} cancelled in ERP successfully." });
+                }
+                else
+                {
+                    return BadRequest(new { code = 400, message = result });
+                }
+            }
 
             Result? l_Result = l_order.SetOrderStatus(OrderId, "InProgress");
 

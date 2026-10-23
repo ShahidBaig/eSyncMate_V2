@@ -41,7 +41,7 @@ export class OrdersDrilldownDialogComponent implements OnInit {
   // ERPCustomerIDs the Re-Map Item IDs action applies to, from ApplicationSettings.
   private amazonCustomerIds = new Set<string>();
 
-  errorStatuses = ['ERROR', 'ASNERROR', 'ACKERROR', 'SYNCERROR'];
+  errorStatuses = ['ERROR', 'ASNERROR', 'ACKERROR', 'SYNCERROR', 'CancelError'];
 
   // Statuses where the order already exists in the ERP — ERP columns are meaningful only for these
   erpStatuses = ['SYNCED', 'SHIPPED', 'CANCELLED', 'Partially Shipped', 'Partially Cancelled'];
@@ -97,12 +97,22 @@ export class OrdersDrilldownDialogComponent implements OnInit {
   private errorTypeHeadings: { [key: string]: string } = {
     'ERP-ERROR': 'ERP ERROR',
     'ERPASN-ERR': 'ERP ASN ERROR',
-    'ASN-ERR': 'ASN ERROR'
+    'ASN-ERR': 'ASN ERROR',
+    'WMCANCEL-MSG': 'CUSTOMER CANCELLATION'
   };
 
   // Statuses that mean "this order is in error right now". Kept separate from
   // errorStatuses, which drives the Re-Process action and also covers SYNCERROR.
   private errorTooltipStatuses = ['ERROR', 'ACKERROR', 'ASNERROR'];
+
+  // Statuses the Walmart cancellation sync sets; their message (OrderData WMCANCEL-MSG) shows on hover.
+  // Mirrors the same check in orders.component.ts.
+  private cancelMessageStatuses = ['CANCELLED', 'PORTALCANCEL', 'CANCELERROR'];
+
+  isRowCancelMessage(row: any): boolean {
+    const s = ((row?.status ?? row?.displayStatus ?? '') + '').toUpperCase().replace(/[^A-Z]/g, '');
+    return row?.errorType === 'WMCANCEL-MSG' && this.cancelMessageStatuses.includes(s);
+  }
 
   /**
    * True only while the order itself is in an error state. The payload is fetched as the
@@ -124,7 +134,7 @@ export class OrdersDrilldownDialogComponent implements OnInit {
 
   /** Formats the raw error payload (OrderData) into readable tooltip lines. */
   getErpErrorText(row: any): string {
-    if (!this.isRowErrorStatus(row)) return '';
+    if (!this.isRowErrorStatus(row) && !this.isRowCancelMessage(row)) return '';
 
     const raw = row?.errorData;
     if (!raw) return '';

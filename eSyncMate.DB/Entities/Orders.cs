@@ -278,7 +278,7 @@ namespace eSyncMate.DB.Entities
             l_Query += " OUTER APPLY (SELECT COALESCE(CONVERT(VARCHAR(30), TRY_CONVERT(DATETIME, MAX(D.ShippedDate)), 126), MAX(D.ShippedDate)) AS ShippedDate"
                     + " FROM [OrderDetail] D WHERE D.OrderId = P.Id AND ISNULL(D.ShippedDate, '') <> '') SHP";
 
-            // Latest error payload (order / ASN / ACK) — shown on hover over the status badge.
+            // Latest error payload (order / ASN / ACK) or Walmart cancellation message — shown on hover over the status badge.
             // Two raw SPARS failures are rewritten into wording an operator can act on. The same two are
             // rewritten by VW_OrderData, which feeds the Files dialog, so the tooltip and that dialog must
             // keep saying the same thing — change one and change the other.
@@ -286,7 +286,7 @@ namespace eSyncMate.DB.Entities
                     + " WHEN OD.Data LIKE '%String or binary data%' THEN '{\"OutPut\":{\"Success\":false,\"Message\":\"There may be more characters than allowed in the Shipping Name or Address fields in SPARS. Please check and correct the information, then reprocess the Order.\",\"ErrorDetail\":[],\"ObjectID\":\"-10\"}}'"
                     + " WHEN OD.Data LIKE '%timeout%' THEN '{\"OutPut\":{\"Success\":false,\"Message\":\"There is no response from SPARS, please reprocess the order in a few minutes.\",\"ErrorDetail\":[],\"ObjectID\":\"-10\"}}'"
                     + " ELSE LEFT(OD.Data, 4000) END AS ErrorData, OD.CreatedDate AS ErrorDate, OD.Type AS ErrorType FROM [OrderData] OD"
-                    + " WHERE OD.OrderId = P.Id AND OD.Type IN ('ERP-ERROR', 'ERPASN-ERR', 'ASN-ERR') ORDER BY OD.CreatedDate DESC) ERR";
+                    + " WHERE OD.OrderId = P.Id AND OD.Type IN ('ERP-ERROR', 'ERPASN-ERR', 'ASN-ERR', 'WMCANCEL-MSG') ORDER BY OD.CreatedDate DESC) ERR";
 
             // Shipping instructions live on the stored marketplace payload — the same copy the
             // transformation map reads — so screen and ERP can never drift apart.
