@@ -20,6 +20,7 @@ AS
 	CASE
         WHEN C.SyncStatus = 'DELETED' THEN 'Published'
         WHEN C.SyncStatus = 'SYNCED' THEN 'Published'
+        WHEN C.SyncStatus IN ('APPROVED', 'APPROVED_PR') AND C.UnListed = 1 THEN 'UNLISTED'
         WHEN C.SyncStatus = 'APPROVED_PR' THEN 'Approved'
         WHEN C.SyncStatus = 'APPROVED' THEN 'Approved'
         ELSE C.SyncStatus

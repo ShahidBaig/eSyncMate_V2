@@ -24,6 +24,7 @@
   "CPCAPPROVED": "Product Data is published",
   "CPCAPPROVED_PR": "Product pricing information is synced",
   "CPCSYNCED": "Product is synced with {{customerName}}",
+  "CPCUNLISTED": "Product is unlisted from the marketplace",
   "logOut": "Log Out",
   "addUser": "Add User",
   "changePassword": "Change Password",

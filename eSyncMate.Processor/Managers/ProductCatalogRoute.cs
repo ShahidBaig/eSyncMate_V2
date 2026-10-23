@@ -534,7 +534,12 @@ namespace eSyncMate.Processor.Managers
 
                                         if (response != null && response.product_statuses != null && response.product_statuses.Any())
                                         {
-                                            destUrl = l_DestinationConnector.BaseUrl + "products/" + unlistedItems.Field<string>("id") + "/statuses/" + response.product_statuses[0].id;
+                                            // Target only unlists the current (live) status. product_statuses[0] is the latest
+                                            // one, which is a pending update when the item was re-sent, and gets 403
+                                            // "You are not allowed to unlist a non-current status".
+                                            var l_UnlistStatus = response.product_statuses.FirstOrDefault(s => s != null && s.current) ?? response.product_statuses[0];
+
+                                            destUrl = l_DestinationConnector.BaseUrl + "products/" + unlistedItems.Field<string>("id") + "/statuses/" + l_UnlistStatus.id;
 
                                             l_DestinationConnector.Url = destUrl;
                                             l_DestinationConnector.Method = "PUT";
