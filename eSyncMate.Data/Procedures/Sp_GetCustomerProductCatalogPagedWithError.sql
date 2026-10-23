@@ -49,7 +49,8 @@ BEGIN
               AND DATALENGTH(D.Data) > 0
               -- An item in a final good state has nothing to report. The view folds SYNCED/DELETED
               -- into Published and APPROVED/APPROVED_PR into Approved; raw values listed too.
-              AND UPPER(ISNULL(P.SyncStatus, '''')) NOT IN (''APPROVED'', ''PUBLISHED'', ''APPROVED_PR'')
+              -- An unlisted item (APPROVED + UnListed = 1, shown as UNLISTED) is final as well.
+              AND UPPER(ISNULL(P.SyncStatus, '''')) NOT IN (''APPROVED'', ''PUBLISHED'', ''APPROVED_PR'', ''UNLISTED'')
               -- A transport failure says nothing about the product, so it never becomes its error
               AND NOT (D.Type IN (''REQ-ERR'', ''RSP-ERR'') AND (
                        H.DataHead LIKE ''%upstream%''

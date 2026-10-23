@@ -25,6 +25,7 @@
   "CPCAPPROVED": "Los datos del producto están publicados",
   "CPCAPPROVED_PR": "La información de precios del producto está sincronizada",
   "CPCSYNCED": "El producto está sincronizado con {{customerName}}",
+  "CPCUNLISTED": "El producto no está listado en el marketplace",
   "orderReceived": "Pedido recibido",
   "orderAcknowledged": "Pedido reconocido",
   "orderSentInERP": "Pedido enviado en ERP",
