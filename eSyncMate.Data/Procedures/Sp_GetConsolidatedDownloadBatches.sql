@@ -37,7 +37,7 @@ BEGIN
 				'AmazonInventoryUpload', 'LowesWHSWInventoryUpload',
 				'MacysInventoryUpload', 'MichealInventoryUpload',
 				'KnotInventoryUpload', 'KnotWHSWInventoryUpload',
-				'AmazonWHSWInventoryUpload'
+				'AmazonWHSWInventoryUpload', 'ShopifyInventoryUpload'
 			)
 			AND ISNULL(StartDate, FinishDate) < @l_CurrentUploadDate
 		ORDER BY ISNULL(StartDate, FinishDate) DESC
