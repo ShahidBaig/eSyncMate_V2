@@ -94,6 +94,42 @@ namespace eSyncMate.Processor.Helpers
             return MaskConnectorData(decrypted);
         }
 
+        // ── Merge an edited connector with the stored one ─────────
+        // The edit screen rebuilds the JSON from its own fields: a field it has no input for (Username, Password,
+        // TimeoutSeconds, ... or the whole blob for a type it does not handle) would be lost, and a masked
+        // sensitive field arrives blank. Both keep the stored value; everything the screen sends wins.
+        public static string MergeConnectorData(string incomingJson, string storedJson, string key)
+        {
+            string stored = DecryptConnectorData(storedJson, key);
+
+            if (string.IsNullOrWhiteSpace(stored)) return incomingJson;
+            if (string.IsNullOrWhiteSpace(incomingJson)) return stored;
+
+            JObject incomingObj, storedObj;
+
+            try
+            {
+                incomingObj = JObject.Parse(incomingJson);
+                storedObj = JObject.Parse(stored);
+            }
+            catch { return incomingJson; }
+
+            foreach (var property in storedObj.Properties())
+            {
+                if (incomingObj[property.Name] == null)
+                    incomingObj[property.Name] = property.Value;
+            }
+
+            foreach (var field in SensitiveFields)
+            {
+                if (incomingObj[field]?.Type == JTokenType.String && string.IsNullOrEmpty(incomingObj[field].ToString()) &&
+                    storedObj[field]?.Type == JTokenType.String && !string.IsNullOrEmpty(storedObj[field].ToString()))
+                    incomingObj[field] = storedObj[field];
+            }
+
+            return incomingObj.ToString(Formatting.None);
+        }
+
         // ── 256-bit key derivation ────────────────────────────────
         private static byte[] DeriveKey(string key)
         {
