@@ -162,9 +162,9 @@
               <button mat-icon-button color="accent" matTooltip="Show Files" (click)="getOrderFiles(element)">
                 <mat-icon>folder_open</mat-icon>
               </button>
-              <!-- Re-Process (ERROR/ASNERROR/ACKERROR) -->
+              <!-- Re-Process (ERROR/ASNERROR/ACKERROR; CancelError = send the Walmart cancellation to ERP again) -->
               <button mat-icon-button matTooltip="Re-Process Order"
-                *ngIf="element.status == 'ERROR' || element.status == 'ASNERROR' || element.status == 'ACKERROR'"
+                *ngIf="element.status == 'ERROR' || element.status == 'ASNERROR' || element.status == 'ACKERROR' || element.status == 'CancelError'"
                 (click)="ReProccess(element,0)">
                 <mat-icon style="color:#dc2626;">restart_alt</mat-icon>
               </button>
