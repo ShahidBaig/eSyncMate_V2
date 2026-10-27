@@ -16,6 +16,7 @@ namespace eSyncMate.Processor.Models
             public string name { get; set; }
             public string cancelledAt { get; set; }
             public string displayFulfillmentStatus { get; set; }
+            public ShopifyOrdersResponseModel.MoneyBag totalOutstandingSet { get; set; }
             public LineItems lineItems { get; set; }
         }
 

@@ -8,6 +8,8 @@ namespace eSyncMate.Processor.Models
         public class Data
         {
             public Orders orders { get; set; }
+            // order(id) { lineItems(after: ...) } - the lines after the first 30
+            public Order order { get; set; }
         }
 
         public class Orders
@@ -92,6 +94,8 @@ namespace eSyncMate.Processor.Models
             public string name { get; set; }
             public int quantity { get; set; }
             public int currentQuantity { get; set; }
+            public bool isGiftCard { get; set; }
+            public bool requiresShipping { get; set; } = true;
             public MoneyBag originalUnitPriceSet { get; set; }
             public MoneyBag discountedUnitPriceSet { get; set; }
             public Variant variant { get; set; }
@@ -104,7 +108,14 @@ namespace eSyncMate.Processor.Models
         public class Variant
         {
             public string id { get; set; }
-            public ShopifyGraphQLResponseModel.IdNode inventoryItem { get; set; }
+            public InventoryItem inventoryItem { get; set; }
+        }
+
+        // requiresShipping = the product's own setting; the line's requiresShipping depends on how the order was made
+        public class InventoryItem
+        {
+            public string id { get; set; }
+            public bool? requiresShipping { get; set; }
         }
 
         public class MoneyBag

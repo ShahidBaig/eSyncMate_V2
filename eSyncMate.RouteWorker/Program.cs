@@ -452,6 +452,10 @@ namespace eSyncMate.RouteWorker
                 {
                     ShopifyCancellationRoute.Execute(config, route);
                 }
+                else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.ShopifyGetCancelledOrders))
+                {
+                    ShopifyGetCancelledOrdersRoute.Execute(config, route);
+                }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.SCSBulkItemPrices))
                 {
                     SCSBulkItemPricesRoute.Execute(config, route);

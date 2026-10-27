@@ -2,6 +2,7 @@ using eSyncMate.DB;
 using eSyncMate.DB.Entities;
 using eSyncMate.Processor.Models;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System.Data;
 using static eSyncMate.DB.Declarations;
 using OL = eSyncMate.Processor.Models.ShopifyOrderLinesResponseModel;
@@ -13,14 +14,16 @@ namespace eSyncMate.Processor.Managers
     /// Shopify - Send Cancellation to Portal (RouteType 84, Task 00006).
     /// Source SP_SyncCancelQty (the same SP as the Target / Macys / Lowes cancellation routes): the lines whose units
     /// the ERP cancelled (OrderDetail CANRVD, written by "Fetch Cancellations from ERP"), one row per order line.
-    /// Line-wise: each line's Shopify quantity is set to what stays, LineQty - CancelQty (order edit:
-    /// orderEditBegin / SetQuantity / Commit). When that leaves no unit on the whole Shopify order -> orderCancel
-    /// instead (Shopify finishes it in the background).
+    /// Line-wise: each line's Shopify quantity is set to what stays, the line's OrderDetail units that are not cancelled
+    /// (order edit: orderEditBegin / SetQuantity / Commit). An order edit does not refund: a refund owed is logged as an
+    /// Error for finance. When nothing stays on the whole Shopify order -> orderCancel instead; Shopify runs it in the
+    /// background, so the units become CANSNT only once the order shows cancelled (else CANRVD, checked next run).
     /// Quantities are set, never subtracted, so a run that repeats after a lost DB update changes nothing in Shopify;
     /// a quantity is never raised (a line already lower in Shopify counts as done).
     /// Sent (or already so in Shopify) -> units CANSNT. Shopify said no -> units CANERR (not retried; set them
     /// back to CANRVD to send again). A failed call (token / network / HTTP / throttle) leaves them CANRVD for the next run.
-    /// OrderData ERPCANLN-JSON (Shopify's answer) / ERPCANLN-ERR.
+    /// Every Shopify call of an order is logged, request and response apart, in every outcome:
+    /// OrderData ERPCANLN-SNT (the requests) + ERPCANLN-JSON (sent: result + responses) or ERPCANLN-ERR (not sent).
     /// Destination connector Parameters: notifyCustomer (default false), restock (default true),
     /// refund (whole order only, default false), reason (CUSTOMER / DECLINED / FRAUD / INVENTORY / OTHER / STAFF, default OTHER).
     /// </summary>
@@ -29,6 +32,7 @@ namespace eSyncMate.Processor.Managers
         private const string OrderLinesQuery = @"query OrderLines($id: ID!) {
   order(id: $id) {
     id name cancelledAt displayFulfillmentStatus
+    totalOutstandingSet { shopMoney { amount currencyCode } }
     lineItems(first: 100) { nodes { id currentQuantity unfulfilledQuantity } }
   }
 }";
@@ -56,10 +60,16 @@ namespace eSyncMate.Processor.Managers
 
         private const string OrderEditCommitMutation = @"mutation Commit($id: ID!, $notifyCustomer: Boolean, $staffNote: String) {
   orderEditCommit(id: $id, notifyCustomer: $notifyCustomer, staffNote: $staffNote) {
-    order { id }
+    order { id name totalOutstandingSet { shopMoney { amount currencyCode } } }
     userErrors { field message }
   }
 }";
+
+        private const string JobQuery = @"query Job($id: ID!) { job(id: $id) { id done } }";
+
+        // orderCancel runs in the background: wait up to JobChecks x JobWaitMs for it before reading the order again
+        private const int JobChecks = 5;
+        private const int JobWaitMs = 2000;
 
         private const string StaffNote = "Cancelled by the ERP (eSyncMate)";
 
@@ -73,6 +83,29 @@ namespace eSyncMate.Processor.Managers
             public bool Restock = true;
             public bool Refund;
             public string Reason = "OTHER";
+        }
+
+        // The Shopify calls made for one order, kept apart as requests and responses for OrderData
+        private class CallLog
+        {
+            public readonly List<object> Requests = new List<object>();
+            public readonly List<object> Responses = new List<object>();
+
+            public ShopifyGraphQLResult<T> Run<T>(ConnectorDataModel p_Connector, string p_Step, string p_Query, object p_Variables) where T : ShopifyGraphQLResponseModel
+            {
+                ShopifyGraphQLResult<T> l_Result = ShopifyGraphQL.Execute<T>(p_Connector, p_Query, p_Variables);
+
+                Requests.Add(new { step = p_Step, at = DateTime.Now, request = LogJson.Embed(l_Result.RequestBody) });
+                Responses.Add(new { step = p_Step, at = DateTime.Now, success = l_Result.Success, error = l_Result.Success ? null : l_Result.Error, response = LogJson.Embed(l_Result.ResponseBody) });
+
+                return l_Result;
+            }
+
+            // the last request, for the route log of a failure
+            public string LastRequest()
+            {
+                return Requests.Count == 0 ? string.Empty : JsonConvert.SerializeObject(Requests[Requests.Count - 1]);
+            }
         }
 
         public static void Execute(IConfiguration config, Routes route)
@@ -156,29 +189,30 @@ namespace eSyncMate.Processor.Managers
             string l_OrderNumber = Convert.ToString(p_Rows[0]["OrderNumber"]) ?? string.Empty;
             string l_OrderGid = "gid://shopify/Order/" + l_OrderNumber;
             List<int> l_LineNos = p_Rows.Select(r => Convert.ToInt32(r["LineNo"])).ToList();
+            CallLog l_Log = new CallLog();
 
-            ShopifyGraphQLResult<OL> l_OrderResult = ShopifyGraphQL.Execute<OL>(p_Destination, OrderLinesQuery, new { id = l_OrderGid });
+            ShopifyGraphQLResult<OL> l_OrderResult = l_Log.Run<OL>(p_Destination, "readOrder", OrderLinesQuery, new { id = l_OrderGid });
             OL.Order l_ShopifyOrder = l_OrderResult.Success ? l_OrderResult.Response.data?.order : null;
 
             if (l_ShopifyOrder == null)
             {
                 if (!l_OrderResult.Success)
-                    return CallFailed(p_Route, p_OrderId, l_OrderNumber, $"the order could not be read: {l_OrderResult.Error}", l_OrderResult.ResponseBody, p_UserNo);
+                    return CallFailed(p_Source, p_Route, p_OrderId, l_OrderNumber, $"the order could not be read: {l_OrderResult.Error}", l_Log, p_UserNo);
 
-                return Rejected(p_Source, p_Route, p_OrderId, l_OrderNumber, l_LineNos, $"Shopify has no order {l_OrderNumber}", l_OrderResult.ResponseBody, string.Empty, p_UserNo);
+                return Rejected(p_Source, p_Route, p_OrderId, l_OrderNumber, l_LineNos, $"Shopify has no order {l_OrderNumber}", l_Log, p_UserNo);
             }
 
             // cancelled in Shopify already (by hand, or an earlier run whose DB update was lost): nothing left to do
             if (!string.IsNullOrEmpty(l_ShopifyOrder.cancelledAt))
                 return Sent(p_Source, p_OrderId, l_OrderNumber, l_LineNos,
-                            JsonConvert.SerializeObject(new { message = $"Order {l_ShopifyOrder.name} is already cancelled in Shopify ({l_ShopifyOrder.cancelledAt}); nothing sent." }), p_UserNo);
+                            new { message = $"Order {l_ShopifyOrder.name} is already cancelled in Shopify ({l_ShopifyOrder.cancelledAt}); nothing sent." }, l_Log, p_UserNo);
 
-            return EditOrder(p_OrderId, l_OrderNumber, l_OrderGid, p_Rows, l_ShopifyOrder, p_Source, p_Destination, p_Settings, p_Route, p_UserNo);
+            return EditOrder(p_OrderId, l_OrderNumber, l_OrderGid, p_Rows, l_ShopifyOrder, p_Source, p_Destination, p_Settings, p_Route, l_Log, p_UserNo);
         }
 
         // no unit left on the whole Shopify order -> orderCancel
         private static Outcome CancelOrder(int p_OrderId, string p_OrderNumber, string p_OrderGid, List<int> p_LineNos, ConnectorDataModel p_Source,
-                                           ConnectorDataModel p_Destination, Settings p_Settings, Routes p_Route, int p_UserNo)
+                                           ConnectorDataModel p_Destination, Settings p_Settings, Routes p_Route, CallLog p_Log, int p_UserNo)
         {
             var l_Variables = new
             {
@@ -190,10 +224,10 @@ namespace eSyncMate.Processor.Managers
                 staffNote = StaffNote
             };
 
-            ShopifyGraphQLResult<ShopifyOrderCancelResponseModel> l_Result = ShopifyGraphQL.Execute<ShopifyOrderCancelResponseModel>(p_Destination, OrderCancelMutation, l_Variables);
+            ShopifyGraphQLResult<ShopifyOrderCancelResponseModel> l_Result = p_Log.Run<ShopifyOrderCancelResponseModel>(p_Destination, "orderCancel", OrderCancelMutation, l_Variables);
 
             if (!l_Result.Success)
-                return CallFailed(p_Route, p_OrderId, p_OrderNumber, $"orderCancel failed: {l_Result.Error}", l_Result.RequestBody, p_UserNo);
+                return CallFailed(p_Source, p_Route, p_OrderId, p_OrderNumber, $"orderCancel failed: {l_Result.Error}", p_Log, p_UserNo);
 
             ShopifyOrderCancelResponseModel.OrderCancel l_Payload = l_Result.Response.data?.orderCancel;
 
@@ -201,26 +235,54 @@ namespace eSyncMate.Processor.Managers
             {
                 string l_Why = l_Payload == null ? "no orderCancel in the response" : JoinErrors(l_Payload.orderCancelUserErrors);
 
-                return Rejected(p_Source, p_Route, p_OrderId, p_OrderNumber, p_LineNos, $"orderCancel rejected: {l_Why}", l_Result.ResponseBody, l_Result.RequestBody, p_UserNo);
+                return Rejected(p_Source, p_Route, p_OrderId, p_OrderNumber, p_LineNos, $"orderCancel rejected: {l_Why}", p_Log, p_UserNo);
             }
 
-            return Sent(p_Source, p_OrderId, p_OrderNumber, p_LineNos, l_Result.ResponseBody, p_UserNo);
+            // the job can still fail in Shopify (e.g. while a payment is processing): sent only once the order shows cancelled
+            bool l_Done = l_Payload.job == null || l_Payload.job.done;
+
+            for (int i = 0; i < JobChecks && !l_Done; i++)
+            {
+                Thread.Sleep(JobWaitMs);
+
+                ShopifyGraphQLResult<ShopifyOrderCancelResponseModel> l_Job = p_Log.Run<ShopifyOrderCancelResponseModel>(p_Destination, "job", JobQuery, new { id = l_Payload.job.id });
+
+                l_Done = l_Job.Success && l_Job.Response.data?.job?.done == true;
+            }
+
+            ShopifyGraphQLResult<OL> l_After = p_Log.Run<OL>(p_Destination, "readOrderAfterCancel", OrderLinesQuery, new { id = p_OrderGid });
+            OL.Order l_Cancelled = l_After.Success ? l_After.Response.data?.order : null;
+
+            if (!string.IsNullOrEmpty(l_Cancelled?.cancelledAt))
+            {
+                LogRefundOwed(p_Route, p_OrderId, l_Cancelled.name ?? p_OrderNumber, l_Cancelled.totalOutstandingSet, "order cancelled by the ERP", p_UserNo);
+
+                return Sent(p_Source, p_OrderId, p_OrderNumber, p_LineNos, new { cancelledAt = l_Cancelled.cancelledAt }, p_Log, p_UserNo);
+            }
+
+            // still running (or the check failed): the units stay CANRVD; the next run finds the order cancelled and records it
+            if (!l_Done || !l_After.Success)
+                return CallFailed(p_Source, p_Route, p_OrderId, p_OrderNumber, $"orderCancel accepted (job {l_Payload.job?.id}) but the order is not cancelled yet; checked again next run", p_Log, p_UserNo);
+
+            return Rejected(p_Source, p_Route, p_OrderId, p_OrderNumber, p_LineNos, $"orderCancel job {l_Payload.job?.id} finished but Shopify did not cancel the order", p_Log, p_UserNo);
         }
 
         // line-wise: each cancelled line set to the quantity that stays (order edit); nothing left on the order -> orderCancel
         private static Outcome EditOrder(int p_OrderId, string p_OrderNumber, string p_OrderGid, List<DataRow> p_Rows, OL.Order p_ShopifyOrder,
-                                         ConnectorDataModel p_Source, ConnectorDataModel p_Destination, Settings p_Settings, Routes p_Route, int p_UserNo)
+                                         ConnectorDataModel p_Source, ConnectorDataModel p_Destination, Settings p_Settings, Routes p_Route, CallLog p_Log, int p_UserNo)
         {
             List<int> l_LineNos = p_Rows.Select(r => Convert.ToInt32(r["LineNo"])).ToList();
             List<string> l_Problems = new List<string>();
             List<(DataRow Row, string LineId, int Keep)> l_Changes = new List<(DataRow, string, int)>();
             Dictionary<string, int> l_Targets = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            Dictionary<int, int> l_UnitsToKeep = GetUnitsToKeep(p_Source, p_OrderId);
 
             foreach (DataRow l_Row in p_Rows)
             {
                 string l_LineId = GetLineId(p_Source, p_OrderId, l_Row);
-                // SP_SyncCancelQty: LineQty = units of the line, CancelQty = units the ERP cancelled (sent or not)
-                int l_Keep = Math.Max(Convert.ToInt32(l_Row["LineQty"]) - Convert.ToInt32(l_Row["CancelQty"]), 0);
+                // what stays = the line's units the ERP did not cancel, counted from OrderDetail (one row per unit), so a
+                // second cancel on the same line lands too, whatever SP_SyncCancelQty counts in LineQty / CancelQty
+                int l_Keep = l_UnitsToKeep.GetValueOrDefault(Convert.ToInt32(l_Row["LineNo"]));
                 OL.LineItem l_Line = p_ShopifyOrder.lineItems?.nodes?.FirstOrDefault(l => string.Equals(l?.id, l_LineId, StringComparison.OrdinalIgnoreCase));
 
                 if (l_Line == null)
@@ -247,29 +309,29 @@ namespace eSyncMate.Processor.Managers
             }
 
             if (l_Problems.Count > 0)
-                return Rejected(p_Source, p_Route, p_OrderId, p_OrderNumber, l_LineNos, string.Join("; ", l_Problems), string.Empty, JsonConvert.SerializeObject(p_ShopifyOrder), p_UserNo);
+                return Rejected(p_Source, p_Route, p_OrderId, p_OrderNumber, l_LineNos, string.Join("; ", l_Problems), p_Log, p_UserNo);
 
             // after these lines nothing stays on the Shopify order (lines not in this run keep their current quantity)
             bool l_NothingLeft = (p_ShopifyOrder.lineItems?.nodes ?? new List<OL.LineItem>())
                 .All(l => (l_Targets.TryGetValue(l.id ?? string.Empty, out int l_T) ? l_T : l.currentQuantity) == 0);
 
             if (l_Changes.Count > 0 && l_NothingLeft)
-                return CancelOrder(p_OrderId, p_OrderNumber, p_OrderGid, l_LineNos, p_Source, p_Destination, p_Settings, p_Route, p_UserNo);
+                return CancelOrder(p_OrderId, p_OrderNumber, p_OrderGid, l_LineNos, p_Source, p_Destination, p_Settings, p_Route, p_Log, p_UserNo);
 
             if (l_Changes.Count == 0)
                 return Sent(p_Source, p_OrderId, p_OrderNumber, l_LineNos,
-                            JsonConvert.SerializeObject(new { message = "Shopify already shows these quantities; nothing sent." }), p_UserNo);
+                            new { message = "Shopify already shows these quantities; nothing sent." }, p_Log, p_UserNo);
 
-            ShopifyGraphQLResult<OE> l_Begin = ShopifyGraphQL.Execute<OE>(p_Destination, OrderEditBeginMutation, new { id = p_OrderGid });
+            ShopifyGraphQLResult<OE> l_Begin = p_Log.Run<OE>(p_Destination, "orderEditBegin", OrderEditBeginMutation, new { id = p_OrderGid });
 
             if (!l_Begin.Success)
-                return CallFailed(p_Route, p_OrderId, p_OrderNumber, $"orderEditBegin failed: {l_Begin.Error}", l_Begin.RequestBody, p_UserNo);
+                return CallFailed(p_Source, p_Route, p_OrderId, p_OrderNumber, $"orderEditBegin failed: {l_Begin.Error}", p_Log, p_UserNo);
 
             OE.OrderEdit l_Edit = l_Begin.Response.data?.orderEditBegin;
 
             if (l_Edit?.calculatedOrder == null || l_Edit.userErrors?.Count > 0)
                 return Rejected(p_Source, p_Route, p_OrderId, p_OrderNumber, l_LineNos,
-                                $"orderEditBegin rejected: {(l_Edit == null ? "no orderEditBegin in the response" : JoinErrors(l_Edit.userErrors))}", l_Begin.ResponseBody, l_Begin.RequestBody, p_UserNo);
+                                $"orderEditBegin rejected: {(l_Edit == null ? "no orderEditBegin in the response" : JoinErrors(l_Edit.userErrors))}", p_Log, p_UserNo);
 
             string l_CalculatedOrderId = l_Edit.calculatedOrder.id;
             List<object> l_Sent = new List<object>();
@@ -282,43 +344,75 @@ namespace eSyncMate.Processor.Managers
 
                 if (l_Calculated == null)
                     return Rejected(p_Source, p_Route, p_OrderId, p_OrderNumber, l_LineNos,
-                                    $"line {l_Change.Row["LineNo"]} ({l_Change.LineId}) is not in the Shopify order edit", l_Begin.ResponseBody, string.Empty, p_UserNo);
+                                    $"line {l_Change.Row["LineNo"]} ({l_Change.LineId}) is not in the Shopify order edit", p_Log, p_UserNo);
 
                 var l_Variables = new { id = l_CalculatedOrderId, lineItemId = l_Calculated.id, quantity = l_Change.Keep, restock = p_Settings.Restock };
 
-                ShopifyGraphQLResult<OE> l_Set = ShopifyGraphQL.Execute<OE>(p_Destination, OrderEditSetQuantityMutation, l_Variables);
+                ShopifyGraphQLResult<OE> l_Set = p_Log.Run<OE>(p_Destination, $"orderEditSetQuantity line {l_Change.Row["LineNo"]}", OrderEditSetQuantityMutation, l_Variables);
 
                 // nothing is committed yet: an edit left open changes nothing in Shopify
                 if (!l_Set.Success)
-                    return CallFailed(p_Route, p_OrderId, p_OrderNumber, $"orderEditSetQuantity failed: {l_Set.Error}", l_Set.RequestBody, p_UserNo);
+                    return CallFailed(p_Source, p_Route, p_OrderId, p_OrderNumber, $"orderEditSetQuantity failed: {l_Set.Error}", p_Log, p_UserNo);
 
                 OE.OrderEdit l_SetPayload = l_Set.Response.data?.orderEditSetQuantity;
 
                 if (l_SetPayload == null || l_SetPayload.userErrors?.Count > 0)
                     return Rejected(p_Source, p_Route, p_OrderId, p_OrderNumber, l_LineNos,
                                     $"orderEditSetQuantity rejected for line {l_Change.Row["LineNo"]}: {(l_SetPayload == null ? "no orderEditSetQuantity in the response" : JoinErrors(l_SetPayload.userErrors))}",
-                                    l_Set.ResponseBody, l_Set.RequestBody, p_UserNo);
+                                    p_Log, p_UserNo);
 
                 l_Sent.Add(new { lineNo = l_Change.Row["LineNo"], lineItemId = l_Change.LineId, from = l_Calculated.quantity, to = l_Change.Keep });
             }
 
-            ShopifyGraphQLResult<OE> l_Commit = ShopifyGraphQL.Execute<OE>(p_Destination, OrderEditCommitMutation,
-                                                                           new { id = l_CalculatedOrderId, notifyCustomer = p_Settings.Notify, staffNote = StaffNote });
+            ShopifyGraphQLResult<OE> l_Commit = p_Log.Run<OE>(p_Destination, "orderEditCommit", OrderEditCommitMutation,
+                                                             new { id = l_CalculatedOrderId, notifyCustomer = p_Settings.Notify, staffNote = StaffNote });
 
             if (!l_Commit.Success)
-                return CallFailed(p_Route, p_OrderId, p_OrderNumber, $"orderEditCommit failed: {l_Commit.Error}", l_Commit.RequestBody, p_UserNo);
+                return CallFailed(p_Source, p_Route, p_OrderId, p_OrderNumber, $"orderEditCommit failed: {l_Commit.Error}", p_Log, p_UserNo);
 
             OE.OrderEditCommit l_CommitPayload = l_Commit.Response.data?.orderEditCommit;
 
             if (l_CommitPayload?.order == null || l_CommitPayload.userErrors?.Count > 0)
                 return Rejected(p_Source, p_Route, p_OrderId, p_OrderNumber, l_LineNos,
                                 $"orderEditCommit rejected: {(l_CommitPayload == null ? "no orderEditCommit in the response" : JoinErrors(l_CommitPayload.userErrors))}",
-                                l_Commit.ResponseBody, l_Commit.RequestBody, p_UserNo);
+                                p_Log, p_UserNo);
 
-            return Sent(p_Source, p_OrderId, p_OrderNumber, l_LineNos, JsonConvert.SerializeObject(new { lines = l_Sent, response = l_Commit.ResponseBody }), p_UserNo);
+            // an order edit never refunds: when the customer had paid for the removed units, Shopify now owes them money
+            decimal l_Outstanding = LogRefundOwed(p_Route, p_OrderId, l_CommitPayload.order.name ?? p_OrderNumber, l_CommitPayload.order.totalOutstandingSet, "lines cancelled by the ERP", p_UserNo);
+
+            return Sent(p_Source, p_OrderId, p_OrderNumber, l_LineNos, new { lines = l_Sent, refundOwed = l_Outstanding < 0 ? -l_Outstanding : 0 }, p_Log, p_UserNo);
         }
 
-        private static Outcome Sent(ConnectorDataModel p_Source, int p_OrderId, string p_OrderNumber, List<int> p_LineNos, string p_Data, int p_UserNo)
+        // Refunding is the client's decision (not made yet), so a refund Shopify owes the customer (negative
+        // totalOutstandingSet) is an Error in the route log for finance. Returns the outstanding amount.
+        private static decimal LogRefundOwed(Routes p_Route, int p_OrderId, string p_OrderName, ShopifyOrdersResponseModel.MoneyBag p_Outstanding, string p_What, int p_UserNo)
+        {
+            decimal l_Amount = p_Outstanding?.shopMoney?.amount ?? 0;
+
+            if (l_Amount < 0)
+                p_Route.SaveLog(LogTypeEnum.Error, $"Shopify order {p_OrderName} (Id {p_OrderId}): {p_What}, refund owed to the customer {-l_Amount:0.00} {p_Outstanding.shopMoney.currencyCode}. Nothing was refunded automatically; refund it in Shopify admin.", string.Empty, p_UserNo);
+
+            return l_Amount;
+        }
+
+        // LineNo -> units the ERP still wants (OrderDetail rows not cancelled: neither CANRVD, CANSNT nor CANERR)
+        private static Dictionary<int, int> GetUnitsToKeep(ConnectorDataModel p_Source, int p_OrderId)
+        {
+            Dictionary<int, int> l_Keep = new Dictionary<int, int>();
+            DataTable l_Table = new DataTable();
+
+            new DBConnector(p_Source.ConnectionString).GetData(
+                $"SELECT [LineNo], SUM(CASE WHEN ISNULL(Status, '') IN ('CANRVD', 'CANSNT', 'CANERR') THEN 0 ELSE LineQty END) AS Keep FROM OrderDetail WITH (NOLOCK) WHERE OrderId = {p_OrderId} GROUP BY [LineNo]", ref l_Table);
+
+            foreach (DataRow l_Row in l_Table.Rows)
+                l_Keep[Convert.ToInt32(l_Row["LineNo"])] = Convert.ToInt32(l_Row["Keep"]);
+
+            l_Table.Dispose();
+
+            return l_Keep;
+        }
+
+        private static Outcome Sent(ConnectorDataModel p_Source, int p_OrderId, string p_OrderNumber, List<int> p_LineNos, object p_Result, CallLog p_Log, int p_UserNo)
         {
             OrderDetail l_Detail = new OrderDetail();
             l_Detail.UseConnection(p_Source.ConnectionString);
@@ -327,31 +421,40 @@ namespace eSyncMate.Processor.Managers
             foreach (int l_LineNo in p_LineNos.Distinct())
                 l_Detail.UpdateOrderDetailStatus(p_OrderId, l_LineNo);
 
-            SaveOrderData(p_Source, p_OrderId, p_OrderNumber, "ERPCANLN-JSON", p_Data, p_UserNo);
+            SaveCalls(p_Source, p_OrderId, p_OrderNumber, "ERPCANLN-JSON", new { outcome = "SENT", result = p_Result, responses = p_Log.Responses }, p_Log, p_UserNo);
 
             return Outcome.Sent;
         }
 
         private static Outcome Rejected(ConnectorDataModel p_Source, Routes p_Route, int p_OrderId, string p_OrderNumber, List<int> p_LineNos,
-                                        string p_Why, string p_Response, string p_Request, int p_UserNo)
+                                        string p_Why, CallLog p_Log, int p_UserNo)
         {
             // CANERR: not picked again, so a rejected cancellation does not write an error row every run
             new DBConnector(p_Source.ConnectionString).Execute(
                 $"UPDATE OrderDetail SET Status = 'CANERR' WHERE OrderId = {p_OrderId} AND [LineNo] IN ({string.Join(",", p_LineNos.Distinct())}) AND Status = 'CANRVD'");
 
-            SaveOrderData(p_Source, p_OrderId, p_OrderNumber, "ERPCANLN-ERR",
-                          string.IsNullOrEmpty(p_Response) ? JsonConvert.SerializeObject(new { message = p_Why }) : p_Response, p_UserNo);
-            p_Route.SaveLog(LogTypeEnum.Error, $"Shopify cancellation for order {p_OrderNumber} (Id {p_OrderId}) not sent, lines set to CANERR: {p_Why}", p_Request, p_UserNo);
+            SaveCalls(p_Source, p_OrderId, p_OrderNumber, "ERPCANLN-ERR", new { outcome = "REJECTED", message = p_Why, responses = p_Log.Responses }, p_Log, p_UserNo);
+            p_Route.SaveLog(LogTypeEnum.Error, $"Shopify cancellation for order {p_OrderNumber} (Id {p_OrderId}) not sent, lines set to CANERR: {p_Why}", p_Log.LastRequest(), p_UserNo);
 
             return Outcome.Rejected;
         }
 
-        private static Outcome CallFailed(Routes p_Route, int p_OrderId, string p_OrderNumber, string p_Why, string p_Request, int p_UserNo)
+        private static Outcome CallFailed(ConnectorDataModel p_Source, Routes p_Route, int p_OrderId, string p_OrderNumber, string p_Why, CallLog p_Log, int p_UserNo)
         {
-            // units stay CANRVD: the next run tries again; no OrderData row, so an outage does not pile them up
-            p_Route.SaveLog(LogTypeEnum.Error, $"Shopify cancellation for order {p_OrderNumber} (Id {p_OrderId}) not sent, retried next run: {p_Why}", p_Request, p_UserNo);
+            // units stay CANRVD: the next run tries again
+            SaveCalls(p_Source, p_OrderId, p_OrderNumber, "ERPCANLN-ERR", new { outcome = "CALL_FAILED", retryNextRun = true, message = p_Why, responses = p_Log.Responses }, p_Log, p_UserNo);
+            p_Route.SaveLog(LogTypeEnum.Error, $"Shopify cancellation for order {p_OrderNumber} (Id {p_OrderId}) not sent, retried next run: {p_Why}", p_Log.LastRequest(), p_UserNo);
 
             return Outcome.CallFailed;
+        }
+
+        // request and response apart: ERPCANLN-SNT = every request made for the order, p_Type = the outcome + every response
+        private static void SaveCalls(ConnectorDataModel p_Source, int p_OrderId, string p_OrderNumber, string p_Type, object p_Response, CallLog p_Log, int p_UserNo)
+        {
+            if (p_Log.Requests.Count > 0)
+                SaveOrderData(p_Source, p_OrderId, p_OrderNumber, "ERPCANLN-SNT", JsonConvert.SerializeObject(new { requests = p_Log.Requests }), p_UserNo);
+
+            SaveOrderData(p_Source, p_OrderId, p_OrderNumber, p_Type, JsonConvert.SerializeObject(p_Response), p_UserNo);
         }
 
         // the Shopify line item gid: from the SP row when it has the column, else from OrderDetail
@@ -393,7 +496,7 @@ namespace eSyncMate.Processor.Managers
 
             l_OrderData.UseConnection(p_Source.ConnectionString);
             l_OrderData.Type = p_Type;
-            l_OrderData.Data = p_Data;
+            l_OrderData.Data = LogJson.Ensure(p_Data);
             l_OrderData.CreatedBy = p_UserNo;
             l_OrderData.CreatedDate = DateTime.Now;
             l_OrderData.OrderId = p_OrderId;

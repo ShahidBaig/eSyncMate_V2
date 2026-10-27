@@ -14,15 +14,16 @@ namespace eSyncMate.Processor.Managers
     /// have yet into Orders (Status New), OrderData (API-JSON = the Shopify order) and OrderDetail (one row per unit),
     /// the same way the Walmart / Lowes / Amazon Get Orders routes do. Shopify has no acknowledge step.
     /// The filter comes from the source connector Parameters, so it changes without a code change:
-    ///   query = Shopify order search, default "financial_status:paid fulfillment_status:unfulfilled status:open"
+    ///   query = Shopify order search, default "(financial_status:paid OR financial_status:pending) fulfillment_status:unfulfilled status:open"
     ///   days  = only orders created in the last N days, default 10
+    /// Gift card and digital (no shipping) lines are left out; an order with nothing to ship is not saved.
     /// OrderNumber = the Shopify order id (e.g. 8690887852218): unique across stores, unlike the "#1001" name,
     /// which goes into CustomerOrderNo. ExternalId is left empty (Place Order sets it to the ERP's id);
     /// OrderDetail.order_line_id = the line item gid.
     /// </summary>
     public class ShopifyGetOrdersRoute
     {
-        private const string DefaultQuery = "financial_status:paid fulfillment_status:unfulfilled status:open";
+        private const string DefaultQuery = "(financial_status:paid OR financial_status:pending) fulfillment_status:unfulfilled status:open";
         private const int DefaultDays = 10;
 
         // requested cost ~ 25 x (1 + 30 lines + 3 shipping lines) = ~850, under Shopify's 1,000 per query;
@@ -37,15 +38,30 @@ namespace eSyncMate.Processor.Managers
       shippingLines(first: 3) { nodes { title code carrierIdentifier originalPriceSet { shopMoney { amount currencyCode } } } }
       lineItems(first: 30) {
         nodes {
-          id sku name quantity currentQuantity
+          id sku name quantity currentQuantity isGiftCard requiresShipping
           originalUnitPriceSet { shopMoney { amount currencyCode } }
           discountedUnitPriceSet { shopMoney { amount currencyCode } }
-          variant { id inventoryItem { id } }
+          variant { id inventoryItem { id requiresShipping } }
         }
         pageInfo { hasNextPage endCursor }
       }
     }
     pageInfo { hasNextPage endCursor }
+  }
+}";
+
+        // an order with more than 30 lines: the rest of its lines, 100 per call
+        private const string MoreLinesQuery = @"query MoreLines($id: ID!, $after: String) {
+  order(id: $id) {
+    lineItems(first: 100, after: $after) {
+      nodes {
+        id sku name quantity currentQuantity isGiftCard requiresShipping
+        originalUnitPriceSet { shopMoney { amount currencyCode } }
+        discountedUnitPriceSet { shopMoney { amount currencyCode } }
+        variant { id inventoryItem { id requiresShipping } }
+      }
+      pageInfo { hasNextPage endCursor }
+    }
   }
 }";
 
@@ -95,7 +111,7 @@ namespace eSyncMate.Processor.Managers
 
                 Dictionary<string, string> l_ItemCodes = LoadItemCodes(l_DestinationConnector.ConnectionString, l_CustomerId, route, userNo);
 
-                int l_Pages = 0, l_Read = 0, l_Saved = 0, l_SavedWithError = 0, l_Known = 0, l_Skipped = 0;
+                int l_Pages = 0, l_Read = 0, l_Saved = 0, l_SavedWithError = 0, l_Known = 0, l_Skipped = 0, l_NothingToShip = 0;
                 bool l_Completed = true;
                 string l_After = null;
 
@@ -132,11 +148,21 @@ namespace eSyncMate.Processor.Managers
                             continue;
                         }
 
-                        // a partial order would reach the ERP without some of its lines; it stays in Shopify until it can be read whole
-                        if (l_Order.lineItems?.pageInfo?.hasNextPage == true)
+                        // a partial order would reach the ERP without some of its lines: the rest are read first,
+                        // and if that fails nothing of the order is written (the next run tries again)
+                        if (l_Order.lineItems?.pageInfo?.hasNextPage == true && !ReadRemainingLines(l_SourceConnector, l_Order, out string l_LinesError))
                         {
                             l_Skipped++;
-                            route.SaveLog(LogTypeEnum.Error, $"Shopify order {l_Order.name} ({l_OrderNumber}) has more than 30 lines and is not saved. It needs a bigger page; nothing of it was written.", string.Empty, userNo);
+                            route.SaveLog(LogTypeEnum.Error, $"Shopify order {l_Order.name} ({l_OrderNumber}) has more than 30 lines and the rest could not be read: {l_LinesError}. Nothing of it was written; the next run tries again.", string.Empty, userNo);
+                            continue;
+                        }
+
+                        // only gift cards / digital products: nothing for the warehouse, the order is not saved
+                        List<SO.LineItem> l_WithQty = (l_Order.lineItems?.nodes ?? new List<SO.LineItem>()).Where(l => l != null && l.currentQuantity > 0).ToList();
+
+                        if (l_WithQty.Count > 0 && !l_WithQty.Any(IsShippable))
+                        {
+                            l_NothingToShip++;
                             continue;
                         }
 
@@ -162,7 +188,7 @@ namespace eSyncMate.Processor.Managers
                 while (!string.IsNullOrEmpty(l_After));
 
                 // RouteInfo: SaveLog keeps only Error / Exception / RouteInfo
-                route.SaveLog(LogTypeEnum.RouteInfo, $"Shopify orders for [{l_CustomerId}] ({l_Query}): {l_Read} read in {l_Pages} page(s){(l_Completed ? "" : " (stopped early)")}, {l_Saved} new saved ({l_SavedWithError} with Status ERROR), {l_Known} already in eSyncMate, {l_Skipped} not saved.", string.Empty, userNo);
+                route.SaveLog(LogTypeEnum.RouteInfo, $"Shopify orders for [{l_CustomerId}] ({l_Query}): {l_Read} read in {l_Pages} page(s){(l_Completed ? "" : " (stopped early)")}, {l_Saved} new saved ({l_SavedWithError} with Status ERROR), {l_Known} already in eSyncMate, {l_Skipped} not saved, {l_NothingToShip} gift card / digital only (skipped).", string.Empty, userNo);
                 route.SaveLog(LogTypeEnum.Info, $"Completed execution of route [{route.Id}]", string.Empty, userNo);
             }
             catch (Exception ex)
@@ -186,7 +212,7 @@ namespace eSyncMate.Processor.Managers
                 SO.Address l_Ship = p_Order.shippingAddress;
                 SO.Address l_Bill = p_Order.billingAddress;
                 SO.ShippingLine l_ShippingLine = p_Order.shippingLines?.nodes?.FirstOrDefault();
-                List<SO.LineItem> l_Lines = (p_Order.lineItems?.nodes ?? new List<SO.LineItem>()).Where(l => l != null && l.currentQuantity > 0).ToList();
+                List<SO.LineItem> l_Lines = (p_Order.lineItems?.nodes ?? new List<SO.LineItem>()).Where(l => l != null && l.currentQuantity > 0 && IsShippable(l)).ToList();
 
                 if (l_Ship == null || string.IsNullOrWhiteSpace(l_Ship.address1))
                     l_Problems.Add("no shipping address");
@@ -203,7 +229,8 @@ namespace eSyncMate.Processor.Managers
                 //   lineNo = 1, 2, 3 ... (Shopify has no line number)
                 //   itemId = the ERP ItemId: the SCSInventoryFeed row whose CustomerItemCode is the line's inventory item
                 //            number (or its SKU); the SKU itself when no row matches
-                // Only lines with a quantity left are kept, so a removed line never reaches the ERP. The product name is
+                // Only shippable lines with a quantity left are kept, so a removed line, a gift card or a digital product
+                // never reaches the ERP. The product name is
                 // blanked: no map reads it, and a stray quote in a title once broke Amazon payloads.
                 int l_No = 0;
 
@@ -272,7 +299,9 @@ namespace eSyncMate.Processor.Managers
                 l_Data.OrderId = l_Orders.Id;
                 l_Data.OrderNumber = l_Orders.OrderNumber;
 
-                l_Data.SaveNew();
+                // a half-written order would count as "already in eSyncMate" and never be read again: take it out
+                if (!l_Data.SaveNew().IsSuccess)
+                    return RemoveOrder(l_Orders, p_Order, "OrderData (API-JSON)", p_Route, p_UserNo);
 
                 // one OrderDetail row per unit, as the other marketplaces do (ASN / cancellation work per unit)
                 int l_LineNo = 0;
@@ -299,7 +328,8 @@ namespace eSyncMate.Processor.Managers
                         l_OrderDetail.CreatedBy = p_UserNo;
                         l_OrderDetail.CreatedDate = DateTime.Now;
 
-                        l_OrderDetail.SaveNew();
+                        if (!l_OrderDetail.SaveNew().IsSuccess)
+                            return RemoveOrder(l_Orders, p_Order, $"OrderDetail (line {l_LineNo})", p_Route, p_UserNo);
                     }
                 }
 
@@ -310,6 +340,51 @@ namespace eSyncMate.Processor.Managers
                 p_Route.SaveLog(LogTypeEnum.Exception, $"Shopify order {p_Order?.name} ({p_Order?.legacyResourceId}) failed while saving.", ex.ToString(), p_UserNo);
                 return null;
             }
+        }
+
+        // Reads the lines after the first 30 into p_Order.lineItems; false (and nothing changed for the caller to keep) on a failed call
+        private static bool ReadRemainingLines(ConnectorDataModel p_Source, SO.Order p_Order, out string p_Error)
+        {
+            List<SO.LineItem> l_More = new List<SO.LineItem>();
+            string l_After = p_Order.lineItems.pageInfo.endCursor;
+
+            p_Error = string.Empty;
+
+            while (!string.IsNullOrEmpty(l_After))
+            {
+                ShopifyGraphQLResult<SO> l_Page = ShopifyGraphQL.Execute<SO>(p_Source, MoreLinesQuery, new { id = p_Order.id, after = l_After });
+                SO.LineItems l_Lines = l_Page.Success ? l_Page.Response.data?.order?.lineItems : null;
+
+                if (l_Lines == null)
+                {
+                    p_Error = l_Page.Success ? "no lines in the response" : l_Page.Error;
+                    return false;
+                }
+
+                l_More.AddRange(l_Lines.nodes ?? new List<SO.LineItem>());
+                l_After = l_Lines.pageInfo?.hasNextPage == true ? l_Lines.pageInfo.endCursor : null;
+            }
+
+            p_Order.lineItems.nodes.AddRange(l_More);
+            p_Order.lineItems.pageInfo.hasNextPage = false;
+
+            return true;
+        }
+
+        // Deletes what was written of an order whose save failed half way; null = not saved, the next run reads it again
+        private static string RemoveOrder(Orders p_Orders, SO.Order p_Order, string p_What, Routes p_Route, int p_UserNo)
+        {
+            try
+            {
+                p_Orders.Connection.Execute($"DELETE FROM OrderDetail WHERE OrderId = {p_Orders.Id}; DELETE FROM OrderData WHERE OrderId = {p_Orders.Id}; DELETE FROM Orders WHERE Id = {p_Orders.Id};");
+                p_Route.SaveLog(LogTypeEnum.Error, $"Shopify order {p_Order.name} ({p_Order.legacyResourceId}): {p_What} could not be saved, so the order was taken out again. The next run tries again.", string.Empty, p_UserNo);
+            }
+            catch (Exception ex)
+            {
+                p_Route.SaveLog(LogTypeEnum.Exception, $"Shopify order {p_Order.name} ({p_Order.legacyResourceId}): {p_What} could not be saved and the order (Id {p_Orders.Id}) could not be taken out. Delete it by hand so the next run reads it again.", ex.ToString(), p_UserNo);
+            }
+
+            return null;
         }
 
         // CustomerItemCode -> ItemId of the customer's inventory feed, read once per run
@@ -343,6 +418,15 @@ namespace eSyncMate.Processor.Managers
             }
 
             return l_Codes;
+        }
+
+        // client (2026-10-26): gift cards and digital products stay out of the ERP.
+        // "Digital" is the product's own setting (variant.inventoryItem.requiresShipping): the line's requiresShipping
+        // depends on how the order was made - an order created through the API (another app, a B2B partner) shows
+        // false even for a physical product (seen on the dev store). Only a line without a variant uses the line's value.
+        private static bool IsShippable(SO.LineItem p_Line)
+        {
+            return !p_Line.isGiftCard && (p_Line.variant?.inventoryItem?.requiresShipping ?? p_Line.requiresShipping);
         }
 
         private static string GetParameter(ConnectorDataModel p_Connector, string p_Name, string p_Default)

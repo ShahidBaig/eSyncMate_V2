@@ -197,24 +197,25 @@ namespace eSyncMate.Processor.Managers
             string l_Response = string.Empty;
             CancelResult l_Result = new CancelResult();
 
+            var data = new
+            {
+                Input = new
+                {
+                    OrderNo = Convert.ToString(l_Row["ExternalId"]),
+                    CustomerPO = "",
+                    ExternalID = ""
+                }
+            };
+
+            string Body = JsonConvert.SerializeObject(data);
+
             try
             {
-                var data = new
-                {
-                    Input = new
-                    {
-                        OrderNo = Convert.ToString(l_Row["ExternalId"]),
-                        CustomerPO = "",
-                        ExternalID = ""
-                    }
-                };
-
-                string Body = JsonConvert.SerializeObject(data);
                 route.SaveData("JSON-SNT", 0, Body, userNo);
 
                 RestResponse sourceResponse = RestConnector.Execute(destinationConnector, Body).GetAwaiter().GetResult();
 
-                l_Response = sourceResponse.Content ?? $"{(int)sourceResponse.StatusCode} {sourceResponse.StatusDescription} - {sourceResponse.ErrorMessage}";
+                l_Response = LogJson.Ensure(string.IsNullOrEmpty(sourceResponse.Content) ? $"{(int)sourceResponse.StatusCode} {sourceResponse.StatusDescription} - {sourceResponse.ErrorMessage}" : sourceResponse.Content);
                 route.SaveData("JSON-RVD", 0, l_Response, userNo);
 
                 if (sourceResponse.StatusCode == System.Net.HttpStatusCode.OK)
@@ -236,10 +237,25 @@ namespace eSyncMate.Processor.Managers
                 l_Result.Success = false;
                 l_Result.Responded = false;
                 l_Result.Message = $"no response from ERP ({ex.Message})";
-                l_Response = string.IsNullOrEmpty(l_Response) ? ex.ToString() : l_Response;
+                l_Response = string.IsNullOrEmpty(l_Response) ? JsonConvert.SerializeObject(new { message = ex.Message, exception = ex.ToString() }) : l_Response;
             }
 
             SaveResult(connection, l_OrderId, l_Result.Success, l_Result.Message, false, isReprocess);
+
+            // request and response apart: ERPCancel-SNT = the Cancel_Order body sent, then the answer (latest of each kept)
+            OrderData l_Request = new OrderData();
+
+            l_Request.UseConnection(connectionString);
+            l_Request.DeleteWithType(l_OrderId, "ERPCancel-SNT");
+
+            l_Request.Type = "ERPCancel-SNT";
+            l_Request.Data = Body;
+            l_Request.CreatedBy = userNo;
+            l_Request.CreatedDate = DateTime.Now;
+            l_Request.OrderId = l_OrderId;
+            l_Request.OrderNumber = l_OrderNumber;
+
+            l_Request.SaveNew();
 
             string l_Type = l_Result.Success ? "ERPCancel-RVD" : "ERPCancel-ERR";
             OrderData l_OrderData = new OrderData();
@@ -248,7 +264,7 @@ namespace eSyncMate.Processor.Managers
             l_OrderData.DeleteWithType(l_OrderId, l_Type);
 
             l_OrderData.Type = l_Type;
-            l_OrderData.Data = l_Response;
+            l_OrderData.Data = LogJson.Ensure(l_Response);
             l_OrderData.CreatedBy = userNo;
             l_OrderData.CreatedDate = DateTime.Now;
             l_OrderData.OrderId = l_OrderId;

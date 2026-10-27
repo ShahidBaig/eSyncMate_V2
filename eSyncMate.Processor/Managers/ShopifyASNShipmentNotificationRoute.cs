@@ -16,24 +16,31 @@ namespace eSyncMate.Processor.Managers
     /// Per order the Shopify fulfillment orders are read, then one fulfillmentCreate per tracking number ships
     /// those quantities from the fulfillment order line items of the order lines (OrderDetail.order_line_id).
     /// A tracking number Shopify accepts -> its units ASNSNT; SP_UpdateOrderStatus 'SCSASN' turns the order SHIPPED
-    /// once every unit is sent. Nothing sent and Shopify rejected it -> 'SCSASNError' (ASNERROR); a failed call leaves the order SYNCED for the next run; a tracking that failed while
-    /// another one landed keeps its units ASNRVD, so the next run sends it again.
-    /// Quantities Shopify already shows as fulfilled are not sent twice: that tracking counts as sent.
+    /// once every unit is sent. Any tracking Shopify rejected -> 'SCSASNError' (ASNERROR, Re-Process sends it again);
+    /// a failed call leaves the order SYNCED for the next run.
+    /// Units Shopify really shipped (fulfillments SUCCESS, beyond what eSyncMate already sent) are not sent twice: that
+    /// tracking counts as sent. Units on an ON_HOLD / SCHEDULED / INCOMPLETE fulfillment order wait (ASNRVD, next run);
+    /// units that are neither open nor shipped (cancelled fulfillment order) are an error.
     /// Logs per tracking: OrderData ASN-SNT (request), ASN-RES (response) or ASN-ERR.
     /// The destination connector Parameter notifyCustomer (true / false, default false) decides whether Shopify
     /// e-mails the customer the shipment.
     /// </summary>
     public class ShopifyASNShipmentNotificationRoute
     {
-        // ~10 x (1 + 50) = ~510 requested cost points, under the 1,000 limit
+        // ~10 x (1 + 40) + 10 x (1 + 40) = ~820 requested cost points, under the 1,000 limit
+        // (Get Orders never saves an order with more than 30 lines)
         private const string FulfillmentOrdersQuery = @"query FulfillmentOrders($id: ID!) {
   order(id: $id) {
     id name
     fulfillmentOrders(first: 10) {
       nodes {
         id status
-        lineItems(first: 50) { nodes { id remainingQuantity totalQuantity lineItem { id } } }
+        lineItems(first: 40) { nodes { id remainingQuantity totalQuantity lineItem { id } } }
       }
+    }
+    fulfillments(first: 10) {
+      status
+      fulfillmentLineItems(first: 40) { nodes { quantity lineItem { id } } }
     }
   }
 }";
@@ -47,6 +54,10 @@ namespace eSyncMate.Processor.Managers
 
         // fulfillment orders a fulfillment can still be created from
         private static readonly HashSet<string> OpenStatuses = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "OPEN", "IN_PROGRESS" };
+
+        // held back in Shopify (fraud / payment hold, scheduled, waiting): not sent, not an error, the next run tries again.
+        // A hold is never released from here.
+        private static readonly HashSet<string> WaitingStatuses = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "ON_HOLD", "SCHEDULED", "INCOMPLETE" };
 
         public static void Execute(IConfiguration config, Routes route)
         {
@@ -136,7 +147,9 @@ namespace eSyncMate.Processor.Managers
             {
                 string l_Why = l_FoResult.Success ? $"Shopify has no order {l_OrderNumber}" : l_FoResult.Error;
 
-                SaveOrderData(p_Source, p_OrderId, l_OrderNumber, "ASN-ERR", JsonConvert.SerializeObject(new { message = $"Fulfillment orders could not be read: {l_Why}" }), p_UserNo);
+                // request and response apart, as for every fulfillment call
+                SaveOrderData(p_Source, p_OrderId, l_OrderNumber, "ASN-SNT", l_FoResult.RequestBody, p_UserNo);
+                SaveOrderData(p_Source, p_OrderId, l_OrderNumber, "ASN-ERR", JsonConvert.SerializeObject(new { message = $"Fulfillment orders could not be read: {l_Why}", response = LogJson.Embed(l_FoResult.ResponseBody) }), p_UserNo);
                 p_Route.SaveLog(LogTypeEnum.Error, $"Shopify ASN for order {l_OrderNumber} (Id {p_OrderId}): fulfillment orders could not be read: {l_Why}", l_FoResult.ResponseBody, p_UserNo);
 
                 // a call problem is retried next run; an order Shopify does not know will not get better
@@ -158,11 +171,24 @@ namespace eSyncMate.Processor.Managers
                     .Select(i => i?.lineItem?.id ?? string.Empty),
                 StringComparer.OrdinalIgnoreCase);
 
+            // order lines that sit on a fulfillment order Shopify holds back
+            HashSet<string> l_WaitingLines = new HashSet<string>(
+                (l_ShopifyOrder.fulfillmentOrders?.nodes ?? new List<FO.FulfillmentOrder>())
+                    .Where(f => f != null && WaitingStatuses.Contains(f.status ?? string.Empty))
+                    .SelectMany(f => f.lineItems?.nodes ?? new List<FO.FulfillmentOrderLineItem>())
+                    .Select(i => i?.lineItem?.id ?? string.Empty),
+                StringComparer.OrdinalIgnoreCase);
+
+            // units Shopify really shipped per order line, less the ones eSyncMate already recorded as sent (ASNSNT):
+            // what is left was shipped outside this route (by hand, or a run whose DB update was lost)
+            Dictionary<string, int> l_ShippedElsewhere = GetShippedElsewhere(l_ShopifyOrder, p_Source, p_OrderId);
+
             foreach (string l_Tracking in l_Trackings)
             {
                 List<DataRow> l_Lines = p_Rows.Where(r => string.Equals(Convert.ToString(r["TrackingNo"])?.Trim(), l_Tracking, StringComparison.OrdinalIgnoreCase)).ToList();
                 FC l_Request = new FC();
                 List<string> l_Problems = new List<string>();
+                List<string> l_Waiting = new List<string>();
                 int l_AlreadyFulfilled = 0;
 
                 l_Request.fulfillment.notifyCustomer = p_Notify;
@@ -208,9 +234,23 @@ namespace eSyncMate.Processor.Managers
                         l_Need -= l_Take;
                     }
 
-                    // nothing left open in Shopify for these units: shipped already (e.g. by hand, or an earlier run whose DB update was lost)
+                    // nothing left open for these units: only units Shopify really shipped count as already fulfilled
+                    int l_Done = Math.Min(l_Need, l_ShippedElsewhere.GetValueOrDefault(l_LineId));
+
+                    if (l_Done > 0)
+                    {
+                        l_ShippedElsewhere[l_LineId] -= l_Done;
+                        l_AlreadyFulfilled += l_Done;
+                        l_Need -= l_Done;
+                    }
+
                     if (l_Need > 0)
-                        l_AlreadyFulfilled += l_Need;
+                    {
+                        if (l_WaitingLines.Contains(l_LineId))
+                            l_Waiting.Add($"line {l_Line["LineNo"]} ({l_Line["ItemID"]}): {l_Need} unit(s) on a fulfillment order Shopify holds back (on hold / scheduled)");
+                        else
+                            l_Problems.Add($"line {l_Line["LineNo"]} ({l_Line["ItemID"]}, {l_LineId}): {l_Need} unit(s) are neither open nor shipped in Shopify (fulfillment order cancelled or closed)");
+                    }
                 }
 
                 string l_Body = JsonConvert.SerializeObject(l_Request);
@@ -222,6 +262,15 @@ namespace eSyncMate.Processor.Managers
                     GiveBack(l_Request, l_Open);
                     SaveOrderData(p_Source, p_OrderId, l_OrderNumber, "ASN-ERR", JsonConvert.SerializeObject(new { tracking = l_Tracking, errors = l_Problems }), p_UserNo);
                     p_Route.SaveLog(LogTypeEnum.Error, $"Shopify ASN for order {l_OrderNumber} (Id {p_OrderId}), tracking {l_Tracking} not sent: {string.Join("; ", l_Problems)}", l_Body, p_UserNo);
+                    continue;
+                }
+
+                // the whole tracking waits: its units stay ASNRVD and go on a later run, once Shopify releases them
+                if (l_Waiting.Count > 0)
+                {
+                    l_Failed++;
+                    GiveBack(l_Request, l_Open);
+                    p_Route.SaveLog(LogTypeEnum.RouteInfo, $"Shopify ASN for order {l_OrderNumber} (Id {p_OrderId}), tracking {l_Tracking} waits, sent again next run: {string.Join("; ", l_Waiting)}", l_Body, p_UserNo);
                     continue;
                 }
 
@@ -267,13 +316,42 @@ namespace eSyncMate.Processor.Managers
             }
 
             // like the Amazon / Walmart ASN routes: SCSASN marks the order SHIPPED once every unit is ASNSNT.
-            // Nothing sent: ASNERROR only when Shopify rejected something; a failed call leaves the order for the next run.
+            // Any tracking Shopify rejected -> ASNERROR, even when another one landed, so it is not sent again every run;
+            // Re-Process (ASNERROR -> SYNCED) sends the rejected one again. A failed call leaves the order for the next run.
             if (l_Sent > 0)
                 SetOrderStatus(p_Source, string.Empty, l_ExternalId);
-            else if (l_Rejected > 0)
+
+            if (l_Rejected > 0)
                 SetOrderStatus(p_Source, "Error", l_ExternalId);
 
             return (l_Sent, l_Failed);
+        }
+
+        private static Dictionary<string, int> GetShippedElsewhere(FO.Order p_Order, ConnectorDataModel p_Source, int p_OrderId)
+        {
+            Dictionary<string, int> l_Shipped = (p_Order.fulfillments ?? new List<FO.Fulfillment>())
+                .Where(f => string.Equals(f?.status, "SUCCESS", StringComparison.OrdinalIgnoreCase))
+                .SelectMany(f => f.fulfillmentLineItems?.nodes ?? new List<FO.FulfillmentLineItem>())
+                .Where(i => !string.IsNullOrEmpty(i?.lineItem?.id))
+                .GroupBy(i => i.lineItem.id, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.Sum(i => i.quantity ?? 0), StringComparer.OrdinalIgnoreCase);
+
+            DataTable l_Sent = new DataTable();
+
+            new DBConnector(p_Source.ConnectionString).GetData(
+                $"SELECT order_line_id, SUM(LineQty) AS Qty FROM OrderDetail WITH (NOLOCK) WHERE OrderId = {p_OrderId} AND Status = 'ASNSNT' GROUP BY order_line_id", ref l_Sent);
+
+            foreach (DataRow l_Row in l_Sent.Rows)
+            {
+                string l_LineId = Convert.ToString(l_Row["order_line_id"])?.Trim() ?? string.Empty;
+
+                if (l_Shipped.ContainsKey(l_LineId))
+                    l_Shipped[l_LineId] = Math.Max(l_Shipped[l_LineId] - Convert.ToInt32(l_Row["Qty"]), 0);
+            }
+
+            l_Sent.Dispose();
+
+            return l_Shipped;
         }
 
         // units a tracking number took but did not ship are open again for the next tracking number of the order
@@ -300,7 +378,7 @@ namespace eSyncMate.Processor.Managers
 
             l_OrderData.UseConnection(p_Source.ConnectionString);
             l_OrderData.Type = p_Type;
-            l_OrderData.Data = p_Data;
+            l_OrderData.Data = LogJson.Ensure(p_Data);
             l_OrderData.CreatedBy = p_UserNo;
             l_OrderData.CreatedDate = DateTime.Now;
             l_OrderData.OrderId = p_OrderId;

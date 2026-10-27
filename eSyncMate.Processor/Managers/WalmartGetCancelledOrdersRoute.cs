@@ -66,8 +66,8 @@ namespace eSyncMate.Processor.Managers
 
                     RestResponse sourceResponse = RestConnector.Execute(l_SourceConnector, string.Empty).GetAwaiter().GetResult();
 
-                    route.SaveData("JSON-SNT", 0, l_SourceConnector.Url, userNo);
-                    route.SaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
+                    route.SaveData("JSON-SNT", 0, JsonConvert.SerializeObject(new { method = "GET", url = l_SourceConnector.Url }), userNo);
+                    route.SaveData("JSON-RVD", 0, LogJson.Ensure(sourceResponse.Content), userNo);
 
                     // Walmart answers 404 CONTENT_NOT_FOUND when no order matches the filter
                     if (sourceResponse.StatusCode == System.Net.HttpStatusCode.NotFound && (sourceResponse.Content ?? string.Empty).Contains("CONTENT_NOT_FOUND"))

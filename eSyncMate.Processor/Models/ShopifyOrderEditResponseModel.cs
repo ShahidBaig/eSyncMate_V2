@@ -25,13 +25,21 @@ namespace eSyncMate.Processor.Models
 
         public class OrderEditCommit
         {
-            public ShopifyGraphQLResponseModel.IdNode order { get; set; }
+            public CommittedOrder order { get; set; }
             public List<UserError> userErrors { get; set; }
 
             public OrderEditCommit()
             {
                 this.userErrors = new List<UserError>();
             }
+        }
+
+        // negative totalOutstandingSet = Shopify owes the customer a refund (an order edit never refunds by itself)
+        public class CommittedOrder
+        {
+            public string id { get; set; }
+            public string name { get; set; }
+            public ShopifyOrdersResponseModel.MoneyBag totalOutstandingSet { get; set; }
         }
 
         public class CalculatedOrder

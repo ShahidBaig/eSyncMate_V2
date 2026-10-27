@@ -8,6 +8,8 @@ namespace eSyncMate.Processor.Models
         public class Data
         {
             public OrderCancel orderCancel { get; set; }
+            // job(id) { done } - checking whether the background cancel has finished
+            public Job job { get; set; }
         }
 
         public class OrderCancel

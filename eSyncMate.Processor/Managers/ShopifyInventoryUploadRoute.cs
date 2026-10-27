@@ -11,24 +11,26 @@ namespace eSyncMate.Processor.Managers
     /// Shopify - Upload Warehouse-Wise Inventory (RouteType 80, Task 00006).
     /// Source Sp_SCS_GetProductCatalog (branch ShopifyInventoryUpload) returns the customer's UPDATED/NEW SCSInventoryFeed rows
     /// (filled by the ERP Full / Differential feed; one row per item, ATS_&lt;WHSID&gt; columns, SKU, ProductId).
-    /// Shopify stock calls take the inventory item id, not the SKU: CustomerItemCode when it is the bare number
-    /// (gid://shopify/InventoryItem/ is added here), otherwise CustomerProductCatalogPrices.ProductID,
-    /// filled by ShopifyProductSyncRoute (RouteType 81). No Shopify lookup is made here.
+    /// Shopify stock calls take the inventory item id, not the SKU: CustomerProductCatalogPrices.ProductID, filled by
+    /// ShopifyProductSyncRoute (RouteType 81), otherwise CustomerItemCode when it is the bare number
+    /// (gid://shopify/InventoryItem/ is added here). No Shopify lookup is made here.
     /// The warehouse -> Shopify location mapping is TargetPlusShipNodes (Warehouse Mapping screen): ShipNode = gid://shopify/Location/...
     /// Each item/location pair is one quantity; 250 quantities per inventorySetQuantities call (Shopify's array limit),
     /// absolute "available" quantity, changeFromQuantity null (the ERP is the source of truth), idempotency key per call.
     /// Items whose every quantity landed become SYNCED; no inventory item id yet or a rejected quantity makes the item ERROR,
     /// with the reason in SCSInventoryFeedData_&lt;CustomerID&gt;. A failed call (token, network, HTTP, throttle, a rejection
-    /// that names no row) leaves its items UPDATED / NEW, so the next run sends them again. A rejected zero (item not stocked
-    /// at that location) is not an error unless the item itself is invalid.
+    /// that names no row) leaves its items UPDATED / NEW, so the next run sends them again. A zero rejected with
+    /// ITEM_NOT_STOCKED_AT_LOCATION is not an error; every other rejection is.
     /// </summary>
     public class ShopifyInventoryUploadRoute
     {
         private const int ChunkSize = 250;
         private const int StatusBatchSize = 1000;
         private const string InventoryItemGidPrefix = "gid://shopify/InventoryItem/";
-        // userError codes that are about the item itself: a zero quantity rejected with one of these is still an error
-        private static readonly HashSet<string> ItemErrorCodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "INVALID_INVENTORY_ITEM", "NON_MUTABLE_INVENTORY_ITEM" };
+        // A zero for a location the item is not stocked at is already right: the only rejected zero that is not an error.
+        // API 2026-10 (the connector's version) accepts such a zero without an error; older versions answer this code.
+        // Any other code (INVALID_LOCATION, INVALID_INVENTORY_ITEM, ...) is a real problem and puts the item in ERROR.
+        private const string NotStockedCode = "ITEM_NOT_STOCKED_AT_LOCATION";
 
         private const string SetQuantitiesMutation = @"mutation SetStock($input: InventorySetQuantitiesInput!, $key: String!) {
   inventorySetQuantities(input: $input) @idempotent(key: $key) {
@@ -192,12 +194,14 @@ namespace eSyncMate.Processor.Managers
 
                 p_Items[l_Item.ItemId] = l_Item;
 
-                // The client puts the Shopify inventory item number (e.g. 52944921100474) in CustomerItemCode;
-                // without it, the id the Sync Products route stored in CustomerProductCatalogPrices is used
+                // The id the Sync Products route stored in CustomerProductCatalogPrices comes first (it was read from
+                // Shopify); without it, an all-digit CustomerItemCode is taken as the Shopify inventory item number
+                // (e.g. 52944921100474). A UPC or numeric SKU there only matters when the catalog has no id.
                 string l_ItemCode = (Convert.ToString(l_Row["CustomerItemCode"]) ?? string.Empty).Trim();
-                string l_InventoryItemId = l_ItemCode.Length > 0 && l_ItemCode.All(char.IsAsciiDigit)
-                    ? InventoryItemGidPrefix + l_ItemCode
-                    : (Convert.ToString(l_Row["ProductId"]) ?? string.Empty).Trim();
+                string l_CatalogId = (Convert.ToString(l_Row["ProductId"]) ?? string.Empty).Trim();
+                string l_InventoryItemId = l_CatalogId.StartsWith(InventoryItemGidPrefix, StringComparison.OrdinalIgnoreCase) ? l_CatalogId
+                    : l_ItemCode.Length > 0 && l_ItemCode.All(char.IsAsciiDigit) ? InventoryItemGidPrefix + l_ItemCode
+                    : l_CatalogId;
 
                 if (!l_InventoryItemId.StartsWith(InventoryItemGidPrefix, StringComparison.OrdinalIgnoreCase))
                 {
@@ -282,7 +286,7 @@ namespace eSyncMate.Processor.Managers
         private static void SaveData(Routes p_Route, string p_Type, string p_Data, int p_UserNo)
         {
             lock (LogLock)
-                p_Route.SaveData(p_Type, 0, p_Data, p_UserNo);
+                p_Route.SaveData(p_Type, 0, LogJson.Ensure(p_Data), p_UserNo);
         }
 
         // An item can sit in two calls at once (a stock call and a zero call), so its lists are changed under its own lock
@@ -371,15 +375,20 @@ namespace eSyncMate.Processor.Managers
 
                     l_Rejected.Add(l_Bad);
 
-                    // Shopify documents no code for "not stocked at this location"; a zero there is already right,
-                    // so a rejected zero is only an error when the item itself is bad
-                    if (l_Bad.Quantity == 0 && !ItemErrorCodes.Contains(l_Error.code ?? string.Empty))
+                    if (l_Bad.Quantity == 0 && string.Equals(l_Error.code, NotStockedCode, StringComparison.OrdinalIgnoreCase))
                     {
                         lock (l_BadItem) l_BadItem.Sent.Remove(l_Bad);
                         continue;
                     }
 
-                    AddError(l_BadItem, $"Warehouse {l_Bad.WHSID} ({l_Bad.LocationId}): {l_Message}. If the product is not stocked at that location in Shopify, turn it on (product > Inventory > locations).");
+                    // what to do depends on the code: a wrong location is a Warehouse Mapping mistake, not a product setting
+                    string l_Hint = string.Equals(l_Error.code, "INVALID_LOCATION", StringComparison.OrdinalIgnoreCase)
+                        ? $"Check the Warehouse Mapping of warehouse {l_Bad.WHSID}: that Shopify location does not exist."
+                        : string.Equals(l_Error.code, NotStockedCode, StringComparison.OrdinalIgnoreCase)
+                            ? "Turn the location on for this product in Shopify (product > Inventory > locations)."
+                            : string.Empty;
+
+                    AddError(l_BadItem, $"Warehouse {l_Bad.WHSID} ({l_Bad.LocationId}): {l_Message.TrimEnd('.')}.{(l_Hint.Length > 0 ? " " + l_Hint : string.Empty)}");
                 }
 
                 HashSet<ShopifyInventoryQuantityModel> l_RejectedSet = new HashSet<ShopifyInventoryQuantityModel>(l_Rejected);

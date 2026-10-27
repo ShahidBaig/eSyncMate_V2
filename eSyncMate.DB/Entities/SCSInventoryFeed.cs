@@ -803,11 +803,12 @@ namespace eSyncMate.DB.Entities
                 }
 
                 string updateQuery = $@"UPDATE {SCSInventoryFeed.TableName}
-                                        SET Status = '{p_Status.Replace("'", "''")}', ModifiedDate = GETDATE()
+                                        SET Status = @Status, ModifiedDate = GETDATE()
                                         WHERE {whereClause}";
 
                 using (SqlCommand cmd = new SqlCommand(updateQuery, connection))
                 {
+                    cmd.Parameters.AddWithValue("@Status", p_Status);
                     cmd.CommandTimeout = 600;
                     cmd.ExecuteNonQuery();
                 }

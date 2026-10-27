@@ -211,7 +211,9 @@ namespace eSyncMate.Processor.Models
         // Shopify (Task 00006): ERP tracking (OrderDetail ASNRVD) -> Shopify fulfillmentCreate per tracking number
         ShopifyASNShipmentNotification = 83,
         // Shopify (Task 00006): ERP cancellations (OrderDetail CANRVD) -> Shopify orderCancel (whole order) or order edit (lines)
-        ShopifyCancellationLines = 84
+        ShopifyCancellationLines = 84,
+        // Shopify (Task 00006): orders the customer cancelled in Shopify -> PortalCancel (RouteType 79 cancels them in ERP)
+        ShopifyGetCancelledOrders = 85
 
     }
 

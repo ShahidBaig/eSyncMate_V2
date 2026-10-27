@@ -117,6 +117,7 @@ namespace eSyncMate.Processor.Managers
                 HashSet<string> l_Seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 HashSet<string> l_Added = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 List<string> l_Mismatches = new List<string>();
+                Dictionary<string, string> l_Corrections = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
                 List<string> l_DuplicateSkus = new List<string>();
                 List<string> l_NotInFeed = new List<string>();
                 int l_ShopifyCount = 0;
@@ -173,7 +174,10 @@ namespace eSyncMate.Processor.Managers
                         if (l_ExistingItems.TryGetValue(l_ItemId, out string l_OurGid))
                         {
                             if (!string.Equals(l_OurGid, l_Gid, StringComparison.OrdinalIgnoreCase))
+                            {
                                 l_Mismatches.Add($"{l_ItemId} (SKU {l_Sku}): ours={l_OurGid}, shopify={l_Gid}");
+                                l_Corrections[l_ItemId] = l_Gid;
+                            }
 
                             continue;
                         }
@@ -189,8 +193,13 @@ namespace eSyncMate.Processor.Managers
                 // RouteInfo: SaveLog keeps only Error / Exception / RouteInfo, so Debug/Info/Warning would never reach RouteLog
                 route.SaveLog(LogTypeEnum.RouteInfo, $"Shopify items for [{l_CustomerId}]: {l_ShopifyCount} in {l_Pages} page(s){(l_Completed ? "" : " (paging stopped early)")}. Missing in CustomerProductCatalogPrices: {l_Missing.Rows.Count}. Id different in Shopify: {l_Mismatches.Count}. No SKU: {l_NoSku}. Not in the inventory feed: {l_NotInFeed.Count}.", string.Empty, userNo);
 
-                if (l_Mismatches.Count > 0)
-                    route.SaveLog(LogTypeEnum.RouteInfo, $"{l_Mismatches.Count} item(s) have a different inventory item id in Shopify than in CustomerProductCatalogPrices. They are not changed.", LogList(l_Mismatches), userNo);
+                // a product deleted and created again in Shopify gets a new id; the stored one would fail every upload
+                if (l_Corrections.Count > 0)
+                {
+                    int l_Updated = UpdateProductIds(l_Connection, l_CustomerId, l_Corrections);
+
+                    route.SaveLog(LogTypeEnum.RouteInfo, $"{l_Mismatches.Count} item(s) had a different inventory item id in Shopify than in CustomerProductCatalogPrices; {l_Updated} row(s) updated to the Shopify id.", LogList(l_Mismatches), userNo);
+                }
 
                 if (l_DuplicateSkus.Count > 0)
                     route.SaveLog(LogTypeEnum.Error, $"{l_DuplicateSkus.Count} Shopify variant(s) repeat a SKU already seen; only the first variant of each SKU is stored.", LogList(l_DuplicateSkus), userNo);
@@ -224,6 +233,32 @@ namespace eSyncMate.Processor.Managers
                 l_Missing.Dispose();
                 l_Result.Dispose();
             }
+        }
+
+        // ItemId -> Shopify inventory item gid, 500 rows per UPDATE; returns the rows changed
+        private static int UpdateProductIds(DBConnector p_Connection, string p_CustomerId, Dictionary<string, string> p_Ids)
+        {
+            int l_Updated = 0;
+            DataTable l_Count = new DataTable();
+
+            foreach (List<KeyValuePair<string, string>> l_Batch in p_Ids.Chunk(500).Select(c => c.ToList()))
+            {
+                string l_Values = string.Join(",", l_Batch.Select(p => $"('{p.Key.Replace("'", "''")}', '{p.Value.Replace("'", "''")}')"));
+
+                l_Count.Clear();
+                p_Connection.GetData($@"UPDATE P SET P.ProductID = V.ProductID
+                                          FROM CustomerProductCatalogPrices P
+                                          JOIN (VALUES {l_Values}) V (ItemId, ProductID) ON V.ItemId = P.ItemId
+                                         WHERE P.CustomerID = '{p_CustomerId.Replace("'", "''")}' AND P.ProductID <> V.ProductID;
+                                        SELECT @@ROWCOUNT AS Updated;", ref l_Count);
+
+                if (l_Count.Rows.Count > 0)
+                    l_Updated += Convert.ToInt32(l_Count.Rows[0]["Updated"]);
+            }
+
+            l_Count.Dispose();
+
+            return l_Updated;
         }
 
         // A full store of 200,000 items would put megabytes into one RouteLog row; the first entries are enough to act on

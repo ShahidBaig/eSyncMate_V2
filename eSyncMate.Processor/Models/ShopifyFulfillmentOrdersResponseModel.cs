@@ -15,6 +15,30 @@ namespace eSyncMate.Processor.Models
             public string id { get; set; }
             public string name { get; set; }
             public FulfillmentOrders fulfillmentOrders { get; set; }
+            public List<Fulfillment> fulfillments { get; set; }
+        }
+
+        // what Shopify really shipped: units count only on a fulfillment with status SUCCESS
+        public class Fulfillment
+        {
+            public string status { get; set; }
+            public FulfillmentLineItems fulfillmentLineItems { get; set; }
+        }
+
+        public class FulfillmentLineItems
+        {
+            public List<FulfillmentLineItem> nodes { get; set; }
+
+            public FulfillmentLineItems()
+            {
+                this.nodes = new List<FulfillmentLineItem>();
+            }
+        }
+
+        public class FulfillmentLineItem
+        {
+            public int? quantity { get; set; }
+            public ShopifyGraphQLResponseModel.IdNode lineItem { get; set; }
         }
 
         public class FulfillmentOrders
