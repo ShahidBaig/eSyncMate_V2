@@ -777,7 +777,7 @@ namespace eSyncMate.DB.Entities
         /// <summary>
         /// Bulk update item status for multiple items in a single database call
         /// </summary>
-        public void BulkUpdateItemStatus(string connectionString, DataTable items)
+        public void BulkUpdateItemStatus(string connectionString, DataTable items, string p_Status = "SYNCED")
         {
             if (items == null || items.Rows.Count == 0)
                 return;
@@ -803,11 +803,12 @@ namespace eSyncMate.DB.Entities
                 }
 
                 string updateQuery = $@"UPDATE {SCSInventoryFeed.TableName}
-                                        SET Status = 'SYNCED', ModifiedDate = GETDATE()
+                                        SET Status = @Status, ModifiedDate = GETDATE()
                                         WHERE {whereClause}";
 
                 using (SqlCommand cmd = new SqlCommand(updateQuery, connection))
                 {
+                    cmd.Parameters.AddWithValue("@Status", p_Status);
                     cmd.CommandTimeout = 600;
                     cmd.ExecuteNonQuery();
                 }

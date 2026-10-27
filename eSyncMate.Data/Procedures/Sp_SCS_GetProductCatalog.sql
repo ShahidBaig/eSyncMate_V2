@@ -172,6 +172,27 @@ BEGIN
 			FROM InventoryBatchWiseFeedDetail WITH (NOLOCK)
 			WHERE CustomerID = @l_CustomerID AND Status = 'NEW'
 		END
+		ELSE IF  @l_RouteTypeID = 'ShopifyInventoryUpload'
+		BEGIN
+			-- Task 00006: Shopify warehouse-wise inventory (deployed by script 135, which adds this branch to the LIVE SP)
+			SELECT INV.CustomerID, INV.ItemId, INV.CustomerItemCode,
+				   ISNULL(NULLIF(LTRIM(RTRIM(INV.CustomerItemCode)), ''), INV.ItemId) AS SKU,
+				   PR.id, PR.ProductId, INV.Total_ATS,
+				   INV.ATS_L10, INV.ATS_L21, INV.ATS_L28, INV.ATS_L29, INV.ATS_L30, INV.ATS_L34, INV.ATS_L35, INV.ATS_L36,
+				   INV.ATS_L37, INV.ATS_L40, INV.ATS_L41, INV.ATS_L55, INV.ATS_L56, INV.ATS_L57, INV.ATS_L60, INV.ATS_L65,
+				   INV.ATS_L70, INV.ATS_L91
+			FROM SCSInventoryFeed INV WITH (NOLOCK)
+				LEFT OUTER JOIN CustomerProductCatalogPrices PR WITH (NOLOCK) ON INV.CustomerID = PR.CustomerID AND INV.ItemId = PR.ItemId
+			WHERE INV.CustomerID = @l_CustomerID AND INV.[Status] IN ('UPDATED','NEW')
+		END
+		ELSE IF  @l_RouteTypeID = 'ShopifyProductSync'
+		BEGIN
+			-- Task 00006: Shopify SKU -> ItemId for the Shopify Product Sync route (deployed by script 142, which adds this branch to the LIVE SP)
+			SELECT INV.ItemId,
+				   ISNULL(NULLIF(LTRIM(RTRIM(INV.CustomerItemCode)), ''), INV.ItemId) AS SKU
+			FROM SCSInventoryFeed INV WITH (NOLOCK)
+			WHERE INV.CustomerID = @l_CustomerID
+		END
 
     END TRY
     BEGIN CATCH     

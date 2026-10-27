@@ -625,6 +625,30 @@ namespace eSyncMate.Processor.Managers
                 {
                     WalmartSendCancellationsToERPRoute.Execute(_config, route);
                 }
+                else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.ShopifyInventoryUpload))
+                {
+                    ShopifyInventoryUploadRoute.Execute(_config, route);
+                }
+                else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.ShopifyProductSync))
+                {
+                    ShopifyProductSyncRoute.Execute(_config, route);
+                }
+                else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.ShopifyGetOrders))
+                {
+                    ShopifyGetOrdersRoute.Execute(_config, route);
+                }
+                else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.ShopifyASNShipmentNotification))
+                {
+                    ShopifyASNShipmentNotificationRoute.Execute(_config, route);
+                }
+                else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.ShopifyCancellationLines))
+                {
+                    ShopifyCancellationRoute.Execute(_config, route);
+                }
+                else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.ShopifyGetCancelledOrders))
+                {
+                    ShopifyGetCancelledOrdersRoute.Execute(_config, route);
+                }
                 else if (route.TypeId == Convert.ToInt32(RouteTypesEnum.SCSBulkItemPrices))
                 {
                     SCSBulkItemPricesRoute.Execute(_config, route);

@@ -201,7 +201,19 @@ namespace eSyncMate.Processor.Models
         TargetProductSync = 77,
         // Walmart US/CA cancellations: Walmart Cancelled + SYNCED -> PortalCancel, then SPARS Cancel_Order -> CANCELLED / CancelError
         WalmartGetCancelledOrders = 78,
-        WalmartSendCancellationsToERP = 79
+        WalmartSendCancellationsToERP = 79,
+        // Shopify (Task 00006): warehouse-wise inventory per Shopify location
+        ShopifyInventoryUpload = 80,
+        // Shopify (Task 00006): inserts the inventory item ids missing in CustomerProductCatalogPrices (ItemID -> ProductID)
+        ShopifyProductSync = 81,
+        // Shopify (Task 00006): paid / unfulfilled / open orders -> Orders, OrderData (API-JSON), OrderDetail
+        ShopifyGetOrders = 82,
+        // Shopify (Task 00006): ERP tracking (OrderDetail ASNRVD) -> Shopify fulfillmentCreate per tracking number
+        ShopifyASNShipmentNotification = 83,
+        // Shopify (Task 00006): ERP cancellations (OrderDetail CANRVD) -> Shopify orderCancel (whole order) or order edit (lines)
+        ShopifyCancellationLines = 84,
+        // Shopify (Task 00006): orders the customer cancelled in Shopify -> PortalCancel (RouteType 79 cancels them in ERP)
+        ShopifyGetCancelledOrders = 85
 
     }
 
@@ -265,6 +277,10 @@ namespace eSyncMate.Processor.Models
         public static Int32 WalmartBulkFeedIntervalSeconds = 75;
         public static Int32 WalmartCABulkFeedIntervalSeconds = 185;
 
+        // Shopify inventory upload: inventorySetQuantities calls in flight at the same time.
+        // One call is ~10 cost points; the Basic plan restores 100 a second, so 3 stays far below it.
+        public static Int32 ShopifyUploadConcurrency = 3;
+
         /// <summary>
         /// Loads all configuration (except ConnectionStrings) from the ApplicationSettings
         /// table into the static fields above. Call ONCE at process startup, after
@@ -315,7 +331,8 @@ namespace eSyncMate.Processor.Models
                 MiraklStatusMaxAttempts = int.TryParse(Get("MiraklStatusMaxAttempts", MiraklStatusMaxAttempts.ToString()), out var msa) ? msa : MiraklStatusMaxAttempts;
                 MiraklStatusCallDelaySeconds = int.TryParse(Get("MiraklStatusCallDelaySeconds", MiraklStatusCallDelaySeconds.ToString()), out var mscd) ? mscd : MiraklStatusCallDelaySeconds;
                 WalmartBulkFeedIntervalSeconds = int.TryParse(Get("WalmartBulkFeedIntervalSeconds", WalmartBulkFeedIntervalSeconds.ToString()), out var wbfi) ? wbfi : WalmartBulkFeedIntervalSeconds;
-                WalmartCABulkFeedIntervalSeconds = int.TryParse(Get("WalmartCABulkFeedIntervalSeconds", WalmartCABulkFeedIntervalSeconds.ToString()), out var wcbfi) ? wcbfi : WalmartCABulkFeedIntervalSeconds;            }
+                WalmartCABulkFeedIntervalSeconds = int.TryParse(Get("WalmartCABulkFeedIntervalSeconds", WalmartCABulkFeedIntervalSeconds.ToString()), out var wcbfi) ? wcbfi : WalmartCABulkFeedIntervalSeconds;
+                ShopifyUploadConcurrency = int.TryParse(Get("ShopifyUploadConcurrency", ShopifyUploadConcurrency.ToString()), out var suc) ? suc : ShopifyUploadConcurrency;            }
             catch (Exception ex)
             {
                 Console.WriteLine($"[CommonUtils.LoadFromDatabase] Failed to load ApplicationSettings: {ex.Message}");

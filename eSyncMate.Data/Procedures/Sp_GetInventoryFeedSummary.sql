@@ -55,7 +55,7 @@ BEGIN
                 ''AmazonInventoryUpload'', ''LowesWHSWInventoryUpload'',
                 ''MacysInventoryUpload'', ''MichealInventoryUpload'',
                 ''KnotInventoryUpload'', ''KnotWHSWInventoryUpload'',
-                ''AmazonWHSWInventoryUpload''
+                ''AmazonWHSWInventoryUpload'', ''ShopifyInventoryUpload''
             )'
 
         IF @l_Status <> ''

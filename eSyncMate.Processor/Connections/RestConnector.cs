@@ -19,6 +19,8 @@ namespace eSyncMate.Processor.Connections
     {
         public static async Task<RestResponse> Execute(ConnectorDataModel connector, string body)
         {
+            bool l_ShopifyRetried = false;
+
             try
             {
 retry:
@@ -116,6 +118,14 @@ retry:
                     request.AddHeader("Authorization", $"Basic {credentials}");
                 }
 
+                // Shopify GraphQL Admin API: client credentials token (cached), sent as X-Shopify-Access-Token
+                if (connector.AuthType == "SHOPIFYGetToken")
+                {
+                    connector.Token = await ShopifyConnector.GetAccessToken(connector.BaseUrl, connector.ConsumerKey, connector.ConsumerSecret);
+
+                    request.AddHeader("X-Shopify-Access-Token", connector.Token);
+                }
+
                 if (connector.Parmeters != null)
                 {
                     foreach (Models.Parameter l_Parameter in connector.Parmeters)
@@ -146,6 +156,14 @@ retry:
                         SCSConnector.Token = string.Empty;
                         goto retry;
                     }
+                }
+
+                // A cached Shopify token can be revoked (app reinstalled, secret rotated): fetch a new one once
+                if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized && connector.AuthType == "SHOPIFYGetToken" && !l_ShopifyRetried)
+                {
+                    l_ShopifyRetried = true;
+                    ShopifyConnector.ClearToken(connector.BaseUrl, connector.ConsumerKey);
+                    goto retry;
                 }
 
                 return response;

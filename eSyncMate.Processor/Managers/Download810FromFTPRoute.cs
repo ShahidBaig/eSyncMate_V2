@@ -68,7 +68,7 @@ namespace eSyncMate.Processor.Managers
 
         private static T? DeserializeConnector<T>(string data) where T : class
         {
-            var connector = JsonConvert.DeserializeObject<T>(data);
+            var connector = JsonConvert.DeserializeObject<T>(eSyncMate.Processor.Helpers.EncryptionHelper.DecryptConnectorData(data, CommonUtils.EncryptionKey));
             if (connector == null)
             {
                 throw new InvalidOperationException("Connector is not set up properly");

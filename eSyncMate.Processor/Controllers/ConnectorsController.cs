@@ -180,6 +180,14 @@ namespace eSyncMate.Processor.Controllers
                 Connectors l_Connectors = new Connectors();
                 l_Connectors.UseConnection(CommonUtils.ConnectionString);
 
+                Connectors l_Stored = new Connectors();
+                l_Stored.UseConnection(CommonUtils.ConnectionString);
+                l_Stored.Id = connectorsModel.Id;
+
+                // fields the edit screen does not send, or sends masked (blank), keep their stored value
+                if (l_Stored.GetObjectOnly().IsSuccess)
+                    connectorsModel.Data = Helpers.EncryptionHelper.MergeConnectorData(connectorsModel.Data, l_Stored.Data, CommonUtils.EncryptionKey);
+
                 connectorsModel.Data = Helpers.EncryptionHelper.EncryptConnectorData(connectorsModel.Data, CommonUtils.EncryptionKey);
                 PublicFunctions.CopyTo(connectorsModel, l_Connectors);
 
