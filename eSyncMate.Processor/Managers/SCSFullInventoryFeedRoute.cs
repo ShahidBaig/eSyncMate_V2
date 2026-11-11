@@ -17,6 +17,16 @@ namespace eSyncMate.Processor.Managers
 {
     public class SCSFullInventoryFeedRoute
     {
+        // A page SPARS does not answer properly (not HTTP 200, or no body) is asked for again this many times in a row,
+        // waiting a little longer each time; then the run stops with an error instead of asking for ever.
+        private const int MaxEmptyResponses = 5;
+        private const int EmptyResponseWaitMs = 3000;
+
+        // SPARS: Success false, Code 407 "No items are configured against provided Customer ID." - the customer has no
+        // inventory feed in SPARS. The run is an error and nothing is acknowledged. Only this code: what SPARS answers a
+        // Differential feed with nothing changed is not known, so every other Success false stays as it was (and is logged).
+        private const int SparsNoItemsConfiguredCode = 407;
+
         public  static void Execute(IConfiguration config, Routes route)
         {
             int userNo = 1;
@@ -139,6 +149,10 @@ namespace eSyncMate.Processor.Managers
 
                 if (l_SourceConnector.ConnectivityType == ConnectorTypesEnum.Rest.ToString())
                 {
+                    int l_EmptyResponses = 0;
+                    int l_PagesRead = 0, l_ItemsRead = 0;
+                    bool l_Refused = false;
+
                     for (int i = l_CurrentPage; i <= TotalPages; i++)
                     {
                         int retryCount = 0;
@@ -154,14 +168,29 @@ namespace eSyncMate.Processor.Managers
 
                             Body = JsonConvert.SerializeObject(data);
 
-                            l_SCSInventory = GetSCSInventory(l_SourceConnector, route, Body, userNo);
+                            l_SCSInventory = GetSCSInventory(l_SourceConnector, route, Body, userNo, out string l_Failure);
 
                             if (l_SCSInventory == null)
                             {
-                                Thread.Sleep(100);
+                                l_EmptyResponses++;
+
+                                if (l_EmptyResponses >= MaxEmptyResponses)
+                                    throw new InvalidOperationException($"SPARS gave no inventory page {i} for [{l_SourceConnector.CustomerID}] in {MaxEmptyResponses} attempts. Last answer: {l_Failure}");
+
+                                Thread.Sleep(EmptyResponseWaitMs * l_EmptyResponses);
                                 i--;
 
                                 continue;
+                            }
+
+                            l_EmptyResponses = 0;
+
+                            if (!l_SCSInventory.Success && l_SCSInventory.Code == SparsNoItemsConfiguredCode)
+                            {
+                                // asking again cannot help, and the catch below must not retry it
+                                l_Refused = true;
+
+                                throw new InvalidOperationException($"SPARS has no inventory feed for [{l_SourceConnector.CustomerID}]: Code {l_SCSInventory.Code}, {l_SCSInventory.Message} Nothing was saved and nothing was acknowledged.");
                             }
 
                             TotalPages = l_SCSInventory.TotalPages;
@@ -237,12 +266,16 @@ namespace eSyncMate.Processor.Managers
                                 l_InventoryBatchWise.PageCount = i;
                                 l_SCSInventoryFeed.UpdateInventoryBatchWisePageCount(l_InventoryBatchWise);
 
+                                l_PagesRead++;
+                                l_ItemsRead += l_dataTable.Rows.Count;
+
                                 route.SaveLog(LogTypeEnum.Debug, $"SCSInventory Bulk Insert Processed...", string.Empty, userNo);
 
                                 Thread.Sleep(500);
                             }
                         }
-                        catch (Exception)
+                        // once SPARS has failed MaxEmptyResponses times, or refused the customer, the error goes straight out: no more calls
+                        catch (Exception) when (l_EmptyResponses < MaxEmptyResponses && !l_Refused)
                         {
                             if(retryCount <= 1)
                             {
@@ -253,6 +286,9 @@ namespace eSyncMate.Processor.Managers
                             throw;
                         }
                     }
+
+                    // one line per run in the route log (Info / Debug lines are not saved)
+                    route.SaveLog(LogTypeEnum.RouteInfo, $"ERP inventory for [{l_SourceConnector.CustomerID}] batch [{l_InventoryBatchWise.BatchID}]: {l_PagesRead} page(s) with {l_ItemsRead} item(s) received from SPARS.", string.Empty, userNo);
                 }
 
                 if (l_DestinationConnector.ConnectivityType == ConnectorTypesEnum.SqlServer.ToString())
@@ -304,9 +340,12 @@ namespace eSyncMate.Processor.Managers
             }
         }
 
-        private static SCSInventory GetSCSInventory(ConnectorDataModel sourceConnector, Routes route, string Body, int userNo, int retryCount = 0)
+        // p_Failure: why no page came back (HTTP status / transport error + the start of the body); empty when it did
+        private static SCSInventory GetSCSInventory(ConnectorDataModel sourceConnector, Routes route, string Body, int userNo, out string p_Failure, int retryCount = 0)
         {
             RestResponse sourceResponse = null;
+
+            p_Failure = string.Empty;
 
             try
             {
@@ -323,14 +362,37 @@ namespace eSyncMate.Processor.Managers
                     l_SCSInventory = JsonConvert.DeserializeObject<SCSInventory>(sourceData);
 
                     route.SaveData("JSON", 0, sourceResponse.Content, userNo);
+
+                    // A page without items is a valid answer (nothing changed, or the customer has no feed in SPARS),
+                    // but it leaves no trace anywhere else: keep what SPARS said so an empty run can be explained
+                    // (only item-less answers: a page with items is never logged here, whatever its Success flag says)
+                    if (l_SCSInventory != null && (l_SCSInventory.InventoryFeed == null || l_SCSInventory.InventoryFeed.Count == 0))
+                    {
+                        route.SaveLog(LogTypeEnum.RouteInfo,
+                            $"SPARS [{sourceConnector.Url}] answered request {Body} with Success {l_SCSInventory.Success}, Code {l_SCSInventory.Code}, {(l_SCSInventory.InventoryFeed?.Count ?? 0)} item(s) (CurrentPage {l_SCSInventory.CurrentPage}, TotalPages {l_SCSInventory.TotalPages}): {l_SCSInventory.Message}",
+                            sourceData.Length > 2000 ? sourceData.Substring(0, 2000) + "..." : sourceData, userNo);
+                    }
+                }
+
+                if (l_SCSInventory == null)
+                {
+                    string l_Content = sourceResponse.Content ?? string.Empty;
+
+                    p_Failure = $"HTTP {(int)sourceResponse.StatusCode} {sourceResponse.StatusCode}"
+                              + (string.IsNullOrEmpty(sourceResponse.ErrorMessage) ? string.Empty : $", {sourceResponse.ErrorMessage}")
+                              + (l_Content.Length == 0 ? ", empty body" : $", body: {(l_Content.Length > 500 ? l_Content.Substring(0, 500) + "..." : l_Content)}");
+
+                    // the answer used to be dropped: without it nobody can tell why the feed gets no page
+                    route.SaveLog(LogTypeEnum.Error, $"SPARS [{sourceConnector.Url}] gave no inventory page for request {Body}: {p_Failure}", l_Content, userNo);
                 }
 
                 return l_SCSInventory;
             }
             catch (Exception ex)
             {
+                // retryCount + 1: with retryCount++ the same value was passed on and the retries never ended
                 if (retryCount <= 2)
-                    return GetSCSInventory(sourceConnector, route, Body, userNo, retryCount++);
+                    return GetSCSInventory(sourceConnector, route, Body, userNo, out p_Failure, retryCount + 1);
 
                 throw new Exception(sourceResponse?.Content ?? "", ex);
             }
