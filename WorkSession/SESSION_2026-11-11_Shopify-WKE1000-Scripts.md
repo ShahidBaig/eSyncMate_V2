@@ -215,6 +215,16 @@ to the client's ERP customer `WKE1000`, and review them for client readiness aga
   Secrets (Client secret, SPARS secret, DB password) still blank. These two edits are NOT committed yet.
 - **To do when the client's values arrive**: 02 + 03 with the real values, re-run 02, 03, then 10, 13, 15, 17.
 
+### Step 17: Client DB connection string in the scripts (user's instruction; scripts only, dev DB untouched)
+- Pushed f30e096 (demo store values in 02 / 03).
+- User gave the client eSyncMate DB connection (192.168.0.44,7100 / ESYNCMATE) and wanted it in every script that
+  makes a DB connector. `@DbConnectionString` is now set in 03 and 10 (existing setting) and was ADDED to
+  04, 11, 12, 14, 15, 18: when filled it overrides the connection copied from "<P> - WHSW Inventory Get Data"
+  (blank keeps the copied one). Scripts 05, 13, 17 make no DB connector of their own.
+- Checked: all scripts compile (SET NOEXEC ON - nothing executed); no dev Shopify connector points at the client server.
+- First left script 10 blank on my own judgement ("blank = copy from 03") - the user corrected that.
+- NOT committed (the scripts now hold the client DB password; it is already in 6 committed files of the repo).
+
 ## Summary
 Scripts now default to `WKE1000` and hold no dev connection string. Not verified: the client DB itself (no access).
 Open points for the team: nightly cleanup list, CustomerItemCode from the ERP (inventory item number), Task 00005
