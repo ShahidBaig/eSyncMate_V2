@@ -169,10 +169,11 @@ export class EditConnectorDialogComponent implements OnInit {
       if (jsonObject.Headers?.length > 0)
       {
         for (const obj of jsonObject.Headers) {
+          // connectors made by a SQL script store Name / Value (the C# model's casing); this screen writes name / value
           const header: HeaderList =
           {
-            name: obj.name,
-            value: obj.value
+            name: obj.name ?? obj.Name,
+            value: obj.value ?? obj.Value
           };
 
           this.headerChipsValues.push(header);
@@ -183,8 +184,8 @@ export class EditConnectorDialogComponent implements OnInit {
         for (const obj of jsonObject.Parmeters) {
           const param: ParamList =
           {
-            name: obj.name,
-            value: obj.value
+            name: obj.name ?? obj.Name,
+            value: obj.value ?? obj.Value
           };
 
           this.paramValues.push(param);
