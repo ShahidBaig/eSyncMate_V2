@@ -11,7 +11,7 @@ namespace eSyncMate.Processor.Managers
 {
     /// <summary>
     /// Shopify - Send ASN Shipment Notification (RouteType 83, Task 00006).
-    /// Source SP_OrdersData (branch SHOPIFY01, ASN mode): the SYNCED orders whose units the ERP shipped
+    /// Source SP_OrdersData (branch of the Shopify customer, e.g. WKE1000, ASN mode): the SYNCED orders whose units the ERP shipped
     /// (OrderDetail ASNRVD, filled by "Fetch ASN from ERP"), one row per line + tracking number.
     /// Per order the Shopify fulfillment orders are read, then one fulfillmentCreate per tracking number ships
     /// those quantities from the fulfillment order line items of the order lines (OrderDetail.order_line_id).

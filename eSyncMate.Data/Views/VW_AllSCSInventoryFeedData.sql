@@ -15,4 +15,4 @@ SELECT Id, CustomerId, ItemId, [Type], [Data], BatchID, CreatedDate, CreatedBy F
 UNION ALL
 SELECT Id, CustomerId, ItemId, [Type], [Data], BatchID, CreatedDate, CreatedBy FROM dbo.SCSInventoryFeedData_MIC1300MP  WITH (NOLOCK)
 UNION ALL
-SELECT Id, CustomerId, ItemId, [Type], [Data], BatchID, CreatedDate, CreatedBy FROM dbo.SCSInventoryFeedData_SHOPIFY01  WITH (NOLOCK)
+SELECT Id, CustomerId, ItemId, [Type], [Data], BatchID, CreatedDate, CreatedBy FROM dbo.SCSInventoryFeedData_WKE1000  WITH (NOLOCK)
