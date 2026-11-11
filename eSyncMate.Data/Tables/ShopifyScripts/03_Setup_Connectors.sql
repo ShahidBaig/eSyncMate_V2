@@ -36,9 +36,12 @@ DECLARE @DbConnectionString  NVARCHAR(500)  = '';
 --- Shopify store + app
 --- REQUIRED, left empty on purpose so a re-run can never point this customer at another store / app
 ---   dev was: esyncmate-dev-store.myshopify.com / 2878ddf0df5aeb8e4839b6392e701d02
-DECLARE @ShopDomain          NVARCHAR(200)  = '';                                   -- e.g. walker-edison.myshopify.com
+--- DEMO VALUES (2026-11-11): the eSoftage demo store and its app "eSyncMate Connector".
+--- TEMPORARY - replace @ShopDomain / @ClientId with the client's own store and app, then run 03, 10, 13, 15 and 17 again
+--- (they copy this connector). Until then nobody saves a Shopify connector in Setup > Connectors (saving encrypts it).
+DECLARE @ShopDomain          NVARCHAR(200)  = 'esyncmate-dev-store.myshopify.com';  -- client: e.g. walker-edison.myshopify.com
 DECLARE @ApiVersion          NVARCHAR(20)   = '2026-10';
-DECLARE @ClientId            NVARCHAR(200)  = '';                                   -- the app's Client ID (Dev Dashboard > app > Settings)
+DECLARE @ClientId            NVARCHAR(200)  = '2878ddf0df5aeb8e4839b6392e701d02';   -- the app's Client ID (Dev Dashboard > app > Settings)
 DECLARE @ClientSecret        NVARCHAR(500)  = '';                                   -- fill here or in the UI (blank keeps the stored one)
 /*==============================================================================*/
 

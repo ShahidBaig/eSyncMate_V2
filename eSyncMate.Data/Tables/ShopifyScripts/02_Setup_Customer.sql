@@ -27,16 +27,19 @@ SET NOCOUNT ON;
   CONFIG  - use the same @ErpCustomerID in scripts 03 and 07
 ==============================================================================*/
 DECLARE @ErpCustomerID VARCHAR(50)    = 'WKE1000';                 -- the ERP customer code for the Shopify store
-DECLARE @CustomerName  NVARCHAR(250)  = '';                          -- REQUIRED, e.g. 'Shopify (WE)'
-DECLARE @Marketplace   NVARCHAR(250)  = '';                          -- REQUIRED, e.g. 'SHOPIFY WALKER EDISON'
+DECLARE @CustomerName  NVARCHAR(250)  = 'WKE1000';                          -- REQUIRED, e.g. 'Shopify (WE)'
+DECLARE @Marketplace   NVARCHAR(250)  = 'SHOPIFY ESYNCMATE DEV STORE';                          -- REQUIRED, e.g. 'SHOPIFY WALKER EDISON'
 
 -- ERP warehouse -> Shopify location (Shopify admin > Settings > Locations > click the location: the number at the
 -- end of the page address; gid = gid://shopify/Location/<number>). REQUIRED: at least one row, only this store's.
 -- Left empty on purpose so a re-run can never put another store's locations on this customer.
 --   dev store (esyncmate-dev-store.myshopify.com) was: ('L10', 'gid://shopify/Location/88131272890'), ('L21', 'gid://shopify/Location/88131305658')
 DECLARE @Locations TABLE (WHSID VARCHAR(10), LocationGid NVARCHAR(500));
--- INSERT INTO @Locations VALUES
---     ('L10', 'gid://shopify/Location/<number>');      -- <Shopify location name>
+-- DEMO VALUES (2026-11-11): the two locations of the eSoftage demo store esyncmate-dev-store.myshopify.com.
+-- TEMPORARY - replace with the client's own store locations (and @CustomerName / @Marketplace above), then run 02 again.
+INSERT INTO @Locations VALUES
+    ('L10', 'gid://shopify/Location/88131272890'),      -- demo store: Shop location
+    ('L21', 'gid://shopify/Location/88131305658');      -- demo store: My Custom Location
 /*==============================================================================*/
 
 BEGIN TRY

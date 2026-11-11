@@ -205,6 +205,16 @@ to the client's ERP customer `WKE1000`, and review them for client readiness aga
   10/22 19:00 -> 10/22 14:00; Flow 51 is at 10/21 13:00 after several saves) - local time / UTC conversion on save.
 - Route 135 (upload) is still Active from the user's test.
 
+### Step 16: Commit / push, then demo values in scripts 02 / 03 (user's decision)
+- Pushed to origin/main: 2bfd27b (UI connector dialog), 654f187 (ShopifyScripts + view + session log),
+  fdc2836 (SCSFullInventoryFeedRoute.cs). `appsettings.json` / `CommonUtils.cs` (dev connection strings) NOT committed.
+- User decided to run the scripts at the client now with the DEMO store values and replace them when the client
+  sends its own. User set `@CustomerName = 'WKE1000'`, `@Marketplace = 'SHOPIFY ESYNCMATE DEV STORE'` in 02.
+  Added: 02 `@Locations` = L10 -> 88131272890, L21 -> 88131305658 (demo store); 03 `@ShopDomain` =
+  esyncmate-dev-store.myshopify.com, `@ClientId` = 2878ddf0df5aeb8e4839b6392e701d02. Marked TEMPORARY in both files.
+  Secrets (Client secret, SPARS secret, DB password) still blank. These two edits are NOT committed yet.
+- **To do when the client's values arrive**: 02 + 03 with the real values, re-run 02, 03, then 10, 13, 15, 17.
+
 ## Summary
 Scripts now default to `WKE1000` and hold no dev connection string. Not verified: the client DB itself (no access).
 Open points for the team: nightly cleanup list, CustomerItemCode from the ERP (inventory item number), Task 00005
