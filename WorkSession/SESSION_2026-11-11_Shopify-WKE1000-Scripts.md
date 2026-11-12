@@ -1,6 +1,106 @@
 # Work Session: Shopify deployment scripts - client customer WKE1000
-**Date**: 2026-11-11
-**Status**: Completed
+**Date**: 2026-11-11 to 2026-11-12
+**Status**: In Progress - client DB scripts run 2026-11-12; backend / UI not deployed at the client yet (see "RESUME HERE")
+
+## RESUME HERE (state on 2026-11-12, afternoon - client DB done, api.zip / ui.zip ready, not deployed)
+
+### Done
+- Scripts in `eSyncMate.Data/Tables/ShopifyScripts` are ready for the client: customer `WKE1000`, client DB connection
+  in 03 / 04 / 10 / 11 / 12 / 14 / 15 / 18, SPARS address + key + secret in 04, demo Shopify store values in 02 / 03
+  (temporary), feed connectors GET, new scripts 16 (nightly cleanup) and 19 (Flows).
+- Code: UI connector dialog fix; `SCSFullInventoryFeedRoute.cs` retry limit, SPARS answer logged, code 407 = Error.
+- Backend published to `D:\Deployment\BIZMATE\Release4\api` (2026-11-12 13:28): Processor + RouteWorker + AlertWorker,
+  latest code inside, all three appsettings.json point to the client DB (192.168.0.44,7100). Verified from the files;
+  Visual Studio froze after each publish and never showed "succeeded". NOT started / tested yet.
+- Dev DB: Shopify setup renamed SHOPIFY01 -> WKE1000, Flows 51 - 54 created, all 11 routes In-Active.
+
+- After the Windows restart (boot 13:42, no pending-reboot flags): user published again from Visual Studio. Output
+  written 13:48 - 13:49:40 (435 files, Processor + RouteWorker + AlertWorker, all appsettings -> 192.168.0.44,7100).
+  Visual Studio again went "Not Responding" on the Publish page after the last file (one CPU core busy, no more files
+  written) - so the publish itself completes, only the VS window hangs. Cause of the hang NOT verified. Restart did
+  not fix it. Suggested command line publish instead:
+  `dotnet publish eSyncMate.Processor\eSyncMate.Processor.csproj -c Release -p:PublishProfile=FolderProfile`
+
+- 13:52 user ran the command line publish: "Build succeeded with 246 warning(s)". Output went to
+  `eSyncMate.Processor\bin\Release\net8.0\publish` (435 files), NOT to the profile's PublishUrl; and
+  `D:\Deployment\BIZMATE\Release4\api` was left EMPTY (emptied 13:52:02, cause not verified - profile has
+  DeleteExistingFiles=true). 13:56 I copied the publish folder to `D:\Deployment\BIZMATE\Release4\api` with robocopy
+  (435 files, 0 failed; appsettings of all three -> 192.168.0.44,7100). For next time use an explicit output folder:
+  `dotnet publish eSyncMate.Processor\eSyncMate.Processor.csproj -c Release -o D:\Deployment\BIZMATE\Release4\api`
+
+- 14:04 Angular UI built: `npx ng build --configuration production` in `UI` (Node 22.23.4), exit 0, warnings only
+  (CommonJS dependencies). Output `UI\dist\ui`, 22 files, 6.4 MB; API address in the bundle is
+  `https://ems.safavieh.com:8085/` (environment.prod.ts), no `localhost:5000`. Copied to the new folder
+  `D:\Deployment\BIZMATE\Release4\ui`. User has uncommitted change in `UI/src/environments/environment.ts`
+  (also set to ems.safavieh.com:8085 - not used by the production build, and it changes the local `ng serve` target).
+  User zipped the backend to `D:\Deployment\BIZMATE\Release4\eSyncMate\api.zip` (13:59).
+
+- 14:08 UI rebuilt the way the team builds it: `npx ng build --base-href /eSyncMate` (production is the default
+  configuration), exit 0. index.html has `<base href="/eSyncMate">` (no trailing slash - same style as the team's
+  earlier BizMate builds, `<base href="/BizMate">` in Release5 / Release13 ui.zip). `D:\Deployment\BIZMATE\Release4\ui`
+  replaced with this build (22 files). The 14:04 build without base-href is gone.
+
+- 14:1x `D:\Deployment\BIZMATE\Release4\eSyncMate\ui.zip` created from `Release4\ui` (22 entries, files at the zip
+  root like the earlier ui.zip files, base href /eSyncMate). Sits beside the user's `api.zip`.
+
+- Client DB pre-check (user ran it in SSMS on EMSBD / ESYNCMATE; this machine cannot reach 192.168.0.44:7100 over the
+  SonicWall VPN - connection refused): no customer WKE1000 / Shopify, 0 Shopify connectors / routes / partner groups,
+  RouteTypes 80, 82-85 free (highest is 79). RouteTypes 78 + 79 exist since 2026-10-27, so Task 00005 was already
+  deployed at the client. Its four SPs (Sp_SetWalmartPortalCancel, Sp_SaveWalmartCancelMessage,
+  Sp_GetWalmartOrdersToCancelInERP, Sp_SetWalmartERPCancelResult) NOT checked yet - scripts 17 / 18 stop with an
+  error if they are missing. Note: the folder `2026-10-22_Task00005_WalmartCancellations` named in the README is
+  NOT in this repo (only `ShopifyScripts` is under `eSyncMate.Data\Tables`).
+
+- Client DB: all four Task 00005 SPs present (user's check, all OK). Pre-checks done - client DB is ready for
+  scripts 01 - 19 (skip 08b and _DEV_ONLY). Scripts not run yet.
+
+- Client DB backup taken by the user before the scripts: `G:\SQL Server\ESYNCMATE_before_Shopify_20261112.bak`
+  (COPY_ONLY, COMPRESSION, CHECKSUM), 19,012,662 pages (~145 GB of data) in 144 s, finished 2026-11-12 04:44:25
+  server time (UTC-5). DB: ~148 GB data in 2 files (B: mdf, G: ndf), log 120 GB allocated / 3 GB used; a backup tool
+  also takes full backups every 4 hours (last 04:00 server time). Delete the .bak when the deployment is confirmed.
+
+- **CLIENT DB DEPLOYED 2026-11-12 (user ran 01 - 19 in SSMS, no errors; output reviewed):** ConnectorType 12
+  Shopify, RouteTypes 80, 82 - 85, customer Id 15 `WKE1000` (Marketplace still "SHOPIFY ESYNCMATE DEV STORE"),
+  partner groups 16 / 17, connectors 247 - 265 (all plain JSON, none encrypted), map 12, routes 157 - 167 (all
+  In-Active), Flows 56 - 59 (In-Active, details 155 - 165), tables SCSInventoryFeed_WKE1000_Log /
+  SCSInventoryFeedData_WKE1000, ApplicationSettings ShopifyUploadConcurrency = 3 (script 09 was run), Shopify
+  branches present in Sp_SCS_GetProductCatalog / SP_OrdersData / feed summary SPs / nightly cleanup SPs.
+  Still demo store: BaseUrl esyncmate-dev-store, locations L10 -> 88131272890, L21 -> 88131305658; Shopify Client
+  secret blank on every Shopify connector (248, 252, 258, 262, 263). Backend / UI not deployed at the client yet.
+
+### Not done / next steps, in order
+Done on 2026-11-12: Windows restart, backend publish, UI build, client DB pre-checks, DB backup, scripts 01 - 19.
+1. Push: local `main` is ahead of origin (65acf93, 160eb7b + the session-file commit). 65acf93 / 160eb7b hold the
+   client DB password and the SPARS secret; my push is blocked by the safety check - the user pushes with
+   `! git push origin main`.
+2. Deploy at the client server (user asked how on 2026-11-12; general IIS steps given, server layout not known to
+   me): `D:\Deployment\BIZMATE\Release4\eSyncMate\api.zip` and `ui.zip`. Back up both folders -> compare
+   appsettings.json (zip points to 192.168.0.44,7100) -> stop the app pool, wait for RouteWorker / AlertWorker
+   processes to end -> extract api.zip over the folder (keep `logs`) -> start pool -> check `/api/health` and
+   `/dashboard`. UI: keep the server's web.config (the build has none), replace the hashed files, site must be served
+   under `/eSyncMate`. NOTE: api.zip was made 13:59 from the 13:56 copy of the command line publish.
+3. After the deploy: Setup > Flows / Routes show the 4 Shopify Flows + 11 routes In-Active; an existing customer's
+   route still runs.
+4. While the client DB holds the DEMO store: do not activate "Place Orders in ERP" / ERP cancellation routes; do not
+   save a Shopify connector (247 - 265) on the Connectors screen (saving encrypts it, scripts then cannot update it).
+5. When the client sends its store domain, Client ID, secret and locations: fill 02 + 03, re-run 02, 03, 10, 13, 15, 17.
+6. When the deployment is confirmed: delete `G:\SQL Server\ESYNCMATE_before_Shopify_20261112.bak` on the client server.
+7. Uncommitted, left alone: `UI/src/environments/environment.ts` (user pointed local dev at ems.safavieh.com:8085)
+   and the generated `eSyncMate.RouteWorker/obj/.../GlobalUsings.g.cs`.
+
+### Waiting on others
+- ERP team: configure items for `WKE1000` (SPARS answers Code 407 "No items are configured against provided
+  Customer ID"), with `CustomerItemCode` = Shopify inventory item number.
+- Client: Shopify app in their organization (scopes as the demo app, API 2026-10), installed on their store.
+
+### Open points (found, not fixed)
+- Shopify upload type 80 is missing from `InventoryRouteHelper` (no coordination with the feeds inside a Flow).
+- Flows screen moves a route's StartDate back 5 hours on every save.
+- Test Run notification always says "Route completed successfully".
+- Upload to a location where the item is not stocked: Shopify shows On hand but blank Available (ESM-SB-ICE / DAWN
+  at My Custom Location on the demo store); cause not verified.
+- Amazon MWA SPARS feed connectors 198 / 199 are POST (should be GET).
+- `SP_InsertSCSInventoryFeed` never updates `CustomerItemCode` of an existing row.
 
 ## Objective
 Change the Shopify deployment scripts (`eSyncMate.Data/Tables/ShopifyScripts`) from the test customer `SHOPIFY01`
