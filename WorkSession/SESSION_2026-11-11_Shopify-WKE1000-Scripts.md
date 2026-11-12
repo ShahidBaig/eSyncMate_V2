@@ -379,6 +379,30 @@ to the client's ERP customer `WKE1000`, and review them for client readiness aga
   own Gmail Shopify account (name "My Store", no card entered). The lead's link does not work on it.
 - Shopify accounts: majid at esoftage.com = the client's staff account; shahid = eSoftage's own (demo store + app).
 
+### Step: Client locations read, V2 script filled (2026-11-12, night)
+- majid account can now open Settings > Locations on `walker-edison`. 4 active own locations:
+  81898176578 "L55 - YARAGHI INDIANA", 81898602562 "L56 - YARAGHI INDIANA 2", 26869263 "1553 W 9000 S" (West Jordan
+  UT), 73155838018 "Twin Star" (Boca Raton FL). Plus ~26 "via Shopify Collective" / custom fulfilment locations (ignored).
+- **V2 script**: `@Locations` = L55 -> 81898176578, L56 -> 81898602562 (mapping inferred from the location names -
+  to confirm with the client). The script will DELETE the demo L10 / L21 mappings of WKE1000.
+- `@ClientSecret` filled by the user's instruction. The file with the secret + locations is NOT committed
+  (GitHub push protection would block the Shopify secret); last commit of the script is 8652022.
+- All CONFIG values are now filled. Not run anywhere. Run it on the client DB only after the client installed the app.
+- To check before running: does the ERP send stock for WKE1000 in L55 / L56 (the upload SP only sends mapped warehouses).
+
+### Step: V2_01 RUN on the client DB by the user (2026-11-12, night) - OK
+- Output pasted by the user: customer 15 Marketplace = SHOPIFY WALKER EDISON; mappings now L55 -> 81898176578,
+  L56 -> 81898602562; removed L10 / L21 (demo); connectors 248, 252, 258, 262, 263 "Plain JSON - updated",
+  BaseUrl esyncmate-dev-store -> walker-edison.myshopify.com, ClientId as in CONFIG, secret filled;
+  "still another store" grid empty.
+- Client DB now points at the client's LIVE store. Everything still In-Active.
+- Install e-mail for the client: doc https://claude.ai/artifact/Qu8Ftmkf7wsUuJcpVKiYYk, PDF saved at
+  `D:\Deployment\BIZMATE\Release4\eSyncMate\eSyncMate_Shopify_App_Install_Walker_Edison.pdf`.
+- **Next**: client installs the app (link expires ~2026-11-19) -> Test Run "Shopify - Get Orders" first (checks the
+  cross-organisation token) -> confirm L55 / L56 with the client -> only then inventory upload / Flows.
+- Working copy of `V2_01_Switch_To_Client_Store.sql` holds the Client secret - NOT committed (committed version 8652022
+  has no secret and no locations).
+
 ## Summary
 Scripts now default to `WKE1000` and hold no dev connection string. Not verified: the client DB itself (no access).
 Open points for the team: nightly cleanup list, CustomerItemCode from the ERP (inventory item number), Task 00005
