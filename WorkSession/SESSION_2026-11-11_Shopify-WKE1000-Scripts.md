@@ -362,6 +362,23 @@ to the client's ERP customer `WKE1000`, and review them for client readiness aga
 - Screenshots of the "You need permission" pages (Apps > Develop apps, Locations) given to the user for the client.
 - Script 03 was left as committed in 02499c2 (client domain, empty Client ID) - no longer the way to switch stores.
 
+### Step: Lead's decision - client installs the eSoftage app with a custom install link (2026-11-12, late)
+- Lead generated a custom install link from the eSoftage app "eSyncMate Connector" (Client ID 2878ddf0...1d02).
+  Decoded from the link: store `walker-edison.myshopify.com`, client organisation 1979525, expires ~2026-11-19.
+  The eSoftage app is now tied to the client's organisation (as far as I know: permanent).
+- Client e-mail with the link + steps written as a doc: https://claude.ai/artifact/Qu8Ftmkf7wsUuJcpVKiYYk
+- **V2 script changed**: `@ClientId` = the eSoftage app's id (same as demo), guard that refused that id removed
+  (the demo STORE is still refused). V2 is still needed: BaseUrl on the 5 Shopify connectors is the demo store's,
+  the locations are the demo store's, and the Client secret is blank in the client DB.
+- **Still missing**: Client secret (from the eSoftage Dev Dashboard, typed at run time, never committed) and the
+  client store's location ids (majid account has no access to Settings > Locations).
+- **RISK, not tested**: the connector uses the client-credentials token (SHOPIFYGetToken). I believe Shopify allows
+  that only when app and store are in the same organisation; here they are not. First check after the install:
+  Test Run of one route. If the token call fails, the app must be created in the client's organisation instead.
+- Side work in the browser (user's request): personal trial store `yuvnir-tf.myshopify.com` created under the user's
+  own Gmail Shopify account (name "My Store", no card entered). The lead's link does not work on it.
+- Shopify accounts: majid at esoftage.com = the client's staff account; shahid = eSoftage's own (demo store + app).
+
 ## Summary
 Scripts now default to `WKE1000` and hold no dev connection string. Not verified: the client DB itself (no access).
 Open points for the team: nightly cleanup list, CustomerItemCode from the ERP (inventory item number), Task 00005

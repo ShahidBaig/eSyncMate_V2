@@ -31,11 +31,15 @@ DECLARE @ErpCustomerID  VARCHAR(50)    = 'WKE1000';
 DECLARE @Prefix         NVARCHAR(100)  = 'Shopify';
 DECLARE @Marketplace    NVARCHAR(250)  = 'SHOPIFY WALKER EDISON';            -- must NOT contain WALMART
 
---- Client store + app (Dev Dashboard > app > Settings > Credentials)
+--- Client store + app
+--- The app is the eSoftage app "eSyncMate Connector" (eSoftage Dev Dashboard > app > Settings > Credentials).
+--- The client installs THAT app on its store with the custom install link (generated 2026-11-12 for
+--- walker-edison.myshopify.com, client organisation 1979525), so the Client ID / secret are the same as on the demo
+--- store. Only the store address (BaseUrl) and the locations are the client's own.
 DECLARE @ShopDomain     NVARCHAR(200)  = 'walker-edison.myshopify.com';      -- client store (given by the client 2026-11-12)
 DECLARE @ApiVersion     NVARCHAR(20)   = '2026-10';
-DECLARE @ClientId       NVARCHAR(200)  = '';                                 -- REQUIRED: the client app's Client ID (app not created yet)
-DECLARE @ClientSecret   NVARCHAR(500)  = '';                                 -- the client app's Client secret; blank = type it in Setup > Connectors
+DECLARE @ClientId       NVARCHAR(200)  = '2878ddf0df5aeb8e4839b6392e701d02'; -- eSyncMate Connector (eSoftage app)
+DECLARE @ClientSecret   NVARCHAR(500)  = '';                                 -- the app's Client secret; blank = type it in Setup > Connectors
 
 --- ERP warehouse -> the CLIENT store's Shopify location
 ---   Shopify admin > Settings > Locations > click the location: the number at the end of the page address.
@@ -54,8 +58,8 @@ BEGIN TRY
     IF @ShopDomain NOT LIKE '%.myshopify.com'
         THROW 51401, '@ShopDomain must be the <store>.myshopify.com domain, not a custom domain.', 1;
 
-    IF @ShopDomain = 'esyncmate-dev-store.myshopify.com' OR @ClientId = '2878ddf0df5aeb8e4839b6392e701d02'
-        THROW 51402, 'These are the DEMO store / app values. This script is for the client''s own store and app.', 1;
+    IF @ShopDomain = 'esyncmate-dev-store.myshopify.com'
+        THROW 51402, 'This is the DEMO store. This script is for the client''s own store.', 1;
 
     IF LTRIM(RTRIM(@Marketplace)) = '' OR UPPER(@Marketplace) LIKE '%WALMART%'
         THROW 51403, 'Fill @Marketplace; it must not contain WALMART (Warehouse Mapping would use WalmartShipNodes).', 1;
@@ -158,7 +162,7 @@ BEGIN TRY
            CASE WHEN x.IsPlain = 1 THEN 'Plain JSON - updated' ELSE 'Encrypted - NOT changed, edit in Setup > Connectors' END AS Result,
            x.OldBaseUrl,
            CASE WHEN x.IsPlain = 1 THEN JSON_VALUE(c.Data, '$.BaseUrl') END AS NewBaseUrl,
-           CASE WHEN x.IsPlain = 1 THEN CASE WHEN JSON_VALUE(c.Data, '$.ConsumerKey') = @ClientId THEN 'client app' ELSE 'CHECK' END END AS ClientId,
+           CASE WHEN x.IsPlain = 1 THEN CASE WHEN JSON_VALUE(c.Data, '$.ConsumerKey') = @ClientId THEN 'as in CONFIG' ELSE 'CHECK' END END AS ClientId,
            CASE WHEN x.IsPlain = 1 THEN CASE WHEN ISNULL(JSON_VALUE(c.Data, '$.ConsumerSecret'), '') = '' THEN 'BLANK - type it in Setup > Connectors' ELSE 'filled' END END AS ClientSecret
       FROM dbo.Connectors c
       JOIN @Conn x ON x.Id = c.Id
