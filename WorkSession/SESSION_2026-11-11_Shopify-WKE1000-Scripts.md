@@ -348,6 +348,20 @@ to the client's ERP customer `WKE1000`, and review them for client readiness aga
   app in the Dev Dashboard (scopes for inventory, orders, fulfillment, order edits, locations), install it on the store,
   fill `@ClientId` / secret in 03 and `@Locations` / `@Marketplace` in 02, user re-runs 02, 03, 10, 13, 15, 17.
 
+### Step: V2 independent script for the store switch (2026-11-12, user's request)
+- User: 01 - 19 were executed at the client as they were (demo values); from now on wants independent "v2" scripts.
+- **Files created**: `eSyncMate.Data/Tables/ShopifyScripts/v2/V2_01_Switch_To_Client_Store.sql`. README: new "V2" section.
+- **What it does**: for `WKE1000` only, one transaction - Marketplace, TargetPlusShipNodes = exactly `@Locations`
+  (others deleted), BaseUrl / ConsumerKey / ConsumerSecret on every Shopify-type connector named "Shopify - ...".
+  Replaces the earlier plan "fill 02 + 03, re-run 02, 03, 10, 13, 15, 17".
+- **Filled**: `@ShopDomain` = walker-edison.myshopify.com, `@Marketplace` = 'SHOPIFY WALKER EDISON' (my wording - confirm).
+  **Still empty**: `@ClientId`, `@ClientSecret`, `@Locations` (script throws until filled; refuses demo values).
+- **NOT verified**: could not compile-check it - dev DB (MCP, 110.93.227.0:1433) unreachable. Note: the repo's
+  `eSyncMate.Processor/appsettings.json` connection string currently points at the CLIENT DB (192.168.0.44,7100);
+  my NOEXEC check tried that by mistake, the connection timed out, nothing ran.
+- Screenshots of the "You need permission" pages (Apps > Develop apps, Locations) given to the user for the client.
+- Script 03 was left as committed in 02499c2 (client domain, empty Client ID) - no longer the way to switch stores.
+
 ## Summary
 Scripts now default to `WKE1000` and hold no dev connection string. Not verified: the client DB itself (no access).
 Open points for the team: nightly cleanup list, CustomerItemCode from the ERP (inventory item number), Task 00005

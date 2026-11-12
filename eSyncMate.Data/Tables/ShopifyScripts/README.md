@@ -58,6 +58,15 @@ still plain JSON: run all the scripts **before** anyone opens and saves a connec
 `..\2026-10-22_Task00005_WalmartCancellations\01-04` first. Scripts 17 / 18 use its RouteType 79 and its four
 cancellation SPs, which only filter by customer.
 
+## V2 - after 01 - 19 were run with the demo store values
+
+The client DB got scripts 01 - 19 on 2026-11-12 with the eSoftage **demo** store values. Do not run 01 - 19 there
+again for the store change. Use the independent script in `v2/` instead:
+
+| Script | What it does |
+|---|---|
+| `v2/V2_01_Switch_To_Client_Store.sql` | One transaction, one customer: `Customers.Marketplace`, the warehouse -> location mapping (exactly `@Locations`; a mapping not listed is deleted) and BaseUrl / Client ID / Client secret of **every** Shopify REST connector of the customer. Creates nothing; routes and Flows are not touched. Stops until `@ClientId` and `@Locations` are filled, and refuses the demo values |
+
 ## DEV only - never run at the client
 
 `_DEV_ONLY_Rename_Customer.sql` renamed the dev test customer `SHOPIFY01` to `WKE1000` in `eSyncmate_Dev`
