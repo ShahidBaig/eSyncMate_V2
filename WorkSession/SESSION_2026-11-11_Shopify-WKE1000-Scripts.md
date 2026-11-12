@@ -403,6 +403,14 @@ to the client's ERP customer `WKE1000`, and review them for client readiness aga
 - Working copy of `V2_01_Switch_To_Client_Store.sql` holds the Client secret - NOT committed (committed version 8652022
   has no secret and no locations).
 
+### Step: V2 script committed without the secret (2026-11-12, night)
+- `V2_01_Switch_To_Client_Store.sql` committed with the locations (L55 / L56) and the eSoftage Client ID.
+  `@ClientSecret` is blank in the file (GitHub push protection blocks Shopify secrets); the secret itself is already
+  in the client DB and in the eSoftage Dev Dashboard.
+- Changed after the client run (NOT run again, not compile-checked): a blank `@ClientSecret` now KEEPS the stored
+  secret while the Client ID is unchanged, so a re-run of the committed file cannot wipe it.
+- Untracked, left alone: `ShopifyScripts/v2/Shopify Connection – Questions for You - Completed.docx` (not mine).
+
 ## Summary
 Scripts now default to `WKE1000` and hold no dev connection string. Not verified: the client DB itself (no access).
 Open points for the team: nightly cleanup list, CustomerItemCode from the ERP (inventory item number), Task 00005

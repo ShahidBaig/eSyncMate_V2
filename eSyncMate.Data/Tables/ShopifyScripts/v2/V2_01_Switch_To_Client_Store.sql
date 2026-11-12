@@ -39,15 +39,22 @@ DECLARE @Marketplace    NVARCHAR(250)  = 'SHOPIFY WALKER EDISON';            -- 
 DECLARE @ShopDomain     NVARCHAR(200)  = 'walker-edison.myshopify.com';      -- client store (given by the client 2026-11-12)
 DECLARE @ApiVersion     NVARCHAR(20)   = '2026-10';
 DECLARE @ClientId       NVARCHAR(200)  = '2878ddf0df5aeb8e4839b6392e701d02'; -- eSyncMate Connector (eSoftage app)
-DECLARE @ClientSecret   NVARCHAR(500)  = '';                                 -- the app's Client secret; blank = type it in Setup > Connectors
+DECLARE @ClientSecret   NVARCHAR(500)  = '';                                 -- the app's Client secret. Blank = keep the secret already stored
+                                                                             -- (set on the client DB 2026-11-12). Not kept in git: GitHub blocks the push.
 
 --- ERP warehouse -> the CLIENT store's Shopify location
 ---   Shopify admin > Settings > Locations > click the location: the number at the end of the page address.
---- REQUIRED: at least one row. Remove the two example lines and add the real ones.
+--- REQUIRED: at least one row.
+--- walker-edison store, Settings > Locations, read 2026-11-12 (4 active locations of its own):
+---   81898176578  L55 - YARAGHI INDIANA      5635 Albert S White Dr, Whitestown IN   -> ERP warehouse L55
+---   81898602562  L56 - YARAGHI INDIANA 2    5383 E 500 S, Whitestown IN             -> ERP warehouse L56
+---   26869263     1553 W 9000 S              West Jordan UT   (client's own warehouse - NOT mapped)
+---   73155838018  Twin Star                  Boca Raton FL    (NOT mapped)
+--- The L55 / L56 mapping is taken from the location NAMES - confirm with the client before running.
 DECLARE @Locations TABLE (WHSID VARCHAR(10), LocationGid NVARCHAR(500));
--- INSERT INTO @Locations VALUES
---     ('L10', 'gid://shopify/Location/<number>'),
---     ('L21', 'gid://shopify/Location/<number>');
+INSERT INTO @Locations VALUES
+    ('L55', 'gid://shopify/Location/81898176578'),      -- L55 - YARAGHI INDIANA
+    ('L56', 'gid://shopify/Location/81898602562');      -- L56 - YARAGHI INDIANA 2
 /*==============================================================================*/
 
 BEGIN TRY
@@ -136,10 +143,14 @@ BEGIN TRY
     PRINT 'Warehouse mappings inserted: ' + CAST(@n AS VARCHAR(10));
 
     /*--- 3. Shopify connectors: store + app ------------------------------------
-      The secret always follows the Client ID: a secret of another app is never kept. */
+      A blank @ClientSecret keeps the stored secret, but only while the Client ID stays the same:
+      the secret of another app is never kept.                                              */
     UPDATE c
        SET c.Data = JSON_MODIFY(JSON_MODIFY(JSON_MODIFY(c.Data,
-                        '$.BaseUrl', @BaseUrl), '$.ConsumerKey', @ClientId), '$.ConsumerSecret', @ClientSecret),
+                        '$.BaseUrl', @BaseUrl), '$.ConsumerKey', @ClientId), '$.ConsumerSecret',
+                        CASE WHEN @ClientSecret <> '' THEN @ClientSecret
+                             WHEN ISNULL(JSON_VALUE(c.Data, '$.ConsumerKey'), '') = @ClientId THEN ISNULL(JSON_VALUE(c.Data, '$.ConsumerSecret'), '')
+                             ELSE '' END),
            c.ModifiedDate = GETDATE(), c.ModifiedBy = 1
       FROM dbo.Connectors c
       JOIN @Conn x ON x.Id = c.Id
