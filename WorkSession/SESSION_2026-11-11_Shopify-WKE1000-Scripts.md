@@ -330,6 +330,24 @@ to the client's ERP customer `WKE1000`, and review them for client readiness aga
 - First left script 10 blank on my own judgement ("blank = copy from 03") - the user corrected that.
 - NOT committed (the scripts now hold the client DB password; it is already in 6 committed files of the repo).
 
+### Step: Client Shopify account checked in the browser (2026-11-12, evening) - BLOCKED on permissions
+- Client's answers: store `walker-edison.myshopify.com`, plan Plus, developer access = yes. Client says the staff
+  account "should have all permissions needed for API/App development" (Settings > Apps > Develop apps).
+- Checked with the user's logged-in Chrome session (staff account of the user at esoftage.com), read-only:
+  - Organisation "Walker Edison Furniture Co", 4 stores. The browser opens `devshop-we` first
+    (`devshop-we.myshopify.com`, password-protected "Opening soon" storefront); `walker-edison` (walkeredison.com) also opens.
+  - On BOTH stores every page says "You need permission to view this feature": Home, Orders, Products > Inventory,
+    Settings > Apps, Settings > Apps > Development, Settings > Locations, Settings > Domains.
+  - Dev Dashboard (dev.shopify.com/dashboard/1979525) opens: Apps = none, Stores = "No stores yet". "Create app" is offered.
+- So there is NO Client ID / Client secret yet, and the location ids cannot be read.
+- **Files changed**: `03_Setup_Connectors.sql` - `@ShopDomain` = `walker-edison.myshopify.com`, `@ClientId` = '' (the
+  script throws 51373 until it is filled, so the demo app cannot be paired with the client store). NOT committed.
+  `02_Setup_Customer.sql` unchanged (still the demo locations / Marketplace) - waiting for the location ids.
+- **Open question for the client**: which store to connect - `walker-edison` (live) or `devshop-we` (their dev shop)?
+- **Next**: client grants the permissions (apps development, view locations, products / inventory, orders) -> create the
+  app in the Dev Dashboard (scopes for inventory, orders, fulfillment, order edits, locations), install it on the store,
+  fill `@ClientId` / secret in 03 and `@Locations` / `@Marketplace` in 02, user re-runs 02, 03, 10, 13, 15, 17.
+
 ## Summary
 Scripts now default to `WKE1000` and hold no dev connection string. Not verified: the client DB itself (no access).
 Open points for the team: nightly cleanup list, CustomerItemCode from the ERP (inventory item number), Task 00005
