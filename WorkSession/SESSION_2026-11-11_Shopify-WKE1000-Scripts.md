@@ -69,6 +69,11 @@
   secret blank on every Shopify connector (248, 252, 258, 262, 263). Backend / UI not deployed at the client yet.
 
 ### Not done / next steps, in order
+**2026-11-12, end of day - user reports: api.zip, ui.zip and the scripts are all deployed at the client (not checked
+by me). Everything Shopify stays In-Active. ON HOLD until (a) the ERP team opens the customer's inventory for
+WKE1000 and (b) the client gives its Shopify account; the user will then ask for the client store setup
+(steps 4 - 5 below). Step 2 below is done, step 3 not confirmed to me.**
+
 Done on 2026-11-12: Windows restart, backend publish, UI build, client DB pre-checks, DB backup, scripts 01 - 19.
 1. Push: local `main` is ahead of origin (65acf93, 160eb7b + the session-file commit). 65acf93 / 160eb7b hold the
    client DB password and the SPARS secret; my push is blocked by the safety check - the user pushes with
