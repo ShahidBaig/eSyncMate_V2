@@ -53,6 +53,16 @@ Customer WAL4001MP, item `122D100W[5PC]WHS`: Walmart inventory upload fails. Fin
 - **Check**: `dotnet build eSyncMate.Processor -c Debug` -> Build succeeded, 0 errors. Not run against any
   marketplace. Committed on `main` (not pushed).
 
+### Step 5: Backend published (2026-11-17)
+- Commit `f79a806` (sweep) on top of `b3f4c9f` (Walmart fix).
+- **Command** (run in `D:\Projects\eSyncMate_V2`; one command publishes Processor + RouteWorker + AlertWorker):
+  `dotnet publish eSyncMate.Processor\eSyncMate.Processor.csproj -c Release -o D:\Deployment\BIZMATE\Release5\api`
+- **Output**: `D:\Deployment\BIZMATE\Release5\api`, 435 files, written 2026-11-17 12:28. `UrlValue` is inside
+  `eSyncMate.Processor.dll` of the API and of `RouteWorker`. The three `appsettings.json` and `web.config` are
+  byte-identical to `Release4\api` (client DB). `Release4` was not touched.
+- **Zip**: `D:\Deployment\BIZMATE\Release5\eSyncMate\api.zip`.
+- UI not rebuilt (no UI change). Not deployed, not started, not tested.
+
 ### Open points (not changed)
 - On a failed call the route calls `feed.UpdateItemStatus` (sets `SYNCED`), so a refused item is not picked up
   again by itself. After the deploy this item has to be sent again (status reset or next inventory change).
