@@ -63,6 +63,12 @@ Customer WAL4001MP, item `122D100W[5PC]WHS`: Walmart inventory upload fails. Fin
 - **Zip**: `D:\Deployment\BIZMATE\Release5\eSyncMate\api.zip`.
 - UI not rebuilt (no UI change). Not deployed, not started, not tested.
 
+### Step 6: Memory saved, session committed (2026-11-17)
+- Session file with the publish step committed as `5def375`.
+- Two Claude memories written (outside the repo): the backend publish procedure for the client, and the open
+  follow-up of this issue (client deploy of Release5, resend of the refused SKUs, task number for the commits).
+- Still open: deploy at the client, run the two queries, decide on "failed call is marked SYNCED".
+
 ### Open points (not changed)
 - On a failed call the route calls `feed.UpdateItemStatus` (sets `SYNCED`), so a refused item is not picked up
   again by itself. After the deploy this item has to be sent again (status reset or next inventory change).
