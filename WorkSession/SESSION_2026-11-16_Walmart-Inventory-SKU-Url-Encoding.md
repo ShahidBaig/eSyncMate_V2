@@ -69,6 +69,19 @@ Customer WAL4001MP, item `122D100W[5PC]WHS`: Walmart inventory upload fails. Fin
   follow-up of this issue (client deploy of Release5, resend of the refused SKUs, task number for the commits).
 - Still open: deploy at the client, run the two queries, decide on "failed call is marked SYNCED".
 
+### Step 7: Deployment at the client - RouteWorker folder locked (2026-11-17)
+- Client API folder: `C:\inetpub\wwwroot\eSyncMateAPI_SSL` (subfolder `RouteWorker`).
+- **Issue**: with the IIS pool stopped the `RouteWorker` folder could not be deleted: "file is open in
+  eSyncMate.RouteWorker.exe". `tasklist | findstr /i "eSyncMate"` showed four `eSyncMate.RouteWorker.exe`
+  (PIDs 37704, 27492, 14740, 22696, session Services, about 300 MB each). `taskkill /F` gave "Access is denied":
+  the user's server account (`s.baig`) has no admin rights and the workers run under the app pool account.
+- **Advice given**: wait until the workers finish (pool stopped = no new ones), or Task Manager > Details > End task,
+  or ask the client's server admin; do not work around the access control.
+- **Result (reported by the user)**: the folder is deleted. Which way it was freed was not said.
+- Not confirmed yet: new files copied, pool started again, Walmart upload inventory re-run.
+- For next time: stop the pool, then wait for `tasklist | findstr /i "eSyncMate"` to print nothing before
+  replacing files; the server commands must be cmd (not PowerShell) unless a PowerShell window is opened.
+
 ### Open points (not changed)
 - On a failed call the route calls `feed.UpdateItemStatus` (sets `SYNCED`), so a refused item is not picked up
   again by itself. After the deploy this item has to be sent again (status reset or next inventory change).
