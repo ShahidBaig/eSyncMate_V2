@@ -177,7 +177,7 @@ namespace eSyncMate.Processor.Managers
             ConnectorDataModel? sourceConnector = ConnectorDataModel.Deserialize(route.SourceConnectorObject.Data);
             ConnectorDataModel? destinationConnector = ConnectorDataModel.Deserialize(route.DestinationConnectorObject.Data);
 
-            sourceConnector.Url = sourceConnector.BaseUrl + $"orders/{orderNumber}";
+            sourceConnector.Url = sourceConnector.BaseUrl + $"orders/{UrlValue.Escape(orderNumber)}";
             response = RestConnector.Execute(sourceConnector, string.Empty).GetAwaiter().GetResult();
 
             return JsonConvert.DeserializeObject<SCSGetOrderResponseModel>(response.Content);
@@ -194,7 +194,7 @@ namespace eSyncMate.Processor.Managers
             if (singleProcess == 0)
             {
                 sourceConnector.Method = "GET";
-                sourceConnector.Url = sourceConnector.BaseUrl + "order_addresses/" + order.id;
+                sourceConnector.Url = sourceConnector.BaseUrl + "order_addresses/" + UrlValue.Escape(order.id);
 
                 sourceResponse = RestConnector.Execute(sourceConnector, string.Empty).GetAwaiter().GetResult();
                 route.SaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
@@ -293,7 +293,7 @@ namespace eSyncMate.Processor.Managers
                 l_Data.UseConnection(string.Empty, l_Orders.Connection);
             }
 
-            sourceConnector.Url = sourceConnector.BaseUrl + "order_statuses/" + l_Orders.OrderNumber;
+            sourceConnector.Url = sourceConnector.BaseUrl + "order_statuses/" + UrlValue.Escape(l_Orders.OrderNumber);
             sourceConnector.Method = "PUT";
 
             route.SaveData("JSON-SNT", 0, sourceConnector.Url, userNo);

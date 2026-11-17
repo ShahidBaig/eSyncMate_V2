@@ -79,7 +79,7 @@ namespace eSyncMate.Processor.Managers
                         Body = JsonConvert.SerializeObject(l_newPrices);
 
                         l_DestinationConnector.Method = "PUT";
-                        l_DestinationConnector.Url = l_DestinationConnector.BaseUrl + l_Row["ProductID"];
+                        l_DestinationConnector.Url = l_DestinationConnector.BaseUrl + UrlValue.Escape(l_Row["ProductID"]);
 
                         //route.RouteSaveData("JSON-SNT", 0, Body, userNo);
 

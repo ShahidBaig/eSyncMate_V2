@@ -77,7 +77,7 @@ namespace eSyncMate.Processor.Managers
                 if (warehouseIdMap.TryGetValue(warehouseName, out int warehouseId))
                 {
                     //string productApiUrl = $"{baseUrl}/products?warehouse_id={warehouseId}&page_size=25&page=1&query={itemID}";
-                    string productApiUrl = $"{baseUrl}/products?page_size=25&page=1&query={itemID}";
+                    string productApiUrl = $"{baseUrl}/products?page_size=25&page=1&query={UrlValue.Escape(itemID)}";
 
                     using var request = new HttpRequestMessage(HttpMethod.Get, productApiUrl);
                     request.Headers.Add(headerName, headerValue);

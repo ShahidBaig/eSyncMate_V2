@@ -211,7 +211,7 @@ namespace eSyncMate.Processor.Managers
             ConnectorDataModel? sourceConnector = ConnectorDataModel.Deserialize(route.SourceConnectorObject.Data);
             ConnectorDataModel? destinationConnector = ConnectorDataModel.Deserialize(route.DestinationConnectorObject.Data);
 
-            sourceConnector.Url = sourceConnector.BaseUrl + $"orders/{orderNumber}";
+            sourceConnector.Url = sourceConnector.BaseUrl + $"orders/{UrlValue.Escape(orderNumber)}";
             response = RestConnector.Execute(sourceConnector, string.Empty).GetAwaiter().GetResult();
 
             return JsonConvert.DeserializeObject<WalmartOrder>(response.Content);
@@ -303,7 +303,7 @@ namespace eSyncMate.Processor.Managers
                 l_Data.UseConnection(string.Empty, l_Orders.Connection);
             }
 
-            sourceConnector.Url = sourceConnector.BaseUrl + $"orders/{order.purchaseOrderId}/acknowledge";
+            sourceConnector.Url = sourceConnector.BaseUrl + $"orders/{UrlValue.Escape(order.purchaseOrderId)}/acknowledge";
             sourceConnector.Method = "POST";
 
             route.SaveData("JSON-SNT", 0, sourceConnector.Url, userNo);

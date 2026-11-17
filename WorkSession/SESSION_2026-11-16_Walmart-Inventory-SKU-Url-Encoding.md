@@ -31,6 +31,28 @@ Customer WAL4001MP, item `122D100W[5PC]WHS`: Walmart inventory upload fails. Fin
 - A reply to the client was drafted in the chat (finding, impact, fix in the next deployment); not sent.
 - Fix and this session file committed on `main` (not pushed).
 
+### Step 4: Same fix for every route that puts a data value into a URL (user request)
+- **New file**: `eSyncMate.Processor/Managers/UrlValue.cs` - `UrlValue.Escape(object)` =
+  `Uri.EscapeDataString(Convert.ToString(value) ?? "")`. Ordinary ids (letters, digits, `-` `_` `.` `~`) give the
+  same URL as before.
+- **Files changed (28, 61 lines)**: every live line in `eSyncMate.Processor/Managers` where an order number,
+  product id, line number or SKU from a data row / API order is put into a URL path or query string:
+  ASNShipmentNotificationRoute, AmazonASNShipmentNotificationRoute, AmazonGetOrdersRoute, BulkUploadOldPricesRoute,
+  BulkUploadPricesRoute, CancellationLinesRoute, Download856FromShipStationRoute, Knot / Lowes / Macys / Micheal
+  ASN + GetOrder routes, ProductCatalogRoute, SCSASNRoute, SCSBulkItemPricesRoute, SCSCancelOrderRoute,
+  SCSGetOrdersRoute, SCSItemPricesRoute, SCSUpdateInventoryRoute, TargetPlusInventoryFeedWHSWiseRoute,
+  VeeqoUpdatedProductsQTYRoute (`query={itemID}` = SKU), WalmartASNShipmentNotificationRoute,
+  WalmartCancellationLinesRoute, WalmartGetOrdersRoute, WalmartUploadInventoryRoute (now uses the helper).
+- **Left as they are on purpose**: connector config values (BaseUrl, Url, Realm), dates and paging numbers in
+  query strings, ids returned by the marketplace inside the same call (Amazon feed / document ids, Mirakl
+  import ids, Target report / status ids, Veeqo numeric ids), commented-out lines, `RouteTestApp`.
+  Routes that send the SKU in the body or a file (Lowes, Macys, Knot, Michaels, Amazon, Shopify, Walmart bulk)
+  had nothing to change. `ProductCatalogStatusRoute` already escaped the item id.
+- **Issue**: the first `sed -i` run rewrote line endings in every file of the folder; reverted with
+  `git checkout -- eSyncMate.Processor/Managers` and re-run with `sed -b` on the matching files only.
+- **Check**: `dotnet build eSyncMate.Processor -c Debug` -> Build succeeded, 0 errors. Not run against any
+  marketplace. Committed on `main` (not pushed).
+
 ### Open points (not changed)
 - On a failed call the route calls `feed.UpdateItemStatus` (sets `SYNCED`), so a refused item is not picked up
   again by itself. After the deploy this item has to be sent again (status reset or next inventory change).

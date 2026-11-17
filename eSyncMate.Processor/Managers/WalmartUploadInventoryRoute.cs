@@ -269,7 +269,7 @@ namespace eSyncMate.Processor.Managers
                 this.feed.SaveData("JSON-SNT", customerId, itemId, Body, this.userNo, this.bacthID);
 
                 // The SKU is part of the URL path: Walmart rejects a raw [ ] / # ? space etc. with "protocol.http.InvalidPath"
-                this.destinationConnector.Url = this.destinationConnector.BaseUrl + "inventories/" + Uri.EscapeDataString(itemId);
+                this.destinationConnector.Url = this.destinationConnector.BaseUrl + "inventories/" + UrlValue.Escape(itemId);
                 sourceResponse = RestConnector.Execute(this.destinationConnector, Body).GetAwaiter().GetResult();
 
                 if (!sourceResponse.IsSuccessful)

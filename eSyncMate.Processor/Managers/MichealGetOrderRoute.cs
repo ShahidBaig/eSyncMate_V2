@@ -211,7 +211,7 @@ namespace eSyncMate.Processor.Managers
             ConnectorDataModel? sourceConnector = ConnectorDataModel.Deserialize(route.SourceConnectorObject.Data);
             ConnectorDataModel? destinationConnector = ConnectorDataModel.Deserialize(route.DestinationConnectorObject.Data);
 
-            sourceConnector.Url = sourceConnector.BaseUrl + $"orders/{orderNumber}";
+            sourceConnector.Url = sourceConnector.BaseUrl + $"orders/{UrlValue.Escape(orderNumber)}";
             response = RestConnector.Execute(sourceConnector, string.Empty).GetAwaiter().GetResult();
 
             return JsonConvert.DeserializeObject<Pagedata>(response.Content);

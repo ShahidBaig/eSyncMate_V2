@@ -210,7 +210,7 @@ namespace eSyncMate.Processor.Managers
                 this.route.SaveData("JSON-SNT", 0, Body, userNo);
                 this.feed.SaveData("JSON-SNT", customerId, itemId, Body, this.userNo, this.bacthID);
 
-                this.destinationConnector.Url = this.destinationConnector.BaseUrl + row["ProductId"] + "/quantities/" + this.destinationConnector.Realm;
+                this.destinationConnector.Url = this.destinationConnector.BaseUrl + UrlValue.Escape(row["ProductId"]) + "/quantities/" + this.destinationConnector.Realm;
                 sourceResponse = RestConnector.Execute(this.destinationConnector, Body).GetAwaiter().GetResult();
 
                 if (!sourceResponse.IsSuccessful)

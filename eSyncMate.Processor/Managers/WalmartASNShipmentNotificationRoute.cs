@@ -154,7 +154,7 @@ namespace eSyncMate.Processor.Managers
 
                         route.SaveData("JSON-SNT", 0, Body, userNo);
 
-                        l_DestinationConnector.Url = l_DestinationConnector.BaseUrl+ "orders/" + l_Row["OrderNumber"] + "/shipping";
+                        l_DestinationConnector.Url = l_DestinationConnector.BaseUrl+ "orders/" + UrlValue.Escape(l_Row["OrderNumber"]) + "/shipping";
                     
                         OrderData l_OrderData = new OrderData();
 
@@ -379,7 +379,7 @@ namespace eSyncMate.Processor.Managers
 
                         route.SaveData("JSON-SNT", 0, Body, userNo);
 
-                        l_DestinationConnector.Url = l_DestinationConnector.BaseUrl + "orders/" + l_Row["OrderNumber"] + "/shipping";
+                        l_DestinationConnector.Url = l_DestinationConnector.BaseUrl + "orders/" + UrlValue.Escape(l_Row["OrderNumber"]) + "/shipping";
 
                         OrderData l_OrderData = new OrderData();
 
@@ -574,7 +574,7 @@ namespace eSyncMate.Processor.Managers
 
             client = new RestClient(options);
 
-            request = new RestRequest($"sellers/5d949496fcd4b70097dfad5e/orders/{orderNumber}/bulk_fulfillments_create", Method.Post);
+            request = new RestRequest($"sellers/5d949496fcd4b70097dfad5e/orders/{UrlValue.Escape(orderNumber)}/bulk_fulfillments_create", Method.Post);
 
             request.AddHeader("x-api-key", "64dd4d52f0e4a4ffa1c25cbdca78d33906cc3af8");
             request.AddHeader("x-seller-token", "b6151b11b08e43ac81706a41a0d4ac00");
@@ -604,7 +604,7 @@ namespace eSyncMate.Processor.Managers
 
             client = new RestClient(options);
 
-            request = new RestRequest($"sellers/5d949496fcd4b70097dfad5e/orders/{orderNumber}", Method.Get);
+            request = new RestRequest($"sellers/5d949496fcd4b70097dfad5e/orders/{UrlValue.Escape(orderNumber)}", Method.Get);
 
             request.AddHeader("x-api-key", "64dd4d52f0e4a4ffa1c25cbdca78d33906cc3af8");
             request.AddHeader("x-seller-token", "b6151b11b08e43ac81706a41a0d4ac00");
@@ -627,7 +627,7 @@ namespace eSyncMate.Processor.Managers
 
             client = new RestClient(options);
 
-            request = new RestRequest($"sellers/5d949496fcd4b70097dfad5e/orders/{orderNumber}/fulfillments", Method.Get);
+            request = new RestRequest($"sellers/5d949496fcd4b70097dfad5e/orders/{UrlValue.Escape(orderNumber)}/fulfillments", Method.Get);
 
             request.AddHeader("x-api-key", "64dd4d52f0e4a4ffa1c25cbdca78d33906cc3af8");
             request.AddHeader("x-seller-token", "b6151b11b08e43ac81706a41a0d4ac00");

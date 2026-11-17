@@ -194,7 +194,7 @@ namespace eSyncMate.Processor.Managers
 
             try
             {
-                sourceConnector.Url = sourceConnector.BaseUrl + $"/api/orders/{order.order_id}/accept";
+                sourceConnector.Url = sourceConnector.BaseUrl + $"/api/orders/{UrlValue.Escape(order.order_id)}/accept";
                 sourceConnector.Method = "PUT";
 
                 foreach (var orderLine in order.order_lines)
@@ -244,7 +244,7 @@ namespace eSyncMate.Processor.Managers
 
                 Thread.Sleep(30000);
 
-                sourceConnector.Url = sourceConnector.BaseUrl + $"/api/orders?order_ids={order.order_id}";
+                sourceConnector.Url = sourceConnector.BaseUrl + $"/api/orders?order_ids={UrlValue.Escape(order.order_id)}";
                 sourceConnector.Method = "GET";
 
                 sourceResponse = RestConnector.Execute(sourceConnector, "").GetAwaiter().GetResult();

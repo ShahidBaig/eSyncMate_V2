@@ -245,7 +245,7 @@ namespace eSyncMate.Processor.Managers
             ConnectorDataModel? sourceConnector = ConnectorDataModel.Deserialize(route.SourceConnectorObject.Data);
             ConnectorDataModel? destinationConnector = ConnectorDataModel.Deserialize(route.DestinationConnectorObject.Data);
 
-            sourceConnector.Url = sourceConnector.BaseUrl + $"orders/{orderNumber}";
+            sourceConnector.Url = sourceConnector.BaseUrl + $"orders/{UrlValue.Escape(orderNumber)}";
             response = RestConnector.Execute(sourceConnector, string.Empty).GetAwaiter().GetResult();
 
             return JsonConvert.DeserializeObject<AmazonOrder>(response.Content);
@@ -263,7 +263,7 @@ namespace eSyncMate.Processor.Managers
             {
 
                 sourceConnector.Method = "GET";
-                sourceConnector.Url = sourceConnector.BaseUrl + $"/orders/v0/orders/{order.AmazonOrderId}/address";
+                sourceConnector.Url = sourceConnector.BaseUrl + $"/orders/v0/orders/{UrlValue.Escape(order.AmazonOrderId)}/address";
 
                 sourceResponse = RestConnector.Execute(sourceConnector, string.Empty).GetAwaiter().GetResult();
                 route.SaveData("JSON-RVD", 0, sourceResponse.Content, userNo);
@@ -287,7 +287,7 @@ namespace eSyncMate.Processor.Managers
             try
             {
                 sourceConnector.Method = "GET";
-                sourceConnector.Url = sourceConnector.BaseUrl + $"/orders/v0/orders/{order.AmazonOrderId}/orderItems";
+                sourceConnector.Url = sourceConnector.BaseUrl + $"/orders/v0/orders/{UrlValue.Escape(order.AmazonOrderId)}/orderItems";
 
                 sourceResponse = RestConnector.Execute(sourceConnector, string.Empty).GetAwaiter().GetResult();
                 route.SaveData("JSON-RVD", 0, sourceResponse.Content, userNo);

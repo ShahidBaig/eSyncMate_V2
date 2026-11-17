@@ -130,7 +130,7 @@ namespace eSyncMate.Processor.Managers
                     foreach (DataRow item in l_dataTable.Rows)
                     {
                         //var first = JsonConvert.DeserializeObject<object>(JsonConvert.SerializeObject(item["Data"]));
-                        l_DestinationConnector.Url = l_DestinationConnector.BaseUrl + $"/shipments?orderNumber={item["OrderNumber"]}";
+                        l_DestinationConnector.Url = l_DestinationConnector.BaseUrl + $"/shipments?orderNumber={UrlValue.Escape(item["OrderNumber"])}";
 
                         OrderData l_OrderData = new OrderData();
 

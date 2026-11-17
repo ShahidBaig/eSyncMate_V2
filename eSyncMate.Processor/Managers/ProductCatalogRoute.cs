@@ -129,7 +129,7 @@ namespace eSyncMate.Processor.Managers
                                         if (string.IsNullOrEmpty(itemsSA.Field<string>("id")))
                                             continue;
 
-                                        l_DestinationConnector.Url = l_DestinationConnector.Url + "/" + itemsSA.Field<string>("id");
+                                        l_DestinationConnector.Url = l_DestinationConnector.Url + "/" + UrlValue.Escape(itemsSA.Field<string>("id"));
                                     }
 
                                     l_SCS_SAPrductModel = new SCS_SAPrductModel();
@@ -508,7 +508,7 @@ namespace eSyncMate.Processor.Managers
                                     if (string.IsNullOrEmpty(unlistedItems.Field<string>("id")))
                                         continue;
 
-                                    string destUrl = l_DestinationConnector.BaseUrl + "products/" + unlistedItems.Field<string>("id");
+                                    string destUrl = l_DestinationConnector.BaseUrl + "products/" + UrlValue.Escape(unlistedItems.Field<string>("id"));
 
                                     l_DestinationConnector.Url = destUrl;
                                     l_DestinationConnector.Method = "GET";
@@ -539,7 +539,7 @@ namespace eSyncMate.Processor.Managers
                                             // "You are not allowed to unlist a non-current status".
                                             var l_UnlistStatus = response.product_statuses.FirstOrDefault(s => s != null && s.current) ?? response.product_statuses[0];
 
-                                            destUrl = l_DestinationConnector.BaseUrl + "products/" + unlistedItems.Field<string>("id") + "/statuses/" + l_UnlistStatus.id;
+                                            destUrl = l_DestinationConnector.BaseUrl + "products/" + UrlValue.Escape(unlistedItems.Field<string>("id")) + "/statuses/" + l_UnlistStatus.id;
 
                                             l_DestinationConnector.Url = destUrl;
                                             l_DestinationConnector.Method = "PUT";

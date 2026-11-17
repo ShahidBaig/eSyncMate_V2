@@ -115,7 +115,7 @@ namespace eSyncMate.Processor.Managers
                         Body = JsonConvert.SerializeObject(walmartInputCancellationModel);
                         route.SaveData("JSONCANLN-SNT", 0, Body, userNo);
                     
-                        l_DestinationConnector.Url = l_DestinationConnector.BaseUrl + "orders/" + l_Row["OrderNumber"].ToString() + "/cancel";
+                        l_DestinationConnector.Url = l_DestinationConnector.BaseUrl + "orders/" + UrlValue.Escape(l_Row["OrderNumber"]) + "/cancel";
                     
                         sourceResponse = RestConnector.Execute(l_DestinationConnector, Body).GetAwaiter().GetResult();
 

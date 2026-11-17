@@ -160,7 +160,7 @@ namespace eSyncMate.Processor.Managers
 
                             route.SaveData("JSON-SNT", 0, Body, userNo);
 
-                            l_DestinationConnector.Url = l_DestinationConnector.BaseUrl + $"/orders/v0/orders/{l_Row["OrderNumber"]}/shipmentConfirmation";
+                            l_DestinationConnector.Url = l_DestinationConnector.BaseUrl + $"/orders/v0/orders/{UrlValue.Escape(l_Row["OrderNumber"])}/shipmentConfirmation";
 
                             l_OrderData.UseConnection(l_SourceConnector.ConnectionString);
 
@@ -480,7 +480,7 @@ namespace eSyncMate.Processor.Managers
 
                             route.SaveData("JSON-SNT", 0, Body, userNo);
 
-                            l_DestinationConnector.Url = l_DestinationConnector.BaseUrl + $"/orders/v0/orders/{l_Row["OrderNumber"]}/shipmentConfirmation";
+                            l_DestinationConnector.Url = l_DestinationConnector.BaseUrl + $"/orders/v0/orders/{UrlValue.Escape(l_Row["OrderNumber"])}/shipmentConfirmation";
 
                             l_OrderData.UseConnection(l_SourceConnector.ConnectionString);
 

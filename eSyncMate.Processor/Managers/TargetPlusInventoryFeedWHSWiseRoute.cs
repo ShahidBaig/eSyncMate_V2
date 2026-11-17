@@ -268,7 +268,7 @@ namespace eSyncMate.Processor.Managers
                 this.feed.UseConnection(this.sourceConnector.ConnectionString);
 
                 //this.destinationConnector.Url = this.destinationConnector.BaseUrl + row["ProductId"] + "/quantities/" + row["ShipNode"].ToString();
-                this.destinationConnector.Url = this.destinationConnector.BaseUrl + row["ProductId"] + "/quantities/bulk";
+                this.destinationConnector.Url = this.destinationConnector.BaseUrl + UrlValue.Escape(row["ProductId"]) + "/quantities/bulk";
 
                 string l_SentData = JsonConvert.SerializeObject(new
                 {

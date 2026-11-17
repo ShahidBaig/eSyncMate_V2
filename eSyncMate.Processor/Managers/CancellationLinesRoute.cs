@@ -120,7 +120,7 @@ namespace eSyncMate.Processor.Managers
                         Body = JsonConvert.SerializeObject(l_InputCancellationLinesModel);
                         route.SaveData("JSONCANLN-SNT", 0, Body, userNo);
 
-                        l_DestinationConnector.Url = l_DestinationConnector.BaseUrl + l_Row["OrderNumber"].ToString() + "/order_lines/" + l_Row["LineNo"].ToString();
+                        l_DestinationConnector.Url = l_DestinationConnector.BaseUrl + UrlValue.Escape(l_Row["OrderNumber"]) + "/order_lines/" + UrlValue.Escape(l_Row["LineNo"]);
 
                         sourceResponse = RestConnector.Execute(l_DestinationConnector, Body).GetAwaiter().GetResult();
 

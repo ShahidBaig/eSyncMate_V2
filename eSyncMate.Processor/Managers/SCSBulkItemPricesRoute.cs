@@ -188,7 +188,7 @@ namespace eSyncMate.Processor.Managers
                 this.route.UseConnection(this.sourceConnector.ConnectionString);
 
                 string Body = JsonConvert.SerializeObject(data);
-                this.destinationConnector.Url = this.destinationConnector.BaseUrl + row["id"];
+                this.destinationConnector.Url = this.destinationConnector.BaseUrl + UrlValue.Escape(row["id"]);
                 //route.RouteSaveData("JSON-SNT", 0, $"URL: {this.destinationConnector.Url}\n{Body}", userNo);
 
                 ProductPriceFeedLog l_PriceLog = new ProductPriceFeedLog();
