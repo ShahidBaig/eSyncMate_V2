@@ -333,5 +333,18 @@ Test scripts are kept in `eSyncMate.Data/Tables/ShopifyScripts/Testing-Client-de
   the client API address `https://ems.safavieh.com:8085/`.
 - Not done: deployment at the client (the user does it), running V2_02 on the client DB.
 
+### Step 25: Release6 deployed at the client (2026-11-18, by the user) - checked from outside
+- User: API, UI deployed and `V2_02_Integration_Tokens.sql` executed at the client. The `RouteWorker` folder was
+  locked again by running workers (no admin rights: wait / Task Manager / client admin).
+- Checked from the user's (whitelisted) machine, read-only:
+  - `GET https://ems.safavieh.com:8085/api/shopify/oauth/start?shop=devshop-we.myshopify.com` -> HTTP 302 to
+    `https://devshop-we.myshopify.com/admin/oauth/authorize` with the app's client_id, the nine scopes and
+    `redirect_uri=https://ems.safavieh.com:8085/api/shopify/oauth/callback` (was 404 before the deployment).
+  - `api/shopify/status` and `api/Customers/getIntegrationTokens/15` -> HTTP 401 (exist, need a login).
+  - UI: `https://ems.safavieh.com/eSyncMate/` serves `main.e1dd7c5938787795.js` = the Release6 build, base href `/eSyncMate`.
+- NOT checked: the V2_02 output on the client DB (not reachable from here; user to paste the two grids).
+- Next: a store user who may manage apps opens the app (from a whitelisted IP) -> token in the list -> select it in
+  Customers > Edit > Tokens (WKE1000) -> Test Run of `Shopify - Get Orders` (read-only) before any writing route.
+
 ## Summary
 (fill in at end)
