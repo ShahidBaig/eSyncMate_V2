@@ -346,5 +346,185 @@ Test scripts are kept in `eSyncMate.Data/Tables/ShopifyScripts/Testing-Client-de
 - Next: a store user who may manage apps opens the app (from a whitelisted IP) -> token in the list -> select it in
   Customers > Edit > Tokens (WKE1000) -> Test Run of `Shopify - Get Orders` (read-only) before any writing route.
 
+### Step 26: Lead's objection on the whitelisting e-mail - who calls application_url / the redirect URL
+- Lead (voice note transcript): the call to our callback / application_url comes from Shopify's SERVERS, so Shopify's
+  IPs must be whitelisted; asked for a standard / known IPs / documentation.
+- Answer given: in the authorization code grant both URLs are requested by the user's BROWSER (HTTP 302 redirects).
+  The only server-to-server call is ours to Shopify (`POST /admin/oauth/access_token`). Shopify's servers call an app
+  only for webhooks, which this app does not have.
+  - Proof from our own test (step 16): the demo store was connected with redirect URL `http://localhost:5000/...`.
+    Shopify's servers cannot reach localhost on a developer PC; only the browser on that PC can.
+  - Check at the client after an authorization: IIS log `c-ip` of the `/api/shopify/oauth/callback` request = the
+    user's public IP; or browser DevTools > Network shows the 302 chain.
+- Looked up 2026-11-18: Shopify publishes no IP ranges, not even for webhooks (staff answers in the developer
+  community; official guidance is HMAC verification). Docs page on the authorization code grant says "Shopify
+  redirects to your redirect_uri" (does not spell out "browser").
+- Options for the firewall: whitelist the authorizing user's IP / do it from a whitelisted network / open only the two
+  `api/shopify/oauth/*` paths on 8085 to the internet (they check HMAC + state). Lead to decide.
+
+### Step 27: Report for the lead (artifact) + his follow-up: the flow starting from the install link
+- HTML report published as a private artifact: https://claude.ai/artifact/VfbTUnWNVuEkLAL5M1DEFq (user shares it with
+  the lead from the Share menu). Source: session scratchpad, not in the repo.
+- Lead (second transcript): the starting point is the INSTALL LINK from the e-mail; step by step, do Shopify's servers
+  call us or the browser of the person who clicked?
+- Answer added to the report: A. browser opens Shopify's install screen; B. Install -> Shopify installs and grants the
+  scopes internally, nothing is sent to eSyncMate; C. Shopify sends the BROWSER to `application_url`; then the four
+  requests (start -> authorize -> callback -> our server's token call). Still no call from Shopify's servers.
+- Consequence stated: installing alone gives no token; if the installer's browser cannot reach ems.safavieh.com:8085
+  (IP whitelist) the app is installed but no token is saved; opening the app again from an allowed IP completes it.
+- Corrections to what was said in the call: the redirect URL IS needed (registered in the app, the code arrives
+  there) - it is only not called by Shopify's servers.
+- NOT verified: step C with a real install link on a client store. Shopify's installation page does not say where the
+  user lands after approving; to confirm in the browser Network tab at the first install.
+
+### Step 28: The actual install link examined (user pasted it)
+- Link: `https://admin.shopify.com/oauth/install_custom_app?client_id=<app>&no_redirect=true&signature=...`
+  Signature payload (base64 JSON, not secret): store `walker-edison.myshopify.com`, purpose `custom_app`,
+  `expires_at` 1795108015 = 2026-11-19 17:06 UTC (22:06 PKT). Valid for that one store only.
+- `no_redirect=true`: after Install the user stays in Shopify admin; Shopify does not send the browser to
+  `application_url` (my reading of the parameter, not found in the docs, not tested). So install and token are two
+  separate actions: install = Shopify only, from any network; token = a store user who may manage apps opens the app
+  (or `<API>/api/shopify/oauth/start?shop=walker-edison.myshopify.com`) from an IP allowed on ems.safavieh.com:8085.
+- Report (artifact) updated accordingly; step C of step 27 corrected.
+- Open: the link expires in about 1.5 days - a new link is needed if the client installs later; no link exists for
+  `devshop-we` (the app is already installed there).
+
+### Step 29: Client DB has a demo-store token - scripts for an inventory upload test at the client
+- User authorized OUR store against the CLIENT API: client `IntegrationTokens` Id 1 = `Shopify -
+  esyncmate-dev-store.myshopify.com` (encrypted, non-expiring), selected on customer 15 `WKE1000`
+  (Marketplace `SHOPIFY WALKER EDISON`). First proof that start -> authorize -> callback -> token works at the client.
+  Note: the saved Scope lists 6 scopes (the write scopes; Shopify leaves out the read scopes they imply).
+- User wants to test "Shopify - Upload Warehouse-Wise Inventory" at the client against our store, with apply + revert.
+- Read from the demo store in Chrome (account Shahid; Chrome was on majid, switched in the account chooser, no
+  password typed):
+  - Locations: Shop location = 88131272890, My Custom Location = 88131305658.
+  - ESM-SB-ICE: inventory item 52944920346810, stock Shop 50 / Custom 50.
+  - ESM-SB-DAWN: inventory item 52944920379578, stock Shop 12 / Custom 3.
+- **New folder** `ShopifyScripts/Testing-Client-DB-demo-store/`:
+  - `CT_01_Apply_Demo_Store_Inventory_Test.sql`: backup into `ZDB_CT01_ShipNodes` / `ZDB_CT01_Connectors`; mapping
+    L55 -> Shop location, L56 -> My Custom Location; ONLY connector `Shopify - WHSW Inventory Upload` BaseUrl store ->
+    demo store; two feed rows Status NEW (ICE 41 / 17, DAWN 9 / 4). Stops when: wrong token selected, other items of
+    WKE1000 waiting (NEW / UPDATED), connector encrypted, already applied.
+  - `CT_01_Verify.sql` (read-only), `CT_99_Revert.sql` (restores from the backup, deletes the two items, drops the
+    backup; optional `@ClearTokenSelection`).
+- **Decision**: the other Shopify connectors (orders, ASN, cancel) stay on walker-edison. With the demo token
+  selected they stop with the store mismatch message, so no demo order can reach the client's ERP (SPARS is live).
+- NOT tested: the three scripts were not run anywhere (dev DB connection is not configured locally at the moment).
+- Reminder for go-live: run CT_99, select the walker-edison token on the customer.
+
+### Step 30: CT_01 applied on the client DB (user, 2026-11-18) - output checked
+- Mapping now: L55 -> 88131272890, L56 -> 88131305658. Backup holds the client values L55 -> 81898176578,
+  L56 -> 81898602562 (as expected).
+- Connector 248 `Shopify - WHSW Inventory Upload`: `walker-edison` -> `esyncmate-dev-store`, API version 2026-10 kept.
+- Feed rows: ESM-SB-ICE 41 / 17 (total 58), ESM-SB-DAWN 9 / 4 (total 13), both NEW.
+- Next: CT_01_Verify, Test Run of the upload route only, check the store, CT_01_Verify again, then CT_99_Revert.
+
+### Step 31: CT_01 verified at the client; Get Orders test scripts (CT_02)
+- User pasted `CT_01_Verify` output: token OK, mapping OK, only connector 248 on the demo store (252, 258, 262, 263
+  on walker-edison), all 11 Shopify routes (157 - 167) In-Active, source SP returns exactly the two test items.
+  Told to Test Run route 159 only. Result of that Test Run NOT reported back yet.
+- User asked for the Get Orders test with a revert. Added to `Testing-Client-DB-demo-store/`:
+  - `CT_02_Apply_Get_Orders_Test.sql`: backup `ZDB_CT02_Connectors` + `ZDB_CT02_Baseline` (highest `Orders.Id`);
+    only connector `Shopify - Get Orders` -> demo store. Stops when the demo token is not selected, when
+    `Shopify - Place Orders in ERP` is Active, when the connector is encrypted, or when already applied.
+  - `CT_02_Verify.sql` (read-only): token, connector stores, route status, the test orders and their lines.
+  - `CT_02_Revert.sql`: connector back; deletes Orders / OrderDetail / OrderData of WKE1000 with Id above the
+    baseline; stops when a test order was processed further (Status not New / ERROR or ExternalId filled), `@Force`.
+- What the route reads (script 10): paid or pending, unfulfilled, open, created in the last 10 days.
+- Risk named to the user: route 161 `Shopify - Place Orders in ERP` must stay In-Active; SPARS at the client is live.
+- NOT tested: CT_02 scripts were not run anywhere.
+
+### Step 32: CT_02 applied at the client - connector 252 is encrypted
+- First run stopped with 51705: connector 252 `Shopify - Get Orders` is encrypted. Cause: the user had changed its
+  Base URL by hand in Setup > Connectors (a save from the UI encrypts the connector); it was plain JSON in the
+  CT_01_Verify output shortly before.
+- `CT_02_Apply_Get_Orders_Test.sql` changed: for an encrypted connector it only makes the backup + baseline
+  (flag `@EncryptedAndStillOnClientStore = 1` after checking in the UI that Base URL shows walker-edison); the Base
+  URL is then changed in the UI. The revert restores the encrypted value as it is.
+- User set the Base URL back to walker-edison in the UI, ran the script with the flag: backup made, baseline
+  `MaxOrderId = 775955` (2026-11-18 05:42 server time), WKE1000 had 0 orders before the test.
+- Next: Base URL -> `https://esyncmate-dev-store.myshopify.com/admin/api/2026-10/` in the UI, CT_02_Verify,
+  Test Run route 160 only. Route 161 stays In-Active.
+- Note for the revert: connector 252 stays ENCRYPTED after it (it was encrypted when backed up). Any later script
+  that edits it by SQL will skip it; change it in the UI.
+
+### Step 33: Get Orders at the client reaches our store through the customer's token (route log, 2026-11-18)
+- User activated route 160 (Minutely 5) instead of a Test Run; 161 and all others In-Active.
+- Route log 160 (client DB, server time):
+  - 05:28 / 05:30: "Customer [WKE1000] has the token [Shopify - esyncmate-dev-store...] selected, but the connector
+    points at [walker-edison.myshopify.com]" -> the store-mismatch check works at the client (connector 252 was
+    still on walker-edison; nothing was sent to the client store).
+  - 05:33 onwards (after the Base URL was changed in the UI): "0 read in 1 page(s), 0 new saved ..." with the query
+    `(financial_status:paid OR financial_status:pending) fulfillment_status:unfulfilled status:open created_at:>=<10 days>`
+    -> token taken through the customer, Shopify answered, no matching order in the demo store.
+- PROVEN at the client: token via `Customers.IntegrationTokenId` in the RouteWorker, read call to the store.
+- Not yet shown: an order actually saved. Needs one order in the demo store: paid or pending, unfulfilled, open,
+  created now, with a shipping address.
+- Still not reported by the user: result of the inventory upload Test Run (route 159).
+
+### Step 34: Test order created in the demo store (Chrome, on the user's request)
+- `esyncmate-dev-store`, account Shahid: Orders > Create order -> The Complete Snowboard / Ice (`ESM-SB-ICE`) x 1,
+  existing sample customer "Test Buyer" (Salt Lake City UT, example.com address), shipping Standard $0.00,
+  Collect payment > Mark as paid > Create order.
+- Result: order **#1018**, Shopify order id **8771273621690**, Paid, Unfulfilled, $699.95, location Shop location.
+  Shopify sent its confirmation e-mail to the sample customer's example.com address (not a real mailbox).
+- Side observation in the product picker: Ice shows 41 available and Dawn 9 = the quantities of CT_01 for L55
+  (Shop location). So the inventory upload (route 159) reached the store. Custom location (17 / 4) not looked at.
+- Expected at the client: route 160 (every 5 min) saves OrderNumber 8771273621690, CustomerOrderNo #1018,
+  Status New, 1 line. User to confirm with the route log / CT_02_Verify.
+
+### Step 35: Tests done (user) - revert order given, optional history cleanup script
+- User: inventory upload and Get Orders tested at the client against the demo store, both done. Wants to revert
+  everything and delete the demo products and orders.
+- Order given: 1. route 160 In-Active from the UI (it was activated, runs every 5 min); 2. `CT_02_Revert.sql`
+  (connector 252 back, deletes orders above Id 775955 = #1018 / 8771273621690); 3. `CT_99_Revert.sql`
+  (mapping + connector 248 back, deletes ESM-SB-ICE / ESM-SB-DAWN from SCSInventoryFeed), recommended with
+  `@ClearTokenSelection = 1`; 4. optional `CT_98_Cleanup_Test_History_OPTIONAL.sql` (new): feed data rows of the
+  two items in `SCSInventoryFeedData_WKE1000`, upload batches in `InventoryBatchWise`, route logs only with a flag;
+  dry run by default.
+- Left as it is unless the user asks: the demo token row in the client `IntegrationTokens`; order #1018 and the
+  test stock (41 / 17, 9 / 4) in our demo store.
+- NOT tested: none of the revert / cleanup scripts has been run yet.
+
+### Step 36: Both reverts run at the client (user, 2026-11-18) - output checked
+- `CT_99_Revert`: mapping L55 -> 81898176578, L56 -> 81898602562 (client locations); connector 248 back on
+  walker-edison; 0 feed rows left for WKE1000. Run with `@ClearTokenSelection = 0`: the DEMO token (Id 1) is still
+  selected on WKE1000.
+- `CT_02_Revert`: connectors 248 / 258 / 262 / 263 on walker-edison, 252 encrypted (restored from the backup taken
+  while it showed walker-edison; not readable by SQL); 0 orders left for WKE1000 (test order #1018 deleted).
+- Still open at the client: confirm route 160 is In-Active; look at connector 252's Base URL in the UI; the demo
+  token is still selected on WKE1000 (clear it or leave it until the walker-edison token exists); optional CT_98.
+- In our demo store: order #1018 and the test stock remain.
+- RESULT of the day at the client: authorization, token via the customer, inventory upload and Get Orders all
+  worked against the demo store; client setup restored.
+
+### Step 37: Demo token taken off the customer, kept in the list (user's decision)
+- `CT_98` dry run at the client: 4 feed data rows, 1 upload batch, 14 route log rows, 0 route data rows.
+- User ran only `UPDATE Customers SET IntegrationTokenId = NULL WHERE ERPCustomerID = 'WKE1000'`. The demo store
+  token row (Id 1) STAYS in the client `IntegrationTokens` on purpose, for the next test.
+- Next test at the client against the demo store: Customers > Edit > Tokens -> select
+  "Shopify - esyncmate-dev-store.myshopify.com", then CT_01 / CT_02 as today, reverts after. No new authorization
+  needed as long as the app stays installed on the demo store.
+- Before go-live: WKE1000 must get the walker-edison token (not this one).
+
+### Step 38: "Is our map to Safavieh (SPARS) OK, how to check?" - preview script
+- The ERP body is built by map "Shopify Order Transformation" (script 11) from the API-JSON Get Orders saves; route
+  161 `Shopify - Place Orders in ERP` (RouteType 9) posts it to SPARS `Place_Order`. There is no map test screen /
+  endpoint in the application (MapsController: get / create / update only).
+- New `Testing-Client-DB-demo-store/CT_03_Preview_Order_For_ERP.sql` (read-only): map + route status, header and
+  lines exactly with the map's JSON paths, [Check] per row, and any ERP-JSON / ERP-ERROR already stored.
+  It mirrors the map in SQL; it does not run the JUST engine. Not run anywhere yet.
+- The client has no Shopify order at the moment (CT_02_Revert deleted #1018): to preview, select the demo token,
+  apply CT_02, let Get Orders read #1018 again, run CT_03, revert.
+- Told the user what a preview cannot prove: that SPARS accepts the body (ItemID known in the ERP for WKE1000,
+  ShipViaCode FEDX still "client to confirm"). Real proof = one agreed test order with the ERP team.
+
+### Step 39: CT_03 at the client; lead: keep the scripts, commit, pull, push
+- `CT_03` run at the client: map 12 `Shopify Order Transformation` valid, ShipViaCode FEDX, route 161 In-Active;
+  no order of WKE1000 in eSyncMate (deleted by CT_02_Revert), so no header / lines to preview.
+- User / lead decision: no further Get Orders test for now; the map check against a saved order is NOT done.
+  Scripts stay in `Testing-Client-DB-demo-store` for later.
+- Commit of the folder (CT_01, CT_01_Verify, CT_02 apply / verify / revert, CT_03, CT_98, CT_99) + this session file.
+
 ## Summary
 (fill in at end)
