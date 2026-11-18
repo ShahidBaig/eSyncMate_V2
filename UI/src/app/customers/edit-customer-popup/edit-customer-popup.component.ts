@@ -49,6 +49,13 @@ import { TranslateModule } from '@ngx-translate/core';
 export class EditCustomerPopupComponent implements OnInit {
   updateCustomerForm: FormGroup | any;
 
+  // Access tokens received from the platforms (Shopify store installs ...). The one selected here is saved on the
+  // customer and used by all of the customer's routes.
+  tokens: any[] = [];
+  private savedTokenId = 0;
+
+  trackByTokenId = (_: number, token: any) => token?.id ?? _;
+
   constructor(
     public dialogRef: MatDialogRef<EditCustomerPopupComponent>,
     private formBuilder: FormBuilder,
@@ -60,6 +67,20 @@ export class EditCustomerPopupComponent implements OnInit {
 
   ngOnInit() {
     this.initializeForm();
+    this.loadTokens();
+  }
+
+  private loadTokens(): void {
+    this.CustomersApi.getIntegrationTokens(this.data.id).subscribe({
+      next: (res) => {
+        this.tokens = res?.tokens ?? [];
+        this.savedTokenId = res?.selectedTokenId ?? 0;
+        this.updateCustomerForm.get('integrationTokenId')?.setValue(this.savedTokenId);
+      },
+      error: () => {
+        this.tokens = [];
+      }
+    });
   }
 
   initializeForm() {
@@ -70,12 +91,30 @@ export class EditCustomerPopupComponent implements OnInit {
       isaCustomerId: [''],
       isa810ReceiverId: [''],
       isa856ReceiverId: [''],
-      marketplace: [this.data.marketplace]
+      marketplace: [this.data.marketplace],
+      integrationTokenId: [0]
     });
   }
 
   onCancel() {
     this.dialogRef.close();
+  }
+
+  // The token is saved on its own, after the customer itself was saved
+  private saveToken(customerId: number, tokenId: number): void {
+    this.CustomersApi.setIntegrationToken(customerId, tokenId).subscribe({
+      next: (res) => {
+        if (res.code === 100) {
+          this.savedTokenId = tokenId;
+          this.toast.success({ detail: "SUCCESS", summary: res.description, duration: 5000, position: 'topRight' });
+        } else {
+          this.toast.error({ detail: "ERROR", summary: res.message, duration: 5000, position: 'topRight' });
+        }
+      },
+      error: (err) => {
+        this.toast.error({ detail: "ERROR", summary: err.message, duration: 5000, position: 'topRight' });
+      }
+    });
   }
 
   updateCustomer(): void {
@@ -90,8 +129,14 @@ export class EditCustomerPopupComponent implements OnInit {
     };
 
     if (this.updateCustomerForm.valid) {
+      const tokenId = Number(this.updateCustomerForm.get('integrationTokenId')?.value ?? 0);
+
       this.CustomersApi.updateCustomer(customerModel).subscribe({
         next: (res) => {
+          if (res.code === 100 && tokenId !== this.savedTokenId) {
+            this.saveToken(customerModel.id, tokenId);
+          }
+
           if (res.code === 100) {
             this.toast.success({ detail: "SUCCESS", summary: res.description, duration: 5000, position: 'topRight' });
           } else if (res.code === 400) {

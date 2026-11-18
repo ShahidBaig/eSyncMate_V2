@@ -36,6 +36,21 @@
           <mat-icon matPrefix>storefront</mat-icon>
         </mat-form-field>
       </div>
+
+      <div class="form-row">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>{{ 'tokens' | translate }}</mat-label>
+          <mat-select formControlName="integrationTokenId">
+            <mat-option [value]="0">{{ 'noToken' | translate }}</mat-option>
+            <mat-option *ngFor="let token of tokens; trackBy: trackByTokenId" [value]="token.id"
+                        [matTooltip]="token.scope" matTooltipPosition="right">
+              {{ token.name }}<span *ngIf="token.linkedCustomers"> &nbsp;({{ token.linkedCustomers }})</span>
+            </mat-option>
+          </mat-select>
+          <mat-icon matPrefix>vpn_key</mat-icon>
+          <mat-hint>{{ 'tokensHint' | translate }}</mat-hint>
+        </mat-form-field>
+      </div>
     </form>
   </div>
 

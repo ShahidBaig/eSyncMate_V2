@@ -19,6 +19,16 @@ export class CustomersService {
     return this.http.post<any>(this.apiUrl + 'api/Customers/updateCustomer', customerModel);
   }
 
+  // Tokens list (Shopify today, other platforms later) + the token selected on the customer. No token values.
+  getIntegrationTokens(customerId: number): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}api/Customers/getIntegrationTokens/${customerId}`);
+  }
+
+  // tokenId 0 = no token
+  setIntegrationToken(customerId: number, tokenId: number): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}api/Customers/setIntegrationToken?customerId=${customerId}&tokenId=${tokenId}`, {});
+  }
+
   getCustomers(searchOption: string, searchValue: string, pageNumber: number = 1, pageSize: number = 10): Observable<any> {
     const params = new HttpParams()
       .set('searchOption', searchOption)

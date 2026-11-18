@@ -1,0 +1,478 @@
+{
+  "info": {
+    "name": "eSyncMate - Shopify (devshop-we test)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Task 00006 - manual checks against a Shopify store with the eSyncMate Connector app.\n\nSet the collection variables first: shop (store handle, for example devshop-we) and client_secret (eSoftage Dev Dashboard > app > Settings). Keep client_secret and access_token as CURRENT values only, so they are not synced or shared.\n\nFolder 1 gets a token and stores it in the variable access_token. Folders 2 and 3 use it.\n\nKnown result 2026-11-17: request 1.1 works on esyncmate-dev-store and is refused on devshop-we and walker-edison with shop_not_permitted. For those stores use 1.2 + 1.3."
+  },
+  "variable": [
+    {
+      "key": "shop",
+      "value": "devshop-we"
+    },
+    {
+      "key": "api_version",
+      "value": "2026-10"
+    },
+    {
+      "key": "client_id",
+      "value": "2878ddf0df5aeb8e4839b6392e701d02"
+    },
+    {
+      "key": "client_secret",
+      "value": ""
+    },
+    {
+      "key": "access_token",
+      "value": ""
+    },
+    {
+      "key": "redirect_uri",
+      "value": ""
+    },
+    {
+      "key": "code",
+      "value": ""
+    },
+    {
+      "key": "sku",
+      "value": "ESM-TEST-001"
+    },
+    {
+      "key": "inventory_item_id",
+      "value": ""
+    },
+    {
+      "key": "location_L55",
+      "value": "gid://shopify/Location/92849602710"
+    },
+    {
+      "key": "location_L56",
+      "value": "gid://shopify/Location/92849635478"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Token",
+      "item": [
+        {
+          "name": "1.1 Token - client credentials (what eSyncMate does today)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = pm.response.json();",
+                  "if (j.access_token) {",
+                  "  pm.collectionVariables.set(\"access_token\", j.access_token);",
+                  "  console.log(\"access_token saved. scope: \" + j.scope);",
+                  "} else {",
+                  "  console.log(\"No token: \" + JSON.stringify(j));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "description": "Same request as ShopifyConnector (AuthType SHOPIFYGetToken). Only allowed when app and store are in the same organisation. On devshop-we and walker-edison the answer is HTTP 400 shop_not_permitted.",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "grant_type",
+                  "value": "client_credentials"
+                },
+                {
+                  "key": "client_id",
+                  "value": "{{client_id}}"
+                },
+                {
+                  "key": "client_secret",
+                  "value": "{{client_secret}}"
+                }
+              ]
+            },
+            "url": {
+              "raw": "https://{{shop}}.myshopify.com/admin/oauth/access_token",
+              "protocol": "https",
+              "host": [
+                "{{shop}}",
+                "myshopify",
+                "com"
+              ],
+              "path": [
+                "admin",
+                "oauth",
+                "access_token"
+              ]
+            }
+          }
+        },
+        {
+          "name": "1.2 Authorize link (open in the BROWSER, do not Send)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "description": "Copy the resolved URL into a browser where a store user is signed in. Shopify sends the browser to redirect_uri?code=...&shop=... Copy the value of code into the collection variable code (valid for a short time, once). redirect_uri must be one of the allowed redirection URLs of the app (Dev Dashboard > app > Versions).",
+            "url": {
+              "raw": "https://{{shop}}.myshopify.com/admin/oauth/authorize?client_id={{client_id}}&redirect_uri={{redirect_uri}}&state=esyncmate-test",
+              "protocol": "https",
+              "host": [
+                "{{shop}}",
+                "myshopify",
+                "com"
+              ],
+              "path": [
+                "admin",
+                "oauth",
+                "authorize"
+              ],
+              "query": [
+                {
+                  "key": "client_id",
+                  "value": "{{client_id}}"
+                },
+                {
+                  "key": "redirect_uri",
+                  "value": "{{redirect_uri}}"
+                },
+                {
+                  "key": "state",
+                  "value": "esyncmate-test"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "1.3 Token - exchange the code (authorization code grant)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = pm.response.json();",
+                  "if (j.access_token) {",
+                  "  pm.collectionVariables.set(\"access_token\", j.access_token);",
+                  "  console.log(\"access_token saved. scope: \" + j.scope);",
+                  "} else {",
+                  "  console.log(\"No token: \" + JSON.stringify(j));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "description": "Exchanges the one-time code from 1.2 for a permanent (offline) access token of this store and stores it in access_token.",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "client_id",
+                  "value": "{{client_id}}"
+                },
+                {
+                  "key": "client_secret",
+                  "value": "{{client_secret}}"
+                },
+                {
+                  "key": "code",
+                  "value": "{{code}}"
+                }
+              ]
+            },
+            "url": {
+              "raw": "https://{{shop}}.myshopify.com/admin/oauth/access_token",
+              "protocol": "https",
+              "host": [
+                "{{shop}}",
+                "myshopify",
+                "com"
+              ],
+              "path": [
+                "admin",
+                "oauth",
+                "access_token"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Read (changes nothing)",
+      "item": [
+        {
+          "name": "2.1 Shop + locations",
+          "request": {
+            "method": "POST",
+            "description": "Store name, plan and every location with its id. The location ids go into Warehouse Mapping (TargetPlusShipNodes).",
+            "header": [
+              {
+                "key": "X-Shopify-Access-Token",
+                "value": "{{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "graphql",
+              "graphql": {
+                "query": "{\n  shop { name myshopifyDomain plan { displayName } }\n  locations(first: 50, includeInactive: true) {\n    nodes { id name isActive fulfillsOnlineOrders address { city province country } }\n  }\n}",
+                "variables": "{}"
+              }
+            },
+            "url": {
+              "raw": "https://{{shop}}.myshopify.com/admin/api/{{api_version}}/graphql.json",
+              "protocol": "https",
+              "host": [
+                "{{shop}}",
+                "myshopify",
+                "com"
+              ],
+              "path": [
+                "admin",
+                "api",
+                "{{api_version}}",
+                "graphql.json"
+              ]
+            }
+          }
+        },
+        {
+          "name": "2.2 Token scopes",
+          "request": {
+            "method": "POST",
+            "description": "What this token is allowed to do.",
+            "header": [
+              {
+                "key": "X-Shopify-Access-Token",
+                "value": "{{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "graphql",
+              "graphql": {
+                "query": "{\n  currentAppInstallation { accessScopes { handle } }\n}",
+                "variables": "{}"
+              }
+            },
+            "url": {
+              "raw": "https://{{shop}}.myshopify.com/admin/api/{{api_version}}/graphql.json",
+              "protocol": "https",
+              "host": [
+                "{{shop}}",
+                "myshopify",
+                "com"
+              ],
+              "path": [
+                "admin",
+                "api",
+                "{{api_version}}",
+                "graphql.json"
+              ]
+            }
+          }
+        },
+        {
+          "name": "2.3 Product by SKU -> inventory item id",
+          "request": {
+            "method": "POST",
+            "description": "Finds the variant with the SKU in the variable sku. The number at the end of inventoryItem.id is what eSyncMate needs in SCSInventoryFeed.CustomerItemCode. Saved to inventory_item_id.",
+            "header": [
+              {
+                "key": "X-Shopify-Access-Token",
+                "value": "{{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "graphql",
+              "graphql": {
+                "query": "query($q: String!) {\n  productVariants(first: 5, query: $q) {\n    nodes {\n      id sku title\n      product { id title status }\n      inventoryItem { id tracked }\n    }\n  }\n}",
+                "variables": "{\n  \"q\": \"sku:{{sku}}\"\n}"
+              }
+            },
+            "url": {
+              "raw": "https://{{shop}}.myshopify.com/admin/api/{{api_version}}/graphql.json",
+              "protocol": "https",
+              "host": [
+                "{{shop}}",
+                "myshopify",
+                "com"
+              ],
+              "path": [
+                "admin",
+                "api",
+                "{{api_version}}",
+                "graphql.json"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = pm.response.json().data || {};",
+                  "const n = d.productVariants;",
+                  "if (n && n.nodes.length) {",
+                  "  pm.collectionVariables.set(\"inventory_item_id\", n.nodes[0].inventoryItem.id);",
+                  "  console.log(\"inventory_item_id = \" + n.nodes[0].inventoryItem.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2.4 Stock of the item per location",
+          "request": {
+            "method": "POST",
+            "description": "Available / on hand / committed quantity of inventory_item_id at every location where it is stocked.",
+            "header": [
+              {
+                "key": "X-Shopify-Access-Token",
+                "value": "{{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "graphql",
+              "graphql": {
+                "query": "query($id: ID!) {\n  inventoryItem(id: $id) {\n    id sku tracked\n    inventoryLevels(first: 50) {\n      nodes {\n        location { id name }\n        quantities(names: [\"available\", \"on_hand\", \"committed\"]) { name quantity }\n      }\n    }\n  }\n}",
+                "variables": "{\n  \"id\": \"{{inventory_item_id}}\"\n}"
+              }
+            },
+            "url": {
+              "raw": "https://{{shop}}.myshopify.com/admin/api/{{api_version}}/graphql.json",
+              "protocol": "https",
+              "host": [
+                "{{shop}}",
+                "myshopify",
+                "com"
+              ],
+              "path": [
+                "admin",
+                "api",
+                "{{api_version}}",
+                "graphql.json"
+              ]
+            }
+          }
+        },
+        {
+          "name": "2.5 Latest orders",
+          "request": {
+            "method": "POST",
+            "description": "The 10 newest orders with their lines (what the Get Orders route reads).",
+            "header": [
+              {
+                "key": "X-Shopify-Access-Token",
+                "value": "{{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "graphql",
+              "graphql": {
+                "query": "{\n  orders(first: 10, sortKey: CREATED_AT, reverse: true) {\n    nodes {\n      id name createdAt displayFinancialStatus displayFulfillmentStatus cancelledAt\n      lineItems(first: 20) { nodes { id sku quantity name } }\n    }\n  }\n}",
+                "variables": "{}"
+              }
+            },
+            "url": {
+              "raw": "https://{{shop}}.myshopify.com/admin/api/{{api_version}}/graphql.json",
+              "protocol": "https",
+              "host": [
+                "{{shop}}",
+                "myshopify",
+                "com"
+              ],
+              "path": [
+                "admin",
+                "api",
+                "{{api_version}}",
+                "graphql.json"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Write (CHANGES the store)",
+      "item": [
+        {
+          "name": "3.1 Set stock at L55 and L56",
+          "request": {
+            "method": "POST",
+            "description": "The same mutation the route Shopify - Upload Warehouse-Wise Inventory sends: absolute available quantity per location. Change the quantities, and use a new key for every new call.",
+            "header": [
+              {
+                "key": "X-Shopify-Access-Token",
+                "value": "{{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "graphql",
+              "graphql": {
+                "query": "mutation SetStock($input: InventorySetQuantitiesInput!, $key: String!) {\n  inventorySetQuantities(input: $input) @idempotent(key: $key) {\n    inventoryAdjustmentGroup {\n      changes { name delta quantityAfterChange item { id } location { id } }\n    }\n    userErrors { code field message }\n  }\n}",
+                "variables": "{\n  \"key\": \"postman-test-001\",\n  \"input\": {\n    \"name\": \"available\",\n    \"reason\": \"correction\",\n    \"quantities\": [\n      {\n        \"inventoryItemId\": \"{{inventory_item_id}}\",\n        \"locationId\": \"{{location_L55}}\",\n        \"quantity\": 10,\n        \"changeFromQuantity\": null\n      },\n      {\n        \"inventoryItemId\": \"{{inventory_item_id}}\",\n        \"locationId\": \"{{location_L56}}\",\n        \"quantity\": 5,\n        \"changeFromQuantity\": null\n      }\n    ]\n  }\n}"
+              }
+            },
+            "url": {
+              "raw": "https://{{shop}}.myshopify.com/admin/api/{{api_version}}/graphql.json",
+              "protocol": "https",
+              "host": [
+                "{{shop}}",
+                "myshopify",
+                "com"
+              ],
+              "path": [
+                "admin",
+                "api",
+                "{{api_version}}",
+                "graphql.json"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

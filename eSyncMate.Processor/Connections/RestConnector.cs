@@ -121,7 +121,7 @@ retry:
                 // Shopify GraphQL Admin API: client credentials token (cached), sent as X-Shopify-Access-Token
                 if (connector.AuthType == "SHOPIFYGetToken")
                 {
-                    connector.Token = await ShopifyConnector.GetAccessToken(connector.BaseUrl, connector.ConsumerKey, connector.ConsumerSecret);
+                    connector.Token = await ShopifyConnector.GetAccessToken(connector.BaseUrl, connector.ConsumerKey, connector.ConsumerSecret, connector.CustomerID);
 
                     request.AddHeader("X-Shopify-Access-Token", connector.Token);
                 }

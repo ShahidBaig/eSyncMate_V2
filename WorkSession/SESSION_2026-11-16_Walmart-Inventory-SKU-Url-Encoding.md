@@ -82,6 +82,20 @@ Customer WAL4001MP, item `122D100W[5PC]WHS`: Walmart inventory upload fails. Fin
 - For next time: stop the pool, then wait for `tasklist | findstr /i "eSyncMate"` to print nothing before
   replacing files; the server commands must be cmd (not PowerShell) unless a PowerShell window is opened.
 
+### Step 8: Deployed at the client, resend of the item started (2026-11-17, server time = USA, about 9-10 h behind PKT)
+- User deployed Release5 at the client (`C:\inetpub\wwwroot\eSyncMateAPI_SSL`) around 03:04 server time.
+- Route `Walmart - Upload Inventory` is Active, every 30 minutes. Source SP takes `SCSInventoryFeed.Status IN
+  ('UPDATED','NEW')`. The nightly ERP feed (about 01:00) marks the item for upload even with an unchanged
+  quantity (23 on 16 and 17 Nov), so my earlier statement "only on a quantity change" was wrong.
+- Item `122D100W[5PC]WHS`: last `InvalidPath` 03:03:02 (batch started 01:30 with the old code, cut off by the
+  deployment, stays "Processing"). User set the item to `UPDATED` at 03:28 (1 row) and pressed Run Now.
+- Batch `2049b4b4-...` started 03:05:06 (after the deployment) is still running: 21,006 `UPDATED` items at about
+  03:39, 19,518 at 03:41. The item is not in it (it was `SYNCED` at 03:05). Run Now started no second batch.
+- 404 "No item found" lines in RouteLog are items not listed at Walmart; unrelated.
+- **Waiting**: batch to finish (estimate 04:15 - 04:20), next run 04:30 picks the item. Check after 04:35:
+  new `JSON-RVD` row for the item dated after 03:28 with ship nodes = fix confirmed. NOT confirmed yet.
+- `D:\Deployment\BIZMATE\Release5pi` is no longer on the dev machine (only `Release5\eSyncMatepi.zip`).
+
 ### Open points (not changed)
 - On a failed call the route calls `feed.UpdateItemStatus` (sets `SYNCED`), so a refused item is not picked up
   again by itself. After the deploy this item has to be sent again (status reset or next inventory change).

@@ -66,6 +66,7 @@ again for the store change. Use the independent script in `v2/` instead:
 | Script | What it does |
 |---|---|
 | `v2/V2_01_Switch_To_Client_Store.sql` | One transaction, one customer: `Customers.Marketplace`, the warehouse -> location mapping (exactly `@Locations`; a mapping not listed is deleted) and BaseUrl / Client ID / Client secret of **every** Shopify REST connector of the customer. Creates nothing; routes and Flows are not touched. Stops until `@ClientId` and `@Locations` are filled, and refuses the demo values |
+| `v2/V2_02_Integration_Tokens.sql` | Creates table `IntegrationTokens` (the token a store hands over when it authorizes the app: authorization code grant, `api/shopify/oauth/start` -> `api/shopify/oauth/callback`) and column `Customers.IntegrationTokenId` (the token selected on the customer in Customers > Edit > Tokens). Needed for a store outside our own Shopify organisation, where the client credentials grant answers `shop_not_permitted`. One customer can so use a demo, UAT or production store. Needs the API / RouteWorker / UI build of 2026-11-17 or later. Changes no existing data |
 
 ## DEV only - never run at the client
 

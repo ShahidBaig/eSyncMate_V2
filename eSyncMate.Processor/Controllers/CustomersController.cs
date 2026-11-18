@@ -531,6 +531,70 @@ namespace eSyncMate.Processor.Controllers
             l_Engine.RemoveRouteJob(route);
         }
 
+        #region Integration tokens (Task 00006: token selected on the customer)
+
+        /// <summary>
+        /// Tokens list for the customer screen (Shopify today, other platforms later) + the one selected on this
+        /// customer. The token values are never returned.
+        /// </summary>
+        [HttpGet]
+        [Route("getIntegrationTokens/{customerId}")]
+        public IActionResult GetIntegrationTokens(int customerId)
+        {
+            try
+            {
+                using DataTable l_Data = eSyncMate.Processor.Connections.IntegrationTokenStore.List();
+
+                var l_Tokens = l_Data.AsEnumerable().Select(r => new
+                {
+                    id = Convert.ToInt32(r["Id"]),
+                    platform = Convert.ToString(r["Platform"]),
+                    name = Convert.ToString(r["Name"]),
+                    accountKey = Convert.ToString(r["AccountKey"]),
+                    scope = Convert.ToString(r["Scope"]),
+                    expiresUtc = r["AccessTokenExpiryUtc"] == DBNull.Value ? (DateTime?)null : Convert.ToDateTime(r["AccessTokenExpiryUtc"]),
+                    savedOn = Convert.ToDateTime(r["ModifiedDate"]),
+                    linkedCustomers = Convert.ToString(r["LinkedCustomers"])
+                }).ToList();
+
+                return Ok(new
+                {
+                    code = 100,
+                    selectedTokenId = eSyncMate.Processor.Connections.IntegrationTokenStore.GetCustomerTokenId(customerId),
+                    tokens = l_Tokens
+                });
+            }
+            catch (Exception ex)
+            {
+                this._logger.LogError(ex, "[CustomersController.GetIntegrationTokens] - customer {CustomerId}", customerId);
+                return Ok(new { code = 400, message = "The tokens could not be loaded.", selectedTokenId = 0, tokens = new object[0] });
+            }
+        }
+
+        /// <summary>
+        /// Selects a token for the customer (Customers.IntegrationTokenId). tokenId 0 = no token.
+        /// The customer's routes pick it up within 10 minutes (token cache of the workers).
+        /// </summary>
+        [HttpPost]
+        [Route("setIntegrationToken")]
+        public IActionResult SetIntegrationToken([FromQuery] int customerId, [FromQuery] int tokenId)
+        {
+            try
+            {
+                if (!eSyncMate.Processor.Connections.IntegrationTokenStore.SetCustomerToken(customerId, tokenId))
+                    return Ok(new { code = 400, message = "Customer or token not found." });
+
+                return Ok(new { code = 100, description = tokenId == 0 ? "Token removed from the customer." : "Token selected for the customer." });
+            }
+            catch (Exception ex)
+            {
+                this._logger.LogError(ex, "[CustomersController.SetIntegrationToken] - customer {CustomerId}, token {TokenId}", customerId, tokenId);
+                return Ok(new { code = 400, message = "The token could not be saved. Has the script V2_02 been run on this database?" });
+            }
+        }
+
+        #endregion
+
         #region Target Plus OAuth 2.0 (Authorization Code + rotating refresh token)
 
         // Default Target Plus OAuth endpoints (used if not stored per-customer).
