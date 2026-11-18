@@ -540,5 +540,20 @@ Test scripts are kept in `eSyncMate.Data/Tables/ShopifyScripts/Testing-Client-de
   4. Map check (order -> SPARS body) against a saved order with `CT_03`; then one agreed test order with the ERP team.
   5. Walmart: confirm the resent SKU `122D100W[5PC]WHS`, list / reset the other refused SKUs.
 
+### Step 41: History cleanup run, final state at the client checked
+- `CT_98` with `@Delete = 1` at the client: 4 feed data rows + 1 upload batch deleted; second dry run 0 / 0. Route
+  logs kept.
+- Route log count kept growing between the runs (14 -> 22 -> 24): route 160 was still Active after the reverts and
+  failing every 5 minutes. The user set it In-Active (seen in the next output).
+- `CT_01_Verify` after the revert (its CHECK lines are expected in this state): no token on WKE1000; L55 ->
+  81898176578, L56 -> 81898602562; connectors 248 / 258 / 262 / 263 on walker-edison, 252 encrypted (not readable,
+  restored from the backup; user asked to look at its Base URL in the UI); all 11 routes In-Active incl. 160; no
+  feed rows; backup tables gone.
+- Left at the client on purpose: the route log lines of the test, the demo store token (Id 1) in IntegrationTokens.
+- Summary given to the user. Proven at the client against the demo store: authorization -> token saved, token
+  through the customer, store-mismatch refusal, inventory upload (Shop location seen: Ice 41, Dawn 9), Get Orders
+  reaching the store ("0 read" log; the saved order was reported by the user, not seen by me).
+  NOT tested: the map to SPARS against a saved order, routes 161 - 167, anything on walker-edison.
+
 ## Summary
 (fill in at end)
