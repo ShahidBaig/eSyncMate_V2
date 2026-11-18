@@ -526,5 +526,19 @@ Test scripts are kept in `eSyncMate.Data/Tables/ShopifyScripts/Testing-Client-de
   Scripts stay in `Testing-Client-DB-demo-store` for later.
 - Commit of the folder (CT_01, CT_01_Verify, CT_02 apply / verify / revert, CT_03, CT_98, CT_99) + this session file.
 
+### Step 40: End of 2026-11-18 - state for the next session
+- Committed `da67304` (test scripts + session file); `git pull --ff-only`: already up to date; push NOT done by me
+  (denied by the session's permission settings) - the user runs `git push origin main`. `main` is ahead of origin;
+  two old commits (65acf93, 160eb7b) hold the client DB password and the SPARS secret, GitHub may reject the push.
+- Told the user `CT_98` can be run at the client with `@Delete = 1` (route logs kept). Result not reported yet.
+- Memory files updated (client deployment state, dev DB access notes).
+- Open, in order:
+  1. Push `main`.
+  2. Client: confirm route 160 In-Active and connector 252 Base URL = walker-edison (UI, it is encrypted).
+  3. Walker Edison authorizes the app (install link expires 2026-11-19 17:06 UTC; the browser that opens the app
+     must be on an IP allowed on ems.safavieh.com:8085), then select the walker-edison token on WKE1000.
+  4. Map check (order -> SPARS body) against a saved order with `CT_03`; then one agreed test order with the ERP team.
+  5. Walmart: confirm the resent SKU `122D100W[5PC]WHS`, list / reset the other refused SKUs.
+
 ## Summary
 (fill in at end)
