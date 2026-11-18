@@ -319,5 +319,19 @@ Test scripts are kept in `eSyncMate.Data/Tables/ShopifyScripts/Testing-Client-de
   in `v2/`, and the build output `eSyncMate.RouteWorker/obj/...GlobalUsings.g.cs`.
 - Not pushed: the user pushes with `git push origin main`.
 
+### Step 24: Published to Release6 (2026-11-18, from commit 1498316)
+- Backend: `dotnet publish eSyncMate.Processor\eSyncMate.Processor.csproj -c Release -o D:\Deployment\BIZMATE\Release6\api`
+  -> exit 0, 435 files (API + `RouteWorker` + `AlertWorker`).
+- UI: `ng build --base-href /eSyncMate` in `UI` (the user's command; the site runs under `/eSyncMate`) -> exit 0,
+  copied `UI\dist\ui` to `Release6\ui` (22 files). My first build had no `--base-href` (`<base href="/">`, would not
+  load at the client); the user pointed it out, rebuilt and `ui.zip` replaced. Now `<base href="/eSyncMate">`, same
+  as Release4.
+- Zips in `D:\Deployment\BIZMATE\Release6\eSyncMate`: `api.zip` (75.7 MB), `ui.zip` (2.3 MB), plus a copy of
+  `V2_02_Integration_Tokens.sql`.
+- Checked: the new code is in `eSyncMate.Processor.dll` of both `api` and `api\RouteWorker`; the three published
+  `appsettings.json` point at the client DB (ESYNCMATE / ESYNCMATESCHEDULER); the UI bundle has the Tokens field and
+  the client API address `https://ems.safavieh.com:8085/`.
+- Not done: deployment at the client (the user does it), running V2_02 on the client DB.
+
 ## Summary
 (fill in at end)
