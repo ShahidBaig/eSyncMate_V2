@@ -450,3 +450,31 @@ one-item upload (Available and On hand 407 at L56 in Shopify), Get Orders for th
 ### Step 41: L65 test closed (user's report)
 - The user set the hidden feed rows back and sent the two Shopify screenshots to the client. ALSD1EIV is a real product of the client; its Shopify stock now equals the SPARS quantities (L56 547, L65 54).
 - **Open**: client's confirmation of L65; all-items upload waits for the client's approval (Sync Products run first for the 2 new items); delete-user test with user no 2 (Tanveer) on 2026-11-26 morning; L65 scripts and the PO_03 / PO_97 removal not committed.
+
+### Step 42: Commit + push (user: leave out what causes the rejection, push the rest)
+- **Commit**: L65 scripts, removal of PO_03 / PO_97, session file.
+- **First push**: denied by the session's safety check (sensitive information). Cause found: 9 files in the 27 unpushed commits carry credentials - the setup scripts 03, 04, 10, 11, 12, 14, 15, 18 (client values put in by old commit `65acf93`) and `Testing-Client-devshop-we/devsql.sh` (old commit `1498316`).
+- **What was done**: backup branch `backup/main-before-secret-clean-2026-11-25` (local only, holds the old commits WITH the credentials - never push it); `git filter-branch` over `origin/main..main`: the 8 scripts stay in history as they are on origin, `devsql.sh` is not in history; one commit became empty and was dropped (27 -> 26). The local files were saved first and restored: the working copy is identical to before (the 8 scripts now show as modified, `devsql.sh` as untracked). The rewrite deleted 7 tracked files under `.git-rewrite/` (tracked since an old commit); restored with `git checkout`.
+- **Checks**: credential scan of the 26 commits: nothing; Processor builds; trees differ from the backup only in the 9 files.
+- **Push**: `f30e096..3134dca main -> main`, 0 commits ahead.
+- **Commit ids changed** by the rewrite: user delete fix `1b42217` -> `f698563`, last commit `f1aa587` -> `3134dca`, location activation `9ade7b4` -> `0050656`. Ids of the unpushed commits named earlier in the session files are the old ones.
+- **Rule from now**: never `git add` the 8 modified scripts or `devsql.sh`; commit by explicit paths only.
+
+### Step 43: Go-live state and the 74 older orders (user's reports, night of 2026-11-25)
+- **Incident**: route 160 Get Orders ran at 12:45 server time with the ORIGINAL filter (cut-off not yet in the connector): 74 orders of the last 10 days saved, and route 161 placed them in SPARS (Status SYNCED, e.g. POs 175258 - 175267). Many may already have been sent to SPARS by the client's NetSuite flow (SPARS accepts duplicate POs). From 12:55 the connector query carries `created_at:>='2026-11-25T18:00:00Z'` and reads 0.
+- **Actions**: 161 set In-Active; PO list query given (Shopify PO, SPARS SO = Orders.ExternalId, order date, status; CustomerId 15, CreatedDate >= '2026-11-25 12:40'); the user shares it with the client, who decides which SPARS orders are duplicates. Orders must NOT be deleted in eSyncMate (Get Orders would fetch them again).
+- **Route state now**: 157, 158, 159, 160 Active; 161, 162, 163, 164, 165, 166 In-Active; 167 / 168 not shown in the user's list (168 should be Active).
+- **Before 161 goes Active**: client confirms their own flow no longer sends Shopify orders to SPARS; all orders queued as New in eSyncMate go to SPARS in its first run. ASN routes 162 / 163 wait for the client's decision on who fulfills the 74 orders in Shopify.
+
+### Step 44: The user decided to mark the 74 older orders DELETED (keep 175273, 175274) - scripts written, not run
+- **New orders after the cut-off**: 175273 (Id 786774, New, saved 13:10) and 175274.
+- **Files** (`eSyncMate.Data/Tables/ShopifyScripts/2026-11-25_Old-Orders-Deleted/`): `OD_01_Mark_Old_Orders_Deleted.sql` (dry run default; targets CustomerId 15 saved 2026-11-25 12:40 - 12:50 except the keep list; stops unless exactly 74; backup `ZDB_OD01_Orders`; refuses while route 161 is Active), `OD_02_Verify.sql` (read only), `OD_99_Revert.sql`.
+- **Checked in code**: Orders screen / dashboard filter `Status <> 'DELETED'` (`OrdersController.cs:695, 736, 824`); Get Orders duplicate check has no status filter, so DELETED orders are not fetched again; ASN branch picks SYNCED only.
+- **Open risk found**: `ShopifyGetCancelledOrdersRoute.LoadCandidates` (route 166) excludes only CANCELLED / PortalCancel / CancelError, NOT DELETED: a customer cancellation in Shopify of one of these orders would be sent to SPARS by 167. Fix (add DELETED to the exclusion) needed before 166 / 167 are activated.
+- **Not done by the script**: the 74 SPARS sales orders stay in SPARS (client decides there).
+
+### Step 45: The older orders closed (user's report, 2026-11-26)
+- OD_01 dry run found 73 (not 74): PO 175267 (Id 786733) was not in the list (assumed already DELETED - not confirmed by the check query); Id 786688 is not a WKE1000 order of that run. Of the 73: 52 SYNCED (had a SPARS sales order, 133181464 - 133181518), 21 ERROR (never created in SPARS).
+- User: the client VOIDED the SPARS sales orders, and the orders are marked DELETED in eSyncMate (OD_01 with `@ExpectedCount = 73`, `@Apply = 1`). Backup `ZDB_OD01_Orders` (OD_99 reverts).
+- Still to do before routes 166 / 167 go Active: exclude DELETED orders in `ShopifyGetCancelledOrdersRoute.LoadCandidates` (now only CANCELLED / PortalCancel / CancelError).
+- Orders 175273 / 175274 (New) wait for route 161 (client's cut-over confirmation).
