@@ -198,5 +198,18 @@ Next step after the inventory work of 2026-11-24: read orders from the live Shop
 - **Order of work now**: publish + deploy Release7 -> PO_01 (map: CustomerPO = PO number) -> PO_03 -> PO_02
   preview -> Place Orders in ERP on the user's go -> PO_02 verify.
 
+### Step 16: Committed and published to Release7 (the user asked)
+- **Commits on `main`** (not pushed): `7742e37` code (5 files in `eSyncMate.Processor/Managers`), `708b02f`
+  scripts of 2026-11-24 / 2026-11-25 and both session files. Left uncommitted as agreed: RouteWorker
+  `GlobalUsings.g.cs`, `MOM/`, the connector zip / folder, the `.docx`, the Amazon session file of 2026-11-23.
+- **Publish**: `dotnet publish eSyncMate.Processor\eSyncMate.Processor.csproj -c Release -o
+  D:\Deployment\BIZMATE\Release7\api` - exit 0, 435 files (same count as Release6).
+- **Checked**: `ShopifyOrderRef` is in `eSyncMate.Processor.dll` of `api` and of `api\RouteWorker` (both
+  2,009,088 bytes, built 2026-11-25 14:06); `appsettings.json`, `web.config`, `RouteWorker\appsettings.json`,
+  `AlertWorker\appsettings.json` are byte-identical to Release6 (client values).
+- **Package**: `D:\Deployment\BIZMATE\Release7\eSyncMate\api.zip` (79,383,189 bytes) and
+  `Release7\eSyncMate\scripts\` with PO_01, PO_02, PO_03, PO_97, PO_99. No UI build (UI unchanged).
+- **Not done**: deployment at the client (user); no test of the new code against a database or the store.
+
 ## Summary
 (open)
