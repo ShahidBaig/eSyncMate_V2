@@ -211,5 +211,67 @@ Next step after the inventory work of 2026-11-24: read orders from the live Shop
   `Release7\eSyncMate\scripts\` with PO_01, PO_02, PO_03, PO_97, PO_99. No UI build (UI unchanged).
 - **Not done**: deployment at the client (user); no test of the new code against a database or the store.
 
+### Step 17: Client question - "you only update On hand, is Available needed or does it follow later?"
+- The client's screenshot (2026-11-24): variant English Oak, L56 On hand 407, Available / Committed / Unavailable
+  blank; total Available 55, On hand 462.
+- **Code**: `ShopifyInventoryUploadRoute` sets the absolute `available` quantity (`inventorySetQuantities`,
+  reason `correction`); it does not send On hand. Shopify derives On hand.
+- **Shopify admin today (read only)**, item `43748597956674`:
+  - Adjustment history of L56: 2026-11-24 9:50 am store time, "Inventory correction" by **eSyncMate Connector**:
+    Available +407 -> 407 and On hand +407 -> 407. 2026-11-24 3:48 pm, "Inventory correction" by **Matrixify**:
+    +4 -> 411 for both.
+  - Variant now: 1553 W 9000 S 0 / 0, L56 Available 411 / On hand 411, L65 0 / 0, total 411 / 411.
+  - `inventory_levels` now lists three levels (26869263 = 0, 81898602562 = 411, 82231951426 = 0; the last two
+    updated 2026-11-24 15:48 store time). Yesterday before 15:48 it listed only 26869263.
+- **Reading**: eSyncMate did send Available. It was not shown (blank) while the product was not stocked at L56;
+  it showed after the client's Matrixify import at 3:48 pm, which stocked the product at L56 / L65 and changed
+  the quantity to 411. It did not appear by itself with time. This corrects step 12 of the 2026-11-24 session
+  ("not sellable"): the cause was the location not being stocked for the product, and the client has since
+  done that for this item.
+- **Open for the client**: 411 (Matrixify) vs 407 (eSyncMate, SPARS ATS; 4 damaged) - the next eSyncMate upload
+  sets 407 again; whether the Matrixify import stocked L55 / L56 / L65 for all products.
+
+### Step 18: Confirmed from Shopify's documentation - Available does not appear by itself
+- The user asked for a confirmed answer on the state of 2026-11-24 (On hand 407, Available blank at L56).
+- **Shopify docs** (shopify.dev, "Manage inventory quantities and states"): from API 2026-04 a quantity mutation
+  on an item that is not stocked at the location creates an INACTIVE inventory level and stores the quantity;
+  the item is not available for sale or fulfillment from that location until it is activated there; apps should
+  activate it with `inventoryActivate` (or `inventoryBulkToggleActivation`); activating keeps the stored
+  quantities. Before 2026-04 the same call answered `ITEM_NOT_STOCKED_AT_LOCATION`. The connector uses 2026-10.
+- **So**: eSyncMate sent Available = 407; Shopify stored it on an inactive level, which is why the screen showed
+  On hand 407 and Available blank. It does not change with time. It showed after the level was activated
+  (Matrixify, 3:48 pm). `ShopifyInventoryUploadRoute` has no activation call.
+- **Options**: the client stocks the products at the locations, or the upload activates the level itself
+  (code change; Release7 is published but not deployed, so it could still go into it).
+
+### Step 19: Report for the lead published; Release7 is deployed at the client
+- **Artifact** (private, the user shares it with the lead): https://claude.ai/artifact/Ugrdqe5emZZVsBrhaFrFRR
+  "Shopify Available Quantity" - answer, store history, Shopify documentation, two options, draft reply to the
+  client. Source file is in the session scratchpad, not in the repo.
+- **The user**: Release7 is deployed at the client; the PO scripts are not executed yet.
+- **Consequence**: the location activation (`inventoryActivate`) can no longer go into Release7; it is a
+  Release8 item if the lead / client choose it.
+- **Next at the client**: PO_01 (dry run, apply) -> PO_03 (dry run, apply with `@Release7Deployed = 1`) ->
+  PO_02 preview -> Place Orders in ERP on the user's go -> PO_02 verify.
+
+### Step 20: Location activation added to the inventory upload; Release8 published (the user asked)
+- **Shopify docs read first**: `inventoryActivate(inventoryItemId, locationId, available, onHand)` needs
+  `write_inventory` and, from 2026-04, an `@idempotent` key; `InventoryLevel.isActive` exists.
+- **Code** (commit `9ade7b4`): `ShopifyInventoryUploadRoute.cs` - new `ActivateLocationsAsync`, run after the
+  quantities are set and before the results are saved:
+  1. only item / location pairs with a quantity above 0 on items without an error;
+  2. one query per 100 items (`nodes(ids)` -> `inventoryLevel(locationId) { isActive }` per mapped location)
+     finds the pairs with no level or an inactive one;
+  3. `inventoryActivate` for each of them with the same Available quantity.
+  A failed check is logged and changes nothing; a failed activation puts the item in ERROR with the reason;
+  the route log line now also says "N location(s) turned on for a product (F failed)"; the per-item JSON-RVD
+  has `locationsTurnedOn`. `ShopifyInventoryItemModel.cs`: new list `Activated`.
+- **Build**: `dotnet build` succeeded, 0 errors. **Not tested against a store** (no test store reachable from
+  here): the first real proof is an upload run at the client with an item that is not stocked at L55 / L56.
+- **Publish**: `dotnet publish ... -o D:\Deployment\BIZMATE\Release8\api` - exit 0, 435 files; both
+  `eSyncMate.Processor.dll` (API and RouteWorker) contain `inventoryActivate` and `ShopifyOrderRef`; the four
+  config files are identical to Release7. Package `D:\Deployment\BIZMATE\Release8\eSyncMate\api.zip`
+  (79,393,666 bytes). Release8 contains Release7. No scripts and no UI build needed for it.
+
 ## Summary
 (open)
