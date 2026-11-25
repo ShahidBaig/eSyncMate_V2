@@ -14,5 +14,7 @@ namespace eSyncMate.Processor.Models
         public List<Change> Changes { get; set; } = new();
         public List<string> Errors { get; set; } = new();
         public List<string> CallErrors { get; set; } = new();
+        // "L56 (gid://shopify/Location/...)": locations this run turned on for the item in Shopify
+        public List<string> Activated { get; set; } = new();
     }
 }

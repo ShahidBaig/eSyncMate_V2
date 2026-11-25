@@ -2,6 +2,7 @@ using eSyncMate.DB;
 using eSyncMate.DB.Entities;
 using eSyncMate.Processor.Models;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System.Data;
 using static eSyncMate.DB.Declarations;
 
@@ -120,13 +121,17 @@ namespace eSyncMate.Processor.Managers
                 int l_Calls = l_Chunks.Count;
                 int l_CallsFailed = SendAllAsync(l_Chunks, l_Items, l_DestinationConnector, route, l_InventoryBatchWise.BatchID, userNo).GetAwaiter().GetResult();
 
+                // Shopify keeps a quantity for a location the product is not stocked at as INACTIVE: On hand shows it,
+                // Available stays blank and nothing can be sold from there. Those locations are turned on here.
+                (int l_Activated, int l_ActivateFailed) = ActivateLocationsAsync(l_Quantities, l_Items, l_DestinationConnector, route, userNo).GetAwaiter().GetResult();
+
                 SaveResults(l_Items, l_Data, l_SCSInventoryFeed, l_SourceConnector.ConnectionString, l_CustomerId, l_InventoryBatchWise.BatchID, out int l_Synced, out int l_Failed, out int l_Retry);
 
                 l_InventoryBatchWise.Status = l_CallsFailed > 0 ? "Error" : "Completed";
                 l_InventoryBatchWise.FinishDate = DateTime.Now;
                 l_SCSInventoryFeed.UpdateInventoryBatchWise(l_InventoryBatchWise);
 
-                route.SaveLog(LogTypeEnum.RouteInfo, $"Shopify inventory for [{l_CustomerId}] batch [{l_InventoryBatchWise.BatchID}]: {l_Items.Count} item(s), {l_Quantities.Count} location quantities in {l_Calls} call(s) ({l_CallsFailed} failed), {l_Synced} SYNCED, {l_Failed} ERROR, {l_Retry} left for next run.", string.Empty, userNo);
+                route.SaveLog(LogTypeEnum.RouteInfo, $"Shopify inventory for [{l_CustomerId}] batch [{l_InventoryBatchWise.BatchID}]: {l_Items.Count} item(s), {l_Quantities.Count} location quantities in {l_Calls} call(s) ({l_CallsFailed} failed), {l_Activated} location(s) turned on for a product ({l_ActivateFailed} failed), {l_Synced} SYNCED, {l_Failed} ERROR, {l_Retry} left for next run.", string.Empty, userNo);
                 route.SaveLog(LogTypeEnum.Info, $"Completed execution of route [{route.Id}]", string.Empty, userNo);
             }
             catch (Exception ex)
@@ -407,6 +412,124 @@ namespace eSyncMate.Processor.Managers
             return true;
         }
 
+        private const int LevelCheckSize = 100;
+
+        private const string ActivateMutation = @"mutation Activate($item: ID!, $location: ID!, $available: Int, $key: String!) {
+  inventoryActivate(inventoryItemId: $item, locationId: $location, available: $available) @idempotent(key: $key) {
+    inventoryLevel { id isActive }
+    userErrors { field message }
+  }
+}";
+
+        // From API 2026-04 inventorySetQuantities no longer refuses a location the product is not stocked at: it stores
+        // the quantity on an inactive inventory level, which is not available for sale until it is activated
+        // (shopify.dev, "Manage inventory quantities and states"). So after the quantities are set, every item/location
+        // with stock is checked, and the ones that are not active are turned on with inventoryActivate, carrying the
+        // same Available quantity. Zeros are left alone: an inactive location with 0 changes nothing.
+        // A failed check changes nothing (as before this step existed) and is logged; a failed activation puts the item
+        // in ERROR, because its stock is saved in Shopify but cannot be sold.
+        // Returns (locations turned on, activations failed).
+        private static async Task<(int Activated, int Failed)> ActivateLocationsAsync(List<ShopifyInventoryQuantityModel> p_Quantities, Dictionary<string, ShopifyInventoryItemModel> p_Items,
+                                                                                    ConnectorDataModel p_Connector, Routes p_Route, int p_UserNo)
+        {
+            int l_Activated = 0, l_Failed = 0;
+
+            try
+            {
+                // only what was really set: stock above 0 on items without any error
+                List<ShopifyInventoryQuantityModel> l_Stocked = p_Quantities
+                    .Where(q => q.Quantity > 0 && p_Items[q.ItemId].Errors.Count == 0 && p_Items[q.ItemId].CallErrors.Count == 0)
+                    .ToList();
+
+                if (l_Stocked.Count == 0)
+                    return (0, 0);
+
+                // the location ids go into the query text as aliases l0, l1 ...: digits only
+                List<string> l_LocationIds = l_Stocked.Select(q => q.LocationId).Distinct(StringComparer.OrdinalIgnoreCase)
+                    .Where(l => l.Substring(l.LastIndexOf('/') + 1).All(char.IsAsciiDigit)).ToList();
+
+                if (l_LocationIds.Count == 0)
+                    return (0, 0);
+
+                string l_LevelFields = string.Join(" ", l_LocationIds.Select((l, i) => $"l{i}: inventoryLevel(locationId: \"{l}\") {{ isActive }}"));
+                string l_LevelsQuery = "query Levels($ids: [ID!]!) { nodes(ids: $ids) { ... on InventoryItem { id " + l_LevelFields + " } } }";
+
+                HashSet<string> l_Inactive = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                List<string> l_ItemIds = l_Stocked.Select(q => q.InventoryItemId).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+
+                for (int l_Start = 0; l_Start < l_ItemIds.Count; l_Start += LevelCheckSize)
+                {
+                    List<string> l_Ids = l_ItemIds.GetRange(l_Start, Math.Min(LevelCheckSize, l_ItemIds.Count - l_Start));
+
+                    ShopifyGraphQLResult<ShopifyGraphQLResponseModel> l_Check =
+                        await ShopifyGraphQL.ExecuteAsync<ShopifyGraphQLResponseModel>(p_Connector, l_LevelsQuery, new { ids = l_Ids });
+
+                    JArray l_Nodes = l_Check.Success ? JObject.Parse(l_Check.ResponseBody)["data"]?["nodes"] as JArray : null;
+
+                    if (l_Nodes == null)
+                    {
+                        SaveLog(p_Route, LogTypeEnum.Error, $"Shopify could not tell which locations are turned on for {l_Ids.Count} product(s): {(l_Check.Success ? "no data in the response" : l_Check.Error)}. Their quantities are saved; a location that is not turned on for a product shows no Available until it is.", l_Check.ResponseBody, p_UserNo);
+                        continue;
+                    }
+
+                    foreach (JToken l_Node in l_Nodes)
+                    {
+                        string l_Id = l_Node?.Value<string>("id") ?? string.Empty;
+
+                        if (l_Id.Length == 0)
+                            continue;
+
+                        for (int i = 0; i < l_LocationIds.Count; i++)
+                        {
+                            JToken l_Level = l_Node[$"l{i}"];
+
+                            // no level at all, or one that is not active
+                            if (l_Level == null || l_Level.Type == JTokenType.Null || l_Level.Value<bool?>("isActive") != true)
+                                l_Inactive.Add(l_Id + "|" + l_LocationIds[i]);
+                        }
+                    }
+                }
+
+                foreach (ShopifyInventoryQuantityModel l_Row in l_Stocked.Where(q => l_Inactive.Contains(q.InventoryItemId + "|" + q.LocationId)))
+                {
+                    ShopifyInventoryItemModel l_Item = p_Items[l_Row.ItemId];
+
+                    ShopifyGraphQLResult<ShopifyGraphQLResponseModel> l_Result = await ShopifyGraphQL.ExecuteAsync<ShopifyGraphQLResponseModel>(p_Connector, ActivateMutation,
+                        new { item = l_Row.InventoryItemId, location = l_Row.LocationId, available = l_Row.Quantity, key = Guid.NewGuid().ToString() });
+
+                    string l_Why = l_Result.Success ? string.Empty : l_Result.Error;
+
+                    if (l_Result.Success)
+                    {
+                        JToken l_Payload = JObject.Parse(l_Result.ResponseBody)["data"]?["inventoryActivate"];
+                        List<string> l_Errors = (l_Payload?["userErrors"] as JArray)?.Select(e => e.Value<string>("message") ?? string.Empty).Where(m => m.Length > 0).ToList() ?? new List<string>();
+
+                        l_Why = l_Errors.Count > 0 ? string.Join("; ", l_Errors)
+                              : l_Payload?["inventoryLevel"] == null || l_Payload["inventoryLevel"].Type == JTokenType.Null ? "no inventory level in the response"
+                              : string.Empty;
+                    }
+
+                    if (l_Why.Length == 0)
+                    {
+                        l_Activated++;
+                        lock (l_Item) l_Item.Activated.Add($"{l_Row.WHSID} ({l_Row.LocationId}), Available {l_Row.Quantity}");
+                        continue;
+                    }
+
+                    l_Failed++;
+                    AddError(l_Item, $"Warehouse {l_Row.WHSID} ({l_Row.LocationId}): the quantity {l_Row.Quantity} is saved in Shopify, but the location could not be turned on for this product, so it shows no Available: {l_Why.TrimEnd('.')}. Turn the location on for the product in Shopify (product > Inventory > locations).");
+                    SaveLog(p_Route, LogTypeEnum.Error, $"Shopify inventoryActivate failed for SKU [{l_Item.Sku}], warehouse {l_Row.WHSID}: {l_Why}", l_Result.ResponseBody, p_UserNo);
+                }
+            }
+            catch (Exception ex)
+            {
+                // the quantities are already saved in Shopify; this step must never take the upload down
+                SaveLog(p_Route, LogTypeEnum.Exception, "Shopify: turning the locations on for the products failed. The quantities are saved; a location that is not turned on shows no Available.", ex.ToString(), p_UserNo);
+            }
+
+            return (l_Activated, l_Failed);
+        }
+
         private static void SaveResults(Dictionary<string, ShopifyInventoryItemModel> p_Items, DataTable p_Data, SCSInventoryFeed p_Feed, string p_ConnectionString,
                                         string p_CustomerId, string p_BatchId, out int p_Synced, out int p_Failed, out int p_Retry)
         {
@@ -450,7 +573,7 @@ namespace eSyncMate.Processor.Managers
                     p_Synced++;
                     l_SyncedItems.Rows.Add(l_Item.ItemId, p_CustomerId);
                     l_SyncedRows.ImportRow(l_Row);
-                    l_FeedData.Rows.Add(p_CustomerId, l_Item.ItemId, "JSON-RVD", JsonConvert.SerializeObject(new { success = true, changes = l_Item.Changes }), DateTime.Now, 1, p_BatchId);
+                    l_FeedData.Rows.Add(p_CustomerId, l_Item.ItemId, "JSON-RVD", JsonConvert.SerializeObject(new { success = true, changes = l_Item.Changes, locationsTurnedOn = l_Item.Activated }), DateTime.Now, 1, p_BatchId);
                 }
                 else
                 {
