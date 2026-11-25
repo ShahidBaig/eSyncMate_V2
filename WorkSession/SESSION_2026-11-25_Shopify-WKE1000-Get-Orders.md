@@ -395,3 +395,58 @@ one-item upload (Available and On hand 407 at L56 in Shopify), Get Orders for th
 - **Files changed**: `eSyncMate.Processor/Controllers/UserController.cs` (new `POST api/User/deleteUser`: sets `Users.Status = 'DELETED'`; refuses a missing id, the caller's own user, and a user that does not exist or is already deleted), `eSyncMate.Processor/Models/UserModel.cs` (`DeleteUserModel`).
 - **Checks**: `dotnet build` of the Processor succeeded. Not run against a database. On the live Users screen the delete icon and the dialog's Delete User button already show the hand cursor on hover (checked in Chrome; dialog cancelled, no user deleted).
 - **Open**: not committed, not published (next folder Release9). After deployment test with user no 2 (Tanveer), as the user asked; no other user is to be deleted.
+
+### Step 32: User delete fix committed, Release9 published
+- **Commit**: `1b42217` fix(users): add the missing `api/User/deleteUser` endpoint (soft delete). The staged removal of PO_03 / PO_97 was left out of this commit.
+- **Command**: `dotnet publish eSyncMate.Processor\eSyncMate.Processor.csproj -c Release -o D:\Deployment\BIZMATE\Release9\api`, then zipped to `D:\Deployment\BIZMATE\Release9\eSyncMate\api.zip`.
+- **Checks**: 435 files (same list as Release8); `appsettings.json` (API, RouteWorker, AlertWorker) and `web.config` identical to Release8; `deleteUser` / `DeleteUserModel` present in `eSyncMate.Processor.dll` of `api` and `api\RouteWorker`, absent in Release8; Release8's location activation still present. API only, no UI build needed.
+- **Open**: deploy at the client; test by deleting user no 2 (Tanveer) only.
+
+### Step 33: Release9 deployed at the client (user's report)
+- **What was done**: the user deployed Release9 at the client on 2026-11-25.
+- **Open for 2026-11-26 morning**: test the delete with user no 2 (Tanveer) only, not now because the client is using the site. Check: success message, user gone from the Users list, login refused. Still waiting for the client's approval for the all-items inventory upload.
+
+### Step 34: ASN plan for order 786382 (PO 175205, SO 133177640) - explained, nothing run
+- **Asked by the user** from home (no site access): the steps to create the ASN for the SPARS order.
+- **Plan given**: (0) SPARS must ship SO 133177640 first; (1) route "Shopify - Fetch ASN from ERP" (type 11, `SCSASNRoute`, SPARS `Get_TrackingInfo`) -> OrderDetail `ASNRVD` + tracking, OrderData `ERPASN-JSON`; (2) route "Shopify - Send ASN Shipment Notification" (type 83) -> `fulfillmentCreate` per tracking number, units `ASNSNT`, order SHIPPED, OrderData `ASN-SNT` / `ASN-RES`. Both in Flow "Shopify - Shipment & ASN", each activated alone for Run Now, then In-Active again.
+- **Open questions for the client before step 2** (it writes to the live store): notifyCustomer (default false = no shipment e-mail from Shopify); the order is also open in the NetSuite flow; the Shopify order is assigned to location "1553 W 9000 S"; client's go.
+- **Not done**: read-only check / verify scripts for the ASN step (AS_01 / AS_02) are not written yet.
+
+### Step 35: Part A done by the user - ASN received from SPARS for order 786382 (PO 175205)
+- **Run**: route "Shopify - Fetch ASN from ERP" via Run Now, by the user on the production site (click steps given by me).
+- **SPARS answer** (Order Log "ASN Received from ERP"): Success true, "Tracking Information Provided."; TrackingNo 385463184259, ItemID WEMYA25OS4MB1, OrderLineNo 1, APIOrderLineNo 1, ShippedQty 1, ShippedDate 2026-11-25 08:26, ShippingMethod "FEDEX HOME DELIVERY" (maps to Shopify carrier FedEx).
+- **Next**: Part B, route "Shopify - Send ASN Shipment Notification" (writes to the live store): expected one fulfillment, 1 unit, tracking 385463184259, carrier FedEx, no customer e-mail (notifyCustomer default false). Not confirmed: that the fetch route was set back to In-Active.
+
+### Step 36: Part B done by the user - ASN sent to Shopify, order #175205 Fulfilled
+- **Run**: route "Shopify - Send ASN Shipment Notification" via Run Now, by the user on the production site.
+- **Shopify answer** (Order Log "ASN Created in Customer Portal"): `fulfillmentCreate` -> fulfillment `gid://shopify/Fulfillment/6878608326722`, status SUCCESS, no userErrors.
+- **Shopify admin** (user's screenshot, 2026-11-25 8:52 pm): order #175205 Paid / Fulfilled / Archived; fulfillment #175205-F1, Confirmed, November 25, 2026, "FedEx tracking: 385463184259", 1 x WEMYA25OS4MB1 at $134.99, location "1553 W 9000 S".
+- **Result**: the whole cycle works on the live store for PO 175205: Get Orders -> SPARS SO 133177640 -> ASN from SPARS -> fulfillment in Shopify.
+- **Not confirmed**: order 786382 status Shipped in eSyncMate; both ASN routes back to In-Active. The fulfillment was recorded at location "1553 W 9000 S" (the location Shopify assigned), not L56 - client question on stock stays open.
+
+### Step 37: Client asks to add warehouse L65 (test item ALSD1EIV) - scripts written, nothing run
+- **Finding**: no code change needed. The upload route reads the warehouse -> location mapping from `TargetPlusShipNodes` (`ShopifyInventoryUploadRoute.cs:155`), and the source SP branch already returns `ATS_L65`. Adding L65 = one mapping row: L65 -> `gid://shopify/Location/82231951426` ("L65 - Yaraghi Patterson", read in Shopify admin 2026-11-24).
+- **Files created** (`eSyncMate.Data/Tables/ShopifyScripts/2026-11-25_Add-L65-Location/`): `L65_01_Add_L65_Mapping.sql` (dry run default; backup `ZDB_L65_ShipNodes`; stops 52010-52014; grids: mapping, plan, test item in the feed, feed L65 totals, upload route), `L65_02_Verify.sql` (read only), `L65_99_Revert.sql`.
+- **Risk told to the user**: once L65 is mapped, every uploaded item gets its SPARS L65 quantity written to the Shopify L65 location, also 0. On 2026-11-25 the feed had 0 units at L65 for all 344 items, while Shopify had stock there (PRSB4CCO 938). Check the grid "Feed L65 totals" before any upload.
+- **Not checked**: whether ALSD1EIV is in the WKE1000 feed (the dry run shows it). Scripts not run against any database. Not committed.
+
+### Step 38: L65_01 dry run at the client (user) + read-only look in Shopify admin
+- **Dry run grids**: mapping now = L55 (row 166) and L56 (row 167); plan = L65 "will be inserted"; test item ALSD1EIV is in the feed (UPC 840357720554, Status UPDATED, Total 547, L55 0, L56 547, L65 0, Shopify id `gid://shopify/InventoryItem/42540949536834`); feed L65 totals = 345 items, 0 with stock at L65, 0 units, 344 waiting for upload; upload route 159 In-Active, JobID NULL.
+- **Shopify admin, Inventory, ALSD1EIV (read only, 2026-11-25 evening)**: L65 - Yaraghi Patterson: stocked, Available 0 / On hand 0; L56: Available 548 / On hand 548; L55: not listed (not stocked there).
+- **Conclusion**: adding the mapping is safe (route In-Active). A one-item upload of ALSD1EIV would set L56 548 -> 547 and write 0 to L65, where Shopify already shows 0, so the L65 part would show no visible change. SPARS sends 0 at L65 for all 345 items: question for the client / ERP team whether that is right.
+- **Not done**: `@Apply = 1` not run yet.
+
+### Step 39: SPARS now sends L65 - second L65_01 dry run (user ran the Full Inventory route, then In-Active)
+- **Grids**: mapping unchanged (L55, L56); plan L65 "will be inserted"; ALSD1EIV: Status UPDATED, Total 601, L55 0, L56 547, L65 54, Shopify id present; feed L65 totals: 347 items (2 more than before), 30 with stock at L65, 11,323 units, 347 waiting for upload (the full feed put every row on UPDATED); route 159 In-Active.
+- **Plan given**: `@Apply = 1`, `L65_02`, then a one-item upload of ALSD1EIV: other rows to `MAJID` first (user's own method), Run Now of route 159 alone, expected Shopify L56 548 -> 547 and L65 0 -> 54, then rows back to `UPDATED`. All-items upload still waits for the client's approval; the 2 new items need a Sync Products run before it.
+
+### Step 40: L65 mapping applied and proven with ALSD1EIV
+- **User (SQL)**: `L65_01` with `@Apply = 1` (row 168: L65 -> `gid://shopify/Location/82231951426`, backup `ZDB_L65_ShipNodes`), `L65_02` verify OK. Feed status then: 345 UPDATED, 2 NEW. Corrected one-item statements given (UPDATED -> `MAJID`, NEW -> `MAJIDN`, because the upload also sends NEW rows).
+- **User (site)**: route 159 run alone via Run Now, then back to In-Active (user's report). Route log not yet seen by me.
+- **Shopify admin, Inventory, ALSD1EIV (read by me after the run)**: L65 - Yaraghi Patterson Available 54 / On hand 54 (before 0 / 0); L56 Available 547 / On hand 547 (before 548 / 548); L55 On hand 0, Available blank (quantity 0 on a location the product is not stocked at - expected). Matches the SPARS feed (L55 0, L56 547, L65 54).
+- **Screenshots for the client**: `D:\Deployment\BIZMATE\L65-Test-ALSD1EIV\` (L65 and L56).
+- **Open**: put the hidden rows back (`MAJID` -> UPDATED, `MAJIDN` -> NEW) - not confirmed; all-items upload still waits for the client's approval; Sync Products run for the 2 new items before it. L65 scripts not committed.
+
+### Step 41: L65 test closed (user's report)
+- The user set the hidden feed rows back and sent the two Shopify screenshots to the client. ALSD1EIV is a real product of the client; its Shopify stock now equals the SPARS quantities (L56 547, L65 54).
+- **Open**: client's confirmation of L65; all-items upload waits for the client's approval (Sync Products run first for the 2 new items); delete-user test with user no 2 (Tanveer) on 2026-11-26 morning; L65 scripts and the PO_03 / PO_97 removal not committed.
