@@ -180,6 +180,73 @@ namespace eSyncMate.Processor.Controllers
             return l_Response;
         }
 
+        /// <summary>
+        /// Soft delete: the user's status becomes DELETED. VW_Users leaves DELETED users out of the list and
+        /// the login only accepts ACTIVE users, so the user disappears and can no longer sign in, while the
+        /// records that carry this user's id (CreatedBy, logs) stay valid.
+        /// </summary>
+        [HttpPost]
+        [Route("deleteUser")]
+        public async Task<ResponseModel> DeleteUser([FromBody] DeleteUserModel model)
+        {
+            ResponseModel l_Response = new ResponseModel();
+            DataTable l_Data = new DataTable();
+
+            try
+            {
+                l_Response.Code = (int)ResponseCodes.Error;
+
+                if (model == null || model.Id <= 0)
+                {
+                    l_Response.Message = "User id is missing.";
+                    return l_Response;
+                }
+
+                string l_CurrentUserId = (User.Identity as System.Security.Claims.ClaimsIdentity)?.FindFirst("id")?.Value ?? string.Empty;
+
+                if (l_CurrentUserId == model.Id.ToString())
+                {
+                    l_Response.Message = "You cannot delete your own user.";
+                    return l_Response;
+                }
+
+                DBConnector l_Conn = new DBConnector(CommonUtils.ConnectionString);
+
+                l_Conn.GetData($"SELECT Id FROM Users WITH (NOLOCK) WHERE Id = {model.Id} AND Status <> 'DELETED'", ref l_Data);
+
+                if (l_Data.Rows.Count == 0)
+                {
+                    l_Response.Message = $"User [{model.Id}] was not found.";
+                    return l_Response;
+                }
+
+                if (l_Conn.Execute($"UPDATE Users SET Status = 'DELETED' WHERE Id = {model.Id}"))
+                {
+                    l_Response.Code = (int)ResponseCodes.Success;
+                    l_Response.Message = "User deleted successfully!";
+                    l_Response.Description = $"User [{model.Id}] has been deleted by user [{l_CurrentUserId}].";
+
+                    this._logger.LogInformation("User {UserId} deleted by user {DeletedBy}", model.Id, l_CurrentUserId);
+                }
+                else
+                {
+                    l_Response.Message = "Failed to delete the user.";
+                }
+            }
+            catch (Exception ex)
+            {
+                l_Response.Code = (int)ResponseCodes.Exception;
+                l_Response.Message = "Failed to delete the user.";
+                this._logger.LogError(ex, "Delete of user {UserId} failed", model?.Id);
+            }
+            finally
+            {
+                l_Data.Dispose();
+            }
+
+            return l_Response;
+        }
+
         [HttpPost]
         [Route("resetMFA/{userId}")]
         public async Task<ResponseModel> ResetMFA(int userId)

@@ -273,5 +273,125 @@ Next step after the inventory work of 2026-11-24: read orders from the live Shop
   config files are identical to Release7. Package `D:\Deployment\BIZMATE\Release8\eSyncMate\api.zip`
   (79,393,666 bytes). Release8 contains Release7. No scripts and no UI build needed for it.
 
+### Step 21: Release8 deployed at the client; today's end-to-end test started
+- **The user's plan**: full inventory from SPARS -> upload the same product as yesterday -> check On hand and
+  Available -> get PO 175205 -> create it in SPARS. Release8 is deployed (user).
+- **Shopify admin (read only)**: 5 of 5 checked items (`WESAS11704CO1`, `WESAS11704EO1`, `PRSB4CCO`,
+  `AF46MXETRO`, `CHL18BL`) are stocked at L56 (81898602562) with the SPARS quantities and at L65 (82231951426);
+  old location 26869263 is 0. The client's import did this for the products. None has a level at L55
+  (81898176578), where SPARS has 0. `PRSB4CCO` has 938 at L65, which is not in our mapping.
+  So the new activation step will find nothing to turn on today; it stays untested against the store.
+- **Full feed run** (production screen): Flow "Shopify - Inventory Sync", only `Fetch Full Inventory from ERP`
+  set Active, Save (04:58), View > Run Now -> "triggered successfully"; set back In-Active, Save (04:59).
+  The Flow list shows all four WKE1000 Flows In-Active.
+- **Open**: INV_02 by the user; GO_99 to delete order 786371 (fresh fetch chosen); statuses for the one-item
+  upload; upload; then Get Orders with the `name:#175205` filter; PO_01; PO_02; Place Orders on the user's go.
+
+### Step 22: Full feed verified, Sync Products, one-item upload - Available and On hand updated in Shopify
+- **User**: GO_99 applied (order 786371 deleted). Feed check: 345 items (9 more than 2026-11-24), last change
+  04:58:55; statuses set to 1 `UPDATED` (`WESAS21704EO1`: Total 407, L55 0, L56 407) and 344 `MAJID`.
+- **Slip**: while opening the upload row the window resized between screenshot and click and the Sync Products
+  row opened; cancelled without a change. Then the upload route was set Active and saved (05:04) before the
+  user asked "why not sync first?".
+- **Changed on the user's wish** (05:05): upload back to In-Active, Sync Products Active -> Run Now ("triggered
+  successfully") -> Sync In-Active, upload Active (05:06) -> Run Now ("triggered successfully") -> upload
+  In-Active, saved (05:07). Flow list afterwards: all four WKE1000 Flows In-Active.
+- **Shopify admin (read only)**, item 43748597956674 at L56: "Just now - Inventory correction - eSyncMate
+  Connector": Available -4 -> 407, On hand -4 -> 407 (after Matrixify's 411). `inventory_levels`: 26869263 = 0,
+  81898602562 = 407 (updated 2026-11-25 03:07 store time), 82231951426 = 0. Variant sellable quantity 407.
+- **Not yet seen**: the route log lines of the sync and the upload (user's SQL); how many of the 9 new items
+  got a Shopify id.
+
+### Step 23: Logs confirmed; PO 175205 fetched again with Release8 - saved with the PO number
+- **Route log (user)**: sync 05:05:56 - 4239 store items in 17 pages, missing 9, id different 0, no SKU 9, not
+  in the feed 3596, "Inserted 9 item(s)" (all 345 feed items have an id now). Upload 05:07:05, batch
+  `81a14853-29d8-47d1-a730-72605d202beb`: 1 item, 2 quantities in 2 calls (0 failed), "0 location(s) turned on
+  for a product (0 failed)", 1 SYNCED, 0 ERROR - the Release8 line, so the new step ran and found L56 active.
+- **Connector 252** (UI): `query` = `name:#175205`, `days` = `10`, saved ("updated successfully").
+- **Get Orders** (UI, by element references after the earlier mis-click): Order Processing Flow, only Get
+  Orders Active, Save (05:12), View, Run Now on the only enabled button -> "'Shopify - Get Orders' has been
+  triggered successfully"; Get Orders In-Active, Save (05:13). All four WKE1000 Flows In-Active.
+- **Orders screen**: 786382, New, WKE1000, Customer PO **175205**, PO date 11/23/2026, created 05:12 AM.
+  The PO number is now eSyncMate's order number (Release8 code path proven for Get Orders).
+- **Open**: connector 252 still on the one-order filter; GO_02 by the user; PO_01 (map) then PO_02 preview;
+  PO_03 is not needed (no order in the old form left); Place Orders in ERP on the user's go.
+
+### Step 24: Scripts no longer needed removed (the user asked)
+- Removed from the repo (`git rm`, not committed yet) and from `Release7\eSyncMate\scripts`:
+  `PO_03_Switch_Existing_Orders_To_PO_Number.sql` and `PO_97_Revert_Switch.sql` - no order in the Release6 form
+  is left, the order was fetched fresh with Release8.
+- Kept: `PO_01_Map_CustomerPO_Apply.sql`, `PO_02_Preview_And_Verify.sql`, and `PO_99_Revert_Map.sql` (the
+  revert of PO_01).
+
+### Step 25: PO_01 applied, preview clean, connector 252 back on the original filter
+- **PO_01** (user, dry run + apply): map 12 `order.header.CustomerPO` changed to the substring expression at
+  2026-11-25 05:19:08, `ExternalID` unchanged; only route 161 (WKE1000, In-Active) uses the map.
+- **PO_02 preview**: header for 786382 - WKE1000, CustomerPO `175205`, ExternalID `7490956558402`, ship-to
+  complete (Spanish Fork / UT / 84660 / US, phone filled), ShipViaCode `FEDX`, dates 11/23/2026, check OK;
+  line 1 x `WEMYA25OS4MB1` at 134.99, item in the feed; order New, no ERP SO; no ERP-SNT / ERP-JSON / ERP-ERROR
+  and no route log line of route 161 yet.
+- **Connector 252** (UI, the user asked): `query` back to `(financial_status:paid OR financial_status:pending)
+  fulfillment_status:unfulfilled status:open`, `days` = `10`; saved ("updated successfully") and read back.
+- **Waiting**: the user's "go" for Place Orders in ERP (route 161, LIVE SPARS).
+
+### Step 26: Order 175205 created in SPARS (the user said "go")
+- **Production screen**: Flow "Shopify - Order Processing", only `Place Orders in ERP` (route 161) set Active,
+  Save (05:25), View, Run Now on the only enabled button -> "'Shopify - Place Orders in ERP' has been triggered
+  successfully"; set back In-Active, Save (05:26). All four WKE1000 Flows In-Active afterwards.
+- **Orders screen**: 786382 | **Synced** | WKE1000 | Customer PO 175205 | PO date 11/23/2026 |
+  **ERP SO No 133177640** | ERP sync date 11/25/2026 05:25 AM.
+- So SPARS accepted the order, including ShipViaCode `FEDX`.
+- **Open**: PO_02 by the user (ERP-SNT body and the SPARS answer); the client checks SO 133177640 / PO 175205 in
+  SPARS; the NetSuite / Celigo question (the same Shopify order is still open there); next flows are the ASN
+  back to Shopify and cancellations.
+
+### Step 27: PO_02 after the run - body sent and SPARS answer confirmed
+- **ERP-SNT** (05:25:55): CustomerID WKE1000, CustomerPO `175205`, ship-to complete (Address2 null), OrderTakenBy
+  API, ShipViaCode FEDX, Order / Ship / Cancel date 11/23/2026, ExternalID 7490956558402; detail 1 line
+  `WEMYA25OS4MB1`, OrderQty 1, UnitPrice 134.99, WHSID empty, APIOrderLineNo 1.
+- **ERP-JSON** (05:25:56): `Success: true`, "Sales Order [133177640] has been created successfully.",
+  ObjectID 133177640. No ERP-ERROR.
+- Order 786382: SYNCED, ERP SO 133177640. Route 161 In-Active, no job. The route log grid is empty because
+  `SCSPlaceOrderRoute` writes only Info / Debug lines for a successful order, and those are not saved.
+
+### Step 28: Price validation package for the lead
+- The lead wants to validate the price with the JSON and the map. Read from the production site (read only):
+  Orders > Order Logs of 786382 (three files) and Setup > Maps (map 12). No browser download was used; the texts
+  were read from the page and written locally. Lengths match the screen exactly (order 1647 characters, map 1675).
+- **Folder** `D:\Deployment\BIZMATE\Order-175205-Validation\` (outside the repo: file 1 has customer data) and
+  `D:\Deployment\BIZMATE\Order-175205-Validation.zip`: `0_Price_Validation.md`,
+  `1_Shopify_Order_Received_API-JSON.json`, `2_Order_Sent_To_SPARS_ERP-SNT.json`,
+  `3_SPARS_Answer_ERP-JSON.json`, `4_Map_Shopify_Order_Transformation.json`.
+- **Price finding**: Shopify line `discountedUnitPriceSet` 134.99 = `originalUnitPriceSet` 134.99, quantity 1,
+  shipping 0.00, order total 134.99; map `UnitPrice` = `$.discountedUnitPriceSet.shopMoney.amount`; SPARS got
+  `UnitPrice` 134.99. Tax, shipping charge and discount fields are not sent by the map (`TaxAmount`, `Discount`
+  fixed empty) - no effect on this order, a gap for orders with tax or paid shipping.
+
+### Step 29: Upload for all items prepared, then stopped by the user before it ran
+- The lead asked to upload the inventory for all items. **User (SQL)**: the 344 `MAJID` rows set back to
+  `UPDATED` (1 `SYNCED`). Totals of what would be sent: 344 items, 260 with stock at L56, Total_L56 99,081,
+  Total_L55 0, Total_L65 0, Total_ATS 99,081, items without a Shopify id 0. (My first totals query had a
+  subquery inside `SUM` - Msg 130; corrected with `OUTER APPLY`.)
+- I opened the Flows screen and selected WKE1000; the user then said "do not update". **Nothing was changed
+  and no route was run.** Checked: all four WKE1000 Flows In-Active, no dialog open.
+- **State to remember**: the 344 feed rows are on `UPDATED`, so any run of route 159 (`Upload Warehouse-Wise
+  Inventory`) sends all of them to the live store. The route is In-Active.
+
 ## Summary
+2026-11-25: Get Orders proven on the live store; on the user's requirements the PO number became eSyncMate's
+order number (Release7) and the inventory upload activates a location (Release8, deployed, the activation
+itself not yet exercised). End-to-end run at the client: full feed (345 items), Sync Products (9 new ids),
+one-item upload (Available and On hand 407 at L56 in Shopify), Get Orders for the client's PO 175205 (order
+786382), map changed with PO_01, and the order created in SPARS as SO 133177640.
 (open)
+
+### Step 30: Lead's question on quantity vs currentQuantity; re-fetch question
+- **What was done**: answered from Shopify's LineItem documentation (currentQuantity is correct; unfulfilledQuantity only if partially fulfilled orders are ever fetched). Artifact "Shopify Line Quantity Fields" published (private). Confirmed to the user that an order already in eSyncMate is skipped by Get Orders (`ShopifyGetOrdersRoute.cs:151`); no connector filter needed. Order 786382 must not be deleted while the Shopify order is open and unfulfilled.
+- **Open**: all-items inventory upload still waits for the client's approval.
+
+### Step 31: Users screen - delete gives "404" (not Shopify related)
+- **Issue**: Users > delete icon > Delete User -> "Http failure response for .../api/User/deleteUser: 404 OK".
+- **Cause**: the UI posts to `api/User/deleteUser` (`UI/src/app/services/user.service.ts:18`), but the Processor's `UserController` never had that endpoint (no trace in git history either). The view `VW_Users` already leaves out `Status = 'DELETED'`, so a soft delete was intended.
+- **Files changed**: `eSyncMate.Processor/Controllers/UserController.cs` (new `POST api/User/deleteUser`: sets `Users.Status = 'DELETED'`; refuses a missing id, the caller's own user, and a user that does not exist or is already deleted), `eSyncMate.Processor/Models/UserModel.cs` (`DeleteUserModel`).
+- **Checks**: `dotnet build` of the Processor succeeded. Not run against a database. On the live Users screen the delete icon and the dialog's Delete User button already show the hand cursor on hover (checked in Chrome; dialog cancelled, no user deleted).
+- **Open**: not committed, not published (next folder Release9). After deployment test with user no 2 (Tanveer), as the user asked; no other user is to be deleted.

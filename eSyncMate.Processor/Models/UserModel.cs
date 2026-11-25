@@ -27,6 +27,11 @@ namespace eSyncMate.Processor.Models
         public bool MFAEnabled { get; set; }
     }
 
+    public class DeleteUserModel
+    {
+        public int Id { get; set; }
+    }
+
     public class UpdateUserDataModel
     {
         public string Email { get; set; }
