@@ -17,8 +17,9 @@ namespace eSyncMate.Processor.Managers
     ///   query = Shopify order search, default "(financial_status:paid OR financial_status:pending) fulfillment_status:unfulfilled status:open"
     ///   days  = only orders created in the last N days, default 10
     /// Gift card and digital (no shipping) lines are left out; an order with nothing to ship is not saved.
-    /// OrderNumber = the Shopify order id (e.g. 8690887852218): unique across stores, unlike the "#1001" name,
-    /// which goes into CustomerOrderNo. ExternalId is left empty (Place Order sets it to the ERP's id);
+    /// OrderNumber = the PO number = the order name without "#" (e.g. 175205): what the client searches for in
+    /// Shopify and in the ERP. CustomerOrderNo = the Shopify order id (e.g. 8690887852218), which the Shopify calls
+    /// need (ShopifyOrderRef). ExternalId is left empty (Place Order sets it to the ERP's id);
     /// OrderDetail.order_line_id = the line item gid.
     /// </summary>
     public class ShopifyGetOrdersRoute
@@ -135,14 +136,19 @@ namespace eSyncMate.Processor.Managers
                     {
                         l_Read++;
 
-                        string l_OrderNumber = l_Order?.legacyResourceId?.Trim() ?? string.Empty;
+                        string l_ShopifyId = l_Order?.legacyResourceId?.Trim() ?? string.Empty;
 
-                        if (string.IsNullOrEmpty(l_OrderNumber))
+                        if (string.IsNullOrEmpty(l_ShopifyId))
                             continue;
+
+                        // eSyncMate's order number = the PO number the client knows ("#175205" -> "175205")
+                        string l_OrderNumber = ShopifyOrderRef.PoNumber(l_Order.name, l_ShopifyId);
 
                         l_Existing = new DataTable();
 
-                        if (l_Orders.GetViewList($"OrderNumber = '{l_OrderNumber.Replace("'", "''")}'", "Id", ref l_Existing))
+                        // this customer's orders only (a PO number is unique per store, not across partners);
+                        // the Shopify id finds orders saved before the PO number became the order number
+                        if (l_Orders.GetViewList($"CustomerId = {l_Customer.Id} AND (OrderNumber = '{l_OrderNumber.Replace("'", "''")}' OR OrderNumber = '{l_ShopifyId.Replace("'", "''")}' OR CustomerOrderNo = '{l_ShopifyId.Replace("'", "''")}')", "Id", ref l_Existing))
                         {
                             l_Known++;
                             continue;
@@ -255,8 +261,10 @@ namespace eSyncMate.Processor.Managers
                 l_Orders.CustomerId = p_Customer.Id;
                 l_Orders.OrderDate = DateTimeOffset.TryParse(p_Order.createdAt, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out DateTimeOffset l_Created)
                     ? l_Created.UtcDateTime : DateTime.UtcNow;
-                l_Orders.OrderNumber = p_Order.legacyResourceId;
-                l_Orders.CustomerOrderNo = p_Order.name ?? string.Empty;
+                // OrderNumber (Customer PO on the Orders screen, CustomerPO in the ERP) = the PO number;
+                // CustomerOrderNo = the Shopify id the Shopify calls need (see ShopifyOrderRef)
+                l_Orders.OrderNumber = ShopifyOrderRef.PoNumber(p_Order.name, p_Order.legacyResourceId);
+                l_Orders.CustomerOrderNo = p_Order.legacyResourceId ?? string.Empty;
                 l_Orders.ShippingMethod = l_ShippingLine?.code ?? l_ShippingLine?.title ?? string.Empty;
                 l_Orders.ShipToName = l_Ship?.name ?? string.Empty;
                 l_Orders.ShipToCompanyName = l_Ship?.company ?? string.Empty;

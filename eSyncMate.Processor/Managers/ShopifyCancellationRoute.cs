@@ -187,7 +187,8 @@ namespace eSyncMate.Processor.Managers
                                             Settings p_Settings, Routes p_Route, int p_UserNo)
         {
             string l_OrderNumber = Convert.ToString(p_Rows[0]["OrderNumber"]) ?? string.Empty;
-            string l_OrderGid = "gid://shopify/Order/" + l_OrderNumber;
+            // OrderNumber is the PO number; Shopify only knows the order by its own id
+            string l_OrderGid = "gid://shopify/Order/" + ShopifyOrderRef.GetShopifyOrderId(p_Source.ConnectionString, p_OrderId, l_OrderNumber);
             List<int> l_LineNos = p_Rows.Select(r => Convert.ToInt32(r["LineNo"])).ToList();
             CallLog l_Log = new CallLog();
 

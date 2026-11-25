@@ -138,7 +138,10 @@ namespace eSyncMate.Processor.Managers
             OrderDetail l_Detail = new OrderDetail();
             l_Detail.UseConnection(p_Source.ConnectionString);
 
-            ShopifyGraphQLResult<FO> l_FoResult = ShopifyGraphQL.Execute<FO>(p_Destination, FulfillmentOrdersQuery, new { id = "gid://shopify/Order/" + l_OrderNumber });
+            // OrderNumber is the PO number; Shopify only knows the order by its own id
+            string l_ShopifyId = ShopifyOrderRef.GetShopifyOrderId(p_Source.ConnectionString, p_OrderId, l_OrderNumber);
+
+            ShopifyGraphQLResult<FO> l_FoResult = ShopifyGraphQL.Execute<FO>(p_Destination, FulfillmentOrdersQuery, new { id = "gid://shopify/Order/" + l_ShopifyId });
             FO.Order l_ShopifyOrder = l_FoResult.Success ? l_FoResult.Response.data?.order : null;
 
             List<string> l_Trackings = p_Rows.Select(r => Convert.ToString(r["TrackingNo"])?.Trim() ?? string.Empty).Where(t => t.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).ToList();

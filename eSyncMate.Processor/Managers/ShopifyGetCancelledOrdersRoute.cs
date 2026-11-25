@@ -172,31 +172,36 @@ namespace eSyncMate.Processor.Managers
             }
         }
 
-        // OrderNumber -> the order's open units per Shopify line; orders already CANCELLED / PortalCancel / CancelError are left out
-        private static Dictionary<string, Candidate> LoadCandidates(DBConnector p_Connection, string p_CustomerId, List<string> p_OrderNumbers)
+        // Shopify order id -> the order's open units per Shopify line; orders already CANCELLED / PortalCancel / CancelError are left out.
+        // The Shopify id is in Orders.CustomerOrderNo (OrderNumber is the PO number); orders saved before that change
+        // have it in OrderNumber, so both columns are searched. Candidate.OrderNumber stays eSyncMate's own number.
+        private static Dictionary<string, Candidate> LoadCandidates(DBConnector p_Connection, string p_CustomerId, List<string> p_ShopifyIds)
         {
             Dictionary<string, Candidate> l_Candidates = new Dictionary<string, Candidate>(StringComparer.OrdinalIgnoreCase);
             DataTable l_Table = new DataTable();
 
-            // the numbers are digits only (checked when read)
+            // the ids are digits only (checked when read)
+            string l_Ids = string.Join(",", p_ShopifyIds.Select(n => $"'{n}'"));
+
             p_Connection.GetData($@"SELECT O.Id, O.OrderNumber, D.order_line_id,
+                                           CASE WHEN O.CustomerOrderNo IN ({l_Ids}) THEN O.CustomerOrderNo ELSE O.OrderNumber END AS ShopifyId,
                                            SUM(CASE WHEN ISNULL(D.[Status], '') IN ('CANRVD', 'CANSNT', 'CANERR') THEN 0 ELSE D.LineQty END) AS Active,
                                            SUM(CASE WHEN ISNULL(D.[Status], '') = 'NEW' THEN D.LineQty ELSE 0 END) AS NewUnits
                                       FROM Orders O WITH (NOLOCK)
                                       JOIN Customers C WITH (NOLOCK) ON C.Id = O.CustomerId
                                       JOIN OrderDetail D WITH (NOLOCK) ON D.OrderId = O.Id
                                      WHERE C.ERPCustomerID = '{p_CustomerId.Replace("'", "''")}'
-                                       AND O.OrderNumber IN ({string.Join(",", p_OrderNumbers.Select(n => $"'{n}'"))})
+                                       AND (O.CustomerOrderNo IN ({l_Ids}) OR O.OrderNumber IN ({l_Ids}))
                                        AND O.[Status] NOT IN ('CANCELLED', 'PortalCancel', 'CancelError')
-                                     GROUP BY O.Id, O.OrderNumber, D.order_line_id", ref l_Table);
+                                     GROUP BY O.Id, O.OrderNumber, O.CustomerOrderNo, D.order_line_id", ref l_Table);
 
             foreach (DataRow l_Row in l_Table.Rows)
             {
-                string l_Number = Convert.ToString(l_Row["OrderNumber"])?.Trim() ?? string.Empty;
+                string l_Number = Convert.ToString(l_Row["ShopifyId"])?.Trim() ?? string.Empty;
 
                 if (!l_Candidates.TryGetValue(l_Number, out Candidate l_Candidate))
                 {
-                    l_Candidate = new Candidate { Id = Convert.ToInt32(l_Row["Id"]), OrderNumber = l_Number };
+                    l_Candidate = new Candidate { Id = Convert.ToInt32(l_Row["Id"]), OrderNumber = Convert.ToString(l_Row["OrderNumber"])?.Trim() ?? string.Empty };
                     l_Candidates.Add(l_Number, l_Candidate);
                 }
 
