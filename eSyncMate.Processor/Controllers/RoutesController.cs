@@ -245,16 +245,22 @@ namespace eSyncMate.Processor.Controllers
                 l_Routes.ModifiedBy = Declarations.g_UserNo;
                 l_Routes.ModifiedDate = DateTime.Now;
 
-                // Look up ERPCustomerID for CustomerName — use the external partner (not internal system)
+                l_OldRoute.GetObject(l_Routes.Id);
+
+                // Look up ERPCustomerID for CustomerName — use the external partner (not internal system).
+                // The edit screen does not send CustomerName. A route between two internal parties
+                // (eSyncMate <-> SPARS, e.g. "Fetch Full Inventory from ERP") has no external partner, so the
+                // lookup finds nothing: keep the value the route already has instead of overwriting it with NULL
+                // (an empty CustomerName hides the route from non-admin users and breaks the per-customer lookups).
                 if (string.IsNullOrEmpty(l_Routes.CustomerName))
                 {
                     string customerName = GetExternalCustomerName(l_Routes.Connection, l_Routes.DestinationPartyId);
                     if (string.IsNullOrEmpty(customerName))
                         customerName = GetExternalCustomerName(l_Routes.Connection, l_Routes.SourcePartyId);
+                    if (string.IsNullOrEmpty(customerName))
+                        customerName = l_OldRoute.CustomerName;
                     l_Routes.CustomerName = customerName;
                 }
-
-                l_OldRoute.GetObject(l_Routes.Id);
 
                 // Remove old RecurringJobs if previously Active
                 if (l_OldRoute.Status == "Active")

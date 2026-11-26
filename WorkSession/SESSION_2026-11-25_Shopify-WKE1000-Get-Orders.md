@@ -478,3 +478,26 @@ one-item upload (Available and On hand 407 at L56 in Shopify), Get Orders for th
 - User: the client VOIDED the SPARS sales orders, and the orders are marked DELETED in eSyncMate (OD_01 with `@ExpectedCount = 73`, `@Apply = 1`). Backup `ZDB_OD01_Orders` (OD_99 reverts).
 - Still to do before routes 166 / 167 go Active: exclude DELETED orders in `ShopifyGetCancelledOrdersRoute.LoadCandidates` (now only CANCELLED / PortalCancel / CancelError).
 - Orders 175273 / 175274 (New) wait for route 161 (client's cut-over confirmation).
+
+### Step 46: User delete fix tested on production (2026-11-26)
+- On the user's request I deleted user no 2 (Tanveer, SuperAdmin) through the Users screen on the production site (Chrome, already signed in): confirm dialog showed "Tanveer", Delete User pressed.
+- **Result**: toast "SUCCESS User deleted successfully!"; the list went from 17 to 16 users and Id 2 is gone. No other user touched. The 404 of `api/User/deleteUser` is fixed (Release9 code; the user called the deployed release "8").
+- **Not checked**: the database row (expected `Users.Status = 'DELETED'` for Id 2) and that Tanveer's login is refused.
+
+### Step 47: Delete User dialog - hand cursor on both buttons
+- **User's report**: in the Delete User dialog, Delete User and Cancel show no hand cursor on hover (user set Tanveer Active again and retested).
+- **Earlier measurement (2026-11-25)**: Delete User showed `pointer` on hover through Material's `.mdc-button:hover` rule; Cancel was not hovered then.
+- **Fix**: `UI/src/app/users/delete-user-dialog/delete-user-dialog.component.scss` - `.dialog-actions button { cursor: pointer; }` (always, not only through Material's hover rule).
+- **Open**: not built, not committed, not deployed (needs a UI build with `--base-href /eSyncMate`, next release folder Release10).
+
+### Step 48: Hand cursor fixes committed; Release10 UI on hold
+- **Fixes**: `delete-user-dialog.component.scss` (`.dialog-actions button, .dialog-actions button *` -> `cursor: pointer !important`) and `view-flow-dialog.component.scss` (`.test-run-btn:not([disabled])` and its children -> `cursor: pointer !important`). The Run Now button already had `cursor: pointer`; a disabled Run Now (route In-Active) gets `pointer-events: none` from Angular Material, so no hand and no tooltip there - expected.
+- **Commit**: `bb54de4` fix(ui) (not pushed).
+- **Release10 UI**: build started, then STOPPED on the user's request ("do not make release now, more issues to fix first"). No Release10 folder. Build with `npx ng build --base-href /eSyncMate` when the user asks.
+
+### Step 49: Blocker - editing a route on the Routes screen sets its CustomerName (ERP Customer ID) to NULL
+- **User's report**: Routes > search 157 > Edit > change Status > Save -> `Routes.CustomerName` becomes NULL (sometimes).
+- **Cause**: `RoutesController.UpdateRoute` copies the posted `UpdateRoutesDataModel`, which has NO CustomerName field (the edit screen does not send it), so CustomerName is always empty and is looked up from the parties with `GetExternalCustomerName`, which skips the internal parties eSyncMate and "SPARS Customer". A route between two internal parties (157 / 158 Fetch Inventory from ERP, Place Orders, Fetch ASN, ...) finds nothing -> `Modify()` writes NULL. Routes with an external party (e.g. Upload to Shopify) get the partner's id back, so it happens only "sometimes".
+- **Effect of NULL**: route hidden from non-admin users (VW_Routes filter), and per-customer lookups by TypeId + CustomerName fail (e.g. Re-Process -> "No route configured for customer", Re-Transmit ASN).
+- **Fix**: `UpdateRoute` reads the old route first and keeps its CustomerName when the lookup finds no external party. Processor builds. Not committed, not published, not tested against a DB.
+- **Data repair** (client DB): routes already set to NULL need their CustomerName back (query given to the user).
