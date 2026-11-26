@@ -1,4 +1,7 @@
 {
+  "requirePasswordChange": "Exigir cambio de contraseña en el próximo inicio de sesión",
+  "requirePasswordChangeHint": "El usuario debe elegir una nueva contraseña antes de usar eSyncMate.",
+  "mustChangePasswordNotice": "Debe cambiar su contraseña antes de continuar.",
   "login": "Iniciar sesión",
   "Cancel": "Cancelar",
   "password": "Contraseña",

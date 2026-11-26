@@ -124,3 +124,17 @@
 mat-error {
   font-size: 12px;
 }
+
+// "Require password change at next login" with its explanation
+.force-password {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 4px 0 8px;
+}
+
+.force-password-hint {
+  font-size: 12px;
+  color: #6b7280;
+  padding-left: 40px;
+}

@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { ActivatedRouteSnapshot, RouterStateSnapshot, UrlTree } from '@angular/router';
+import { ActivatedRouteSnapshot, Router, RouterStateSnapshot, UrlTree } from '@angular/router';
 import { Observable } from 'rxjs';
 import { ApiService } from '../services/api.service';
 
@@ -7,7 +7,7 @@ import { ApiService } from '../services/api.service';
   providedIn: 'root',
 })
 export class AuthenticationGuard  {
-  constructor(private api: ApiService) {}
+  constructor(private api: ApiService, private router: Router) {}
   canActivate(
     route: ActivatedRouteSnapshot,
     state: RouterStateSnapshot
@@ -16,6 +16,15 @@ export class AuthenticationGuard  {
     | Promise<boolean | UrlTree>
     | boolean
     | UrlTree {
-    return this.api.isLoggedIn();
+    if (!this.api.isLoggedIn()) {
+      return this.router.parseUrl('/login');
+    }
+
+    // A user who must change the password can open only the Change Password page
+    if (this.api.mustChangePassword() && !state.url.startsWith('/change-password')) {
+      return this.router.parseUrl('/change-password');
+    }
+
+    return true;
   }
 }

@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
@@ -29,6 +29,8 @@ using QRCoder;
 
 namespace eSyncMate.Processor.Controllers
 {
+    // Every action needs a signed-in user unless it is marked [AllowAnonymous] (Login, VerifyMFA, RefreshToken, Logout).
+    [Authorize(AuthenticationSchemes = Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerDefaults.AuthenticationScheme)]
     public class AuthenticationController : Controller
     {
         private readonly IConfiguration _config;
@@ -75,7 +77,8 @@ namespace eSyncMate.Processor.Controllers
                 new Claim("customerName", user.CustomerName.ToString()),
                 new Claim("isSetupAllowed", user.IsSetupAllowed.ToString()),
                 new Claim("userID", user.UserID.ToString()),
-                new Claim("roleName", user.RoleName ?? "")
+                new Claim("roleName", user.RoleName ?? ""),
+                new Claim("mustChangePassword", user.MustChangePassword ? "true" : "false")
             };
 
             var token = new JwtSecurityToken(CommonUtils.JwtIssuer,
@@ -87,78 +90,167 @@ namespace eSyncMate.Processor.Controllers
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
 
-        private async Task<LoginModel> AuthenticateUser(string userID, string password)
+        // Reads VW_Users with SQL parameters: typed text (User ID, passwords, e-mail) never becomes part of the SQL.
+        private static DataTable QueryUsers(string p_Where, params System.Data.SqlClient.SqlParameter[] p_Params)
         {
-            LoginModel user = null;
-            var l_DataTable = new DataTable();
-            Users l_users = new Users();
+            DataTable l_Table = new DataTable();
 
-            l_users.UseConnection(CommonUtils.ConnectionString);
+            using var l_Conn = new System.Data.SqlClient.SqlConnection(CommonUtils.ConnectionString);
+            using var l_Cmd = new System.Data.SqlClient.SqlCommand("SELECT * FROM VW_Users WHERE " + p_Where, l_Conn);
+            l_Cmd.Parameters.AddRange(p_Params);
+            using var l_Adapter = new System.Data.SqlClient.SqlDataAdapter(l_Cmd);
+            l_Adapter.Fill(l_Table);
 
-            string criteria = $"(UserID = '{userID}') AND Password = '{l_users.Encrypt(password)}' AND Status = 'ACTIVE'";
-
-            if (l_users.GetViewList(criteria, "", ref l_DataTable))
-            {
-                if (l_DataTable.Rows.Count > 0)
-                {
-                    DataRow row = l_DataTable.Rows[0];
-                    user = new LoginModel
-                    {
-                        Id = int.Parse(row["Id"].ToString()),
-                        FirstName = row["FirstName"].ToString(),
-                        LastName = row["LastName"].ToString(),
-                        Mobile = row["Mobile"].ToString(),
-                        Email = row["Email"].ToString(),
-                        Status = row["Status"].ToString(),
-                        CreatedDate = DateTime.Parse(row["createdDate"].ToString()),
-                        UserType = row["UserType"].ToString(),
-                        Company = row["Company"].ToString(),
-                        CustomerName = row["CustomerName"] != DBNull.Value ? row["CustomerName"].ToString() : "",
-                        IsSetupAllowed= row["IsSetupAllowed"] != DBNull.Value ?  Convert.ToBoolean(row["IsSetupAllowed"]): false,
-                        MFAEnabled = row.Table.Columns.Contains("MFAEnabled") && row["MFAEnabled"] != DBNull.Value ? Convert.ToBoolean(row["MFAEnabled"]) : false,
-                        MFASecret = row.Table.Columns.Contains("MFASecret") && row["MFASecret"] != DBNull.Value ? Convert.ToString(row["MFASecret"]) : "",
-                        UserID = row["UserID"] != DBNull.Value ? Convert.ToString(row["UserID"]) : "",
-                        RoleName = row.Table.Columns.Contains("RoleName") && row["RoleName"] != DBNull.Value ? Convert.ToString(row["RoleName"]) : "",
-                    };
-                }
-            }
-
-            return user;
+            return l_Table;
         }
 
+        private static int ExecuteUsers(string p_Sql, params System.Data.SqlClient.SqlParameter[] p_Params)
+        {
+            using var l_Conn = new System.Data.SqlClient.SqlConnection(CommonUtils.ConnectionString);
+            using var l_Cmd = new System.Data.SqlClient.SqlCommand(p_Sql, l_Conn);
+            l_Cmd.Parameters.AddRange(p_Params);
+            l_Conn.Open();
+            return l_Cmd.ExecuteNonQuery();
+        }
+
+        private static LoginModel ToLoginModel(DataRow row)
+        {
+            return new LoginModel
+            {
+                Id = int.Parse(row["Id"].ToString()),
+                FirstName = row["FirstName"].ToString(),
+                LastName = row["LastName"].ToString(),
+                Mobile = row["Mobile"].ToString(),
+                Email = row["Email"].ToString(),
+                Status = row["Status"].ToString(),
+                CreatedDate = DateTime.TryParse(row["createdDate"].ToString(), out DateTime l_Created) ? l_Created : DateTime.MinValue,
+                UserType = row["UserType"].ToString(),
+                Company = row["Company"].ToString(),
+                CustomerName = row["CustomerName"] != DBNull.Value ? row["CustomerName"].ToString() : "",
+                IsSetupAllowed = row["IsSetupAllowed"] != DBNull.Value ? Convert.ToBoolean(row["IsSetupAllowed"]) : false,
+                MFAEnabled = row.Table.Columns.Contains("MFAEnabled") && row["MFAEnabled"] != DBNull.Value ? Convert.ToBoolean(row["MFAEnabled"]) : false,
+                MFASecret = row.Table.Columns.Contains("MFASecret") && row["MFASecret"] != DBNull.Value ? Convert.ToString(row["MFASecret"]) : "",
+                UserID = row["UserID"] != DBNull.Value ? Convert.ToString(row["UserID"]) : "",
+                RoleName = row.Table.Columns.Contains("RoleName") && row["RoleName"] != DBNull.Value ? Convert.ToString(row["RoleName"]) : "",
+                MustChangePassword = row.Table.Columns.Contains("MustChangePassword") && row["MustChangePassword"] != DBNull.Value && Convert.ToBoolean(row["MustChangePassword"]),
+            };
+        }
+
+        // The current ACTIVE user by database id (null when the user is gone, blocked or deleted)
+        private static LoginModel GetActiveUser(int p_Id)
+        {
+            using DataTable l_Table = QueryUsers("Id = @id AND Status = 'ACTIVE'", new System.Data.SqlClient.SqlParameter("@id", p_Id));
+            return l_Table.Rows.Count > 0 ? ToLoginModel(l_Table.Rows[0]) : null;
+        }
+
+        private async Task<LoginModel> AuthenticateUser(string userID, string password)
+        {
+            if (string.IsNullOrEmpty(userID) || string.IsNullOrEmpty(password))
+                return null;
+
+            using DataTable l_DataTable = QueryUsers("UserID = @userID AND Password = @password AND Status = 'ACTIVE'",
+                new System.Data.SqlClient.SqlParameter("@userID", userID),
+                new System.Data.SqlClient.SqlParameter("@password", new Users().Encrypt(password)));
+
+            return l_DataTable.Rows.Count > 0 ? ToLoginModel(l_DataTable.Rows[0]) : null;
+        }
+
+        // ---- 2FA: a short-lived ticket proves the password step happened ----
+        // It is signed with a key derived from the JWT key, so it can never be used as an access token,
+        // and it only says WHICH user passed the password step; the 2FA secret never leaves the server after setup.
+        private const string MfaTicketAudience = "esyncmate-mfa-pending";
+        private const int MfaTicketMinutes = 5;
+
+        private static SymmetricSecurityKey MfaTicketKey =>
+            new SymmetricSecurityKey(System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(CommonUtils.JwtKey + "|mfa-pending")));
+
+        private static string GenerateMfaTicket(int p_UserId)
+        {
+            var l_Token = new JwtSecurityToken(CommonUtils.JwtIssuer, MfaTicketAudience,
+                claims: new[] { new Claim("mfaUserId", p_UserId.ToString()), new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()) },
+                expires: DateTime.UtcNow.AddMinutes(MfaTicketMinutes),
+                signingCredentials: new SigningCredentials(MfaTicketKey, SecurityAlgorithms.HmacSha256));
+
+            return new JwtSecurityTokenHandler().WriteToken(l_Token);
+        }
+
+        private static int? ReadMfaTicket(string p_Ticket)
+        {
+            if (string.IsNullOrEmpty(p_Ticket))
+                return null;
+
+            try
+            {
+                new JwtSecurityTokenHandler().ValidateToken(p_Ticket, new TokenValidationParameters
+                {
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = MfaTicketKey,
+                    ValidateIssuer = true,
+                    ValidIssuer = CommonUtils.JwtIssuer,
+                    ValidateAudience = true,
+                    ValidAudience = MfaTicketAudience,
+                    ValidateLifetime = true,
+                    ClockSkew = TimeSpan.Zero
+                }, out SecurityToken l_Validated);
+
+                string l_Id = ((JwtSecurityToken)l_Validated).Claims.FirstOrDefault(c => c.Type == "mfaUserId")?.Value;
+                return int.TryParse(l_Id, out int l_UserId) ? l_UserId : null;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        // Issues the access token + refresh cookie for a user who passed every login step
+        private object CompleteLogin(LoginModel p_User, string p_Message, int? p_Code = null)
+        {
+            string l_Token = GenerateJSONWebToken(p_User);                         // short access token (15 min)
+            string l_Refresh = GenerateJSONWebToken(p_User, RefreshTokenMinutes);  // long-lived refresh token (8 h)
+            Declarations.g_UserNo = p_User.Id;
+            var l_Menus = GetUserMenuTree(p_User.Id, p_User.Company);
+
+            SetRefreshCookie(l_Refresh);
+
+            return p_Code.HasValue
+                ? new { code = p_Code.Value, token = l_Token, message = p_Message, menus = l_Menus, mustChangePassword = p_User.MustChangePassword }
+                : (object)new { token = l_Token, message = p_Message, menus = l_Menus, mustChangePassword = p_User.MustChangePassword };
+        }
+
+        [AllowAnonymous]
         [HttpPost("Login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
             IActionResult response = Unauthorized();
-            var user = await AuthenticateUser(request.UserID, request.Password);
-           
+            var user = await AuthenticateUser(request?.UserID, request?.Password);
+
             if (user !=null)
             {
                 if (user.MFAEnabled)
                 {
-                    // 2FA enabled for this user — same pattern as BizMate
+                    // 2FA: the password is correct; the session is issued only after the code (VerifyMFA).
+                    // The browser gets a short-lived ticket for that step, not the user's 2FA secret.
                     string secretKey = user.MFASecret;
                     string qrImage = "";
                     bool requiresSetup = false;
 
                     if (string.IsNullOrEmpty(secretKey))
                     {
-                        // First time: generate secret + QR code
+                        // First time: generate secret + QR code (the QR is the only time the secret leaves the server)
                         requiresSetup = true;
                         secretKey = GenerateSecretKey();
                         qrImage = GenerateQRCode(user.Email, secretKey);
 
-                        // Store secret in DB
-                        Users l_users = new Users();
-                        l_users.UseConnection(CommonUtils.ConnectionString);
-                        l_users.Connection.Execute($"UPDATE Users SET MFASecret = '{secretKey}' WHERE Id = {user.Id}");
+                        ExecuteUsers("UPDATE Users SET MFASecret = @secret WHERE Id = @id",
+                            new System.Data.SqlClient.SqlParameter("@secret", secretKey),
+                            new System.Data.SqlClient.SqlParameter("@id", user.Id));
                     }
 
                     response = Ok(new
                     {
                         requiresMfa = true,
                         requiresSetup = requiresSetup,
-                        secretKey = secretKey,
+                        mfaToken = GenerateMfaTicket(user.Id),
                         qrImage = qrImage,
                         userId = user.UserID,
                         userIdNum = user.Id,
@@ -168,15 +260,8 @@ namespace eSyncMate.Processor.Controllers
                 }
                 else
                 {
-                    // No 2FA — normal login (original flow)
-                    var tokenString = GenerateJSONWebToken(user);                        // short access token (15 min)
-                    var refreshToken = GenerateJSONWebToken(user, RefreshTokenMinutes);   // long-lived refresh token (8 h)
-                    Declarations.g_UserNo = user.Id;
-                    var userMenus = GetUserMenuTree(user.Id, user.Company);
-
-                    SetRefreshCookie(refreshToken);
-
-                    response = Ok(new { token = tokenString, message = "Success", menus = userMenus });
+                    // No 2FA — normal login
+                    response = Ok(CompleteLogin(user, "Success"));
                 }
             }
             else
@@ -290,6 +375,20 @@ namespace eSyncMate.Processor.Controllers
             return new string[] { accessToken };
         }
 
+        // A SuperAdmin, or a role that may add users on the Users screen
+        private bool CanAddUsers()
+        {
+            if (string.Equals(User.FindFirst("roleName")?.Value, "SuperAdmin", StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            if (!int.TryParse(User.FindFirst("id")?.Value, out int l_UserId))
+                return false;
+
+            var l_Menus = GetUserMenuTree(l_UserId, User.FindFirst("company")?.Value ?? "");
+
+            return l_Menus?.Modules?.Any(m => m.MenuItems?.Any(i => i.Route == "edi/users" && i.CanAdd) == true) == true;
+        }
+
         [HttpPost]
         [Route("registerUser")]
         public async Task<GetUserResponseModel> RegisterUser([FromBody] LoginModel User)
@@ -300,6 +399,14 @@ namespace eSyncMate.Processor.Controllers
             DataTable l_Data =new DataTable();
             try
             {
+                if (!CanAddUsers())
+                {
+                    l_Response.Code = (int)ResponseCodes.Error;
+                    l_Response.Message = "You are not allowed to add users.";
+                    l_Response.Description = "You are not allowed to add users.";
+                    return l_Response;
+                }
+
                 l_Users.UseConnection(CommonUtils.ConnectionString);
 
                 l_Users.FirstName = User.FirstName;
@@ -309,14 +416,17 @@ namespace eSyncMate.Processor.Controllers
                 l_Users.Status = User.Status;
                 l_Users.UserType = User.UserType;
                 l_Users.Email = User.Email;
-                l_Users.CreatedBy = Declarations.g_UserNo;
+                l_Users.CreatedBy = int.TryParse(this.User.FindFirst("id")?.Value, out int l_CreatedBy) ? l_CreatedBy : Declarations.g_UserNo;
                 l_Users.CreatedDate = DateTime.Now;
                 l_Users.Company = CommonUtils.Company;
                 l_Users.CustomerName = User.CustomerName;
                 l_Users.IsSetupAllowed = User.IsSetupAllowed;
                 l_Users.UserID = User.UserID;
+                l_Users.MustChangePassword = User.MustChangePassword;
 
-                l_Users.GetViewList("(UserID = '" + l_Users.UserID+"')" +"OR" + "(Email = '" + l_Users.Email + "')", "",ref l_Data);
+                l_Data = QueryUsers("UserID = @userID OR Email = @email",
+                    new System.Data.SqlClient.SqlParameter("@userID", (object)l_Users.UserID ?? DBNull.Value),
+                    new System.Data.SqlClient.SqlParameter("@email", (object)l_Users.Email ?? DBNull.Value));
 
                 if (l_Data.Rows.Count > 0)
                 {
@@ -396,36 +506,46 @@ namespace eSyncMate.Processor.Controllers
 
 
 
+        // The signed-in user changes their OWN password (the user comes from the token, not from the request).
+        // A successful change clears "must change password" and issues a fresh session.
         [HttpPost("UpdatePassword")]
         public async Task<IActionResult> UpdatePassword([FromBody] UpdatePasswordRequest request)
         {
-            IActionResult response = Unauthorized();
+            if (!int.TryParse(User.FindFirst("id")?.Value, out int l_UserId))
+                return Unauthorized();
 
-            Result l_Result = new Result();
+            if (string.IsNullOrEmpty(request?.OldPassword) || string.IsNullOrEmpty(request.Password))
+                return Ok(new { Message = "Enter the old and the new password.", Code = 400 });
 
-            string Password = PublicFunctions.Encrypt(request.Password);
+            if (request.Password.Length < 8 || request.Password.Length > 15)
+                return Ok(new { Message = "The new password must be 8 to 15 characters.", Code = 400 });
 
-            var l_DataTable = new DataTable();
+            if (request.Password == request.OldPassword)
+                return Ok(new { Message = "The new password must be different from the old one.", Code = 400 });
+
             Users l_users = new Users();
 
-            l_users.UseConnection(CommonUtils.ConnectionString);
+            using DataTable l_DataTable = QueryUsers("Id = @id AND Password = @old AND Status = 'ACTIVE'",
+                new System.Data.SqlClient.SqlParameter("@id", l_UserId),
+                new System.Data.SqlClient.SqlParameter("@old", l_users.Encrypt(request.OldPassword)));
 
-            string criteria = $"UserID = '{request.UserID}' AND Password = '{l_users.Encrypt(request.OldPassword)}' AND Status = 'ACTIVE'";
+            if (l_DataTable.Rows.Count == 0)
+                return Ok(new { Message = "The old password is not correct.", Code = 400 });
 
-            if (l_users.GetViewList(criteria, "", ref l_DataTable))
-            {
-                l_Result = l_users.UpdatePassword(request.UserID, Password);
-            }
+            ExecuteUsers(@"UPDATE Users SET Password = @new WHERE Id = @id;
+                           IF COL_LENGTH('dbo.Users', 'MustChangePassword') IS NOT NULL
+                               EXEC sp_executesql N'UPDATE Users SET MustChangePassword = 0 WHERE Id = @uid', N'@uid INT', @uid = @id;",
+                new System.Data.SqlClient.SqlParameter("@new", PublicFunctions.Encrypt(request.Password)),
+                new System.Data.SqlClient.SqlParameter("@id", l_UserId));
 
-            if (l_Result.IsSuccess)
-            {
-                response = Ok(new { Message = "Password Updated Successfuly", Code = 100 });
-            }
-            else
-            {
-                response = Ok(new { Message = "Either you dont have permission or Invalid Credentials!", Code = 400 });
-            }
-            return response;
+            LoginModel l_User = GetActiveUser(l_UserId);
+
+            if (l_User == null)
+                return Ok(new { Message = "Password Updated Successfuly", Code = 100 });
+
+            // new token without "must change password"
+            var l_Session = CompleteLogin(l_User, "Password Updated Successfuly", 100);
+            return Ok(l_Session);
         }
 
         [AllowAnonymous]
@@ -454,30 +574,20 @@ namespace eSyncMate.Processor.Controllers
 
                 var jwtToken = (JwtSecurityToken)validatedToken;
 
-                var user = new LoginModel
+                // Read the user again: a user who was blocked or deleted meanwhile gets no new session,
+                // and role / "must change password" are always current.
+                if (!int.TryParse(jwtToken.Claims.FirstOrDefault(c => c.Type == "id")?.Value, out int l_UserId))
+                    return Unauthorized(new { message = "Session expired" });
+
+                LoginModel user = GetActiveUser(l_UserId);
+
+                if (user == null)
                 {
-                    Id = int.Parse(jwtToken.Claims.First(c => c.Type == "id").Value),
-                    FirstName = jwtToken.Claims.FirstOrDefault(c => c.Type == "firstName")?.Value ?? "",
-                    LastName = jwtToken.Claims.FirstOrDefault(c => c.Type == "lastName")?.Value ?? "",
-                    Mobile = jwtToken.Claims.FirstOrDefault(c => c.Type == "mobile")?.Value ?? "",
-                    Email = jwtToken.Claims.FirstOrDefault(c => c.Type == "email")?.Value ?? "",
-                    Status = jwtToken.Claims.FirstOrDefault(c => c.Type == "status")?.Value ?? "",
-                    CreatedDate = DateTime.TryParse(jwtToken.Claims.FirstOrDefault(c => c.Type == "createdDate")?.Value, out var cd) ? cd : DateTime.MinValue,
-                    UserType = jwtToken.Claims.FirstOrDefault(c => c.Type == "userType")?.Value ?? "",
-                    Company = jwtToken.Claims.FirstOrDefault(c => c.Type == "company")?.Value ?? "",
-                    CustomerName = jwtToken.Claims.FirstOrDefault(c => c.Type == "customerName")?.Value ?? "",
-                    IsSetupAllowed = bool.TryParse(jwtToken.Claims.FirstOrDefault(c => c.Type == "isSetupAllowed")?.Value, out var isa) && isa,
-                    UserID = jwtToken.Claims.FirstOrDefault(c => c.Type == "userID")?.Value ?? "",
-                    RoleName = jwtToken.Claims.FirstOrDefault(c => c.Type == "roleName")?.Value ?? ""
-                };
+                    Response.Cookies.Delete("jwt");
+                    return Unauthorized(new { message = "Session expired" });
+                }
 
-                var newToken = GenerateJSONWebToken(user);                          // new short access token (15 min)
-                var newRefreshToken = GenerateJSONWebToken(user, RefreshTokenMinutes); // rotate refresh token (8 h)
-                var userMenus = GetUserMenuTree(user.Id, user.Company);
-
-                SetRefreshCookie(newRefreshToken);
-
-                return Ok(new { token = newToken, message = "Success", menus = userMenus });
+                return Ok(CompleteLogin(user, "Success"));
             }
             catch
             {
@@ -485,6 +595,7 @@ namespace eSyncMate.Processor.Controllers
             }
         }
 
+        [AllowAnonymous]
         [HttpPost("Logout")]
         public IActionResult Logout()
         {
@@ -523,60 +634,37 @@ namespace eSyncMate.Processor.Controllers
             return Ok(new { Message = "Logged out" });
         }
 
-        // Exact BizMate VerifyOTP pattern with wider window for clock drift
+        // 2FA step 2: the code is checked against the secret STORED for the user named in the ticket that the
+        // password step issued. The browser cannot choose the user or the secret.
+        // VerificationWindow(10,10) as before, for clock drift between phone and server.
+        [AllowAnonymous]
         [HttpPost("VerifyMFA")]
         public async Task<IActionResult> VerifyMFA([FromBody] VerifyMFARequest request)
         {
             try
             {
-                // Exact BizMate 3 lines + VerificationWindow(10,10) for clock drift
-                var secretBytes = OtpNet.Base32Encoding.ToBytes(request.SecretKey);
-                var totp = new Totp(secretBytes);
-                bool result = totp.VerifyTotp(request.Code, out long timeStepMatched, new VerificationWindow(10, 10));
+                int? l_UserId = ReadMfaTicket(request?.MfaToken);
 
-                if (result)
-                {
-                    // Get user data for JWT
-                    Users l_users = new Users();
-                    l_users.UseConnection(CommonUtils.ConnectionString);
-                    DataTable userData = new DataTable();
+                if (l_UserId == null)
+                    return Ok(new { code = 900, token = "Invalid", message = "The sign-in has expired. Please sign in again." });
 
-                    if (!l_users.GetViewList($"UserID = '{request.UserID}' AND Status = 'ACTIVE'", "", ref userData) || userData.Rows.Count == 0)
-                    {
-                        return Ok(new { code = 900, token = "Invalid", message = "User not found." });
-                    }
+                LoginModel user = GetActiveUser(l_UserId.Value);
 
-                    DataRow row = userData.Rows[0];
-                    LoginModel user = new LoginModel
-                    {
-                        Id = Convert.ToInt32(row["Id"]),
-                        FirstName = row["FirstName"].ToString(),
-                        LastName = row["LastName"].ToString(),
-                        Mobile = row["Mobile"].ToString(),
-                        Email = row["Email"].ToString(),
-                        Status = row["Status"].ToString(),
-                        CreatedDate = DateTime.Parse(row["createdDate"].ToString()),
-                        UserType = row["UserType"].ToString(),
-                        Company = row["Company"].ToString(),
-                        CustomerName = row["CustomerName"] != DBNull.Value ? row["CustomerName"].ToString() : "",
-                        IsSetupAllowed = row["IsSetupAllowed"] != DBNull.Value ? Convert.ToBoolean(row["IsSetupAllowed"]) : false,
-                        UserID = row["UserID"] != DBNull.Value ? Convert.ToString(row["UserID"]) : "",
-                        RoleName = row.Table.Columns.Contains("RoleName") && row["RoleName"] != DBNull.Value ? Convert.ToString(row["RoleName"]) : "",
-                    };
+                if (user == null || !user.MFAEnabled || string.IsNullOrEmpty(user.MFASecret))
+                    return Ok(new { code = 900, token = "Invalid", message = "User not found." });
 
-                    var tokenString = GenerateJSONWebToken(user);                        // short access token (15 min)
-                    var refreshToken = GenerateJSONWebToken(user, RefreshTokenMinutes);   // long-lived refresh token (8 h)
-                    Declarations.g_UserNo = user.Id;
-                    var userMenus = GetUserMenuTree(user.Id, user.Company);
+                string l_Code = (request.Code ?? string.Empty).Trim();
 
-                    SetRefreshCookie(refreshToken);
-
-                    return Ok(new { code = 100, token = tokenString, message = "OTP is verified.", menus = userMenus });
-                }
-                else
-                {
+                if (l_Code.Length != 6 || !l_Code.All(char.IsDigit))
                     return Ok(new { code = 900, token = "Invalid", message = "OTP is either wrong or expired." });
-                }
+
+                var totp = new Totp(OtpNet.Base32Encoding.ToBytes(user.MFASecret));
+                bool result = totp.VerifyTotp(l_Code, out long timeStepMatched, new VerificationWindow(10, 10));
+
+                if (!result)
+                    return Ok(new { code = 900, token = "Invalid", message = "OTP is either wrong or expired." });
+
+                return Ok(CompleteLogin(user, "OTP is verified.", 100));
             }
             catch (Exception ex)
             {
@@ -589,8 +677,7 @@ namespace eSyncMate.Processor.Controllers
     // Simple request model for VerifyMFA
     public class VerifyMFARequest
     {
-        public string SecretKey { get; set; } = "";
+        public string MfaToken { get; set; } = "";   // ticket from the password step (Login)
         public string Code { get; set; } = "";
-        public string UserID { get; set; } = "";
     }
 }

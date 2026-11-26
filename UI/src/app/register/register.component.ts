@@ -73,6 +73,7 @@ export class RegisterComponent {
         status: ['', Validators.required],
         customerName: ['', Validators.required],
         isSetupMenu: false,
+        mustChangePassword: true,   // new users choose their own password at the first login
         userID: fb.control('', [Validators.required]),
       },
       {
@@ -121,6 +122,7 @@ export class RegisterComponent {
       isSetupAllowed: this.registerForm.get('isSetupMenu')?.value,
       userID: this.registerForm.get('userID')?.value,
       roleId: this.selectedRoleId,
+      mustChangePassword: this.registerForm.get('mustChangePassword')?.value === true,
     };
 
     let values = this.registerForm.get('customerName')?.value;

@@ -129,7 +129,7 @@ export class LoginComponent {
         } else if (res.requiresMfa) {
           // Store auth result (like BizMate)
           this.authResult = {
-            secretKey: res.secretKey,
+            mfaToken: res.mfaToken,
             qrCodeImage: res.qrImage,
             userID: res.userId,
             userId: res.userIdNum,
@@ -166,9 +166,8 @@ export class LoginComponent {
     this.isOtpInvalid = false;
 
     this.api.verifyMFADirect({
-      SecretKey: this.authResult.secretKey,
-      Code: otp,
-      UserID: this.authResult.userID
+      MfaToken: this.authResult.mfaToken,
+      Code: otp
     }).subscribe({
       next: (res: any) => {
         this.isOTPVerifyProgress = false;
@@ -208,7 +207,10 @@ export class LoginComponent {
     localStorage.setItem("email", this.api.getTokenUserInfo()?.email || "");
 
     let isActive = this.api.getTokenUserInfo()?.status.toLocaleUpperCase() === 'ACTIVE';
-    if (isActive) {
+    if (isActive && this.api.mustChangePassword()) {
+      // first login with a password set by an admin: choose an own password first
+      this.router.navigateByUrl('/change-password');
+    } else if (isActive) {
       const userMenus = this.api.getUserMenus();
       let navigated = false;
       if (userMenus && userMenus.modules && userMenus.modules.length > 0) {

@@ -35,5 +35,6 @@ namespace eSyncMate.Processor.Models
         public int CreatedBy { get; set; }
         public int RoleId { get; set; }
         public string RoleName { get; set; } = string.Empty;
+        public bool MustChangePassword { get; set; }
     }
 }

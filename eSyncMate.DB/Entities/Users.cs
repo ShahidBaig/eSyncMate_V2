@@ -33,6 +33,7 @@ namespace eSyncMate.DB.Entities
         public string Company { get; set; } = string.Empty;
         public bool MFAEnabled { get; set; }
         public string MFASecret { get; set; } = string.Empty;
+        public bool MustChangePassword { get; set; }
         public DateTime CreatedDate { get; set; }
         public int CreatedBy { get; set; }
         private static string TableName { get; set; }

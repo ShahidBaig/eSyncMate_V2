@@ -94,17 +94,22 @@ export class ChangePasswordComponent implements OnInit {
     }
   }
 
-  ngOnInit(): void {}
+  // true when the user must choose a new password before using any other page
+  forced = false;
+
+  ngOnInit(): void {
+    this.forced = this.api.mustChangePassword();
+  }
 
   onClose(): void {
-    this.router.navigate(['/dashboard']);
+    this.router.navigateByUrl(this.api.firstAllowedRoute());
   }
 
   onSubmit(): void {
     if (this.changePasswordForm.valid) {
       const oldPassword = this.changePasswordForm.get('oldPassword')?.value;
       const newPassword = this.changePasswordForm.get('newPassword')?.value;
-      const userID = localStorage.getItem('userID');
+      const userID = this.api.getTokenUserInfo()?.userID || localStorage.getItem('userID');
 
       if (userID && oldPassword && newPassword) {
         // Assign the passwords to the global variables
@@ -114,8 +119,14 @@ export class ChangePasswordComponent implements OnInit {
         this.api.updatePassword(userID, oldPassword, newPassword).subscribe({
           next: (res: any) => {
             if (res.code === 100) {
+              // the server returns a fresh session without "must change password"
+              if (res.token) {
+                this.api.saveToken(res.token);
+                if (res.menus) this.api.saveUserMenus(res.menus);
+              }
+              this.forced = false;
               this.toast.success({ detail: "SUCCESS", summary: res.message, duration: 5000, position: 'topRight' });
-              this.router.navigate(['/dashboard']);
+              this.router.navigateByUrl(this.api.firstAllowedRoute());
             } else if (res.code === 400) {
               this.toast.error({ detail: "ERROR", summary: res.message, duration: 5000, /*sticky: true,*/ position: 'topRight' });
             } else if (res.code === 401) {

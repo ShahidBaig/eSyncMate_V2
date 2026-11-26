@@ -207,8 +207,24 @@ export class ApiService {
       userID: token.userID,
       roleName: token.roleName || '',
       mfaEnabled: token.mfaEnabled || false,
+      mustChangePassword: token.mustChangePassword === 'true' || token.mustChangePassword === true,
     };
     return user;
+  }
+
+  // The user has to choose a new password before using any other page
+  mustChangePassword(): boolean {
+    return this.getTokenUserInfo()?.mustChangePassword === true;
+  }
+
+  // First page the user may open (the same choice the login makes)
+  firstAllowedRoute(): string {
+    const menus = this.getUserMenus();
+    for (const mod of menus?.modules || []) {
+      const first = (mod.menuItems || []).find((m: any) => m.canView && m.route);
+      if (first) return '/' + first.route;
+    }
+    return '/edi/dashboard';
   }
 
   getAllUsers() {
@@ -246,8 +262,10 @@ export class ApiService {
     return this.http.get<any>(this.apiUrl + 'EDIProcessor/api/v1/orders/getOrders/' + orderId + '/' + fromDate + '/' + toDate + '/' + orderNumber + '/' + status + '/' + ExternalId + '/' + CustomerId, { params });
   }
 
+  // withCredentials: the API is on another origin (port 8085); without it the browser drops the session cookie
+  // this call sets, and a 2FA user is signed out on the next page refresh.
   verifyMFADirect(data: any): Observable<any> {
-    return this.http.post(this.apiUrl + 'VerifyMFA', data);
+    return this.http.post(this.apiUrl + 'VerifyMFA', data, { withCredentials: true });
   }
 
   getDashboardStats(fromDate: string = '', toDate: string = '', erpCustomerID: string = '') {

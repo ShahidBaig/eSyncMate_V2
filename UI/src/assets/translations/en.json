@@ -1,4 +1,7 @@
 {
+  "requirePasswordChange": "Require password change at next login",
+  "requirePasswordChangeHint": "The user must choose a new password before using eSyncMate.",
+  "mustChangePasswordNotice": "You must change your password before you continue.",
   "login": "Login",
   "Cancel": "Cancel",
   "password": "Password",

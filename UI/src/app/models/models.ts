@@ -28,6 +28,7 @@ export interface User {
   userID: string;
   roleName: string;
   mfaEnabled: boolean;
+  mustChangePassword?: boolean;
 }
 
 // RBAC Models

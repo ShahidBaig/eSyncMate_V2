@@ -41,6 +41,16 @@ namespace eSyncMate.Processor.Middleware
                 return;
             }
 
+            // A user who must change the password may only do that (UpdatePassword); everything else is refused
+            // until the password is changed (Login / VerifyMFA / RefreshToken / Logout are public paths above).
+            if (string.Equals(context.User.FindFirst("mustChangePassword")?.Value, "true", StringComparison.OrdinalIgnoreCase)
+                && !path.StartsWith("updatepassword", StringComparison.OrdinalIgnoreCase))
+            {
+                context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                await context.Response.WriteAsJsonAsync(new { message = "Change your password first." });
+                return;
+            }
+
             // Check token blacklist (revoked/logged-out tokens)
             var jti = context.User.Claims.FirstOrDefault(c => c.Type == "jti")?.Value;
             if (!string.IsNullOrEmpty(jti) && await IsTokenRevokedAsync(jti, config.GetConnectionString("DefaultConnection")))

@@ -13,5 +13,6 @@
     [Company] [nvarchar](50) NULL, 
     [CustomerName] NVARCHAR(500) NULL,
     [IsSetupAllowed] BIT NULL DEFAULT 0,
-    [USERID] NVARCHAR(100) NOT NULL
+    [USERID] NVARCHAR(100) NOT NULL,
+    [MustChangePassword] BIT NOT NULL CONSTRAINT [DF_Users_MustChangePassword] DEFAULT 0
 )

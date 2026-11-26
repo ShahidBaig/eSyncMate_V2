@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 namespace eSyncMate.Processor.Models
 {
@@ -25,6 +25,7 @@ namespace eSyncMate.Processor.Models
         public int CreatedBy { get; set; }
         public string RoleName { get; set; } = string.Empty;
         public bool MFAEnabled { get; set; }
+        public bool MustChangePassword { get; set; }
     }
 
     public class DeleteUserModel
@@ -49,6 +50,7 @@ namespace eSyncMate.Processor.Models
         public DateTime CreatedDate { get; set; }
         public int CreatedBy { get; set; }
         public bool MFAEnabled { get; set; }
+        public bool MustChangePassword { get; set; }
     }
 
     public class UserSearchModel

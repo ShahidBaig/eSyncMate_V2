@@ -112,12 +112,20 @@ export class EditUsersDialogComponent implements OnInit {
         status: [this.data.status, Validators.required],
         customerName: [this.data.customerName ? this.data.customerName.split(',') : [], Validators.required],
         isSetupMenu: [this.data.isSetupAllowed],
-        mfaEnabled: [this.data.mfaEnabled || false]
+        mfaEnabled: [this.data.mfaEnabled || false],
+        mustChangePassword: [this.data.mustChangePassword || false]
       },
       {
         validators: [repeatPasswordValidator],
       } as AbstractControlOptions
     );
+
+    // An admin who sets a new password for the user makes the user choose their own at the next login
+    this.updateUserForm.get('password')?.valueChanges.subscribe((value: string) => {
+      if (value !== this.data.password) {
+        this.updateUserForm.get('mustChangePassword')?.setValue(true);
+      }
+    });
   }
 
   onCancel() {
@@ -208,6 +216,7 @@ export class EditUsersDialogComponent implements OnInit {
       customerName: '',
       isSetupAllowed: this.updateUserForm.get('isSetupMenu')?.value,
       mfaEnabled: this.updateUserForm.get('mfaEnabled')?.value,
+      mustChangePassword: this.updateUserForm.get('mustChangePassword')?.value,
       createdDate: this.data.createdDate,
       userID: this.data.userID,
     };
