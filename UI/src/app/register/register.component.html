@@ -123,7 +123,11 @@
         </mat-form-field>
       </div>
 
-      <!-- Row 6 (Task 00008): force a password change -->
+      <!-- Row 6 (Task 00008): two-step login and a forced password change -->
+      <div class="force-password">
+        <mat-checkbox formControlName="mfaEnabled">Enable Two-Factor Authentication (MFA)</mat-checkbox>
+        <span class="force-password-hint">{{ 'enableMfaHint' | translate }}</span>
+      </div>
       <div class="force-password">
         <mat-checkbox formControlName="mustChangePassword">{{ 'requirePasswordChange' | translate }}</mat-checkbox>
         <span class="force-password-hint">{{ 'requirePasswordChangeHint' | translate }}</span>

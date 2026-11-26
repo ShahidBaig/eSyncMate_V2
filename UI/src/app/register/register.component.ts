@@ -74,6 +74,7 @@ export class RegisterComponent {
         customerName: ['', Validators.required],
         isSetupMenu: false,
         mustChangePassword: true,   // Task 00008: new users choose their own password at the first login
+        mfaEnabled: false,          // Task 00008: 2FA can be switched on when the user is added (same as Edit User)
         userID: fb.control('', [Validators.required]),
       },
       {
@@ -123,6 +124,7 @@ export class RegisterComponent {
       userID: this.registerForm.get('userID')?.value,
       roleId: this.selectedRoleId,
       mustChangePassword: this.registerForm.get('mustChangePassword')?.value === true,   // Task 00008
+      mfaEnabled: this.registerForm.get('mfaEnabled')?.value === true,                   // Task 00008
     };
 
     let values = this.registerForm.get('customerName')?.value;

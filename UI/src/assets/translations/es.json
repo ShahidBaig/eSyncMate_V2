@@ -1,4 +1,5 @@
 {
+  "enableMfaHint": "En el primer inicio de sesión el usuario escanea un código QR con una app de autenticación y luego introduce un código en cada inicio de sesión.",
   "requirePasswordChange": "Exigir cambio de contraseña en el próximo inicio de sesión",
   "requirePasswordChangeHint": "El usuario debe elegir una nueva contraseña antes de usar eSyncMate.",
   "mustChangePasswordNotice": "Debe cambiar su contraseña antes de continuar.",

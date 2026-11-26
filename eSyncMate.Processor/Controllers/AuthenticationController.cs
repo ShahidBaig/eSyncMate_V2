@@ -160,22 +160,36 @@ namespace eSyncMate.Processor.Controllers
         // and it only says WHICH user passed the password step; the 2FA secret never leaves the server after setup.
         private const string MfaTicketAudience = "esyncmate-mfa-pending";
         private const int MfaTicketMinutes = 5;
+        private const int MfaSetupTicketMinutes = 10;   // Task 00008: more time to install the app and scan the QR
 
         private static SymmetricSecurityKey MfaTicketKey =>
             new SymmetricSecurityKey(System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(CommonUtils.JwtKey + "|mfa-pending")));
 
-        private static string GenerateMfaTicket(int p_UserId)
+        // Task 00008: during the first setup the new secret travels in the (signed) ticket and is stored only after the
+        // first correct code, so a setup the user does not finish leaves nothing behind and the next login shows a new QR.
+        // The browser already has this secret in the QR image, so carrying it in the ticket exposes nothing new.
+        private static string GenerateMfaTicket(int p_UserId, string p_SetupSecret = null)
         {
+            var l_Claims = new List<Claim> { new Claim("mfaUserId", p_UserId.ToString()), new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()) };
+
+            if (!string.IsNullOrEmpty(p_SetupSecret))
+                l_Claims.Add(new Claim("mfaSetup", p_SetupSecret));
+
             var l_Token = new JwtSecurityToken(CommonUtils.JwtIssuer, MfaTicketAudience,
-                claims: new[] { new Claim("mfaUserId", p_UserId.ToString()), new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()) },
-                expires: DateTime.UtcNow.AddMinutes(MfaTicketMinutes),
+                claims: l_Claims,
+                expires: DateTime.UtcNow.AddMinutes(string.IsNullOrEmpty(p_SetupSecret) ? MfaTicketMinutes : MfaSetupTicketMinutes),
                 signingCredentials: new SigningCredentials(MfaTicketKey, SecurityAlgorithms.HmacSha256));
 
             return new JwtSecurityTokenHandler().WriteToken(l_Token);
         }
 
-        private static int? ReadMfaTicket(string p_Ticket)
+        private static int? ReadMfaTicket(string p_Ticket) => ReadMfaTicket(p_Ticket, out _);
+
+        // Task 00008: also returns the new secret of a first setup (null for a normal 2FA login)
+        private static int? ReadMfaTicket(string p_Ticket, out string p_SetupSecret)
         {
+            p_SetupSecret = null;
+
             if (string.IsNullOrEmpty(p_Ticket))
                 return null;
 
@@ -193,7 +207,9 @@ namespace eSyncMate.Processor.Controllers
                     ClockSkew = TimeSpan.Zero
                 }, out SecurityToken l_Validated);
 
-                string l_Id = ((JwtSecurityToken)l_Validated).Claims.FirstOrDefault(c => c.Type == "mfaUserId")?.Value;
+                var l_Jwt = (JwtSecurityToken)l_Validated;
+                string l_Id = l_Jwt.Claims.FirstOrDefault(c => c.Type == "mfaUserId")?.Value;
+                p_SetupSecret = l_Jwt.Claims.FirstOrDefault(c => c.Type == "mfaSetup")?.Value;
                 return int.TryParse(l_Id, out int l_UserId) ? l_UserId : null;
             }
             catch
@@ -234,23 +250,22 @@ namespace eSyncMate.Processor.Controllers
                     string qrImage = "";
                     bool requiresSetup = false;
 
+                    string setupSecret = null;
+
                     if (string.IsNullOrEmpty(secretKey))
                     {
-                        // First time: generate secret + QR code (the QR is the only time the secret leaves the server)
+                        // First time: new secret + QR code. Task 00008: NOT stored yet - VerifyMFA stores it after the
+                        // first correct code, so an unfinished setup shows a fresh QR at the next login.
                         requiresSetup = true;
-                        secretKey = GenerateSecretKey();
-                        qrImage = GenerateQRCode(user.Email, secretKey);
-
-                        ExecuteUsers("UPDATE Users SET MFASecret = @secret WHERE Id = @id",
-                            new System.Data.SqlClient.SqlParameter("@secret", secretKey),
-                            new System.Data.SqlClient.SqlParameter("@id", user.Id));
+                        setupSecret = GenerateSecretKey();
+                        qrImage = GenerateQRCode(user.Email, setupSecret);
                     }
 
                     response = Ok(new
                     {
                         requiresMfa = true,
                         requiresSetup = requiresSetup,
-                        mfaToken = GenerateMfaTicket(user.Id),
+                        mfaToken = GenerateMfaTicket(user.Id, setupSecret),
                         qrImage = qrImage,
                         userId = user.UserID,
                         userIdNum = user.Id,
@@ -423,6 +438,7 @@ namespace eSyncMate.Processor.Controllers
                 l_Users.IsSetupAllowed = User.IsSetupAllowed;
                 l_Users.UserID = User.UserID;
                 l_Users.MustChangePassword = User.MustChangePassword;   // Task 00008
+                l_Users.MFAEnabled = User.MFAEnabled;                   // Task 00008: 2FA can be set when the user is added
 
                 l_Data = QueryUsers("UserID = @userID OR Email = @email",
                     new System.Data.SqlClient.SqlParameter("@userID", (object)l_Users.UserID ?? DBNull.Value),
@@ -643,26 +659,42 @@ namespace eSyncMate.Processor.Controllers
         {
             try
             {
-                int? l_UserId = ReadMfaTicket(request?.MfaToken);
+                int? l_UserId = ReadMfaTicket(request?.MfaToken, out string l_SetupSecret);
 
                 if (l_UserId == null)
                     return Ok(new { code = 900, token = "Invalid", message = "The sign-in has expired. Please sign in again." });
 
                 LoginModel user = GetActiveUser(l_UserId.Value);
 
-                if (user == null || !user.MFAEnabled || string.IsNullOrEmpty(user.MFASecret))
+                if (user == null || !user.MFAEnabled)
                     return Ok(new { code = 900, token = "Invalid", message = "User not found." });
+
+                // Task 00008: the stored secret wins; the ticket's secret is used only for a first setup
+                bool l_IsSetup = string.IsNullOrEmpty(user.MFASecret);
+                string l_Secret = l_IsSetup ? l_SetupSecret : user.MFASecret;
+
+                if (string.IsNullOrEmpty(l_Secret))
+                    return Ok(new { code = 900, token = "Invalid", message = "The sign-in has expired. Please sign in again." });
 
                 string l_Code = (request.Code ?? string.Empty).Trim();
 
                 if (l_Code.Length != 6 || !l_Code.All(char.IsDigit))
                     return Ok(new { code = 900, token = "Invalid", message = "OTP is either wrong or expired." });
 
-                var totp = new Totp(OtpNet.Base32Encoding.ToBytes(user.MFASecret));
+                var totp = new Totp(OtpNet.Base32Encoding.ToBytes(l_Secret));
                 bool result = totp.VerifyTotp(l_Code, out long timeStepMatched, new VerificationWindow(10, 10));
 
                 if (!result)
                     return Ok(new { code = 900, token = "Invalid", message = "OTP is either wrong or expired." });
+
+                // Task 00008: the first correct code completes the setup - only now the secret is stored
+                // (only when still empty, so two parallel setups cannot overwrite each other)
+                if (l_IsSetup)
+                {
+                    ExecuteUsers("UPDATE Users SET MFASecret = @secret WHERE Id = @id AND ISNULL(MFASecret, '') = ''",
+                        new System.Data.SqlClient.SqlParameter("@secret", l_Secret),
+                        new System.Data.SqlClient.SqlParameter("@id", user.Id));
+                }
 
                 return Ok(CompleteLogin(user, "OTP is verified.", 100));
             }
