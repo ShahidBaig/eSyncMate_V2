@@ -283,6 +283,8 @@ namespace eSyncMate.Processor.Controllers
 
                 if (l_Result.IsSuccess)
                 {
+                    SyncFlowDetails(l_Routes);
+
                     l_Response.Code = l_Result.Code;
                     l_Response.Message = l_Result.Description;
                     l_Response.Description = $"Route [ {RoutesModel.Id} ] has been updated successfully!";
@@ -594,6 +596,43 @@ namespace eSyncMate.Processor.Controllers
             RouteEngine l_Engine = new RouteEngine(this._config);
 
             l_Engine.RemoveRouteJob(route);
+        }
+
+        /// <summary>
+        /// The Flows screen shows (and on save writes back) the schedule kept in FlowDetails, while this screen
+        /// saves it in Routes and schedules the job from Routes. Copy the schedule and status to the route's
+        /// Flow row, so the Flow shows what really runs and a later Flow save does not restore the old schedule.
+        /// A failure here does not fail the route save; it is logged.
+        /// </summary>
+        private void SyncFlowDetails(Routes route)
+        {
+            try
+            {
+                System.Data.SqlClient.SqlParameter[] l_Params =
+                {
+                    new("@RouteId", route.Id),
+                    new("@Status", (object?)route.Status ?? DBNull.Value),
+                    new("@FrequencyType", (object?)route.FrequencyType ?? DBNull.Value),
+                    new("@StartDate", route.StartDate == DateTime.MinValue ? DBNull.Value : route.StartDate),
+                    new("@EndDate", route.EndDate == DateTime.MinValue ? DBNull.Value : route.EndDate),
+                    new("@RepeatCount", route.RepeatCount),
+                    new("@WeekDays", (object?)route.WeekDays ?? DBNull.Value),
+                    new("@OnDay", (object?)route.OnDay ?? DBNull.Value),
+                    new("@ExecutionTime", (object?)route.ExecutionTime ?? DBNull.Value),
+                    new("@UserId", Declarations.g_UserNo)
+                };
+
+                new DBConnector(CommonUtils.ConnectionString).Execute(
+                    @"UPDATE FlowDetails
+                         SET Status = @Status, FrequencyType = @FrequencyType, StartDate = @StartDate, EndDate = @EndDate,
+                             RepeatCount = @RepeatCount, WeekDays = @WeekDays, OnDay = @OnDay, ExecutionTime = @ExecutionTime,
+                             ModifiedDate = GETDATE(), ModifiedBy = @UserId
+                       WHERE RouteId = @RouteId AND ISNULL(Status, '') <> 'DELETED'", -1, l_Params);
+            }
+            catch (Exception ex)
+            {
+                this._logger?.LogError($"UpdateRoute: Flow schedule of route [{route.Id}] not synchronised: {ex}");
+            }
         }
 
         private string GetExternalCustomerName(DBConnector connection, int partyId)

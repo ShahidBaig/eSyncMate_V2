@@ -501,3 +501,9 @@ one-item upload (Available and On hand 407 at L56 in Shopify), Get Orders for th
 - **Effect of NULL**: route hidden from non-admin users (VW_Routes filter), and per-customer lookups by TypeId + CustomerName fail (e.g. Re-Process -> "No route configured for customer", Re-Transmit ASN).
 - **Fix**: `UpdateRoute` reads the old route first and keeps its CustomerName when the lookup finds no external party. Processor builds. Not committed, not published, not tested against a DB.
 - **Data repair** (client DB): routes already set to NULL need their CustomerName back (query given to the user).
+
+### Step 50: Routes screen schedule not shown on the Flows screen (route 168: Routes Minutely 10, Flow view "Every 6 hrs")
+- **Cause**: two copies of the schedule. The Flows screen reads and saves `FlowDetails` and pushes it into `Routes` through `Sp_LogAndUpdateRoute` (Flow -> Routes only). The Routes screen (`RoutesController.UpdateRoute`) saves only `Routes` and schedules the Hangfire job from it; `FlowDetails` keeps the old values. So route 168 RUNS every 10 min (job from Routes) while the Flow shows 6 h - and the next Flow save that processes this row writes 6 h back into Routes.
+- **Fix**: `UpdateRoute` calls new `SyncFlowDetails(route)` after a successful save: parameterised UPDATE of the route's non-deleted FlowDetails row(s) with Status, FrequencyType, StartDate, EndDate, RepeatCount, WeekDays, OnDay, ExecutionTime; a failure is logged and does not fail the route save. Processor builds. Not committed / released / tested against a DB.
+- **Data now**: route 168's FlowDetails row still says Hourly 6; check query for all mismatches given to the user.
+- **Data aligned (user, client DB)**: FlowDetails row of route 168 updated from Routes (Minutely 10); the mismatch check query now returns no rows. The code fix (`SyncFlowDetails`) still waits for Release10.
