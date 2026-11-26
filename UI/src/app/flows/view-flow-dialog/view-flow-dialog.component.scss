@@ -206,6 +206,12 @@
         color: #fff !important;
     }
 
+    // hand cursor on the whole button, also over its icon / label / ripple layers
+    &:not([disabled]),
+    &:not([disabled]) * {
+        cursor: pointer !important;
+    }
+
     &[disabled] {
         border-color: #ccc !important;
         color: #999 !important;

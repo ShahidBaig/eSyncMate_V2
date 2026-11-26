@@ -29,3 +29,9 @@
 .cancel-button {
   color: #666;
 }
+
+// both dialog buttons show the hand cursor on hover, also over their label / ripple layers
+.dialog-actions button,
+.dialog-actions button * {
+  cursor: pointer !important;
+}
