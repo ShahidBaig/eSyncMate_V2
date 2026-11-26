@@ -41,7 +41,7 @@ namespace eSyncMate.Processor.Middleware
                 return;
             }
 
-            // A user who must change the password may only do that (UpdatePassword); everything else is refused
+            // Task 00008: a user who must change the password may only do that (UpdatePassword); everything else is refused
             // until the password is changed (Login / VerifyMFA / RefreshToken / Logout are public paths above).
             if (string.Equals(context.User.FindFirst("mustChangePassword")?.Value, "true", StringComparison.OrdinalIgnoreCase)
                 && !path.StartsWith("updatepassword", StringComparison.OrdinalIgnoreCase))

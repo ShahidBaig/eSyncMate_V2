@@ -63,7 +63,7 @@ const routes: Routes = [
   {
     path: 'change-password',
     component: ChangePasswordComponent,
-    canActivate: [AuthenticationGuard],
+    canActivate: [AuthenticationGuard],   // Task 00008: only for a signed-in user
   },
   {
     path: 'edi/process850',

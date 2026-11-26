@@ -21,7 +21,7 @@ export class AuthorizationGuard  {
       return false;
     }
 
-    // A user who must change the password can open only the Change Password page
+    // Task 00008: a user who must change the password can open only the Change Password page
     if (this.api.mustChangePassword()) {
       return this.router.parseUrl('/change-password');
     }

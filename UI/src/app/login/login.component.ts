@@ -129,7 +129,7 @@ export class LoginComponent {
         } else if (res.requiresMfa) {
           // Store auth result (like BizMate)
           this.authResult = {
-            mfaToken: res.mfaToken,
+            mfaToken: res.mfaToken,   // Task 00008: ticket from the password step (the 2FA secret is no longer sent)
             qrCodeImage: res.qrImage,
             userID: res.userId,
             userId: res.userIdNum,
@@ -208,7 +208,7 @@ export class LoginComponent {
 
     let isActive = this.api.getTokenUserInfo()?.status.toLocaleUpperCase() === 'ACTIVE';
     if (isActive && this.api.mustChangePassword()) {
-      // first login with a password set by an admin: choose an own password first
+      // Task 00008: first login with a password set by an admin - choose an own password first
       this.router.navigateByUrl('/change-password');
     } else if (isActive) {
       const userMenus = this.api.getUserMenus();

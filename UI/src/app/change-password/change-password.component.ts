@@ -94,7 +94,7 @@ export class ChangePasswordComponent implements OnInit {
     }
   }
 
-  // true when the user must choose a new password before using any other page
+  // Task 00008: true when the user must choose a new password before using any other page
   forced = false;
 
   ngOnInit(): void {
@@ -119,7 +119,7 @@ export class ChangePasswordComponent implements OnInit {
         this.api.updatePassword(userID, oldPassword, newPassword).subscribe({
           next: (res: any) => {
             if (res.code === 100) {
-              // the server returns a fresh session without "must change password"
+              // Task 00008: the server returns a fresh session without "must change password"
               if (res.token) {
                 this.api.saveToken(res.token);
                 if (res.menus) this.api.saveUserMenus(res.menus);

@@ -29,7 +29,7 @@ using QRCoder;
 
 namespace eSyncMate.Processor.Controllers
 {
-    // Every action needs a signed-in user unless it is marked [AllowAnonymous] (Login, VerifyMFA, RefreshToken, Logout).
+    // Task 00008: every action needs a signed-in user unless it is marked [AllowAnonymous] (Login, VerifyMFA, RefreshToken, Logout).
     [Authorize(AuthenticationSchemes = Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerDefaults.AuthenticationScheme)]
     public class AuthenticationController : Controller
     {
@@ -78,7 +78,7 @@ namespace eSyncMate.Processor.Controllers
                 new Claim("isSetupAllowed", user.IsSetupAllowed.ToString()),
                 new Claim("userID", user.UserID.ToString()),
                 new Claim("roleName", user.RoleName ?? ""),
-                new Claim("mustChangePassword", user.MustChangePassword ? "true" : "false")
+                new Claim("mustChangePassword", user.MustChangePassword ? "true" : "false")   // Task 00008
             };
 
             var token = new JwtSecurityToken(CommonUtils.JwtIssuer,
@@ -90,7 +90,7 @@ namespace eSyncMate.Processor.Controllers
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
 
-        // Reads VW_Users with SQL parameters: typed text (User ID, passwords, e-mail) never becomes part of the SQL.
+        // Task 00008: reads VW_Users with SQL parameters - typed text (User ID, passwords, e-mail) never becomes part of the SQL.
         private static DataTable QueryUsers(string p_Where, params System.Data.SqlClient.SqlParameter[] p_Params)
         {
             DataTable l_Table = new DataTable();
@@ -136,7 +136,7 @@ namespace eSyncMate.Processor.Controllers
             };
         }
 
-        // The current ACTIVE user by database id (null when the user is gone, blocked or deleted)
+        // Task 00008: the current ACTIVE user by database id (null when the user is gone, blocked or deleted)
         private static LoginModel GetActiveUser(int p_Id)
         {
             using DataTable l_Table = QueryUsers("Id = @id AND Status = 'ACTIVE'", new System.Data.SqlClient.SqlParameter("@id", p_Id));
@@ -155,7 +155,7 @@ namespace eSyncMate.Processor.Controllers
             return l_DataTable.Rows.Count > 0 ? ToLoginModel(l_DataTable.Rows[0]) : null;
         }
 
-        // ---- 2FA: a short-lived ticket proves the password step happened ----
+        // ---- Task 00008 - 2FA: a short-lived ticket proves the password step happened ----
         // It is signed with a key derived from the JWT key, so it can never be used as an access token,
         // and it only says WHICH user passed the password step; the 2FA secret never leaves the server after setup.
         private const string MfaTicketAudience = "esyncmate-mfa-pending";
@@ -202,7 +202,7 @@ namespace eSyncMate.Processor.Controllers
             }
         }
 
-        // Issues the access token + refresh cookie for a user who passed every login step
+        // Task 00008: issues the access token + refresh cookie for a user who passed every login step
         private object CompleteLogin(LoginModel p_User, string p_Message, int? p_Code = null)
         {
             string l_Token = GenerateJSONWebToken(p_User);                         // short access token (15 min)
@@ -228,7 +228,7 @@ namespace eSyncMate.Processor.Controllers
             {
                 if (user.MFAEnabled)
                 {
-                    // 2FA: the password is correct; the session is issued only after the code (VerifyMFA).
+                    // Task 00008 - 2FA: the password is correct; the session is issued only after the code (VerifyMFA).
                     // The browser gets a short-lived ticket for that step, not the user's 2FA secret.
                     string secretKey = user.MFASecret;
                     string qrImage = "";
@@ -375,7 +375,7 @@ namespace eSyncMate.Processor.Controllers
             return new string[] { accessToken };
         }
 
-        // A SuperAdmin, or a role that may add users on the Users screen
+        // Task 00008: a SuperAdmin, or a role that may add users on the Users screen
         private bool CanAddUsers()
         {
             if (string.Equals(User.FindFirst("roleName")?.Value, "SuperAdmin", StringComparison.OrdinalIgnoreCase))
@@ -422,7 +422,7 @@ namespace eSyncMate.Processor.Controllers
                 l_Users.CustomerName = User.CustomerName;
                 l_Users.IsSetupAllowed = User.IsSetupAllowed;
                 l_Users.UserID = User.UserID;
-                l_Users.MustChangePassword = User.MustChangePassword;
+                l_Users.MustChangePassword = User.MustChangePassword;   // Task 00008
 
                 l_Data = QueryUsers("UserID = @userID OR Email = @email",
                     new System.Data.SqlClient.SqlParameter("@userID", (object)l_Users.UserID ?? DBNull.Value),
@@ -506,7 +506,7 @@ namespace eSyncMate.Processor.Controllers
 
 
 
-        // The signed-in user changes their OWN password (the user comes from the token, not from the request).
+        // Task 00008: the signed-in user changes their OWN password (the user comes from the token, not from the request).
         // A successful change clears "must change password" and issues a fresh session.
         [HttpPost("UpdatePassword")]
         public async Task<IActionResult> UpdatePassword([FromBody] UpdatePasswordRequest request)
@@ -574,7 +574,7 @@ namespace eSyncMate.Processor.Controllers
 
                 var jwtToken = (JwtSecurityToken)validatedToken;
 
-                // Read the user again: a user who was blocked or deleted meanwhile gets no new session,
+                // Task 00008: read the user again - a user who was blocked or deleted meanwhile gets no new session,
                 // and role / "must change password" are always current.
                 if (!int.TryParse(jwtToken.Claims.FirstOrDefault(c => c.Type == "id")?.Value, out int l_UserId))
                     return Unauthorized(new { message = "Session expired" });
@@ -634,7 +634,7 @@ namespace eSyncMate.Processor.Controllers
             return Ok(new { Message = "Logged out" });
         }
 
-        // 2FA step 2: the code is checked against the secret STORED for the user named in the ticket that the
+        // Task 00008 - 2FA step 2: the code is checked against the secret STORED for the user named in the ticket that the
         // password step issued. The browser cannot choose the user or the secret.
         // VerificationWindow(10,10) as before, for clock drift between phone and server.
         [AllowAnonymous]
@@ -677,7 +677,7 @@ namespace eSyncMate.Processor.Controllers
     // Simple request model for VerifyMFA
     public class VerifyMFARequest
     {
-        public string MfaToken { get; set; } = "";   // ticket from the password step (Login)
+        public string MfaToken { get; set; } = "";   // Task 00008: ticket from the password step (Login)
         public string Code { get; set; } = "";
     }
 }

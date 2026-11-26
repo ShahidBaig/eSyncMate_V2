@@ -207,17 +207,17 @@ export class ApiService {
       userID: token.userID,
       roleName: token.roleName || '',
       mfaEnabled: token.mfaEnabled || false,
-      mustChangePassword: token.mustChangePassword === 'true' || token.mustChangePassword === true,
+      mustChangePassword: token.mustChangePassword === 'true' || token.mustChangePassword === true,   // Task 00008
     };
     return user;
   }
 
-  // The user has to choose a new password before using any other page
+  // Task 00008: the user has to choose a new password before using any other page
   mustChangePassword(): boolean {
     return this.getTokenUserInfo()?.mustChangePassword === true;
   }
 
-  // First page the user may open (the same choice the login makes)
+  // Task 00008: first page the user may open (the same choice the login makes)
   firstAllowedRoute(): string {
     const menus = this.getUserMenus();
     for (const mod of menus?.modules || []) {
@@ -262,7 +262,7 @@ export class ApiService {
     return this.http.get<any>(this.apiUrl + 'EDIProcessor/api/v1/orders/getOrders/' + orderId + '/' + fromDate + '/' + toDate + '/' + orderNumber + '/' + status + '/' + ExternalId + '/' + CustomerId, { params });
   }
 
-  // withCredentials: the API is on another origin (port 8085); without it the browser drops the session cookie
+  // Task 00008 - withCredentials: the API is on another origin (port 8085); without it the browser drops the session cookie
   // this call sets, and a 2FA user is signed out on the next page refresh.
   verifyMFADirect(data: any): Observable<any> {
     return this.http.post(this.apiUrl + 'VerifyMFA', data, { withCredentials: true });
